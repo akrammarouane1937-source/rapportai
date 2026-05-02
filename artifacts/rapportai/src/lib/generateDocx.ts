@@ -16,6 +16,7 @@ import {
 } from "docx";
 import type { ReportData } from "./reportStore";
 import { getApprovedFigures } from "./figureStore";
+import { getBibSources, type BibSource } from "./bibliothequeStore";
 
 // ─── Constants ───────────────────────────────────────────────────────────────
 
@@ -308,7 +309,99 @@ function buildConclusion(d: ReportData): Paragraph[] {
   return paras;
 }
 
+// ─── Citation formatters ──────────────────────────────────────────────────────
+
+/** Format one source entry according to the chosen citation style */
+function formatBibEntry(s: BibSource, style: string): TextRun[] {
+  const author  = s.authors || "Auteur inconnu";
+  const year    = s.year    || "s.d.";
+  const title   = s.title   || "Titre inconnu";
+  const journal = s.journal || "";
+  const doi     = s.doi     ? ` https://doi.org/${s.doi}` : "";
+
+  const styleKey = style.toLowerCase();
+
+  // APA 7th (default)
+  if (styleKey.includes("apa")) {
+    // Author, A. A. (Year). *Title*. Journal.
+    return [
+      new TextRun({ text: `${author} (${year}). `, font: FONT, size: BODY_PT }),
+      new TextRun({ text: title, font: FONT, size: BODY_PT, italics: true }),
+      ...(journal ? [new TextRun({ text: `. ${journal}`, font: FONT, size: BODY_PT })] : []),
+      new TextRun({ text: doi, font: FONT, size: BODY_PT }),
+    ];
+  }
+
+  // Chicago (Author-Date)
+  if (styleKey.includes("chicago")) {
+    // Author. Year. "Title." Journal.
+    return [
+      new TextRun({ text: `${author}. ${year}. "`, font: FONT, size: BODY_PT }),
+      new TextRun({ text: title, font: FONT, size: BODY_PT }),
+      new TextRun({ text: `."${journal ? ` ${journal}.` : ""}${doi}`, font: FONT, size: BODY_PT }),
+    ];
+  }
+
+  // Vancouver / ICMJE
+  if (styleKey.includes("vancouver")) {
+    // Author. Title. Journal. Year.
+    return [
+      new TextRun({ text: `${author}. ${title}. `, font: FONT, size: BODY_PT }),
+      ...(journal ? [new TextRun({ text: `${journal}. `, font: FONT, size: BODY_PT, italics: true })] : []),
+      new TextRun({ text: `${year}.${doi}`, font: FONT, size: BODY_PT }),
+    ];
+  }
+
+  // IEEE
+  if (styleKey.includes("ieee")) {
+    // [N] A. Author, "Title," Journal, Year.
+    return [
+      new TextRun({ text: `${author}, "`, font: FONT, size: BODY_PT }),
+      new TextRun({ text: title, font: FONT, size: BODY_PT }),
+      new TextRun({ text: `,"${journal ? ` ${journal},` : ""} ${year}.${doi}`, font: FONT, size: BODY_PT }),
+    ];
+  }
+
+  // Fallback — same as APA
+  return [
+    new TextRun({ text: `${author} (${year}). `, font: FONT, size: BODY_PT }),
+    new TextRun({ text: title, font: FONT, size: BODY_PT, italics: true }),
+    ...(journal ? [new TextRun({ text: `. ${journal}`, font: FONT, size: BODY_PT })] : []),
+    new TextRun({ text: doi, font: FONT, size: BODY_PT }),
+  ];
+}
+
 function buildBibliographie(d: ReportData): Paragraph[] {
+  // Prefer live BibSources from bibliothequeStore over static report.bibliographie
+  const liveSources = getBibSources();
+  const style       = d.citationStyle ?? "APA 7th ed.";
+
+  if (liveSources.length > 0) {
+    // Sort alphabetically by first author last name
+    const sorted = [...liveSources].sort((a, b) =>
+      (a.authors.split(/[,& ]/)[0] ?? "").localeCompare(b.authors.split(/[,& ]/)[0] ?? "", "fr")
+    );
+    return [
+      heading1("Bibliographie", true),
+      emptyLine(),
+      ...sorted.map((s, i) =>
+        new Paragraph({
+          alignment: AlignmentType.JUSTIFIED,
+          spacing: { ...SPACING_BODY, after: 140 },
+          indent: { left: 720, hanging: 720 },
+          children: [
+            // IEEE prefix numbering
+            ...(style.toLowerCase().includes("ieee")
+              ? [new TextRun({ text: `[${i + 1}] `, font: FONT, size: BODY_PT, bold: true })]
+              : []),
+            ...formatBibEntry(s, style),
+          ],
+        })
+      ),
+    ];
+  }
+
+  // Fallback — static entries from ReportData (legacy / Step 9 manual input)
   const entries = d.bibliographie || [];
   if (entries.length === 0) return [];
   return [

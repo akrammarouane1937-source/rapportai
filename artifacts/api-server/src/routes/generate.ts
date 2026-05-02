@@ -3,6 +3,14 @@ import { anthropic } from "@workspace/integrations-anthropic-ai";
 
 const router = Router();
 
+interface BibEntry {
+  title: string;
+  authors: string;
+  year: string;
+  journal?: string;
+  doi?: string;
+}
+
 interface GenerateBody {
   section: string;
   // Identity
@@ -25,6 +33,8 @@ interface GenerateBody {
   introduction?: string;
   partieI?: string;
   partieII?: string;
+  // Library sources from Bibliothèque
+  sources?: BibEntry[];
   // Misc
   extraContext?: string;
 }
@@ -47,6 +57,44 @@ Règles absolues :
 - Commence directement par le contenu — aucun préambule méta, aucun "Voici la rédaction…"
 - Utilise toutes les données personnelles fournies dans le prompt (nom étudiant, école, encadrants…)
 - Si des sections précédentes sont fournies, assure la cohérence et la continuité du discours`;
+}
+
+/**
+ * Build an APA-style inline label for a source, e.g. "(Dupont, 2020)"
+ * Used in citation instructions to show Claude the exact format to use.
+ */
+function inlineLabel(s: BibEntry): string {
+  const lastName = s.authors.split(/[,& ]/)[0].trim();
+  return `(${lastName}, ${s.year})`;
+}
+
+/**
+ * Build the sources block injected into the Claude prompt.
+ * If sources are provided, lists them and tells Claude to cite inline.
+ * If not, tells Claude to use [SOURCE À COMPLÉTER] placeholders.
+ */
+function buildCitationBlock(sources: BibEntry[] | undefined, style: string): string {
+  if (!sources || sources.length === 0) {
+    return `\nInstruction citations : L'étudiant n'a pas encore importé de sources dans sa bibliothèque. Utilise des citations plausibles au format ${style} avec des auteurs réels du domaine académique, ET insère au moins 2 placeholders [SOURCE À COMPLÉTER] aux endroits où une source spécifique manque, pour que l'étudiant sache où chercher.`;
+  }
+
+  const numbered = sources
+    .map((s, i) => {
+      const journal = s.journal ? `. *${s.journal}*` : "";
+      const doi     = s.doi ? ` https://doi.org/${s.doi}` : "";
+      return `  ${i + 1}. ${inlineLabel(s)} — ${s.authors} (${s.year}). ${s.title}${journal}${doi}`;
+    })
+    .join("\n");
+
+  return `\n## Sources bibliographiques disponibles (à citer dans le texte)
+L'étudiant a importé ces sources dans sa bibliothèque. Tu DOIS :
+1. Citer les sources pertinentes dans le corps du texte au format ${style}, ex : ${inlineLabel(sources[0])}
+2. Utiliser autant de sources de la liste que possible là où elles sont académiquement pertinentes
+3. Pour toute affirmation nécessitant une source non listée, écrire [SOURCE À COMPLÉTER]
+4. Ne pas inventer de références qui ne sont pas dans la liste
+
+Sources disponibles :
+${numbered}`;
 }
 
 function snippet(text: string | undefined, maxChars = 900): string {
@@ -90,8 +138,9 @@ Style de citation : ${style}
 
 ${ctx.resume ? `Résumé existant (cohérence requise) :\n"${snippet(ctx.resume)}"\n` : ""}
 ${ctx.introduction ? `Introduction existante (s'appuyer dessus) :\n"${snippet(ctx.introduction)}"\n` : ""}
+${buildCitationBlock(ctx.sources, style)}
 
-Exigences : minimum 1 000 mots, citations académiques plausibles (${style}), placeholders figures : [INSÉRER FIGURE N — Titre], analyses spécifiques au marché marocain.`;
+Exigences : minimum 1 000 mots, placeholders figures : [INSÉRER FIGURE N — Titre], analyses spécifiques au marché marocain.`;
 
     case "partie-ii":
       return `Rédige la Partie II du ${type} intitulé "${theme}", réalisé par ${student} à ${school} en ${filiere} (${annee}).
@@ -111,6 +160,7 @@ Mots-clés : ${kw}
 Style de citation : ${style}
 
 ${ctx.partieI ? `Partie I déjà rédigée (assure la continuité) :\n"${snippet(ctx.partieI)}"\n` : ""}
+${buildCitationBlock(ctx.sources, style)}
 
 Exigences : minimum 1 000 mots, analyses chiffrées fictives mais cohérentes, placeholders : [INSÉRER FIGURE N — Titre descriptif].`;
 
@@ -127,6 +177,7 @@ Problématique : ${prob}
 Mots-clés : ${kw}
 
 ${ctx.resume ? `Résumé existant (utilise-le comme boussole thématique) :\n"${snippet(ctx.resume)}"\n` : ""}
+${buildCitationBlock(ctx.sources, style)}
 
 400 à 600 mots. Pose clairement la problématique et justifie la pertinence du sujet dans le contexte marocain actuel.`;
 
@@ -144,6 +195,7 @@ Problématique résolue : ${prob}
 
 ${ctx.partieI  ? `Résumé Partie I (à synthétiser) :\n"${snippet(ctx.partieI)}"\n`  : ""}
 ${ctx.partieII ? `Résumé Partie II (à synthétiser) :\n"${snippet(ctx.partieII)}"\n` : ""}
+${buildCitationBlock(ctx.sources, style)}
 
 400 à 600 mots. Synthétise les apports théoriques et pratiques en lien direct avec les deux parties, puis ouvre sur des perspectives de recherche pertinentes pour le Maroc.`;
 

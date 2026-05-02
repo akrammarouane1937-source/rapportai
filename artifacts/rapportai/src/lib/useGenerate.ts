@@ -1,5 +1,6 @@
 import { useRef, useState, useCallback } from "react";
 import { getReport } from "@/lib/reportStore";
+import { getBibSources } from "@/lib/bibliothequeStore";
 
 const BASE_PATH = import.meta.env.BASE_URL.replace(/\/$/, "");
 
@@ -73,6 +74,15 @@ export function useGenerate(opts: {
       // Load everything from the store so Claude has maximum context
       const stored = getReport();
 
+      // Collect library sources — stripped to just what Claude needs
+      const bibSources = getBibSources().map((s) => ({
+        title:   s.title,
+        authors: s.authors,
+        year:    s.year,
+        journal: s.journal,
+        doi:     s.doi,
+      }));
+
       const body = {
         // 1. Demo defaults (lowest priority — only when store is empty)
         ...DEMO,
@@ -94,6 +104,8 @@ export function useGenerate(opts: {
         introduction:  stored.introduction,
         partieI:       stored.partieI,
         partieII:      stored.partieII,
+        // Library sources from Bibliothèque page
+        sources:       bibSources.length > 0 ? bibSources : undefined,
         // 3. Explicit call-site options override everything
         ...options,
       };
