@@ -129,7 +129,7 @@ function DemoSidebar({ active, setActive, hovered, setHovered }: {
   );
 }
 
-function DashboardView() {
+function DashboardView({ setActive }: { setActive: (v: string) => void }) {
   return (
     <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.35 }}>
       <div className="flex items-center justify-between mb-7">
@@ -149,14 +149,14 @@ function DashboardView() {
       <div className="mb-6">
         <div className="flex items-center justify-between mb-3">
           <h2 className="text-sm font-semibold text-gray-700" style={{ fontFamily: "'Plus Jakarta Sans', sans-serif" }}>Rapport en cours</h2>
-          <button className="text-xs text-purple-600 hover:text-purple-700 flex items-center gap-1 font-medium">
+          <button onClick={() => setActive("rapports")} className="text-xs text-purple-600 hover:text-purple-700 flex items-center gap-1 font-medium">
             Voir tous les rapports <ChevronRight className="w-3 h-3" />
           </button>
         </div>
         <ActiveReportCard
           title="Optimisation de portefeuille — EMSI Finance"
           type="PFE" currentStep={3} completedSteps={[1, 2]}
-          updatedAt="Il y a 2 heures" onContinue={() => {}}
+          updatedAt="Il y a 2 heures" onContinue={() => setActive("rapports")}
         />
       </div>
       <div className="grid grid-cols-5 gap-4">
@@ -302,7 +302,7 @@ export default function DemoPage() {
 
       <main className="flex-1 p-8 pt-14 min-w-0">
         <div className="max-w-5xl mx-auto">
-          {active === "dashboard" && <DashboardView />}
+          {active === "dashboard" && <DashboardView setActive={setActive} />}
           {active === "rapports" && <RapportsView />}
           {active === "figures" && (
             <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }}>

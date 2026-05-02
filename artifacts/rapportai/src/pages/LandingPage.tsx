@@ -48,12 +48,16 @@ export default function LandingPage() {
             </span>
           </div>
           <div className="flex items-center gap-4">
-            <Button variant="ghost" className="hidden sm:inline-flex text-foreground hover:text-primary hover:bg-primary-light/50">
-              Se connecter
-            </Button>
-            <Button className="bg-primary text-white hover:bg-primary-dark shadow-[0_4px_24px_rgba(124,58,237,0.12)] rounded-full px-6">
-              Commencer gratuitement <ArrowRight className="w-4 h-4 ml-1" />
-            </Button>
+            <Link href="/sign-in">
+              <Button variant="ghost" className="hidden sm:inline-flex text-foreground hover:text-primary hover:bg-primary-light/50">
+                Se connecter
+              </Button>
+            </Link>
+            <Link href="/sign-up">
+              <Button className="bg-primary text-white hover:bg-primary-dark shadow-[0_4px_24px_rgba(124,58,237,0.12)] rounded-full px-6">
+                Commencer gratuitement <ArrowRight className="w-4 h-4 ml-1" />
+              </Button>
+            </Link>
           </div>
         </div>
       </header>
@@ -90,12 +94,16 @@ export default function LandingPage() {
               transition={{ duration: 0.5, delay: 0.2 }}
               className="flex flex-col sm:flex-row items-center justify-center gap-4"
             >
-              <Button size="lg" className="w-full sm:w-auto text-lg h-14 px-8 rounded-full bg-primary hover:bg-primary-dark shadow-[0_4px_24px_rgba(124,58,237,0.25)] text-white">
-                Générer mon rapport <ArrowRight className="w-5 h-5 ml-2" />
-              </Button>
-              <Button size="lg" variant="outline" className="w-full sm:w-auto text-lg h-14 px-8 rounded-full border-border hover:bg-muted text-foreground">
-                Voir la démo
-              </Button>
+              <Link href="/sign-up">
+                <Button size="lg" className="w-full sm:w-auto text-lg h-14 px-8 rounded-full bg-primary hover:bg-primary-dark shadow-[0_4px_24px_rgba(124,58,237,0.25)] text-white">
+                  Générer mon rapport <ArrowRight className="w-5 h-5 ml-2" />
+                </Button>
+              </Link>
+              <Link href="/demo">
+                <Button size="lg" variant="outline" className="w-full sm:w-auto text-lg h-14 px-8 rounded-full border-border hover:bg-muted text-foreground">
+                  Voir la démo
+                </Button>
+              </Link>
             </motion.div>
           </div>
         </section>
@@ -351,9 +359,11 @@ export default function LandingPage() {
             </p>
             
             <div className="flex flex-col items-center">
-              <Button size="lg" className="w-full sm:w-auto text-lg h-14 px-10 rounded-full bg-primary text-white hover:bg-primary-dark shadow-[0_4px_24px_rgba(124,58,237,0.25)] mb-4">
-                Commencer gratuitement <ArrowRight className="w-5 h-5 ml-2" />
-              </Button>
+              <Link href="/sign-up">
+                <Button size="lg" className="w-full sm:w-auto text-lg h-14 px-10 rounded-full bg-primary text-white hover:bg-primary-dark shadow-[0_4px_24px_rgba(124,58,237,0.25)] mb-4">
+                  Commencer gratuitement <ArrowRight className="w-5 h-5 ml-2" />
+                </Button>
+              </Link>
               <p className="text-sm text-muted-foreground font-medium">
                 Sans carte bancaire · Sans engagement · Commencer maintenant
               </p>
