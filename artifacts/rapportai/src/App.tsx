@@ -9,6 +9,7 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import LandingPage from "@/pages/LandingPage";
 import OnboardingPage from "@/pages/OnboardingPage";
 import DashboardPage from "@/pages/DashboardPage";
+import RapportsPage from "@/pages/RapportsPage";
 import NotFound from "@/pages/not-found";
 
 const queryClient = new QueryClient();
@@ -271,6 +272,9 @@ function ClerkProviderWithRoutes() {
             </Route>
             <Route path="/dashboard">
               <ProtectedRoute component={DashboardPage} />
+            </Route>
+            <Route path="/rapports">
+              <ProtectedRoute component={RapportsPage} />
             </Route>
             <Route component={NotFound} />
           </Switch>
