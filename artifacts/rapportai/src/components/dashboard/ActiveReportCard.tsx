@@ -3,13 +3,15 @@ import { ChevronRight, Clock, FileText, Play } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
 const STEPS = [
-  { id: 1, label: "Infos générales", short: "01" },
-  { id: 2, label: "Page de garde", short: "02" },
-  { id: 3, label: "Dédicaces", short: "03" },
-  { id: 4, label: "Remerciements", short: "04" },
-  { id: 5, label: "Sommaire", short: "05" },
-  { id: 6, label: "Partie I", short: "06" },
-  { id: 7, label: "Partie II", short: "07" },
+  { id: 1, label: "Infos générales",          short: "01" },
+  { id: 2, label: "Page de garde",            short: "02" },
+  { id: 3, label: "Dédicaces + Remerciements",short: "03" },
+  { id: 4, label: "Résumé + Abstract",        short: "04" },
+  { id: 5, label: "Sommaire",                 short: "05" },
+  { id: 6, label: "Introduction Générale",    short: "06" },
+  { id: 7, label: "Partie I",                 short: "07" },
+  { id: 8, label: "Partie II",                short: "08" },
+  { id: 9, label: "Conclusion",               short: "09" },
 ];
 
 interface ActiveReportCardProps {

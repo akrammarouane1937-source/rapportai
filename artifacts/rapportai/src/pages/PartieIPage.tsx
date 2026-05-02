@@ -127,11 +127,11 @@ export default function PartieIPage() {
       <div className="flex-1 flex flex-col overflow-hidden">
         <div className="bg-white border-b border-gray-100 px-6 py-4 flex-shrink-0 z-30">
           <div className="flex items-center gap-3 mb-2">
-            <span className="text-xs font-bold text-purple-600 bg-purple-50 px-2.5 py-1 rounded-full">Étape 6 sur 7</span>
+            <span className="text-xs font-bold text-purple-600 bg-purple-50 px-2.5 py-1 rounded-full">Étape 7 sur 9</span>
             <span className="text-xs text-gray-400">Partie I — Contenu principal</span>
           </div>
           <div className="h-1.5 bg-gray-100 rounded-full overflow-hidden">
-            <div className="h-full bg-purple-500 rounded-full" style={{ width: "85.7%" }} />
+            <div className="h-full bg-purple-500 rounded-full" style={{ width: "77.8%" }} />
           </div>
         </div>
 

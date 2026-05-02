@@ -1,0 +1,88 @@
+"Important structural update: change from 7 steps to 9 steps everywhere including the stepper pills. Here is the complete new structure:
+
+Step 1 — Informations Générales (already built — add citation settings at the bottom)
+Step 2 — Page de Garde (already built)
+Step 3 — Dédicaces + Remerciements (already built)
+Step 4 — Résumé + Abstract + Abréviations
+Step 5 — Sommaire (auto-generated)
+Step 6 — Introduction Générale
+Step 7 — Partie I (already built)
+Step 8 — Partie II (already built)
+Step 9 — Conclusion + Back matter
+
+ADD to Step 1 at the bottom — Paramètres de citation section:
+- Style de citation dropdown: APA 7th ed. (default) / Chicago 17th / Harvard / IEEE / MLA 9th
+- Année de publication pills: Tous / 5 dernières années / Personnalisé
+- Toggle: Afficher le numéro de page dans les citations ON/OFF
+- Toggle: Considérer les sources externes ON/OFF — 'L'IA considérera les sources du web'
+- This setting flows into every in-text citation and the final Bibliographie
+
+BUILD Step 4 — Résumé + Abstract + Abréviations:
+Left form panel + right Word preview.
+1. Résumé français — textarea 6 rows, live word counter '247 / 300 mots', placeholder 'Présentez votre travail en français — contexte, méthodologie, résultats principaux, conclusion.', '✦ Laisser l'IA décider'
+2. Mots-clés français — max 5 chips, AI suggests from theme, editable
+3. Abstract English — textarea 6 rows, same word counter, placeholder 'Present your work in English — context, methodology, main results, conclusion.', '✦ Laisser l'IA décider' (AI translates from résumé)
+4. Keywords English — max 5 chips, auto-translated from mots-clés
+5. Liste des abréviations — add/remove table with 2 columns: Abréviation | Signification, '+ Ajouter une abréviation' button, AI pre-suggests from theme: MPT, CAPM, VaR, MASI, BVC, etc.
+Word preview: Résumé page + Abstract page + Liste des abréviations page, all Word-styled.
+Button: 'Suivant — Sommaire →'
+
+BUILD Step 5 — Sommaire:
+Full width layout, no Word preview panel.
+Purple tint info banner: 'Le sommaire est généré automatiquement depuis la structure de votre rapport. Vous pouvez réorganiser les sections.'
+Auto-generated from all headings: Introduction Générale + Partie I + Partie II + Conclusion Générale.
+Drag and drop list:
+- Heading 1 (Parties): bold, indent 0
+- Heading 2 (Chapitres): normal, indent 1
+- Heading 3 (Sections): muted, indent 2
+- Each item: drag handle + number + title + dotted line + page number
+If nothing generated yet: placeholder structure editable manually + message 'Complétez d'abord les autres étapes pour générer le sommaire automatiquement'
+'Aperçu Word' button top right.
+Button: 'Suivant — Introduction Générale →'
+
+BUILD Step 6 — Introduction Générale:
+Left form panel + right Word preview.
+1. AI context card (purple tint): reads thème + problématique + keywords from Steps 1 and 4
+2. Contexte général — textarea 3 rows, placeholder 'Ex: Dans un contexte de mondialisation des marchés financiers, la gestion du risque de portefeuille...', '✦ Laisser l'IA décider'
+3. Problématique — pre-filled from Step 1, shown as highlighted editable block with edit icon
+4. Objectifs de recherche — textarea 3 rows, placeholder 'Ex: Cette étude vise à construire un portefeuille optimal sur le marché boursier marocain...', '✦ Laisser l'IA décider'
+5. Structure du rapport — auto-generated from all 9 step titles, read-only, shows as 'Ce rapport s'articule autour de X parties...'
+Word preview: ~1 full A4 page Introduction Générale in Word style.
+Sticky bottom: '✦ Générer l'Introduction Générale' button.
+Button: 'Suivant — Partie I →'
+
+BUILD Step 9 — Conclusion + Back matter:
+Left form panel + right Word preview.
+1. AI context card: reads Partie I + Partie II generated content
+2. Conclusion Générale — textarea 4 rows, placeholder 'Ex: Ce travail nous a permis de démontrer que l'optimisation de portefeuille sur le marché marocain...', '✦ Laisser l'IA décider'
+3. Apports et limites — textarea 3 rows, placeholder 'Ex: Cette étude contribue à la littérature sur les marchés émergents, cependant elle se limite à...', '✦ Laisser l'IA décider'
+4. Perspectives futures — textarea 3 rows, placeholder 'Ex: Des recherches futures pourraient intégrer des données ESG...', '✦ Laisser l'IA décider'
+5. Bibliographie — auto-generated from ALL sources added across all steps, formatted in chosen citation style from Step 1, editable list, each entry: author, year, title, journal
+6. Table des figures — auto-generated from figures in Partie II, each row: Figure N | Titre | Page, editable
+7. Liste des tableaux — same as figures but for tables, auto-generated + editable
+8. Annexes — file upload zone, accepts PDF/images/Excel, each shown as: Annexe N — filename
+Word preview: all back matter formatted correctly across multiple pages.
+Sticky bottom: '✦ Générer la Conclusion' button
+Final button: '🎉 Télécharger mon rapport complet .docx' green full width
+
+UPDATE Word .docx export — correct order with proper Heading 1/2/3 styles for auto Table of Contents:
+1. Page de garde
+2. Dédicaces
+3. Remerciements
+4. Résumé + mots-clés
+5. Abstract + keywords
+6. Liste des abréviations
+7. Sommaire (auto-generated from Heading 1/2/3)
+8. Introduction Générale
+9. Partie I
+10. Partie II
+11. Conclusion Générale
+12. Bibliographie (formatted in chosen citation style)
+13. Table des figures
+14. Liste des tableaux
+15. Annexes
+16. Table des matières (auto-generated from Heading 1/2/3)
+
+For figures: wherever a figure is referenced in the text insert placeholder [INSÉRER FIGURE N — Titre] so student adds their chart in Word after download.
+
+Show preview of all 4 new steps when done."

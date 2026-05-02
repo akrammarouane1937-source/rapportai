@@ -1,10 +1,13 @@
 import { useState } from "react";
 import { motion } from "framer-motion";
 import { useLocation } from "wouter";
-import { ChevronDown, ChevronRight, Search, ArrowRight } from "lucide-react";
+import { ChevronDown, Search, ArrowRight, ToggleLeft, ToggleRight } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Sidebar } from "@/components/layout/Sidebar";
+import { StepLayout } from "@/components/report/StepLayout";
+
+const CITATION_STYLES = ["APA 7th ed.", "Chicago 17th", "Harvard", "IEEE", "MLA 9th"];
+const ANNEE_PILLS = ["Tous", "5 dernières années", "Personnalisé"];
 
 const REPORT_TYPES = [
   { id: "pfe", label: "PFE", desc: "Projet de Fin d'Études", icon: "🎓" },
@@ -28,6 +31,11 @@ export default function Step1Page() {
   const [encadrantPeda, setEncadrantPeda] = useState("");
   const [encadrantPro, setEncadrantPro] = useState("");
   const [entreprise, setEntreprise] = useState("");
+  const [citationStyle, setCitationStyle] = useState("APA 7th ed.");
+  const [citationStyleOpen, setCitationStyleOpen] = useState(false);
+  const [anneePub, setAnneePub] = useState("Tous");
+  const [showPageNum, setShowPageNum] = useState(true);
+  const [sourcesExternes, setSourcesExternes] = useState(false);
   const [ville, setVille] = useState("");
 
   const filteredSchools = SCHOOLS.filter((s) =>
@@ -37,24 +45,8 @@ export default function Step1Page() {
   const canContinue = reportType && theme.trim() && school && filiere.trim() && annee && encadrantPeda.trim() && ville.trim();
 
   return (
-    <div className="flex min-h-screen bg-[#f9f8ff]">
-      <Sidebar />
-      <div className="flex-shrink-0" style={{ width: 60 }} />
-
+    <StepLayout stepId={1}>
       <main className="flex-1 overflow-y-auto pb-32">
-        {/* Step header */}
-        <div className="bg-white border-b border-gray-100 px-8 py-5 sticky top-0 z-30">
-          <div className="max-w-2xl mx-auto">
-            <div className="flex items-center gap-3 mb-1">
-              <span className="text-xs font-bold text-purple-600 bg-purple-50 px-2.5 py-1 rounded-full">Étape 1 sur 7</span>
-              <span className="text-xs text-gray-400">Informations Générales</span>
-            </div>
-            <div className="h-1.5 bg-gray-100 rounded-full overflow-hidden mt-3">
-              <div className="h-full bg-purple-500 rounded-full" style={{ width: "14.28%" }} />
-            </div>
-          </div>
-        </div>
-
         <div className="max-w-2xl mx-auto px-8 py-10">
           <motion.div initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }}>
             <h1 className="text-2xl font-bold text-gray-900 mb-2" style={{ fontFamily: "'Plus Jakarta Sans', sans-serif" }}>
@@ -185,6 +177,71 @@ export default function Step1Page() {
               <label className="block text-sm font-semibold text-gray-700 mb-2">Ville *</label>
               <Input value={ville} onChange={(e) => setVille(e.target.value)} placeholder="Casablanca" className="h-12 text-sm border-gray-200 rounded-xl" />
             </div>
+
+            {/* ── Citation settings ── */}
+            <div className="mt-10 pt-8 border-t border-gray-100">
+              <h2 className="text-base font-bold text-gray-900 mb-1" style={{ fontFamily: "'Plus Jakarta Sans', sans-serif" }}>Paramètres de citation</h2>
+              <p className="text-xs text-gray-400 mb-6">Ces paramètres influencent chaque citation en texte et la bibliographie finale.</p>
+
+              {/* Style de citation */}
+              <div className="mb-5 relative">
+                <label className="block text-sm font-semibold text-gray-700 mb-2">Style de citation</label>
+                <button onClick={() => setCitationStyleOpen(!citationStyleOpen)}
+                  className="w-full h-12 px-4 flex items-center justify-between rounded-xl border border-gray-200 text-sm bg-white hover:border-purple-300 focus:outline-none text-gray-900">
+                  <span>{citationStyle}</span>
+                  <ChevronDown className={`w-4 h-4 text-gray-400 transition-transform ${citationStyleOpen ? "rotate-180" : ""}`} />
+                </button>
+                {citationStyleOpen && (
+                  <div className="absolute top-full left-0 right-0 mt-1 bg-white border border-gray-200 rounded-xl overflow-hidden z-20 shadow-lg">
+                    {CITATION_STYLES.map(s => (
+                      <button key={s} onClick={() => { setCitationStyle(s); setCitationStyleOpen(false); }}
+                        className={`w-full text-left px-4 py-2.5 text-sm hover:bg-purple-50 hover:text-purple-700 ${citationStyle === s ? "bg-purple-50 text-purple-700 font-medium" : "text-gray-700"}`}>
+                        {s}
+                      </button>
+                    ))}
+                  </div>
+                )}
+              </div>
+
+              {/* Année de publication */}
+              <div className="mb-5">
+                <label className="block text-sm font-semibold text-gray-700 mb-2">Année de publication</label>
+                <div className="flex gap-2 flex-wrap">
+                  {ANNEE_PILLS.map(p => (
+                    <button key={p} onClick={() => setAnneePub(p)}
+                      className={`px-4 py-2 rounded-full text-xs font-semibold border transition-all ${anneePub === p ? "bg-purple-600 text-white border-purple-600" : "bg-white text-gray-600 border-gray-200 hover:border-purple-300"}`}>
+                      {p}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              {/* Toggles */}
+              <div className="space-y-3">
+                <div className="flex items-center justify-between p-4 bg-gray-50 rounded-2xl">
+                  <div>
+                    <p className="text-sm font-semibold text-gray-700">Afficher le numéro de page dans les citations</p>
+                    <p className="text-xs text-gray-400 mt-0.5">Ex: (Markowitz, 1952, p. 78)</p>
+                  </div>
+                  <button onClick={() => setShowPageNum(!showPageNum)} className="flex-shrink-0 ml-4">
+                    {showPageNum
+                      ? <ToggleRight className="w-8 h-8 text-purple-600" />
+                      : <ToggleLeft className="w-8 h-8 text-gray-300" />}
+                  </button>
+                </div>
+                <div className="flex items-center justify-between p-4 bg-gray-50 rounded-2xl">
+                  <div>
+                    <p className="text-sm font-semibold text-gray-700">Considérer les sources externes</p>
+                    <p className="text-xs text-gray-400 mt-0.5">L'IA considérera les sources du web</p>
+                  </div>
+                  <button onClick={() => setSourcesExternes(!sourcesExternes)} className="flex-shrink-0 ml-4">
+                    {sourcesExternes
+                      ? <ToggleRight className="w-8 h-8 text-purple-600" />
+                      : <ToggleLeft className="w-8 h-8 text-gray-300" />}
+                  </button>
+                </div>
+              </div>
+            </div>
           </motion.div>
         </div>
 
@@ -193,7 +250,7 @@ export default function Step1Page() {
           <div className="max-w-2xl mx-auto flex items-center justify-between">
             <span className="text-xs text-gray-400">{canContinue ? "Tout est prêt ✓" : "Remplis les champs obligatoires (*)"}</span>
             <Button
-              onClick={() => setLocation("/rapport/partie-i")}
+              onClick={() => setLocation("/rapport/step-2")}
               disabled={!canContinue}
               className="bg-purple-600 hover:bg-purple-700 text-white h-11 px-6 rounded-xl font-semibold text-sm flex items-center gap-2 disabled:opacity-40"
               style={{ boxShadow: canContinue ? "0 4px 16px rgba(124,58,237,0.3)" : "none" }}
@@ -203,6 +260,6 @@ export default function Step1Page() {
           </div>
         </div>
       </main>
-    </div>
+    </StepLayout>
   );
 }

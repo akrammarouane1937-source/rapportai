@@ -13,6 +13,10 @@ import RapportsPage from "@/pages/RapportsPage";
 import DemoPage from "@/pages/DemoPage";
 import PricingPage from "@/pages/PricingPage";
 import Step1Page from "@/pages/Step1Page";
+import Step4Page from "@/pages/Step4Page";
+import Step5Page from "@/pages/Step5Page";
+import Step6Page from "@/pages/Step6Page";
+import Step9Page from "@/pages/Step9Page";
 import PartieIPage from "@/pages/PartieIPage";
 import NotFound from "@/pages/not-found";
 
@@ -285,10 +289,26 @@ function ClerkProviderWithRoutes() {
             <Route path="/rapport/step-1">
               <ProtectedRoute component={Step1Page} />
             </Route>
+            <Route path="/rapport/step-4">
+              <ProtectedRoute component={Step4Page} />
+            </Route>
+            <Route path="/rapport/step-5">
+              <ProtectedRoute component={Step5Page} />
+            </Route>
+            <Route path="/rapport/step-6">
+              <ProtectedRoute component={Step6Page} />
+            </Route>
+            <Route path="/rapport/step-9">
+              <ProtectedRoute component={Step9Page} />
+            </Route>
             <Route path="/rapport/partie-i">
               <ProtectedRoute component={PartieIPage} />
             </Route>
             <Route path="/demo/step-1" component={Step1Page} />
+            <Route path="/demo/step-4" component={Step4Page} />
+            <Route path="/demo/step-5" component={Step5Page} />
+            <Route path="/demo/step-6" component={Step6Page} />
+            <Route path="/demo/step-9" component={Step9Page} />
             <Route path="/demo/partie-i" component={PartieIPage} />
             <Route component={NotFound} />
           </Switch>
