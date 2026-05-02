@@ -10,6 +10,7 @@ import LandingPage from "@/pages/LandingPage";
 import OnboardingPage from "@/pages/OnboardingPage";
 import DashboardPage from "@/pages/DashboardPage";
 import RapportsPage from "@/pages/RapportsPage";
+import DemoPage from "@/pages/DemoPage";
 import NotFound from "@/pages/not-found";
 
 const queryClient = new QueryClient();
@@ -276,6 +277,7 @@ function ClerkProviderWithRoutes() {
             <Route path="/rapports">
               <ProtectedRoute component={RapportsPage} />
             </Route>
+            <Route path="/demo" component={DemoPage} />
             <Route component={NotFound} />
           </Switch>
           <Toaster />
