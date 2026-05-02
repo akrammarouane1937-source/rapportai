@@ -18,6 +18,7 @@ import Step5Page from "@/pages/Step5Page";
 import Step6Page from "@/pages/Step6Page";
 import Step9Page from "@/pages/Step9Page";
 import PartieIPage from "@/pages/PartieIPage";
+import PartieIIPage from "@/pages/PartieIIPage";
 import NotFound from "@/pages/not-found";
 
 const queryClient = new QueryClient();
@@ -304,12 +305,16 @@ function ClerkProviderWithRoutes() {
             <Route path="/rapport/partie-i">
               <ProtectedRoute component={PartieIPage} />
             </Route>
+            <Route path="/rapport/partie-ii">
+              <ProtectedRoute component={PartieIIPage} />
+            </Route>
             <Route path="/demo/step-1" component={Step1Page} />
             <Route path="/demo/step-4" component={Step4Page} />
             <Route path="/demo/step-5" component={Step5Page} />
             <Route path="/demo/step-6" component={Step6Page} />
             <Route path="/demo/step-9" component={Step9Page} />
             <Route path="/demo/partie-i" component={PartieIPage} />
+            <Route path="/demo/partie-ii" component={PartieIIPage} />
             <Route component={NotFound} />
           </Switch>
           <Toaster />
