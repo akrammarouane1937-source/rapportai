@@ -6,6 +6,7 @@ import figuresRouter from "./figures";
 import shareRouter from "./share";
 import stripeRouter from "./stripe";
 import reviseRouter from "./revise";
+import chatRouter from "./chat";
 
 const router: IRouter = Router();
 
@@ -16,5 +17,6 @@ router.use(figuresRouter);
 router.use(shareRouter);
 router.use(stripeRouter);
 router.use(reviseRouter);
+router.use(chatRouter);
 
 export default router;

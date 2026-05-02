@@ -423,7 +423,7 @@ function SourcesView({
 
 export default function BibliothequeePage() {
   const plan = getMyPlan();
-  const isLocked = plan.planId === "free" || plan.planId === "essentiel";
+  const isLocked = plan.planId === "free";
 
   const [sources, setSources] = useState<BibSource[]>(() => {
     const report = getReport();
