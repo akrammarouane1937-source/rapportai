@@ -17,6 +17,8 @@ import Step4Page from "@/pages/Step4Page";
 import Step5Page from "@/pages/Step5Page";
 import Step6Page from "@/pages/Step6Page";
 import Step9Page from "@/pages/Step9Page";
+import Step2Page from "@/pages/Step2Page";
+import Step3Page from "@/pages/Step3Page";
 import PartieIPage from "@/pages/PartieIPage";
 import PartieIIPage from "@/pages/PartieIIPage";
 import NotFound from "@/pages/not-found";
@@ -290,6 +292,12 @@ function ClerkProviderWithRoutes() {
             <Route path="/rapport/step-1">
               <ProtectedRoute component={Step1Page} />
             </Route>
+            <Route path="/rapport/step-2">
+              <ProtectedRoute component={Step2Page} />
+            </Route>
+            <Route path="/rapport/step-3">
+              <ProtectedRoute component={Step3Page} />
+            </Route>
             <Route path="/rapport/step-4">
               <ProtectedRoute component={Step4Page} />
             </Route>
@@ -309,6 +317,8 @@ function ClerkProviderWithRoutes() {
               <ProtectedRoute component={PartieIIPage} />
             </Route>
             <Route path="/demo/step-1" component={Step1Page} />
+            <Route path="/demo/step-2" component={Step2Page} />
+            <Route path="/demo/step-3" component={Step3Page} />
             <Route path="/demo/step-4" component={Step4Page} />
             <Route path="/demo/step-5" component={Step5Page} />
             <Route path="/demo/step-6" component={Step6Page} />

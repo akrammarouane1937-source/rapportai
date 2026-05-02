@@ -5,6 +5,7 @@ import { ChevronDown, Search, ArrowRight, ToggleLeft, ToggleRight } from "lucide
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { StepLayout } from "@/components/report/StepLayout";
+import { saveReport } from "@/lib/reportStore";
 
 const CITATION_STYLES = ["APA 7th ed.", "Chicago 17th", "Harvard", "IEEE", "MLA 9th"];
 const ANNEE_PILLS = ["Tous", "5 dernières années", "Personnalisé"];
@@ -250,7 +251,16 @@ export default function Step1Page() {
           <div className="max-w-2xl mx-auto flex items-center justify-between">
             <span className="text-xs text-gray-400">{canContinue ? "Tout est prêt ✓" : "Remplis les champs obligatoires (*)"}</span>
             <Button
-              onClick={() => setLocation("/rapport/step-2")}
+              onClick={() => {
+                saveReport({
+                  reportType: reportType!,
+                  theme, school, filiere, annee,
+                  encadrantPeda, encadrantPro: encadrantPro || undefined,
+                  entreprise: entreprise || undefined,
+                  ville, citationStyle,
+                });
+                setLocation("/rapport/step-2");
+              }}
               disabled={!canContinue}
               className="bg-purple-600 hover:bg-purple-700 text-white h-11 px-6 rounded-xl font-semibold text-sm flex items-center gap-2 disabled:opacity-40"
               style={{ boxShadow: canContinue ? "0 4px 16px rgba(124,58,237,0.3)" : "none" }}
