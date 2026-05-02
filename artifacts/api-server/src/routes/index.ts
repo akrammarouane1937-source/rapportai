@@ -5,6 +5,7 @@ import juryRouter from "./jury";
 import figuresRouter from "./figures";
 import shareRouter from "./share";
 import stripeRouter from "./stripe";
+import reviseRouter from "./revise";
 
 const router: IRouter = Router();
 
@@ -14,5 +15,6 @@ router.use(juryRouter);
 router.use(figuresRouter);
 router.use(shareRouter);
 router.use(stripeRouter);
+router.use(reviseRouter);
 
 export default router;

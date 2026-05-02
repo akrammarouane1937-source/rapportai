@@ -1,13 +1,15 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { motion } from "framer-motion";
 import {
-  Plus, Search, FileText, Clock, MoreVertical,
-  Trash2, Edit3, Download, ChevronRight, Filter,
+  Plus, Search, FileText, Clock, ChevronRight,
+  Trash2,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Sidebar, SidebarSpacer } from "@/components/layout/Sidebar";
 import { FloatingChat } from "@/components/dashboard/FloatingChat";
+import { Link } from "wouter";
+import { getReport, saveReport } from "@/lib/reportStore";
 
 interface Report {
   id: string;
@@ -22,44 +24,46 @@ interface Report {
   wordCount: number;
 }
 
-const MOCK_REPORTS: Report[] = [
-  {
-    id: "1",
-    title: "Optimisation de portefeuille — EMSI Finance",
-    type: "PFE",
-    school: "EMSI",
-    field: "Finance",
-    status: "in_progress",
-    currentStep: 3,
-    completedSteps: [1, 2],
-    updatedAt: "Il y a 2 heures",
-    wordCount: 3240,
-  },
-  {
-    id: "2",
-    title: "Transformation digitale des PME marocaines",
-    type: "Mémoire",
-    school: "ENCG",
-    field: "Management",
-    status: "completed",
-    currentStep: 7,
-    completedSteps: [1, 2, 3, 4, 5, 6, 7],
-    updatedAt: "Hier",
-    wordCount: 18650,
-  },
-  {
-    id: "3",
-    title: "Analyse des risques opérationnels — BCP",
-    type: "Rapport de Stage",
-    school: "ISCAE",
-    field: "Finance",
-    status: "draft",
-    currentStep: 1,
-    completedSteps: [],
-    updatedAt: "Il y a 3 jours",
-    wordCount: 0,
-  },
-];
+function loadRealReports(): Report[] {
+  const d = getReport();
+  if (!d.theme && !d.school) return [];
+
+  const sections = [d.introduction, d.resume, d.dedicaces, d.remerciements, d.partieI, d.partieII, d.conclusion] as (string | undefined)[];
+  const completedSteps = sections
+    .map((s, i) => (s && s.trim().length > 50 ? i + 1 : null))
+    .filter((v): v is number => v !== null);
+
+  const wordCount = sections
+    .filter(Boolean)
+    .join(" ")
+    .trim()
+    .split(/\s+/)
+    .filter(Boolean).length;
+
+  const status: Report["status"] =
+    completedSteps.length === 0 ? "draft"
+    : completedSteps.length >= 6 ? "completed"
+    : "in_progress";
+
+  const currentStep = completedSteps.length > 0 ? Math.max(...completedSteps) + 1 : 1;
+
+  const type = (d.reportType as Report["type"]) ?? "PFE";
+
+  return [
+    {
+      id: "current",
+      title: d.theme ?? "Rapport sans titre",
+      type,
+      school:        d.school   ?? "",
+      field:         d.filiere  ?? "",
+      status,
+      currentStep,
+      completedSteps,
+      updatedAt:     "Maintenant",
+      wordCount,
+    },
+  ];
+}
 
 const STEP_LABELS = ["Infos", "Garde", "Dédicaces", "Remerciements", "Sommaire", "Partie I", "Partie II"];
 
@@ -256,9 +260,13 @@ function EmptyState() {
 }
 
 export default function RapportsPage() {
-  const [reports, setReports] = useState<Report[]>(MOCK_REPORTS);
+  const [reports, setReports] = useState<Report[]>(() => loadRealReports());
   const [search, setSearch] = useState("");
   const [filter, setFilter] = useState<"all" | "draft" | "in_progress" | "completed">("all");
+
+  useEffect(() => {
+    setReports(loadRealReports());
+  }, []);
 
   const filtered = reports
     .filter((r) => filter === "all" || r.status === filter)
@@ -269,8 +277,12 @@ export default function RapportsPage() {
       r.field.toLowerCase().includes(search.toLowerCase())
     );
 
-  const deleteReport = (id: string) =>
+  const deleteReport = (id: string) => {
+    if (id === "current") {
+      saveReport({ theme: undefined, school: undefined, filiere: undefined, reportType: undefined, partieI: undefined, partieII: undefined, introduction: undefined, conclusion: undefined, resume: undefined, dedicaces: undefined, remerciements: undefined });
+    }
     setReports((prev) => prev.filter((r) => r.id !== id));
+  };
 
   const filterOptions: { value: typeof filter; label: string }[] = [
     { value: "all", label: "Tous" },
