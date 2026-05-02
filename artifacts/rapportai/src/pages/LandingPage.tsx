@@ -48,6 +48,11 @@ export default function LandingPage() {
             </span>
           </div>
           <div className="flex items-center gap-4">
+            <Link href="/pricing">
+              <Button variant="ghost" className="hidden sm:inline-flex text-foreground hover:text-primary hover:bg-primary-light/50">
+                Tarifs
+              </Button>
+            </Link>
             <Link href="/sign-in">
               <Button variant="ghost" className="hidden sm:inline-flex text-foreground hover:text-primary hover:bg-primary-light/50">
                 Se connecter

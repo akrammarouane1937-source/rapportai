@@ -1,0 +1,46 @@
+Build the /pricing page exactly like this design:
+
+3 cards side by side, background #f9f8ff, purple checkmark icons, Plus Jakarta Sans, #7c3aed primary:
+
+Card 1 — Essentiel, 149 MAD, 'Paiement unique', button 'Choisir Essentiel' (purple outline):
+✓ 30 pages
+✓ PDF + Word
+✓ 10 révisions
+✓ Chatbot IA
+✓ Canevas de ton école
+
+Card 2 — Pro, 449 MAD, badge 'Le plus populaire' purple filled top center, purple border, button 'Choisir Pro' purple filled:
+✓ 60 pages
+✓ PDF + Word
+✓ Révisions illimitées
+✓ Chatbot IA
+✓ Canevas de ton école
+✓ Rapport de citations
+✓ Vérification anti-plagiat
+✓ Certificat Anti-Détection IA
+✓ JuryAI — Simulation de soutenance
+
+Card 3 — Premium, 749 MAD, button 'Choisir Premium' purple outline:
+✓ Pages illimitées
+✓ PDF + Word
+✓ Tout le plan Pro inclus
+✓ Slides PowerPoint
+✓ JuryAI — Simulation de soutenance
+
+Add 'Tarifs' link in navbar pointing to /pricing.
+
+Then build Phase 4:
+
+1. 3-column step layout: sidebar (already built, reuse it) + form panel 38% + Word preview panel 62%. No top navbar — sidebar handles navigation.
+
+2. Step 1 — Informations Générales (full width form, no Word preview): Type de rapport (3 selectable cards: PFE / Rapport de Stage / Mémoire), Thème du rapport (large input), École (searchable dropdown: EMSI ENCG ENSA ENSIAS UIR UCA UM5 ISCAE HEM Autre), Filière, Année académique, Encadrant pédagogique, Encadrant professionnel (optional), Entreprise d'accueil (optional), Ville. Sticky bottom button 'Suivant — Page de garde →'
+
+3. Step 6 — Partie I form panel: AI cadrage card (purple tint #f5f0ff) with 5 keyword chips + Google Scholar link + 'Regénérer ↺'. Problématique textarea 4 rows + '✦ Laisser l'IA décider' button. PDF upload drag & drop zone. Résumé contexte textarea + '✦ Laisser l'IA décider'. Chapitres structure (2 pre-filled inputs + '+ Ajouter un chapitre'). Sources chips [Markowitz (1952)] [Fama (1970)] [+ Ajouter]. Sticky bottom '✦ Générer la Partie I' button with loading spinner + success state.
+
+4. Word preview panel (right 62%): gray background #e5e7eb, centered white A4 card, box-shadow, padding 64px. Typography: Times New Roman body 11pt #1a1a1a justified 1.75 line-height, H2 16pt bold centered underlined, H3 13pt bold left. Page header small centered gray. Page number '— 12 —' bottom center. Word count badge floating bottom right '1 247 mots'. Top bar: 'Aperçu du document' left + 3 buttons right: Copier, Télécharger .docx, Révision.
+
+5. Revision slide-in panel: slides from right 320px wide, textarea 'Que souhaitez-vous modifier ?', 'Appliquer la révision' purple button.
+
+6. PaywallModal: triggers after 600 words stream. Blurs document filter:blur(4px). White modal card centered with 3 plan cards (Essentiel 149 MAD / Pro 449 MAD 'Le plus populaire' / Premium 749 MAD). 'Paiement sécurisé · Remboursement 48h · MAD' below.
+
+Show me preview when everything is done."
