@@ -5,7 +5,7 @@ import { ChevronDown, Search, ArrowRight, ToggleLeft, ToggleRight } from "lucide
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { StepLayout } from "@/components/report/StepLayout";
-import { saveReport } from "@/lib/reportStore";
+import { saveReport, useAutoSave } from "@/lib/reportStore";
 
 const CITATION_STYLES = ["APA 7th ed.", "Chicago 17th", "Harvard", "IEEE", "MLA 9th"];
 const ANNEE_PILLS = ["Tous", "5 dernières années", "Personnalisé"];
@@ -41,6 +41,11 @@ export default function Step1Page() {
 
   const filteredSchools = SCHOOLS.filter((s) =>
     s.toLowerCase().includes(schoolSearch.toLowerCase())
+  );
+
+  useAutoSave(
+    { reportType: reportType ?? undefined, theme, school, filiere, annee, encadrantPeda, encadrantPro: encadrantPro || undefined, entreprise: entreprise || undefined, ville, citationStyle },
+    [reportType, theme, school, filiere, annee, encadrantPeda, encadrantPro, entreprise, ville, citationStyle]
   );
 
   const canContinue = reportType && theme.trim() && school && filiere.trim() && annee && encadrantPeda.trim() && ville.trim();

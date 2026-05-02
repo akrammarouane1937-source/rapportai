@@ -7,7 +7,7 @@ import { StepLayout } from "@/components/report/StepLayout";
 import { WordPreview } from "@/components/report/WordPreview";
 import { useGenerate } from "@/lib/useGenerate";
 import { markdownToHtml } from "@/lib/markdownToHtml";
-import { saveReport, getReport } from "@/lib/reportStore";
+import { saveReport, getReport, useAutoSave } from "@/lib/reportStore";
 
 const DEFAULT_DEDICACES = `À mes chers parents, pour leur amour inconditionnel, leurs sacrifices et leur soutien indéfectible tout au long de mon parcours.
 
@@ -48,6 +48,11 @@ export default function Step3Page() {
   const previewHtml = buildPreviewHtml(
     dedicaces || DEFAULT_DEDICACES,
     remerciements || DEFAULT_REMERCIEMENTS,
+  );
+
+  useAutoSave(
+    { dedicaces: dedicaces || undefined, remerciements: remerciements || undefined },
+    [dedicaces, remerciements]
   );
 
   const wordCount = (dedicaces + " " + remerciements)

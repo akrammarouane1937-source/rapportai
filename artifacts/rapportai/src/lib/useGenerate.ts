@@ -1,4 +1,5 @@
 import { useRef, useState, useCallback } from "react";
+import { getReport } from "@/lib/reportStore";
 
 const BASE_PATH = import.meta.env.BASE_URL.replace(/\/$/, "");
 
@@ -14,6 +15,7 @@ export type GenerateSection =
 
 export interface GenerateOptions {
   section: GenerateSection;
+  // Callers may override any field; everything else is auto-filled from the store
   theme?: string;
   school?: string;
   filiere?: string;
@@ -23,14 +25,21 @@ export interface GenerateOptions {
   extraContext?: string;
 }
 
-const DEMO_CONTEXT: GenerateOptions = {
-  theme: "Optimisation de portefeuille d'actifs financiers à la Bourse de Casablanca",
-  school: "EMSI",
-  filiere: "Finance",
-  problematique: "Dans quelle mesure la théorie moderne du portefeuille peut-elle être appliquée aux spécificités du marché boursier marocain ?",
-  motsCles: ["optimisation", "portefeuille", "Markowitz", "MASI", "marché émergent"],
-  citationStyle: "APA 7th ed.",
-  section: "laisser-ia",
+/** Fallback demo context — used when the store has no data yet */
+const DEMO: Record<string, unknown> = {
+  reportType:   "PFE",
+  theme:        "Optimisation de portefeuille d'actifs financiers à la Bourse de Casablanca",
+  school:       "EMSI",
+  filiere:      "Finance",
+  annee:        "2023–2024",
+  studentName:  "Youssef El Amrani",
+  encadrantPeda:"Pr. Mohamed Alami",
+  encadrantPro: "M. Karim Benali",
+  entreprise:   "Attijariwafa Bank",
+  ville:        "Casablanca",
+  problematique:"Dans quelle mesure la théorie moderne du portefeuille peut-elle être appliquée aux spécificités du marché boursier marocain ?",
+  motsCles:     ["optimisation", "portefeuille", "Markowitz", "MASI", "marché émergent"],
+  citationStyle:"APA 7th ed.",
 };
 
 function countWords(text: string): number {
@@ -61,11 +70,43 @@ export function useGenerate(opts: {
     abortRef.current = ctrl;
 
     try {
-      const body = { ...DEMO_CONTEXT, ...options };
+      // Load everything from the store so Claude has maximum context
+      const stored = getReport();
+
+      const body = {
+        // 1. Demo defaults (lowest priority — only when store is empty)
+        ...DEMO,
+        // 2. Stored user data (the real profile + previously generated sections)
+        reportType:    stored.reportType,
+        theme:         stored.theme,
+        school:        stored.school,
+        filiere:       stored.filiere,
+        annee:         stored.annee,
+        studentName:   stored.studentName,
+        encadrantPeda: stored.encadrantPeda,
+        encadrantPro:  stored.encadrantPro,
+        entreprise:    stored.entreprise,
+        ville:         stored.ville,
+        citationStyle: stored.citationStyle,
+        motsCles:      stored.motsCles,
+        // Previously generated sections → Claude can cross-reference them
+        resume:        stored.resume,
+        introduction:  stored.introduction,
+        partieI:       stored.partieI,
+        partieII:      stored.partieII,
+        // 3. Explicit call-site options override everything
+        ...options,
+      };
+
+      // Strip undefined so JSON body stays clean
+      const cleanBody = Object.fromEntries(
+        Object.entries(body).filter(([, v]) => v !== undefined)
+      );
+
       const resp = await fetch(`${BASE_PATH}/api/generate`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(body),
+        body: JSON.stringify(cleanBody),
         signal: ctrl.signal,
       });
 
@@ -91,7 +132,7 @@ export function useGenerate(opts: {
           try {
             const msg = JSON.parse(json) as { content?: string; done?: boolean; error?: string };
             if (msg.error) { setError(msg.error); break; }
-            if (msg.done) { onDone(); break; }
+            if (msg.done)  { onDone(); break; }
             if (msg.content) {
               if (paywallWords && !paywallTriggeredRef.current) {
                 wordCountRef.current += countWords(msg.content);

@@ -4,7 +4,7 @@ import { useLocation } from "wouter";
 import { Upload, X, ArrowRight, Sparkles, University } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { StepLayout } from "@/components/report/StepLayout";
-import { saveReport, getReport } from "@/lib/reportStore";
+import { saveReport, getReport, useAutoSave } from "@/lib/reportStore";
 
 const REPORT_TYPES = [
   { id: "PFE", label: "PFE", desc: "Projet de Fin d'Études" },
@@ -55,6 +55,11 @@ export default function Step2Page() {
     });
     setLocation("/rapport/step-3");
   };
+
+  useAutoSave(
+    { reportType, theme, school, filiere, annee, studentName: student, encadrantPeda: encPeda, encadrantPro: encPro || undefined, entreprise: entreprise || undefined, ville },
+    [reportType, theme, school, filiere, annee, student, encPeda, encPro, entreprise, ville]
+  );
 
   const canContinue = theme.trim() && school.trim() && student.trim();
 

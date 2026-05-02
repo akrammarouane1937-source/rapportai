@@ -1,3 +1,5 @@
+import { useEffect } from "react";
+
 const KEY = "rapportai_v1";
 
 export interface ReportData {
@@ -38,7 +40,7 @@ export interface ReportData {
 export function getReport(): ReportData {
   try {
     const raw = localStorage.getItem(KEY);
-    return raw ? JSON.parse(raw) : {};
+    return raw ? (JSON.parse(raw) as ReportData) : {};
   } catch {
     return {};
   }
@@ -51,4 +53,16 @@ export function saveReport(patch: Partial<ReportData>): void {
   } catch {
     // ignore quota errors in demo mode
   }
+}
+
+/**
+ * Auto-saves a partial report snapshot whenever any dependency changes.
+ * Uses a 600 ms debounce so saves don't fire on every keystroke.
+ */
+export function useAutoSave(data: Partial<ReportData>, deps: unknown[]): void {
+  useEffect(() => {
+    const t = setTimeout(() => saveReport(data), 600);
+    return () => clearTimeout(t);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, deps);
 }
