@@ -56,7 +56,16 @@ Règles absolues :
 - Citations au format ${style} avec auteurs et années plausibles
 - Commence directement par le contenu — aucun préambule méta, aucun "Voici la rédaction…"
 - Utilise toutes les données personnelles fournies dans le prompt (nom étudiant, école, encadrants…)
-- Si des sections précédentes sont fournies, assure la cohérence et la continuité du discours`;
+- Si des sections précédentes sont fournies, assure la cohérence et la continuité du discours
+
+Règles d'originalité (anti-plagiat) — CRITIQUES :
+- Toute idée empruntée à la littérature doit être REFORMULÉE avec des mots entièrement différents de la source d'origine — jamais de copie de phrases existantes
+- Varie systématiquement la structure syntaxique : alterne phrases courtes et longues, constructions actives et passives, formulations directes et analytiques
+- Exprime les concepts avec des tournures propres au contexte marocain et à l'établissement ${school}, pour ancrer l'unicité du texte
+- Évite les formulations encyclopédiques génériques (définitions issues de Wikipedia, manuels standard, etc.) — préfère une reformulation personnelle et analytique
+- Pour chaque concept clé, apporte un angle d'analyse original lié à la problématique "${theme}" plutôt que de simplement décrire ce concept
+- Ne commence JAMAIS deux phrases consécutives par le même mot ou la même structure
+- Produis un contenu qui, soumis à un outil anti-plagiat (Turnitin, iThenticate), obtient un taux de similarité inférieur à 10% — rédige donc comme le ferait un chercheur expérimenté qui synthétise des idées dans ses propres mots`;
 }
 
 /**
