@@ -36,6 +36,7 @@ pnpm workspace monorepo. SaaS for Moroccan students to generate academic reports
 | `/rapport/partie-i` | PartieIPage | protected, page-limit upsell |
 | `/rapport/partie-ii` | PartieIIPage | protected, page-limit upsell |
 | `/juryai` | JuryAIPage | protected, Pro/Premium gate |
+| `/bibliotheque` | BibliothequeePage | protected, Pro/Premium gate, dark theme |
 | `/demo/*` | Same pages | public demo versions |
 
 ### API (all under `/api` prefix)
@@ -74,6 +75,14 @@ pnpm workspace monorepo. SaaS for Moroccan students to generate academic reports
 - **`JuryAIPage`** — Split-panel chat interface, 3 jury members (Pr. Benali, Dr. Alaoui, M. Mansouri), SSE streaming, quick-reply chips, progress counter
 - **`FigurePanel`** — CSV/Excel upload → Claude analysis → approve/reject suggestion cards → Chart.js PNG rendering → stored in figureStore → auto-inserted into .docx. Works with or without data file.
 - **`ScholarChips`** — Dynamic Google Scholar keyword chips derived from student's keywords + theme/filière. 2-3 chips per section, each opens a targeted search in new tab.
+- **`BibliothequeePage`** — Dark-themed source manager. Stacked card illustration (Springer/arXiv/nature). Import PDF (with details modal), DOI/URL (CrossRef API lookup), .bib/.ris (regex parser), Google Scholar. Saves to `bibliothequeStore` (localStorage). Auto-detects "Utilisé dans Partie I/II" by matching author names against generated text. Pro/Premium gate with blur overlay + upgrade CTA.
+
+## Bibliothèque (`src/lib/bibliothequeStore.ts`)
+- `BibSource` type: `{ id, title, authors, year, journal, doi, url, type, usedIn[], addedAt }`
+- `getBibSources()`, `addBibSource()`, `removeBibSource()` — localStorage CRUD
+- `parseBib(text)` — regex parser for `.bib`/`.ris` files, extracts `@article`/`@book` entries
+- `fetchDoi(doi)` — calls `https://api.crossref.org/works/{doi}` (free, no auth) → title, authors, year, journal
+- `detectUsedIn(source, partieI, partieII, intro)` — author last-name string match against generated sections
 
 ## Figures System (`src/lib/` + `src/components/figures/`)
 
