@@ -3,6 +3,8 @@ import { motion, AnimatePresence } from "framer-motion";
 import { Copy, Download, PenLine, X, Check, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { generatePartialDocx, downloadBlob } from "@/lib/generateDocx";
+import { UpsellModal } from "@/components/report/UpsellModal";
+import { getMyPlan, incrementRevision, PLAN_LIMITS } from "@/lib/userPlan";
 
 interface WordPreviewProps {
   content?: string;
@@ -34,13 +36,30 @@ const MOCK_CONTENT = `
 <p>Plus récemment, les modèles factoriels ont enrichi cette approche en introduisant des facteurs supplémentaires tels que la taille des entreprises, le ratio valeur comptable sur valeur de marché, et la momentum. Ces développements théoriques ont permis d'améliorer significativement le pouvoir explicatif des modèles d'évaluation.</p>
 `;
 
-function RevisionPanel({ open, onClose }: { open: boolean; onClose: () => void }) {
+function RevisionPanel({
+  open,
+  onClose,
+  onRevisionLimitHit,
+}: {
+  open: boolean;
+  onClose: () => void;
+  onRevisionLimitHit: () => void;
+}) {
   const [text, setText] = useState("");
   const [applied, setApplied] = useState(false);
 
   const handleApply = () => {
+    const next = incrementRevision();
+    const limit = PLAN_LIMITS[next.planId].revisions;
     setApplied(true);
-    setTimeout(() => { setApplied(false); setText(""); onClose(); }, 1500);
+    setTimeout(() => {
+      setApplied(false);
+      setText("");
+      onClose();
+      if (next.revisionCount >= limit) {
+        onRevisionLimitHit();
+      }
+    }, 1500);
   };
 
   return (
@@ -105,6 +124,7 @@ export function WordPreview({
   blurred = false,
 }: WordPreviewProps) {
   const [revisionOpen, setRevisionOpen] = useState(false);
+  const [revisionUpsell, setRevisionUpsell] = useState(false);
   const [copied, setCopied] = useState(false);
   const [downloading, setDownloading] = useState(false);
   const html = content || MOCK_CONTENT;
@@ -214,7 +234,17 @@ export function WordPreview({
       </div>
 
       {/* Revision panel */}
-      <RevisionPanel open={revisionOpen} onClose={() => setRevisionOpen(false)} />
+      <RevisionPanel
+        open={revisionOpen}
+        onClose={() => setRevisionOpen(false)}
+        onRevisionLimitHit={() => setRevisionUpsell(true)}
+      />
+      <UpsellModal
+        open={revisionUpsell}
+        onClose={() => setRevisionUpsell(false)}
+        variant="revision-essentiel"
+        currentPlan={getMyPlan().planId}
+      />
     </div>
   );
 }

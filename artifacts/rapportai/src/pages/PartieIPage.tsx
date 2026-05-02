@@ -9,9 +9,11 @@ import { Button } from "@/components/ui/button";
 import { Sidebar } from "@/components/layout/Sidebar";
 import { WordPreview } from "@/components/report/WordPreview";
 import { PaywallModal } from "@/components/report/PaywallModal";
+import { UpsellModal } from "@/components/report/UpsellModal";
 import { useGenerate } from "@/lib/useGenerate";
 import { markdownToHtml } from "@/lib/markdownToHtml";
-import { saveReport } from "@/lib/reportStore";
+import { saveReport, getReport } from "@/lib/reportStore";
+import { getMyPlan, PLAN_LIMITS } from "@/lib/userPlan";
 
 const INITIAL_KEYWORDS = ["portefeuille", "MEDAF", "Markowitz", "risque financier", "Bourse de Casablanca"];
 const INITIAL_SOURCES = ["Markowitz (1952)", "Fama (1970)", "Sharpe (1964)"];
@@ -51,6 +53,7 @@ export default function PartieIPage() {
   const [wordCount, setWordCount] = useState(0);
   const [previewContent, setPreviewContent] = useState("");
   const [showPaywall, setShowPaywall] = useState(false);
+  const [showUpsell, setShowUpsell] = useState(false);
   const fileRef = useRef<HTMLInputElement>(null);
   const rawTextRef = useRef("");
 
@@ -62,7 +65,18 @@ export default function PartieIPage() {
     setPreviewContent(html);
   }, []);
 
-  const onDone = useCallback(() => { saveReport({ partieI: rawTextRef.current }); }, []);
+  const onDone = useCallback(() => {
+    saveReport({ partieI: rawTextRef.current });
+    // Check page limit after generation
+    const plan = getMyPlan();
+    const d = getReport();
+    const totalWords = [d.introduction, rawTextRef.current, d.partieII, d.conclusion]
+      .reduce((acc, s) => acc + (s ? s.split(/\s+/).filter(Boolean).length : 0), 0);
+    const estimatedPages = Math.round(totalWords / 250);
+    if (estimatedPages >= PLAN_LIMITS[plan.planId].pages) {
+      setTimeout(() => setShowUpsell(true), 800);
+    }
+  }, []);
   const onPaywall = useCallback(() => { setShowPaywall(true); }, []);
 
   const { generate, isStreaming: generating } = useGenerate({
@@ -79,12 +93,8 @@ export default function PartieIPage() {
     setShowPaywall(false);
     generate({
       section: "partie-i",
-      theme: "Optimisation de portefeuille d'actifs financiers à la Bourse de Casablanca",
-      school: "EMSI",
-      filiere: "Finance",
-      problematique: problematique || "Dans quelle mesure la théorie moderne du portefeuille peut-elle être appliquée aux spécificités du marché boursier marocain ?",
+      problematique: problematique || undefined,
       motsCles: keywords,
-      citationStyle: "APA 7th ed.",
     });
   };
 
@@ -309,6 +319,12 @@ export default function PartieIPage() {
           </div>
         </div>
       </div>
+      <UpsellModal
+        open={showUpsell}
+        onClose={() => setShowUpsell(false)}
+        variant={getMyPlan().planId === "pro" ? "page-pro" : "page-essentiel"}
+        currentPlan={getMyPlan().planId}
+      />
     </div>
   );
 }

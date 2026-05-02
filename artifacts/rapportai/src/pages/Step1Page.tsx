@@ -5,7 +5,7 @@ import { ChevronDown, Search, ArrowRight, ToggleLeft, ToggleRight } from "lucide
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { StepLayout } from "@/components/report/StepLayout";
-import { saveReport, useAutoSave } from "@/lib/reportStore";
+import { saveReport, useAutoSave, getReport } from "@/lib/reportStore";
 
 const CITATION_STYLES = ["APA 7th ed.", "Chicago 17th", "Harvard", "IEEE", "MLA 9th"];
 const ANNEE_PILLS = ["Tous", "5 dernières années", "Personnalisé"];
@@ -21,23 +21,24 @@ const YEARS = ["2023–2024", "2024–2025", "2025–2026"];
 
 export default function Step1Page() {
   const [, setLocation] = useLocation();
-  const [reportType, setReportType] = useState<string | null>(null);
-  const [theme, setTheme] = useState("");
-  const [school, setSchool] = useState("");
+  const _stored = getReport();
+  const [reportType, setReportType] = useState<string | null>(_stored.reportType ?? null);
+  const [theme, setTheme] = useState(_stored.theme ?? "");
+  const [school, setSchool] = useState(_stored.school ?? "");
   const [schoolSearch, setSchoolSearch] = useState("");
   const [schoolOpen, setSchoolOpen] = useState(false);
-  const [filiere, setFiliere] = useState("");
-  const [annee, setAnnee] = useState("");
+  const [filiere, setFiliere] = useState(_stored.filiere ?? "");
+  const [annee, setAnnee] = useState(_stored.annee ?? "");
   const [anneeOpen, setAnneeOpen] = useState(false);
-  const [encadrantPeda, setEncadrantPeda] = useState("");
-  const [encadrantPro, setEncadrantPro] = useState("");
-  const [entreprise, setEntreprise] = useState("");
-  const [citationStyle, setCitationStyle] = useState("APA 7th ed.");
+  const [encadrantPeda, setEncadrantPeda] = useState(_stored.encadrantPeda ?? "");
+  const [encadrantPro, setEncadrantPro] = useState(_stored.encadrantPro ?? "");
+  const [entreprise, setEntreprise] = useState(_stored.entreprise ?? "");
+  const [citationStyle, setCitationStyle] = useState(_stored.citationStyle ?? "APA 7th ed.");
   const [citationStyleOpen, setCitationStyleOpen] = useState(false);
   const [anneePub, setAnneePub] = useState("Tous");
   const [showPageNum, setShowPageNum] = useState(true);
   const [sourcesExternes, setSourcesExternes] = useState(false);
-  const [ville, setVille] = useState("");
+  const [ville, setVille] = useState(_stored.ville ?? "");
 
   const filteredSchools = SCHOOLS.filter((s) =>
     s.toLowerCase().includes(schoolSearch.toLowerCase())

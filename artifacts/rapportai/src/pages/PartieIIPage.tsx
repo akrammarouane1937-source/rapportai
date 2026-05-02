@@ -9,9 +9,11 @@ import { Button } from "@/components/ui/button";
 import { Sidebar } from "@/components/layout/Sidebar";
 import { WordPreview } from "@/components/report/WordPreview";
 import { PaywallModal } from "@/components/report/PaywallModal";
+import { UpsellModal } from "@/components/report/UpsellModal";
 import { useGenerate } from "@/lib/useGenerate";
 import { markdownToHtml } from "@/lib/markdownToHtml";
-import { saveReport } from "@/lib/reportStore";
+import { saveReport, getReport } from "@/lib/reportStore";
+import { getMyPlan, PLAN_LIMITS } from "@/lib/userPlan";
 
 const INITIAL_KEYWORDS = ["analyse empirique", "frontière efficiente", "rendement ajusté", "ratio de Sharpe", "BVC"];
 const INITIAL_SOURCES = ["Fama & French (1993)", "Elton et al. (1976)", "AMMC (2023)"];
@@ -51,6 +53,7 @@ export default function PartieIIPage() {
   const [wordCount, setWordCount] = useState(0);
   const [previewContent, setPreviewContent] = useState("");
   const [showPaywall, setShowPaywall] = useState(false);
+  const [showUpsell, setShowUpsell] = useState(false);
   const fileRef = useRef<HTMLInputElement>(null);
   const rawTextRef = useRef("");
 
@@ -62,7 +65,18 @@ export default function PartieIIPage() {
     setPreviewContent(html);
   }, []);
 
-  const onDone = useCallback(() => { saveReport({ partieII: rawTextRef.current }); }, []);
+  const onDone = useCallback(() => {
+    saveReport({ partieII: rawTextRef.current });
+    // Check page limit after generation
+    const plan = getMyPlan();
+    const d = getReport();
+    const totalWords = [d.introduction, d.partieI, rawTextRef.current, d.conclusion]
+      .reduce((acc, s) => acc + (s ? s.split(/\s+/).filter(Boolean).length : 0), 0);
+    const estimatedPages = Math.round(totalWords / 250);
+    if (estimatedPages >= PLAN_LIMITS[plan.planId].pages) {
+      setTimeout(() => setShowUpsell(true), 800);
+    }
+  }, []);
   const onPaywall = useCallback(() => { setShowPaywall(true); }, []);
 
   const { generate, isStreaming: generating } = useGenerate({
@@ -79,12 +93,8 @@ export default function PartieIIPage() {
     setShowPaywall(false);
     generate({
       section: "partie-ii",
-      theme: "Optimisation de portefeuille d'actifs financiers à la Bourse de Casablanca",
-      school: "EMSI",
-      filiere: "Finance",
-      problematique: resultats || "Comment les résultats empiriques confirment-ils ou infirment-ils les prédictions du modèle de Markowitz sur le marché boursier marocain ?",
+      problematique: resultats || undefined,
       motsCles: keywords,
-      citationStyle: "APA 7th ed.",
       extraContext: methodo || undefined,
     });
   };
@@ -327,6 +337,12 @@ export default function PartieIIPage() {
           </div>
         </div>
       </div>
+      <UpsellModal
+        open={showUpsell}
+        onClose={() => setShowUpsell(false)}
+        variant={getMyPlan().planId === "pro" ? "page-pro" : "page-essentiel"}
+        currentPlan={getMyPlan().planId}
+      />
     </div>
   );
 }
