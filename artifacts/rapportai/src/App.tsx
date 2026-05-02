@@ -24,6 +24,7 @@ import PartieIIPage from "@/pages/PartieIIPage";
 import JuryAIPage from "@/pages/JuryAIPage";
 import BibliothequeePage from "@/pages/BibliothequeePage";
 import SharePage from "@/pages/SharePage";
+import PaymentSuccessPage from "@/pages/PaymentSuccessPage";
 import NotFound from "@/pages/not-found";
 
 const queryClient = new QueryClient();
@@ -335,6 +336,7 @@ function ClerkProviderWithRoutes() {
             <Route path="/demo/partie-i" component={PartieIPage} />
             <Route path="/demo/partie-ii" component={PartieIIPage} />
             <Route path="/share/:id" component={SharePage} />
+            <Route path="/payment/success" component={PaymentSuccessPage} />
             <Route component={NotFound} />
           </Switch>
           <Toaster />

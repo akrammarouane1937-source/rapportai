@@ -1,13 +1,14 @@
 import { useState } from "react";
-import { motion, AnimatePresence } from "framer-motion";
-import { Link, useLocation } from "wouter";
+import { motion } from "framer-motion";
+import { Link } from "wouter";
 import {
-  Check, Sparkles, X, CreditCard, Smartphone, ShieldCheck,
-  ChevronRight, ArrowLeft, Loader2, PartyPopper,
+  Check, X, Sparkles, ShieldCheck,
+  ChevronRight, ArrowLeft, Loader2,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { getMyPlan, saveMyPlan, type PlanId } from "@/lib/userPlan";
+import { getMyPlan, type PlanId } from "@/lib/userPlan";
+
+const BASE_PATH = (import.meta.env.BASE_URL as string).replace(/\/$/, "");
 
 /* ─── Plan definitions ─────────────────────────────────────────────────── */
 interface Plan {
@@ -77,339 +78,39 @@ const PLANS: Plan[] = [
   },
 ];
 
-/* ─── Payment methods ───────────────────────────────────────────────────── */
-type PayMethod = "cmi" | "orange" | "cih";
-
-const PAY_METHODS: { id: PayMethod; label: string; sub: string; icon: React.ReactNode }[] = [
-  {
-    id: "cmi",
-    label: "Carte bancaire",
-    sub: "Visa / Mastercard / CMI",
-    icon: <CreditCard className="w-5 h-5 text-blue-600" />,
-  },
-  {
-    id: "orange",
-    label: "Orange Money",
-    sub: "Paiement mobile instantané",
-    icon: <Smartphone className="w-5 h-5 text-orange-500" />,
-  },
-  {
-    id: "cih",
-    label: "CIH Pay",
-    sub: "Via votre compte CIH",
-    icon: <Smartphone className="w-5 h-5 text-green-600" />,
-  },
-];
-
-/* ─── Checkout modal ────────────────────────────────────────────────────── */
-type CheckoutStep = "method" | "details" | "processing" | "success";
-
-function CheckoutModal({
-  plan,
-  onClose,
-}: {
-  plan: Plan;
-  onClose: () => void;
-}) {
-  const [, setLocation] = useLocation();
-  const [step, setStep] = useState<CheckoutStep>("method");
-  const [method, setMethod] = useState<PayMethod>("cmi");
-  const [phone, setPhone] = useState("");
-  const [cardNum, setCardNum] = useState("");
-  const [cardExp, setCardExp] = useState("");
-  const [cardCvv, setCardCvv] = useState("");
-
-  const handlePay = () => {
-    setStep("processing");
-    setTimeout(() => {
-      saveMyPlan({ planId: plan.id, purchasedAt: Date.now() });
-      setStep("success");
-    }, 2400);
-  };
-
-  const handleGoToDashboard = () => {
-    onClose();
-    setLocation("/dashboard");
-  };
-
-  const detailsValid =
-    method === "cmi"
-      ? cardNum.replace(/\s/g, "").length >= 16 && cardExp.length >= 5 && cardCvv.length >= 3
-      : phone.replace(/\s/g, "").length >= 10;
-
-  return (
-    <motion.div
-      initial={{ opacity: 0 }}
-      animate={{ opacity: 1 }}
-      exit={{ opacity: 0 }}
-      className="fixed inset-0 z-[9999] flex items-center justify-center p-4"
-      style={{ background: "rgba(15,10,30,0.5)", backdropFilter: "blur(6px)" }}
-      onClick={(e) => { if (e.target === e.currentTarget && step !== "processing") onClose(); }}
-    >
-      <motion.div
-        initial={{ scale: 0.92, opacity: 0, y: 24 }}
-        animate={{ scale: 1,     opacity: 1, y: 0  }}
-        exit={{ scale: 0.95, opacity: 0 }}
-        transition={{ type: "spring", damping: 26, stiffness: 300 }}
-        className="bg-white rounded-2xl w-full max-w-md overflow-hidden"
-        style={{ boxShadow: "0 32px 80px rgba(124,58,237,0.25), 0 4px 24px rgba(0,0,0,0.12)" }}
-      >
-        {/* Top stripe */}
-        <div className="h-1.5" style={{ background: "linear-gradient(90deg, #7c3aed, #a855f7, #ec4899)" }} />
-
-        {/* Close button (hidden during processing) */}
-        {step !== "processing" && step !== "success" && (
-          <button
-            onClick={onClose}
-            className="absolute top-4 right-4 w-8 h-8 rounded-xl flex items-center justify-center hover:bg-gray-100 text-gray-400 hover:text-gray-700 transition-colors z-10"
-          >
-            <X className="w-4 h-4" />
-          </button>
-        )}
-
-        <AnimatePresence mode="wait">
-
-          {/* ── Step 1: choose method ── */}
-          {step === "method" && (
-            <motion.div key="method" initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -20 }} className="p-7">
-              {/* Plan summary */}
-              <div className="flex items-center justify-between mb-6">
-                <div>
-                  <p className="text-xs font-bold text-purple-600 uppercase tracking-wider mb-0.5">Plan {plan.name}</p>
-                  <p className="text-2xl font-extrabold text-gray-900">{plan.price} <span className="text-base font-semibold text-gray-400">MAD</span></p>
-                  <p className="text-xs text-gray-400 mt-0.5">Paiement unique · Remboursement 48h</p>
-                </div>
-                <div className="w-14 h-14 rounded-2xl bg-purple-50 flex items-center justify-center">
-                  <ShieldCheck className="w-7 h-7 text-purple-600" />
-                </div>
-              </div>
-
-              <p className="text-sm font-semibold text-gray-700 mb-3">Choisir le mode de paiement</p>
-              <div className="space-y-2.5 mb-6">
-                {PAY_METHODS.map((m) => (
-                  <button
-                    key={m.id}
-                    onClick={() => setMethod(m.id)}
-                    className={`w-full flex items-center gap-3.5 p-4 rounded-xl border-2 transition-all text-left
-                      ${method === m.id ? "border-purple-500 bg-purple-50" : "border-gray-100 hover:border-gray-200 bg-white"}`}
-                  >
-                    <div className={`w-9 h-9 rounded-xl flex items-center justify-center flex-shrink-0 ${method === m.id ? "bg-white" : "bg-gray-50"}`}>
-                      {m.icon}
-                    </div>
-                    <div className="flex-1 min-w-0">
-                      <p className="text-sm font-semibold text-gray-900">{m.label}</p>
-                      <p className="text-xs text-gray-400">{m.sub}</p>
-                    </div>
-                    <div className={`w-4 h-4 rounded-full border-2 flex-shrink-0 ${method === m.id ? "border-purple-500 bg-purple-500" : "border-gray-300"}`}>
-                      {method === m.id && <div className="w-full h-full rounded-full bg-white scale-50" />}
-                    </div>
-                  </button>
-                ))}
-              </div>
-
-              <Button
-                onClick={() => setStep("details")}
-                className="w-full h-12 bg-purple-600 hover:bg-purple-700 text-white font-bold rounded-xl flex items-center justify-center gap-2"
-                style={{ boxShadow: "0 4px 20px rgba(124,58,237,0.35)" }}
-              >
-                Continuer <ChevronRight className="w-4 h-4" />
-              </Button>
-            </motion.div>
-          )}
-
-          {/* ── Step 2: payment details ── */}
-          {step === "details" && (
-            <motion.div key="details" initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -20 }} className="p-7">
-              <button onClick={() => setStep("method")} className="flex items-center gap-1.5 text-sm text-gray-500 hover:text-gray-700 mb-5 transition-colors">
-                <ArrowLeft className="w-4 h-4" /> Retour
-              </button>
-
-              <h3 className="font-bold text-gray-900 text-base mb-5" style={{ fontFamily: "'Plus Jakarta Sans', sans-serif" }}>
-                {method === "cmi" ? "Informations de carte" : method === "orange" ? "Orange Money" : "CIH Pay"}
-              </h3>
-
-              {method === "cmi" ? (
-                <div className="space-y-3 mb-6">
-                  <div>
-                    <label className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1.5 block">Numéro de carte</label>
-                    <Input
-                      placeholder="0000 0000 0000 0000"
-                      value={cardNum}
-                      onChange={(e) => {
-                        const v = e.target.value.replace(/[^\d]/g, "").slice(0, 16);
-                        setCardNum(v.replace(/(.{4})/g, "$1 ").trim());
-                      }}
-                      className="h-11 rounded-xl border-gray-200 focus:border-purple-400 focus:ring-purple-300"
-                    />
-                  </div>
-                  <div className="grid grid-cols-2 gap-3">
-                    <div>
-                      <label className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1.5 block">Date d'expiration</label>
-                      <Input
-                        placeholder="MM/AA"
-                        value={cardExp}
-                        onChange={(e) => {
-                          let v = e.target.value.replace(/[^\d]/g, "").slice(0, 4);
-                          if (v.length > 2) v = v.slice(0,2) + "/" + v.slice(2);
-                          setCardExp(v);
-                        }}
-                        className="h-11 rounded-xl border-gray-200 focus:border-purple-400 focus:ring-purple-300"
-                      />
-                    </div>
-                    <div>
-                      <label className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1.5 block">CVV</label>
-                      <Input
-                        placeholder="123"
-                        type="password"
-                        value={cardCvv}
-                        onChange={(e) => setCardCvv(e.target.value.replace(/[^\d]/g, "").slice(0, 4))}
-                        className="h-11 rounded-xl border-gray-200 focus:border-purple-400 focus:ring-purple-300"
-                      />
-                    </div>
-                  </div>
-                </div>
-              ) : (
-                <div className="mb-6">
-                  <label className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1.5 block">Numéro de téléphone</label>
-                  <Input
-                    placeholder="06 12 34 56 78"
-                    value={phone}
-                    onChange={(e) => setPhone(e.target.value.replace(/[^\d\s]/g, "").slice(0, 14))}
-                    className="h-11 rounded-xl border-gray-200 focus:border-purple-400 focus:ring-purple-300"
-                  />
-                  <p className="text-xs text-gray-400 mt-2">
-                    {method === "orange" ? "Un code OTP vous sera envoyé pour confirmer." : "Vous recevrez une notification CIH Pay pour approuver."}
-                  </p>
-                </div>
-              )}
-
-              {/* Security note */}
-              <div className="flex items-center gap-2 bg-gray-50 rounded-xl p-3 mb-5">
-                <ShieldCheck className="w-4 h-4 text-green-600 flex-shrink-0" />
-                <p className="text-xs text-gray-500">Paiement sécurisé SSL 256-bit. Vos données ne sont jamais stockées.</p>
-              </div>
-
-              {/* Summary */}
-              <div className="flex items-center justify-between mb-5 px-1">
-                <span className="text-sm text-gray-600">Total — Plan {plan.name}</span>
-                <span className="font-extrabold text-gray-900 text-lg">{plan.price} MAD</span>
-              </div>
-
-              <Button
-                onClick={handlePay}
-                disabled={!detailsValid}
-                className="w-full h-12 bg-purple-600 hover:bg-purple-700 text-white font-bold rounded-xl disabled:opacity-50"
-                style={{ boxShadow: detailsValid ? "0 4px 20px rgba(124,58,237,0.35)" : "none" }}
-              >
-                Payer {plan.price} MAD
-              </Button>
-            </motion.div>
-          )}
-
-          {/* ── Step 3: processing ── */}
-          {step === "processing" && (
-            <motion.div
-              key="processing"
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              className="p-10 flex flex-col items-center text-center"
-            >
-              <div className="relative mb-6">
-                <div className="w-20 h-20 rounded-full bg-purple-50 flex items-center justify-center">
-                  <Loader2 className="w-10 h-10 text-purple-600 animate-spin" />
-                </div>
-              </div>
-              <h3 className="font-bold text-gray-900 text-lg mb-2" style={{ fontFamily: "'Plus Jakarta Sans', sans-serif" }}>
-                Traitement en cours...
-              </h3>
-              <p className="text-sm text-gray-500">Validation du paiement. Ne fermez pas cette fenêtre.</p>
-              <div className="flex gap-1.5 mt-6">
-                {[0,1,2].map((i) => (
-                  <motion.div
-                    key={i}
-                    className="w-2 h-2 rounded-full bg-purple-300"
-                    animate={{ scale: [1, 1.4, 1], opacity: [0.4, 1, 0.4] }}
-                    transition={{ duration: 0.9, repeat: Infinity, delay: i * 0.18 }}
-                  />
-                ))}
-              </div>
-            </motion.div>
-          )}
-
-          {/* ── Step 4: success ── */}
-          {step === "success" && (
-            <motion.div
-              key="success"
-              initial={{ opacity: 0, scale: 0.9 }}
-              animate={{ opacity: 1, scale: 1 }}
-              className="p-10 flex flex-col items-center text-center"
-            >
-              {/* Animated success circle */}
-              <motion.div
-                initial={{ scale: 0 }}
-                animate={{ scale: 1 }}
-                transition={{ type: "spring", damping: 14, stiffness: 300, delay: 0.1 }}
-                className="relative mb-6"
-              >
-                <div className="w-20 h-20 rounded-full bg-green-100 flex items-center justify-center">
-                  <Check className="w-10 h-10 text-green-600 stroke-[2.5]" />
-                </div>
-                <motion.div
-                  initial={{ scale: 0 }}
-                  animate={{ scale: [0, 1.5, 0] }}
-                  transition={{ duration: 0.6, delay: 0.2 }}
-                  className="absolute inset-0 rounded-full bg-green-100"
-                />
-              </motion.div>
-
-              <PartyPopper className="w-8 h-8 text-amber-400 mb-3" />
-              <h3 className="font-bold text-gray-900 text-xl mb-2" style={{ fontFamily: "'Plus Jakarta Sans', sans-serif" }}>
-                Plan {plan.name} activé !
-              </h3>
-              <p className="text-sm text-gray-500 mb-6 max-w-xs">
-                Ton paiement a été confirmé. Tu peux maintenant accéder à toutes les fonctionnalités du plan {plan.name}.
-              </p>
-
-              {/* What's unlocked */}
-              <div className="w-full bg-purple-50 rounded-xl p-4 mb-6 text-left">
-                <p className="text-xs font-bold text-purple-700 uppercase tracking-wider mb-2">Ce qui est débloqué</p>
-                <ul className="space-y-1.5">
-                  {plan.features.slice(0, 4).map((f) => (
-                    <li key={f} className="flex items-center gap-2">
-                      <Check className="w-3.5 h-3.5 text-purple-600 flex-shrink-0 stroke-[2.5]" />
-                      <span className="text-xs text-gray-700">{f}</span>
-                    </li>
-                  ))}
-                  {plan.features.length > 4 && (
-                    <li className="text-xs text-purple-500 font-medium pl-5">+{plan.features.length - 4} de plus…</li>
-                  )}
-                </ul>
-              </div>
-
-              <Button
-                onClick={handleGoToDashboard}
-                className="w-full h-12 bg-purple-600 hover:bg-purple-700 text-white font-bold rounded-xl flex items-center justify-center gap-2"
-                style={{ boxShadow: "0 4px 20px rgba(124,58,237,0.35)" }}
-              >
-                Aller à mon tableau de bord <ChevronRight className="w-4 h-4" />
-              </Button>
-            </motion.div>
-          )}
-
-        </AnimatePresence>
-      </motion.div>
-    </motion.div>
-  );
-}
 
 /* ─── Main page ─────────────────────────────────────────────────────────── */
 export default function PricingPage() {
-  const [selectedPlan, setSelectedPlan] = useState<Plan | null>(null);
+  const [checkoutLoading, setCheckoutLoading] = useState<PlanId | null>(null);
+  const [checkoutError, setCheckoutError] = useState<string | null>(null);
   const currentPlan = getMyPlan();
 
   const canUpgrade = (planId: PlanId) => {
     const order: PlanId[] = ["free", "essentiel", "pro", "premium"];
     return order.indexOf(planId) > order.indexOf(currentPlan.planId);
+  };
+
+  const handleCheckout = async (plan: Plan) => {
+    setCheckoutLoading(plan.id);
+    setCheckoutError(null);
+    try {
+      const origin = window.location.origin;
+      const res = await fetch(`${BASE_PATH}/api/stripe/create-checkout`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          planId: plan.id,
+          successUrl: `${origin}${BASE_PATH}/payment/success?session_id={CHECKOUT_SESSION_ID}`,
+          cancelUrl:  `${origin}${BASE_PATH}/pricing`,
+        }),
+      });
+      const data = await res.json() as { url?: string; error?: string };
+      if (!res.ok || !data.url) throw new Error(data.error ?? "Erreur Stripe");
+      window.location.href = data.url;
+    } catch (err) {
+      setCheckoutError(err instanceof Error ? err.message : "Erreur inconnue");
+      setCheckoutLoading(null);
+    }
   };
 
   return (
@@ -573,7 +274,8 @@ export default function PricingPage() {
                       </div>
                     ) : upgradable ? (
                       <Button
-                        onClick={() => setSelectedPlan(plan)}
+                        onClick={() => handleCheckout(plan)}
+                        disabled={checkoutLoading !== null}
                         className={`w-full h-11 font-semibold rounded-xl text-sm transition-all
                           ${plan.popular
                             ? "bg-purple-600 hover:bg-purple-700 text-white shadow-[0_4px_16px_rgba(124,58,237,0.32)]"
@@ -582,7 +284,10 @@ export default function PricingPage() {
                         `}
                         variant={plan.popular ? "default" : "outline"}
                       >
-                        Choisir {plan.name}
+                        {checkoutLoading === plan.id
+                          ? <><Loader2 className="w-4 h-4 animate-spin mr-2 inline" />Redirection…</>
+                          : <>Choisir {plan.name} <ChevronRight className="w-3.5 h-3.5 ml-1 inline" /></>
+                        }
                       </Button>
                     ) : (
                       <Button
@@ -598,6 +303,21 @@ export default function PricingPage() {
               );
             })}
           </div>
+
+          {/* ── Checkout error ── */}
+          {checkoutError && (
+            <motion.div
+              initial={{ opacity: 0, y: -8 }}
+              animate={{ opacity: 1, y: 0 }}
+              className="mt-6 max-w-md mx-auto bg-red-50 border border-red-200 rounded-xl px-4 py-3 flex items-center gap-3"
+            >
+              <X className="w-4 h-4 text-red-500 flex-shrink-0" />
+              <p className="text-sm text-red-700">{checkoutError}</p>
+              <button onClick={() => setCheckoutError(null)} className="ml-auto text-red-400 hover:text-red-600">
+                <X className="w-4 h-4" />
+              </button>
+            </motion.div>
+          )}
 
           {/* ── Trust strip ── */}
           <motion.div
@@ -638,12 +358,6 @@ export default function PricingPage() {
         </div>
       </main>
 
-      {/* ── Checkout modal ── */}
-      <AnimatePresence>
-        {selectedPlan && (
-          <CheckoutModal plan={selectedPlan} onClose={() => setSelectedPlan(null)} />
-        )}
-      </AnimatePresence>
     </div>
   );
 }
