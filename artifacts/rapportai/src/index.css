@@ -300,3 +300,32 @@
     inset: -1px;
   }
 }
+
+/* Word preview document typography */
+.word-preview-content h2 {
+  font-size: 16pt;
+  font-weight: bold;
+  text-align: center;
+  text-decoration: underline;
+  margin: 2em 0 1em;
+  color: #1a1a1a;
+  font-family: "Times New Roman", serif;
+}
+
+.word-preview-content h3 {
+  font-size: 13pt;
+  font-weight: bold;
+  text-align: left;
+  margin: 1.5em 0 0.75em;
+  color: #1a1a1a;
+  font-family: "Times New Roman", serif;
+}
+
+.word-preview-content p {
+  margin: 0 0 1em;
+  font-family: "Times New Roman", serif;
+  font-size: 11pt;
+  color: #1a1a1a;
+  text-align: justify;
+  line-height: 1.75;
+}
