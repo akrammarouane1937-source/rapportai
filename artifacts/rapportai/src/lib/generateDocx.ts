@@ -3,6 +3,7 @@ import {
   Document,
   Footer,
   HeadingLevel,
+  ImageRun,
   LineRuleType,
   NumberFormat,
   Packer,
@@ -14,6 +15,7 @@ import {
   convertMillimetersToTwip,
 } from "docx";
 import type { ReportData } from "./reportStore";
+import { getApprovedFigures } from "./figureStore";
 
 // ─── Constants ───────────────────────────────────────────────────────────────
 
@@ -235,11 +237,53 @@ function buildIntroduction(d: ReportData): Paragraph[] {
   ];
 }
 
+// ─── Figure image helpers ─────────────────────────────────────────────────────
+
+function base64ToUint8Array(base64: string): Uint8Array {
+  const stripped = base64.replace(/^data:image\/\w+;base64,/, "");
+  const raw = atob(stripped);
+  const bytes = new Uint8Array(raw.length);
+  for (let i = 0; i < raw.length; i++) bytes[i] = raw.charCodeAt(i);
+  return bytes;
+}
+
+function buildFigureImages(placement: "Partie I" | "Partie II"): Paragraph[] {
+  const figures = getApprovedFigures().filter((f) => f.placement === placement);
+  if (figures.length === 0) return [];
+
+  const paras: Paragraph[] = [heading2("Figures et illustrations"), emptyLine()];
+  for (const fig of figures) {
+    try {
+      const data = base64ToUint8Array(fig.pngBase64);
+      paras.push(
+        new Paragraph({
+          alignment: AlignmentType.CENTER,
+          spacing: { before: 280, after: 120 },
+          children: [
+            new ImageRun({
+              type: "png",
+              data,
+              transformation: { width: fig.width ?? 500, height: fig.height ?? 280 },
+            }),
+          ],
+        }),
+        centerPara(fig.caption, BODY_PT, true),
+        bodyPara(fig.description),
+        emptyLine(),
+      );
+    } catch {
+      // skip malformed figure
+    }
+  }
+  return paras;
+}
+
 function buildPartieI(d: ReportData): Paragraph[] {
   return [
     heading1("Partie I", true),
     emptyLine(),
     ...markdownToParas(d.partieI || ""),
+    ...buildFigureImages("Partie I"),
   ];
 }
 
@@ -248,6 +292,7 @@ function buildPartieII(d: ReportData): Paragraph[] {
     heading1("Partie II", true),
     emptyLine(),
     ...markdownToParas(d.partieII || ""),
+    ...buildFigureImages("Partie II"),
   ];
 }
 
@@ -285,12 +330,15 @@ function buildBibliographie(d: ReportData): Paragraph[] {
 }
 
 function buildTableFigures(d: ReportData): Paragraph[] {
-  const figs = d.figures || [];
+  // Prefer live approved figures from figureStore over static report data
+  const approved = getApprovedFigures();
+  const liveFigs = approved.map((f) => ({ n: f.figureNumber, title: f.title, page: "—" }));
+  const figs = liveFigs.length > 0 ? liveFigs : (d.figures || []);
   if (figs.length === 0) return [];
   return [
-    heading1("Table des figures", true),
+    heading1("Liste des figures", true),
     emptyLine(),
-    ...figs.map(f => bodyPara(`Figure ${f.n} — ${f.title} .......... ${f.page}`)),
+    ...figs.map((f) => bodyPara(`Figure ${f.n} — ${f.title} .......... ${f.page}`)),
   ];
 }
 

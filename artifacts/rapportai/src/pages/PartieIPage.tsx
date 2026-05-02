@@ -2,7 +2,7 @@ import { useState, useRef, useCallback } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { useLocation } from "wouter";
 import {
-  Sparkles, RefreshCw, Upload, Plus, X, ExternalLink,
+  Sparkles, RefreshCw, Upload, Plus, X,
   Loader2, ChevronRight, GripVertical,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -14,6 +14,8 @@ import { useGenerate } from "@/lib/useGenerate";
 import { markdownToHtml } from "@/lib/markdownToHtml";
 import { saveReport, getReport } from "@/lib/reportStore";
 import { getMyPlan, PLAN_LIMITS } from "@/lib/userPlan";
+import { ScholarChips } from "@/components/figures/ScholarChips";
+import { FigurePanel } from "@/components/figures/FigurePanel";
 
 const INITIAL_KEYWORDS = ["portefeuille", "MEDAF", "Markowitz", "risque financier", "Bourse de Casablanca"];
 const INITIAL_SOURCES = ["Markowitz (1952)", "Fama (1970)", "Sharpe (1964)"];
@@ -38,6 +40,7 @@ function SourceChip({ label, onRemove }: { label: string; onRemove: () => void }
 
 export default function PartieIPage() {
   const [, setLocation] = useLocation();
+  const report = getReport();
   const [keywords, setKeywords] = useState(INITIAL_KEYWORDS);
   const [problematique, setProblematique] = useState("");
   const [contexte, setContexte] = useState("");
@@ -137,11 +140,7 @@ export default function PartieIPage() {
                     </span>
                   </div>
                   <div className="flex items-center gap-2">
-                    <a href="https://scholar.google.com" target="_blank" rel="noopener noreferrer"
-                      className="text-xs text-purple-500 hover:text-purple-700 flex items-center gap-1 font-medium">
-                      Google Scholar <ExternalLink className="w-3 h-3" />
-                    </a>
-                    <button className="text-xs text-purple-500 hover:text-purple-700 flex items-center gap-1 font-medium ml-1">
+                    <button className="text-xs text-purple-500 hover:text-purple-700 flex items-center gap-1 font-medium">
                       <RefreshCw className="w-3 h-3" /> Regénérer
                     </button>
                   </div>
@@ -151,6 +150,7 @@ export default function PartieIPage() {
                     <KeywordChip key={i} label={kw} onRemove={() => setKeywords((prev) => prev.filter((_, idx) => idx !== i))} />
                   ))}
                 </div>
+                <ScholarChips keywords={keywords} section="partie-i" theme={report.theme} filiere={report.filiere} />
               </div>
 
               {/* Problématique */}
@@ -209,6 +209,8 @@ export default function PartieIPage() {
                   )}
                 </div>
               </div>
+
+              <FigurePanel defaultPlacement="Partie I" />
 
               {/* Résumé contexte */}
               <div>

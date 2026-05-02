@@ -2,7 +2,7 @@ import { useState, useRef, useCallback } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { useLocation } from "wouter";
 import {
-  Sparkles, RefreshCw, Upload, Plus, X, ExternalLink,
+  Sparkles, RefreshCw, Plus, X,
   Loader2, GripVertical,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -14,6 +14,8 @@ import { useGenerate } from "@/lib/useGenerate";
 import { markdownToHtml } from "@/lib/markdownToHtml";
 import { saveReport, getReport } from "@/lib/reportStore";
 import { getMyPlan, PLAN_LIMITS } from "@/lib/userPlan";
+import { ScholarChips } from "@/components/figures/ScholarChips";
+import { FigurePanel } from "@/components/figures/FigurePanel";
 
 const INITIAL_KEYWORDS = ["analyse empirique", "frontière efficiente", "rendement ajusté", "ratio de Sharpe", "BVC"];
 const INITIAL_SOURCES = ["Fama & French (1993)", "Elton et al. (1976)", "AMMC (2023)"];
@@ -38,6 +40,7 @@ function SourceChip({ label, onRemove }: { label: string; onRemove: () => void }
 
 export default function PartieIIPage() {
   const [, setLocation] = useLocation();
+  const report = getReport();
   const [keywords, setKeywords] = useState(INITIAL_KEYWORDS);
   const [resultats, setResultats] = useState("");
   const [methodo, setMethodo] = useState("");
@@ -48,13 +51,10 @@ export default function PartieIIPage() {
   const [sources, setSources] = useState(INITIAL_SOURCES);
   const [newSource, setNewSource] = useState("");
   const [addingSource, setAddingSource] = useState(false);
-  const [dragOver, setDragOver] = useState(false);
-  const [uploadedFile, setUploadedFile] = useState<string | null>(null);
   const [wordCount, setWordCount] = useState(0);
   const [previewContent, setPreviewContent] = useState("");
   const [showPaywall, setShowPaywall] = useState(false);
   const [showUpsell, setShowUpsell] = useState(false);
-  const fileRef = useRef<HTMLInputElement>(null);
   const rawTextRef = useRef("");
 
   const onChunk = useCallback((chunk: string) => {
@@ -138,11 +138,7 @@ export default function PartieIIPage() {
                     </span>
                   </div>
                   <div className="flex items-center gap-2">
-                    <a href="https://scholar.google.com" target="_blank" rel="noopener noreferrer"
-                      className="text-xs text-purple-500 hover:text-purple-700 flex items-center gap-1 font-medium">
-                      Google Scholar <ExternalLink className="w-3 h-3" />
-                    </a>
-                    <button className="text-xs text-purple-500 hover:text-purple-700 flex items-center gap-1 font-medium ml-1">
+                    <button className="text-xs text-purple-500 hover:text-purple-700 flex items-center gap-1 font-medium">
                       <RefreshCw className="w-3 h-3" /> Regénérer
                     </button>
                   </div>
@@ -157,6 +153,7 @@ export default function PartieIIPage() {
                     <Plus className="w-3 h-3" /> Mot-clé
                   </button>
                 </div>
+                <ScholarChips keywords={keywords} section="partie-ii" theme={report.theme} filiere={report.filiere} />
               </div>
 
               {/* Résultats attendus */}
@@ -196,45 +193,7 @@ export default function PartieIIPage() {
                 </button>
               </div>
 
-              {/* PDF Upload */}
-              <div>
-                <label className="block text-sm font-semibold text-gray-700 mb-2">
-                  Documents de référence <span className="text-xs font-normal text-gray-400">(optionnel)</span>
-                </label>
-                <div
-                  onDragOver={(e) => { e.preventDefault(); setDragOver(true); }}
-                  onDragLeave={() => setDragOver(false)}
-                  onDrop={(e) => {
-                    e.preventDefault();
-                    setDragOver(false);
-                    const file = e.dataTransfer.files[0];
-                    if (file) setUploadedFile(file.name);
-                  }}
-                  onClick={() => fileRef.current?.click()}
-                  className={`border-2 border-dashed rounded-xl p-5 text-center cursor-pointer transition-all ${
-                    dragOver ? "border-purple-400 bg-purple-50" : "border-gray-200 hover:border-purple-300 hover:bg-purple-50/30"
-                  }`}
-                >
-                  <input ref={fileRef} type="file" accept=".pdf,.doc,.docx,.xlsx,.csv" className="hidden"
-                    onChange={(e) => { if (e.target.files?.[0]) setUploadedFile(e.target.files[0].name); }} />
-                  {uploadedFile ? (
-                    <div className="flex items-center justify-center gap-2">
-                      <div className="w-8 h-8 bg-purple-100 rounded-lg flex items-center justify-center">
-                        <span className="text-xs font-bold text-purple-600">PDF</span>
-                      </div>
-                      <span className="text-sm font-medium text-gray-700 truncate max-w-[180px]">{uploadedFile}</span>
-                      <button onClick={(e) => { e.stopPropagation(); setUploadedFile(null); }}
-                        className="text-gray-400 hover:text-gray-600"><X className="w-4 h-4" /></button>
-                    </div>
-                  ) : (
-                    <>
-                      <Upload className="w-6 h-6 text-gray-300 mx-auto mb-2" />
-                      <p className="text-sm text-gray-400 font-medium">Données ou PDF</p>
-                      <p className="text-xs text-gray-300 mt-1">PDF, Word, Excel, CSV · max 20 Mo</p>
-                    </>
-                  )}
-                </div>
-              </div>
+              <FigurePanel defaultPlacement="Partie II" />
 
               {/* Chapitres */}
               <div>
@@ -298,12 +257,6 @@ export default function PartieIIPage() {
                 </div>
               </div>
 
-              {/* Figures notice */}
-              <div className="rounded-xl bg-amber-50 border border-amber-100 p-3">
-                <p className="text-xs text-amber-700 font-medium">
-                  💡 Astuce : insère tes graphiques (frontière efficiente, matrices) dans la section <strong>Figures & Graphiques</strong> du tableau de bord pour les inclure automatiquement.
-                </p>
-              </div>
 
             </div>
 

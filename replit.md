@@ -44,6 +44,7 @@ pnpm workspace monorepo. SaaS for Moroccan students to generate academic reports
 | `GET /api/healthz` | Health check |
 | `POST /api/generate` | SSE streaming — generates report sections via Claude |
 | `POST /api/jury` | SSE streaming — JuryAI simulation with 3 jury members |
+| `POST /api/figures/analyze` | JSON — Claude suggests 2-4 figure ideas from CSV/Excel data or topic |
 
 ## Core Libraries (`artifacts/rapportai/src/lib/`)
 
@@ -71,6 +72,28 @@ pnpm workspace monorepo. SaaS for Moroccan students to generate academic reports
 - **`Sidebar`** — Collapsible icon→label, gates JuryAI & Bibliothèque behind Pro with UpsellModal
 - **`ActiveReportCard`** — 9-step stepper with live progress from reportStore
 - **`JuryAIPage`** — Split-panel chat interface, 3 jury members (Pr. Benali, Dr. Alaoui, M. Mansouri), SSE streaming, quick-reply chips, progress counter
+- **`FigurePanel`** — CSV/Excel upload → Claude analysis → approve/reject suggestion cards → Chart.js PNG rendering → stored in figureStore → auto-inserted into .docx. Works with or without data file.
+- **`ScholarChips`** — Dynamic Google Scholar keyword chips derived from student's keywords + theme/filière. 2-3 chips per section, each opens a targeted search in new tab.
+
+## Figures System (`src/lib/` + `src/components/figures/`)
+
+| File | Purpose |
+|---|---|
+| `parseDataFile.ts` | CSV (papaparse) and Excel (xlsx/SheetJS) parsing → `{ columns, rows, preview }` |
+| `figureStore.ts` | localStorage persistence of approved figures with base64 PNG (`getApprovedFigures`, `addApprovedFigure`, `removeApprovedFigure`) |
+| `renderChart.ts` | Chart.js v4 rendering to off-screen canvas → PNG base64 (`renderChartToPng`, `renderFallbackChart`) |
+| `FigurePanel.tsx` | Full panel UI: upload → analyze → suggestion cards (approve/reject) → approved thumbnails |
+| `ScholarChips.tsx` | Dynamic search chips: `https://scholar.google.com/scholar?q=...` |
+
+### Packages added to `@workspace/rapportai`
+- `papaparse` + `@types/papaparse` — CSV parsing
+- `xlsx` — Excel/SheetJS parsing
+- `chart.js` — Chart rendering
+
+### DOCX integration (`generateDocx.ts`)
+- `buildFigureImages(placement)` — reads `getApprovedFigures()`, converts base64 → `Uint8Array`, inserts `ImageRun` + caption + description paragraph
+- `buildTableFigures()` — uses live `getApprovedFigures()` as "Liste des figures", falls back to `d.figures`
+- Figures for "Partie I" injected at end of Partie I section; "Partie II" at end of Partie II
 
 ## Design System
 
