@@ -17,9 +17,9 @@ export const PLAN_LIMITS: Record<PlanId, { pages: number; revisions: number; lab
 
 export const PLAN_FEATURES: Record<PlanId, string[]> = {
   free:      [],
-  essentiel: [],
-  pro:       ["juryai", "anti-plagiat", "citations", "certificat"],
-  premium:   ["juryai", "anti-plagiat", "citations", "certificat", "powerpoint"],
+  essentiel: ["pdf"],
+  pro:       ["pdf", "juryai", "anti-plagiat", "citations", "certificat"],
+  premium:   ["pdf", "juryai", "anti-plagiat", "citations", "certificat", "powerpoint"],
 };
 
 export function getMyPlan(): UserPlanData {

@@ -2,11 +2,12 @@ import { useState, useEffect, useCallback } from "react";
 import { useParams } from "wouter";
 import {
   Download, Link2, Check, Loader2, AlertCircle,
-  BookOpen, GraduationCap, Building2, Calendar,
+  BookOpen, GraduationCap, Building2, Calendar, FileText,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { markdownToHtml } from "@/lib/markdownToHtml";
 import { generateDocx, downloadBlob } from "@/lib/generateDocx";
+import { generatePdf } from "@/lib/generatePdf";
 import type { ReportData } from "@/lib/reportStore";
 
 const BASE_PATH = import.meta.env.BASE_URL.replace(/\/$/, "");
@@ -180,6 +181,14 @@ export default function SharePage() {
                 ? <Loader2 className="w-3 h-3 animate-spin" />
                 : <Download className="w-3 h-3" />}
               .docx
+            </Button>
+            <Button
+              onClick={() => report && generatePdf(report)}
+              variant="outline"
+              className="h-8 px-3 text-xs font-bold rounded-xl gap-1.5 border-red-200 text-red-600 hover:bg-red-50"
+            >
+              <FileText className="w-3 h-3" />
+              PDF
             </Button>
           </div>
         </div>

@@ -4,7 +4,7 @@ import { useLocation } from "wouter";
 import {
   Sparkles, Loader2, X, Upload, Download,
   CheckCircle2, Circle, FileText, BookOpen,
-  BarChart2, Hash, ArrowRight, Share2, Link2, Check,
+  BarChart2, Hash, ArrowRight, Share2, Link2, Check, Lock,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { StepLayout } from "@/components/report/StepLayout";
@@ -14,9 +14,10 @@ import { useGenerate } from "@/lib/useGenerate";
 import { markdownToHtml } from "@/lib/markdownToHtml";
 import { saveReport, getReport } from "@/lib/reportStore";
 import { generateDocx, downloadBlob } from "@/lib/generateDocx";
+import { generatePdf } from "@/lib/generatePdf";
 import { getApprovedFigures } from "@/lib/figureStore";
 import { getBibSources } from "@/lib/bibliothequeStore";
-import { getMyPlan, PLAN_LIMITS } from "@/lib/userPlan";
+import { getMyPlan, PLAN_LIMITS, canUseFeature } from "@/lib/userPlan";
 
 // ─── Constants ────────────────────────────────────────────────────────────────
 
@@ -146,6 +147,7 @@ export default function Step9Page() {
 
   const completedCount = sections.filter((s) => s.done).length;
   const allDone        = completedCount === sections.length;
+  const canPdf         = canUseFeature("pdf", plan.planId);
 
   // ── Share ─────────────────────────────────────────────────────────────────
   const handleShare = async () => {
@@ -404,32 +406,63 @@ export default function Step9Page() {
                 : <><Sparkles className="w-4 h-4" /> Générer la Conclusion</>}
             </Button>
 
-            {/* Export CTA */}
-            <button
-              onClick={handleFullExport}
-              disabled={exportingFull}
-              className="w-full h-14 rounded-xl font-black text-sm flex items-center justify-center gap-3 transition-all disabled:opacity-70 relative overflow-hidden"
-              style={{
-                background: exported
-                  ? "linear-gradient(135deg, #10b981, #059669)"
-                  : "linear-gradient(135deg, #16a34a, #15803d)",
-                boxShadow: "0 6px 24px rgba(22,163,74,0.4)",
-                color: "white",
-                fontFamily: "'Plus Jakarta Sans', sans-serif",
-              }}
-            >
-              {exportingFull ? (
-                <><Loader2 className="w-4 h-4 animate-spin" /> Génération du .docx…</>
-              ) : exported ? (
-                <><CheckCircle2 className="w-5 h-5" /> Rapport téléchargé !</>
+            {/* Export row: .docx + PDF side by side */}
+            <div className="flex gap-2">
+              {/* .docx CTA */}
+              <button
+                onClick={handleFullExport}
+                disabled={exportingFull}
+                className="flex-1 h-14 rounded-xl font-black text-sm flex items-center justify-center gap-2 transition-all disabled:opacity-70 relative overflow-hidden"
+                style={{
+                  background: exported
+                    ? "linear-gradient(135deg, #10b981, #059669)"
+                    : "linear-gradient(135deg, #16a34a, #15803d)",
+                  boxShadow: "0 6px 24px rgba(22,163,74,0.4)",
+                  color: "white",
+                  fontFamily: "'Plus Jakarta Sans', sans-serif",
+                }}
+              >
+                {exportingFull ? (
+                  <><Loader2 className="w-4 h-4 animate-spin" /> .docx…</>
+                ) : exported ? (
+                  <><CheckCircle2 className="w-4 h-4" /> Téléchargé !</>
+                ) : (
+                  <><Download className="w-4 h-4" /> Word .docx</>
+                )}
+              </button>
+
+              {/* PDF button — gated to paid plans */}
+              {canPdf ? (
+                <button
+                  onClick={() => {
+                    saveReport({
+                      conclusion:   rawTextRef.current || report.conclusion || undefined,
+                      apports:      apports || undefined,
+                      perspectives: perspectives || undefined,
+                    });
+                    generatePdf(getReport());
+                  }}
+                  className="flex-1 h-14 rounded-xl font-black text-sm flex items-center justify-center gap-2 transition-all relative overflow-hidden"
+                  style={{
+                    background: "linear-gradient(135deg, #dc2626, #b91c1c)",
+                    boxShadow: "0 6px 24px rgba(220,38,38,0.35)",
+                    color: "white",
+                    fontFamily: "'Plus Jakarta Sans', sans-serif",
+                  }}
+                >
+                  <Download className="w-4 h-4" /> PDF
+                </button>
               ) : (
-                <>
-                  <Download className="w-5 h-5" />
-                  <span>Télécharger mon rapport .docx</span>
-                  <ArrowRight className="w-4 h-4 opacity-70" />
-                </>
+                <button
+                  onClick={() => setShowUpsell(true)}
+                  className="flex-1 h-14 rounded-xl font-black text-sm flex items-center justify-center gap-2 transition-all relative overflow-hidden border-2 border-dashed"
+                  style={{ borderColor: "#e5e7eb", color: "#9ca3af", background: "#fafafa", fontFamily: "'Plus Jakarta Sans', sans-serif" }}
+                  title="Disponible dès le plan Essentiel (149 MAD)"
+                >
+                  <Lock className="w-4 h-4" /> PDF
+                </button>
               )}
-            </button>
+            </div>
 
             {/* ── Share link ── */}
             <AnimatePresence>
