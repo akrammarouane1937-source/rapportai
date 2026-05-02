@@ -1,10 +1,12 @@
-import { useState } from "react";
+import { useState, useRef, useCallback } from "react";
 import { motion } from "framer-motion";
 import { useLocation } from "wouter";
 import { Sparkles, Loader2, ArrowRight, Edit2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { StepLayout } from "@/components/report/StepLayout";
 import { WordPreview } from "@/components/report/WordPreview";
+import { useGenerate } from "@/lib/useGenerate";
+import { markdownToHtml } from "@/lib/markdownToHtml";
 
 const STRUCTURE_AUTO = `Ce rapport s'articule autour de neuf parties principales : une introduction générale qui pose le cadre et la problématique, deux parties principales développant le cadre théorique et les résultats empiriques, suivies d'une conclusion générale, d'une bibliographie, et des annexes.`;
 
@@ -34,11 +36,31 @@ export default function Step6Page() {
   const [problematique, setProblematique] = useState("Dans quelle mesure la théorie moderne du portefeuille peut-elle être appliquée aux spécificités du marché boursier marocain pour construire un portefeuille optimal sur la Bourse de Casablanca ?");
   const [editingProb, setEditingProb] = useState(false);
   const [objectifs, setObjectifs] = useState("");
-  const [generating, setGenerating] = useState(false);
+  const [streamedContent, setStreamedContent] = useState(PREVIEW_HTML);
+  const [streamedWordCount, setStreamedWordCount] = useState(298);
+  const rawTextRef = useRef("");
+
+  const onChunk = useCallback((chunk: string) => {
+    rawTextRef.current += chunk;
+    setStreamedContent(markdownToHtml(rawTextRef.current));
+    setStreamedWordCount(rawTextRef.current.split(/\s+/).filter(Boolean).length);
+  }, []);
+
+  const { generate, isStreaming: generating } = useGenerate({ onChunk, onDone: useCallback(() => {}, []) });
 
   const handleGenerate = () => {
-    setGenerating(true);
-    setTimeout(() => { setGenerating(false); }, 2000);
+    rawTextRef.current = "";
+    setStreamedContent("");
+    setStreamedWordCount(0);
+    generate({
+      section: "introduction",
+      theme: "Optimisation de portefeuille d'actifs financiers à la Bourse de Casablanca",
+      school: "EMSI",
+      filiere: "Finance",
+      problematique,
+      motsCles: ["MPT", "CAPM", "VaR", "MASI", "BVC"],
+      citationStyle: "APA 7th ed.",
+    });
   };
 
   return (
@@ -138,7 +160,7 @@ export default function Step6Page() {
 
         {/* RIGHT — Word preview */}
         <div className="flex-1 overflow-hidden">
-          <WordPreview content={PREVIEW_HTML} wordCount={298} />
+          <WordPreview content={streamedContent || undefined} wordCount={streamedWordCount} />
         </div>
       </div>
     </StepLayout>

@@ -41,7 +41,7 @@ const MOCK_REPORTS = [
   {
     id: "3", title: "Analyse des risques opérationnels — BCP",
     type: "Rapport de Stage" as const, school: "ISCAE", field: "Finance",
-    status: "draft" as const, currentStep: 1, completedSteps: [],
+    status: "draft" as const, currentStep: 1, completedSteps: [] as number[],
     updatedAt: "Il y a 3 jours", wordCount: 0,
   },
 ];

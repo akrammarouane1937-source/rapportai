@@ -1,10 +1,12 @@
-import { useState } from "react";
+import { useState, useRef, useCallback } from "react";
 import { motion } from "framer-motion";
 import { useLocation } from "wouter";
 import { Sparkles, Loader2, Plus, X, Upload, Download } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { StepLayout } from "@/components/report/StepLayout";
 import { WordPreview } from "@/components/report/WordPreview";
+import { useGenerate } from "@/lib/useGenerate";
+import { markdownToHtml } from "@/lib/markdownToHtml";
 
 const AI_CONCLUSION = "Ce travail nous a permis de démontrer que l'application de la théorie moderne du portefeuille au marché boursier marocain est non seulement possible mais pertinente. La construction d'une frontière efficiente à partir des titres du MASI révèle que la diversification sectorielle permet de réduire significativement le risque sans sacrifice notable sur le rendement espéré. Ces résultats confirment, dans une large mesure, la validité du modèle de Markowitz dans un contexte de marché émergent.";
 const AI_APPORTS = "Cette étude contribue à la littérature sur les marchés financiers émergents en adaptant un cadre théorique classique au contexte marocain. Elle fournit aux gestionnaires de fonds locaux un outil opérationnel pour la construction de portefeuilles optimaux. Cependant, elle se limite à un horizon d'analyse de 5 ans et ne prend pas en compte les coûts de transaction ni la liquidité des titres.";
@@ -61,16 +63,30 @@ export default function Step9Page() {
   const [figures] = useState(FIGURES);
   const [tableaux] = useState(TABLEAUX);
   const [annexes, setAnnexes] = useState<string[]>([]);
-  const [generating, setGenerating] = useState(false);
+  const [streamedContent, setStreamedContent] = useState(PREVIEW_HTML);
+  const [streamedWordCount, setStreamedWordCount] = useState(487);
+  const rawTextRef = useRef("");
+
+  const onChunk = useCallback((chunk: string) => {
+    rawTextRef.current += chunk;
+    setStreamedContent(markdownToHtml(rawTextRef.current));
+    setStreamedWordCount(rawTextRef.current.split(/\s+/).filter(Boolean).length);
+  }, []);
+
+  const { generate, isStreaming: generating } = useGenerate({ onChunk, onDone: useCallback(() => {}, []) });
 
   const handleGenerate = () => {
-    setGenerating(true);
-    setTimeout(() => {
-      setConclusion(AI_CONCLUSION);
-      setApports(AI_APPORTS);
-      setPerspectives(AI_PERSPECTIVES);
-      setGenerating(false);
-    }, 2000);
+    rawTextRef.current = "";
+    setStreamedContent("");
+    setStreamedWordCount(0);
+    generate({
+      section: "conclusion",
+      theme: "Optimisation de portefeuille d'actifs financiers à la Bourse de Casablanca",
+      school: "EMSI",
+      filiere: "Finance",
+      problematique: "Dans quelle mesure la théorie moderne du portefeuille peut-elle être appliquée au marché boursier marocain ?",
+      citationStyle: "APA 7th ed.",
+    });
   };
 
   return (
@@ -211,7 +227,7 @@ export default function Step9Page() {
 
         {/* RIGHT — Word preview */}
         <div className="flex-1 overflow-hidden">
-          <WordPreview content={PREVIEW_HTML} wordCount={487} />
+          <WordPreview content={streamedContent || undefined} wordCount={streamedWordCount} />
         </div>
       </div>
     </StepLayout>

@@ -1,4 +1,4 @@
-import { useState, useRef } from "react";
+import { useState, useRef, useCallback } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { useLocation } from "wouter";
 import {
@@ -9,37 +9,11 @@ import { Button } from "@/components/ui/button";
 import { Sidebar } from "@/components/layout/Sidebar";
 import { WordPreview } from "@/components/report/WordPreview";
 import { PaywallModal } from "@/components/report/PaywallModal";
+import { useGenerate } from "@/lib/useGenerate";
+import { markdownToHtml } from "@/lib/markdownToHtml";
 
 const INITIAL_KEYWORDS = ["portefeuille", "MEDAF", "Markowitz", "risque financier", "Bourse de Casablanca"];
 const INITIAL_SOURCES = ["Markowitz (1952)", "Fama (1970)", "Sharpe (1964)"];
-
-const MOCK_STREAM_TEXT = `
-<h2>Chapitre I — Cadre théorique et revue de littérature</h2>
-
-<h3>1.1 Introduction au cadre théorique</h3>
-
-<p>La théorie moderne du portefeuille, telle qu'elle a été formulée par Harry Markowitz en 1952, constitue le fondement conceptuel de la présente analyse. Cette théorie révolutionnaire a profondément transformé la manière dont les investisseurs appréhendent la relation entre rendement et risque dans la construction d'un portefeuille d'actifs financiers.</p>
-
-<p>Dans le contexte marocain, l'optimisation des portefeuilles revêt une importance particulière compte tenu des spécificités du marché financier national. La Bourse de Casablanca, principal marché organisé du Royaume, présente des caractéristiques structurelles qui nécessitent une adaptation des modèles théoriques développés dans des contextes occidentaux.</p>
-
-<h3>1.2 La théorie de Markowitz et l'efficience des marchés</h3>
-
-<p>Markowitz (1952) a démontré que pour un niveau de risque donné, il existe un portefeuille qui maximise le rendement espéré — et réciproquement, pour un niveau de rendement donné, il existe un portefeuille qui minimise le risque. L'ensemble de ces portefeuilles constitue ce que l'on appelle la frontière efficiente.</p>
-
-<p>Cette approche quantitative repose sur trois hypothèses fondamentales : les investisseurs sont rationnels et averses au risque, les marchés sont efficients au sens semi-fort, et les distributions de rendements peuvent être caractérisées par leur espérance et leur variance. Ces hypothèses, bien que simplificatrices, permettent de développer un cadre analytique rigoureux et opérationnel.</p>
-
-<h3>1.3 Évolution des modèles d'optimisation</h3>
-
-<p>À la suite des travaux de Markowitz, Sharpe (1964) a proposé le modèle d'évaluation des actifs financiers (MEDAF), qui lie le rendement d'un actif à sa sensibilité aux fluctuations du marché. Ce coefficient de sensibilité, communément appelé bêta, est devenu l'un des outils les plus utilisés dans la gestion de portefeuille contemporaine.</p>
-
-<p>Plus récemment, les modèles factoriels ont enrichi cette approche en introduisant des facteurs supplémentaires tels que la taille des entreprises, le ratio valeur comptable sur valeur de marché, et le momentum. Ces développements théoriques ont permis d'améliorer significativement le pouvoir explicatif des modèles d'évaluation des actifs.</p>
-
-<h3>1.4 Application au marché boursier marocain</h3>
-
-<p>Le marché boursier marocain, bien qu'il ait connu un développement significatif au cours des dernières décennies, présente des caractéristiques qui le distinguent des marchés développés. Sa liquidité limitée, la concentration sectorielle de sa capitalisation boursière et la prédominance de certains acteurs institutionnels constituent autant de facteurs à prendre en compte dans l'application des modèles d'optimisation classiques.</p>
-
-<p>Plusieurs études empiriques ont tenté d'adapter les modèles d'efficience au contexte marocain, avec des résultats nuancés. Si l'hypothèse d'efficience faible semble vérifiée dans l'ensemble, l'efficience semi-forte reste sujette à débat, notamment en raison de l'asymétrie informationnelle et des pratiques de gouvernance d'entreprise propres au marché local.</p>
-`;
 
 function KeywordChip({ label, onRemove }: { label: string; onRemove: () => void }) {
   return (
@@ -73,43 +47,44 @@ export default function PartieIPage() {
   const [addingSource, setAddingSource] = useState(false);
   const [dragOver, setDragOver] = useState(false);
   const [uploadedFile, setUploadedFile] = useState<string | null>(null);
-  const [generating, setGenerating] = useState(false);
   const [wordCount, setWordCount] = useState(0);
   const [previewContent, setPreviewContent] = useState("");
   const [showPaywall, setShowPaywall] = useState(false);
   const fileRef = useRef<HTMLInputElement>(null);
-  const streamRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const rawTextRef = useRef("");
+
+  const onChunk = useCallback((chunk: string) => {
+    rawTextRef.current += chunk;
+    const html = markdownToHtml(rawTextRef.current);
+    const wc = rawTextRef.current.split(/\s+/).filter(Boolean).length;
+    setWordCount(wc);
+    setPreviewContent(html);
+  }, []);
+
+  const onDone = useCallback(() => {}, []);
+  const onPaywall = useCallback(() => { setShowPaywall(true); }, []);
+
+  const { generate, isStreaming: generating } = useGenerate({
+    onChunk,
+    onDone,
+    onPaywall,
+    paywallWords: 600,
+  });
 
   const handleGenerate = () => {
-    setGenerating(true);
+    rawTextRef.current = "";
     setPreviewContent("");
     setWordCount(0);
-
-    // Simulate streaming — split content into chunks
-    const words = MOCK_STREAM_TEXT.split(" ");
-    let i = 0;
-    let accumulated = "";
-
-    const stream = setInterval(() => {
-      if (i >= words.length) {
-        clearInterval(stream);
-        setGenerating(false);
-        return;
-      }
-      const chunk = words.slice(i, i + 8).join(" ") + " ";
-      accumulated += chunk;
-      i += 8;
-      const currentWordCount = accumulated.replace(/<[^>]+>/g, "").split(/\s+/).filter(Boolean).length;
-      setWordCount(currentWordCount);
-      setPreviewContent(accumulated);
-      if (currentWordCount >= 600) {
-        clearInterval(stream);
-        setGenerating(false);
-        setShowPaywall(true);
-      }
-    }, 80);
-
-    streamRef.current = stream;
+    setShowPaywall(false);
+    generate({
+      section: "partie-i",
+      theme: "Optimisation de portefeuille d'actifs financiers à la Bourse de Casablanca",
+      school: "EMSI",
+      filiere: "Finance",
+      problematique: problematique || "Dans quelle mesure la théorie moderne du portefeuille peut-elle être appliquée aux spécificités du marché boursier marocain ?",
+      motsCles: keywords,
+      citationStyle: "APA 7th ed.",
+    });
   };
 
   const addChapitre = () => setChapitres((prev) => [...prev, ""]);

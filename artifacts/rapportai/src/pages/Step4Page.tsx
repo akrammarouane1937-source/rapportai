@@ -1,10 +1,12 @@
-import { useState } from "react";
+import { useState, useRef, useCallback } from "react";
 import { motion } from "framer-motion";
 import { useLocation } from "wouter";
 import { Sparkles, X, Plus, ArrowRight } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { StepLayout } from "@/components/report/StepLayout";
 import { WordPreview } from "@/components/report/WordPreview";
+import { useGenerate } from "@/lib/useGenerate";
+import { markdownToHtml } from "@/lib/markdownToHtml";
 
 const MAX_WORDS = 300;
 const AI_RESUME = "Ce travail étudie l'optimisation de portefeuille sur la Bourse de Casablanca à travers le prisme de la théorie moderne de Markowitz. En appliquant le modèle moyenne-variance à un échantillon de 30 titres cotés sur le MASI, nous construisons une frontière efficiente adaptée aux spécificités du marché marocain. Les résultats montrent qu'une diversification sectorielle réduit le risque de 18 % sans sacrifier le rendement espéré. Cette étude contribue à la littérature sur l'efficience des marchés émergents.";
@@ -70,6 +72,9 @@ export default function Step4Page() {
   const [abrevs, setAbrevs] = useState(AI_ABREV);
   const [newAbbr, setNewAbbr] = useState("");
   const [newSig, setNewSig] = useState("");
+  const [previewContent, setPreviewContent] = useState(PREVIEW_HTML);
+  const [previewWordCount, setPreviewWordCount] = useState(312);
+  const rawTextRef = useRef("");
 
   const resumeWords = countWords(resume);
   const abstractWords = countWords(abstract);
@@ -79,6 +84,32 @@ export default function Step4Page() {
       setAbrevs([...abrevs, { abbr: newAbbr.trim(), sig: newSig.trim() }]);
       setNewAbbr(""); setNewSig("");
     }
+  };
+
+  const onChunkResume = useCallback((chunk: string) => {
+    rawTextRef.current += chunk;
+    setResume(rawTextRef.current);
+    setPreviewContent(markdownToHtml(`## Résumé\n\n${rawTextRef.current}`));
+    setPreviewWordCount(rawTextRef.current.split(/\s+/).filter(Boolean).length);
+  }, []);
+
+  const { generate: generateResume, isStreaming: generatingResume } = useGenerate({
+    onChunk: onChunkResume,
+    onDone: useCallback(() => {}, []),
+  });
+
+  const handleLaisserIA = () => {
+    rawTextRef.current = "";
+    setResume("");
+    generateResume({
+      section: "resume",
+      theme: "Optimisation de portefeuille d'actifs financiers à la Bourse de Casablanca",
+      school: "EMSI",
+      filiere: "Finance",
+      problematique: "Modèle de Markowitz & BVC",
+      motsCles: motsCles.length > 0 ? motsCles : AI_MOTS,
+      citationStyle: "APA 7th ed.",
+    });
   };
 
   return (
@@ -102,8 +133,8 @@ export default function Step4Page() {
                 placeholder="Présentez votre travail en français — contexte, méthodologie, résultats principaux, conclusion."
                 className="w-full text-sm border border-gray-200 rounded-xl p-3 resize-none focus:outline-none focus:ring-2 focus:ring-purple-300 focus:border-purple-400 placeholder:text-gray-300"
               />
-              <button onClick={() => setResume(AI_RESUME)} className="mt-1.5 text-xs text-purple-600 hover:text-purple-700 font-medium flex items-center gap-1">
-                <Sparkles className="w-3 h-3" /> Laisser l'IA décider
+              <button onClick={handleLaisserIA} disabled={generatingResume} className="mt-1.5 text-xs text-purple-600 hover:text-purple-700 font-medium flex items-center gap-1 disabled:opacity-50">
+                <Sparkles className="w-3 h-3" /> {generatingResume ? "Génération IA..." : "Laisser l'IA décider"}
               </button>
             </div>
 
@@ -192,7 +223,7 @@ export default function Step4Page() {
 
         {/* RIGHT — Word preview 62% */}
         <div className="flex-1 overflow-hidden">
-          <WordPreview content={PREVIEW_HTML} wordCount={resumeWords + abstractWords || 312} />
+          <WordPreview content={previewContent || undefined} wordCount={previewWordCount} />
         </div>
       </div>
     </StepLayout>
