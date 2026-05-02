@@ -4,7 +4,7 @@ import { useLocation } from "wouter";
 import {
   Sparkles, Loader2, X, Upload, Download,
   CheckCircle2, Circle, FileText, BookOpen,
-  BarChart2, Hash, ChevronRight, ArrowRight,
+  BarChart2, Hash, ArrowRight, Share2, Link2, Check,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { StepLayout } from "@/components/report/StepLayout";
@@ -17,6 +17,10 @@ import { generateDocx, downloadBlob } from "@/lib/generateDocx";
 import { getApprovedFigures } from "@/lib/figureStore";
 import { getBibSources } from "@/lib/bibliothequeStore";
 import { getMyPlan, PLAN_LIMITS } from "@/lib/userPlan";
+
+// ─── Constants ────────────────────────────────────────────────────────────────
+
+const BASE_PATH = (import.meta.env.BASE_URL as string).replace(/\/$/, "");
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -85,6 +89,9 @@ export default function Step9Page() {
   const [exportingFull, setExportingFull] = useState(false);
   const [showUpsell, setShowUpsell]       = useState(false);
   const [exported, setExported]           = useState(false);
+  const [sharing, setSharing]             = useState(false);
+  const [shareUrl, setShareUrl]           = useState<string | null>(null);
+  const [linkCopied, setLinkCopied]       = useState(false);
   const rawTextRef = useRef(report.conclusion ?? "");
 
   // ── Streaming generation ──────────────────────────────────────────────────
@@ -139,6 +146,42 @@ export default function Step9Page() {
 
   const completedCount = sections.filter((s) => s.done).length;
   const allDone        = completedCount === sections.length;
+
+  // ── Share ─────────────────────────────────────────────────────────────────
+  const handleShare = async () => {
+    if (sharing) return;
+    setSharing(true);
+    try {
+      saveReport({
+        conclusion:   rawTextRef.current || report.conclusion || undefined,
+        apports:      apports || undefined,
+        perspectives: perspectives || undefined,
+        annexes:      annexes.length > 0 ? annexes : undefined,
+      });
+      const data = getReport();
+      const resp = await fetch(`${BASE_PATH}/api/share`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(data),
+      });
+      if (!resp.ok) throw new Error("Erreur serveur");
+      const { id } = await resp.json() as { id: string };
+      const url = `${window.location.origin}${BASE_PATH}/share/${id}`;
+      setShareUrl(url);
+      navigator.clipboard.writeText(url).catch(() => {});
+    } catch (e) {
+      console.error("share error", e);
+    } finally {
+      setSharing(false);
+    }
+  };
+
+  const handleCopyLink = () => {
+    if (!shareUrl) return;
+    navigator.clipboard.writeText(shareUrl);
+    setLinkCopied(true);
+    setTimeout(() => setLinkCopied(false), 2500);
+  };
 
   // ── Export ───────────────────────────────────────────────────────────────
   const handleFullExport = async () => {
@@ -386,6 +429,50 @@ export default function Step9Page() {
                   <ArrowRight className="w-4 h-4 opacity-70" />
                 </>
               )}
+            </button>
+
+            {/* ── Share link ── */}
+            <AnimatePresence>
+              {shareUrl && (
+                <motion.div
+                  initial={{ opacity: 0, height: 0 }}
+                  animate={{ opacity: 1, height: "auto" }}
+                  exit={{ opacity: 0, height: 0 }}
+                  className="rounded-xl border border-blue-100 bg-blue-50 p-3"
+                >
+                  <div className="flex items-center gap-2 mb-1.5">
+                    <Link2 className="w-3.5 h-3.5 text-blue-500 flex-shrink-0" />
+                    <p className="text-xs font-bold text-blue-700">Lien partageable créé !</p>
+                    <span className="ml-auto text-[10px] text-blue-400">expire dans 7 j</span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <p className="text-[11px] text-blue-600 truncate flex-1 min-w-0 font-mono">{shareUrl}</p>
+                    <button
+                      onClick={handleCopyLink}
+                      className="flex-shrink-0 flex items-center gap-1 px-2.5 py-1 rounded-lg text-xs font-bold transition-all"
+                      style={{
+                        background: linkCopied ? "#10b981" : "#3b82f6",
+                        color: "white",
+                      }}
+                    >
+                      {linkCopied ? <Check className="w-3 h-3" /> : <Link2 className="w-3 h-3" />}
+                      {linkCopied ? "Copié !" : "Copier"}
+                    </button>
+                  </div>
+                </motion.div>
+              )}
+            </AnimatePresence>
+
+            {/* Share button */}
+            <button
+              onClick={handleShare}
+              disabled={sharing}
+              className="w-full h-10 rounded-xl font-bold text-sm flex items-center justify-center gap-2 transition-all border disabled:opacity-60"
+              style={{ background: "white", borderColor: "#e5e7eb", color: "#4b5563" }}
+            >
+              {sharing
+                ? <><Loader2 className="w-4 h-4 animate-spin text-blue-500" /> Création du lien…</>
+                : <><Share2 className="w-4 h-4 text-blue-500" /> Partager mon rapport</>}
             </button>
 
             <p className="text-center text-xs text-gray-400">
