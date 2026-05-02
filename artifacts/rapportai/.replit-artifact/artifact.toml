@@ -1,0 +1,31 @@
+kind = "web"
+previewPath = "/"
+title = "RapportAI"
+version = "1.0.0"
+id = "artifacts/rapportai"
+router = "path"
+
+[[integratedSkills]]
+name = "react-vite"
+version = "1.0.0"
+
+[[services]]
+name = "web"
+paths = [ "/" ]
+localPort = 20770
+
+[services.development]
+run = "pnpm --filter @workspace/rapportai run dev"
+
+[services.production]
+build = [ "pnpm", "--filter", "@workspace/rapportai", "run", "build" ]
+publicDir = "artifacts/rapportai/dist/public"
+serve = "static"
+
+[[services.production.rewrites]]
+from = "/*"
+to = "/index.html"
+
+[services.env]
+PORT = "20770"
+BASE_PATH = "/"
