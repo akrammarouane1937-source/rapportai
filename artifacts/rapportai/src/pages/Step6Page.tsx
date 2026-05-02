@@ -7,6 +7,7 @@ import { StepLayout } from "@/components/report/StepLayout";
 import { WordPreview } from "@/components/report/WordPreview";
 import { useGenerate } from "@/lib/useGenerate";
 import { markdownToHtml } from "@/lib/markdownToHtml";
+import { saveReport } from "@/lib/reportStore";
 
 const STRUCTURE_AUTO = `Ce rapport s'articule autour de neuf parties principales : une introduction générale qui pose le cadre et la problématique, deux parties principales développant le cadre théorique et les résultats empiriques, suivies d'une conclusion générale, d'une bibliographie, et des annexes.`;
 
@@ -46,7 +47,8 @@ export default function Step6Page() {
     setStreamedWordCount(rawTextRef.current.split(/\s+/).filter(Boolean).length);
   }, []);
 
-  const { generate, isStreaming: generating } = useGenerate({ onChunk, onDone: useCallback(() => {}, []) });
+  const onDone = useCallback(() => { saveReport({ introduction: rawTextRef.current }); }, []);
+  const { generate, isStreaming: generating } = useGenerate({ onChunk, onDone });
 
   const handleGenerate = () => {
     rawTextRef.current = "";
@@ -160,7 +162,12 @@ export default function Step6Page() {
 
         {/* RIGHT — Word preview */}
         <div className="flex-1 overflow-hidden">
-          <WordPreview content={streamedContent || undefined} wordCount={streamedWordCount} />
+          <WordPreview
+            content={streamedContent || undefined}
+            rawContent={rawTextRef.current || undefined}
+            sectionTitle="Introduction Générale"
+            wordCount={streamedWordCount}
+          />
         </div>
       </div>
     </StepLayout>

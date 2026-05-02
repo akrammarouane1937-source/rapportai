@@ -7,6 +7,8 @@ import { StepLayout } from "@/components/report/StepLayout";
 import { WordPreview } from "@/components/report/WordPreview";
 import { useGenerate } from "@/lib/useGenerate";
 import { markdownToHtml } from "@/lib/markdownToHtml";
+import { saveReport, getReport } from "@/lib/reportStore";
+import { generateDocx, downloadBlob } from "@/lib/generateDocx";
 
 const AI_CONCLUSION = "Ce travail nous a permis de démontrer que l'application de la théorie moderne du portefeuille au marché boursier marocain est non seulement possible mais pertinente. La construction d'une frontière efficiente à partir des titres du MASI révèle que la diversification sectorielle permet de réduire significativement le risque sans sacrifice notable sur le rendement espéré. Ces résultats confirment, dans une large mesure, la validité du modèle de Markowitz dans un contexte de marché émergent.";
 const AI_APPORTS = "Cette étude contribue à la littérature sur les marchés financiers émergents en adaptant un cadre théorique classique au contexte marocain. Elle fournit aux gestionnaires de fonds locaux un outil opérationnel pour la construction de portefeuilles optimaux. Cependant, elle se limite à un horizon d'analyse de 5 ans et ne prend pas en compte les coûts de transaction ni la liquidité des titres.";
@@ -65,6 +67,7 @@ export default function Step9Page() {
   const [annexes, setAnnexes] = useState<string[]>([]);
   const [streamedContent, setStreamedContent] = useState(PREVIEW_HTML);
   const [streamedWordCount, setStreamedWordCount] = useState(487);
+  const [exportingFull, setExportingFull] = useState(false);
   const rawTextRef = useRef("");
 
   const onChunk = useCallback((chunk: string) => {
@@ -73,7 +76,11 @@ export default function Step9Page() {
     setStreamedWordCount(rawTextRef.current.split(/\s+/).filter(Boolean).length);
   }, []);
 
-  const { generate, isStreaming: generating } = useGenerate({ onChunk, onDone: useCallback(() => {}, []) });
+  const onDone = useCallback(() => {
+    saveReport({ conclusion: rawTextRef.current });
+  }, []);
+
+  const { generate, isStreaming: generating } = useGenerate({ onChunk, onDone });
 
   const handleGenerate = () => {
     rawTextRef.current = "";
@@ -87,6 +94,31 @@ export default function Step9Page() {
       problematique: "Dans quelle mesure la théorie moderne du portefeuille peut-elle être appliquée au marché boursier marocain ?",
       citationStyle: "APA 7th ed.",
     });
+  };
+
+  const handleFullExport = async () => {
+    if (exportingFull) return;
+    setExportingFull(true);
+    try {
+      // Save current page state to store before export
+      saveReport({
+        conclusion: rawTextRef.current || conclusion || undefined,
+        apports: apports || undefined,
+        perspectives: perspectives || undefined,
+        bibliographie: biblio,
+        figures,
+        tableaux,
+        annexes,
+      });
+      const data = getReport();
+      const blob = await generateDocx(data);
+      const theme = data.theme?.slice(0, 40).replace(/\s+/g, "-").replace(/[^a-z0-9-]/gi, "") || "rapport";
+      downloadBlob(blob, `RapportAI-${theme}.docx`);
+    } catch (err) {
+      console.error("full export error", err);
+    } finally {
+      setExportingFull(false);
+    }
   };
 
   return (
@@ -218,16 +250,27 @@ export default function Step9Page() {
               style={{ boxShadow: "0 4px 20px rgba(124,58,237,0.35)" }}>
               {generating ? <><Loader2 className="w-4 h-4 animate-spin" /> Génération...</> : <><Sparkles className="w-4 h-4" /> Générer la Conclusion</>}
             </Button>
-            <Button className="w-full h-12 bg-green-600 hover:bg-green-700 text-white font-bold text-sm rounded-xl flex items-center justify-center gap-2"
+            <Button
+              onClick={handleFullExport}
+              disabled={exportingFull}
+              className="w-full h-12 bg-green-600 hover:bg-green-700 text-white font-bold text-sm rounded-xl flex items-center justify-center gap-2 disabled:opacity-70"
               style={{ boxShadow: "0 4px 20px rgba(22,163,74,0.3)" }}>
-              <Download className="w-4 h-4" /> Télécharger mon rapport complet .docx
+              {exportingFull
+                ? <><Loader2 className="w-4 h-4 animate-spin" /> Génération du .docx...</>
+                : <><Download className="w-4 h-4" /> 🎉 Télécharger mon rapport complet .docx</>
+              }
             </Button>
           </div>
         </div>
 
         {/* RIGHT — Word preview */}
         <div className="flex-1 overflow-hidden">
-          <WordPreview content={streamedContent || undefined} wordCount={streamedWordCount} />
+          <WordPreview
+            content={streamedContent || undefined}
+            rawContent={rawTextRef.current || undefined}
+            sectionTitle="Conclusion Générale"
+            wordCount={streamedWordCount}
+          />
         </div>
       </div>
     </StepLayout>

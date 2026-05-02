@@ -7,6 +7,7 @@ import { StepLayout } from "@/components/report/StepLayout";
 import { WordPreview } from "@/components/report/WordPreview";
 import { useGenerate } from "@/lib/useGenerate";
 import { markdownToHtml } from "@/lib/markdownToHtml";
+import { saveReport } from "@/lib/reportStore";
 
 const MAX_WORDS = 300;
 const AI_RESUME = "Ce travail étudie l'optimisation de portefeuille sur la Bourse de Casablanca à travers le prisme de la théorie moderne de Markowitz. En appliquant le modèle moyenne-variance à un échantillon de 30 titres cotés sur le MASI, nous construisons une frontière efficiente adaptée aux spécificités du marché marocain. Les résultats montrent qu'une diversification sectorielle réduit le risque de 18 % sans sacrifier le rendement espéré. Cette étude contribue à la littérature sur l'efficience des marchés émergents.";
@@ -93,9 +94,12 @@ export default function Step4Page() {
     setPreviewWordCount(rawTextRef.current.split(/\s+/).filter(Boolean).length);
   }, []);
 
+  const onDoneResume = useCallback(() => {
+    saveReport({ resume: rawTextRef.current, motsCles, keywords, abreviations: abrevs });
+  }, [motsCles, keywords, abrevs]);
   const { generate: generateResume, isStreaming: generatingResume } = useGenerate({
     onChunk: onChunkResume,
-    onDone: useCallback(() => {}, []),
+    onDone: onDoneResume,
   });
 
   const handleLaisserIA = () => {
@@ -223,7 +227,12 @@ export default function Step4Page() {
 
         {/* RIGHT — Word preview 62% */}
         <div className="flex-1 overflow-hidden">
-          <WordPreview content={previewContent || undefined} wordCount={previewWordCount} />
+          <WordPreview
+            content={previewContent || undefined}
+            rawContent={rawTextRef.current || undefined}
+            sectionTitle="Résumé"
+            wordCount={previewWordCount}
+          />
         </div>
       </div>
     </StepLayout>

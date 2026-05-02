@@ -1,10 +1,13 @@
-import { useState } from "react";
+import { useState, useCallback } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { Copy, Download, PenLine, X, Check } from "lucide-react";
+import { Copy, Download, PenLine, X, Check, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { generatePartialDocx, downloadBlob } from "@/lib/generateDocx";
 
 interface WordPreviewProps {
   content?: string;
+  rawContent?: string;
+  sectionTitle?: string;
   wordCount?: number;
   blurred?: boolean;
 }
@@ -94,9 +97,16 @@ function RevisionPanel({ open, onClose }: { open: boolean; onClose: () => void }
   );
 }
 
-export function WordPreview({ content, wordCount = 1247, blurred = false }: WordPreviewProps) {
+export function WordPreview({
+  content,
+  rawContent,
+  sectionTitle = "Section",
+  wordCount = 1247,
+  blurred = false,
+}: WordPreviewProps) {
   const [revisionOpen, setRevisionOpen] = useState(false);
   const [copied, setCopied] = useState(false);
+  const [downloading, setDownloading] = useState(false);
   const html = content || MOCK_CONTENT;
 
   const handleCopy = () => {
@@ -104,6 +114,21 @@ export function WordPreview({ content, wordCount = 1247, blurred = false }: Word
     setCopied(true);
     setTimeout(() => setCopied(false), 2000);
   };
+
+  const handleDownload = useCallback(async () => {
+    if (downloading) return;
+    setDownloading(true);
+    try {
+      const text = rawContent || html.replace(/<[^>]+>/g, " ").replace(/\s+/g, " ").trim();
+      const blob = await generatePartialDocx(sectionTitle, text);
+      const slug = sectionTitle.toLowerCase().replace(/\s+/g, "-").replace(/[^a-z0-9-]/g, "");
+      downloadBlob(blob, `rapportai-${slug}.docx`);
+    } catch (err) {
+      console.error("docx export error", err);
+    } finally {
+      setDownloading(false);
+    }
+  }, [downloading, rawContent, html, sectionTitle]);
 
   return (
     <div className="relative h-full flex flex-col overflow-hidden">
@@ -117,8 +142,17 @@ export function WordPreview({ content, wordCount = 1247, blurred = false }: Word
             {copied ? <Check className="w-3.5 h-3.5 text-green-600" /> : <Copy className="w-3.5 h-3.5" />}
             {copied ? "Copié" : "Copier"}
           </Button>
-          <Button variant="ghost" size="sm" className="h-8 px-3 text-xs text-gray-600 hover:text-gray-900 gap-1.5">
-            <Download className="w-3.5 h-3.5" /> Télécharger .docx
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={handleDownload}
+            disabled={downloading}
+            className="h-8 px-3 text-xs text-gray-600 hover:text-gray-900 gap-1.5 disabled:opacity-60"
+          >
+            {downloading
+              ? <><Loader2 className="w-3.5 h-3.5 animate-spin" /> Export...</>
+              : <><Download className="w-3.5 h-3.5" /> .docx</>
+            }
           </Button>
           <Button
             onClick={() => setRevisionOpen(true)}

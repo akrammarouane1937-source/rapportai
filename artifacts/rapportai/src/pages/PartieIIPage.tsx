@@ -11,6 +11,7 @@ import { WordPreview } from "@/components/report/WordPreview";
 import { PaywallModal } from "@/components/report/PaywallModal";
 import { useGenerate } from "@/lib/useGenerate";
 import { markdownToHtml } from "@/lib/markdownToHtml";
+import { saveReport } from "@/lib/reportStore";
 
 const INITIAL_KEYWORDS = ["analyse empirique", "frontière efficiente", "rendement ajusté", "ratio de Sharpe", "BVC"];
 const INITIAL_SOURCES = ["Fama & French (1993)", "Elton et al. (1976)", "AMMC (2023)"];
@@ -61,7 +62,7 @@ export default function PartieIIPage() {
     setPreviewContent(html);
   }, []);
 
-  const onDone = useCallback(() => {}, []);
+  const onDone = useCallback(() => { saveReport({ partieII: rawTextRef.current }); }, []);
   const onPaywall = useCallback(() => { setShowPaywall(true); }, []);
 
   const { generate, isStreaming: generating } = useGenerate({
@@ -317,6 +318,8 @@ export default function PartieIIPage() {
           <div className="flex-1 relative overflow-hidden">
             <WordPreview
               content={previewContent || undefined}
+              rawContent={rawTextRef.current || undefined}
+              sectionTitle="Partie II"
               wordCount={wordCount || 1189}
               blurred={showPaywall}
             />

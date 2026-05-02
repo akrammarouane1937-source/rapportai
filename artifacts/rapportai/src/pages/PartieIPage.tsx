@@ -11,6 +11,7 @@ import { WordPreview } from "@/components/report/WordPreview";
 import { PaywallModal } from "@/components/report/PaywallModal";
 import { useGenerate } from "@/lib/useGenerate";
 import { markdownToHtml } from "@/lib/markdownToHtml";
+import { saveReport } from "@/lib/reportStore";
 
 const INITIAL_KEYWORDS = ["portefeuille", "MEDAF", "Markowitz", "risque financier", "Bourse de Casablanca"];
 const INITIAL_SOURCES = ["Markowitz (1952)", "Fama (1970)", "Sharpe (1964)"];
@@ -61,7 +62,7 @@ export default function PartieIPage() {
     setPreviewContent(html);
   }, []);
 
-  const onDone = useCallback(() => {}, []);
+  const onDone = useCallback(() => { saveReport({ partieI: rawTextRef.current }); }, []);
   const onPaywall = useCallback(() => { setShowPaywall(true); }, []);
 
   const { generate, isStreaming: generating } = useGenerate({
@@ -299,6 +300,8 @@ export default function PartieIPage() {
           <div className="flex-1 relative overflow-hidden">
             <WordPreview
               content={previewContent || undefined}
+              rawContent={rawTextRef.current || undefined}
+              sectionTitle="Partie I"
               wordCount={wordCount || 1247}
               blurred={showPaywall}
             />
