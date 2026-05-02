@@ -1,0 +1,102 @@
+This is RapportAI — a SaaS for Moroccan students to generate complete PFE/rapport de stage in 30 minutes using Claude API. The app is already 80% built in the ZIP I uploaded. Do NOT build from scratch. Read the existing code first, then apply only the fixes listed at the bottom.
+
+Here is the full spec:
+
+---
+
+# RapportAI — Full Spec
+
+## Core
+- App name: RapportAI
+- Value prop: 3 mois de rédaction → 30 minutes avec RapportAI
+- Stack: Next.js 14 App Router + Tailwind + ShadCN + Clerk + Neon PostgreSQL + Drizzle + Claude API + Stripe + Uploadthing + Chart.js
+- ALL UI text in French. Code/comments in English.
+
+## Pricing Plans
+- Essentiel: 149 MAD — 30 pages, PDF + Word, 10 révisions, Chatbot IA, Canevas école
+- Pro: 449 MAD — 60 pages, PDF + Word, révisions illimitées, Chatbot IA, Canevas école, Rapport de citations, Vérification anti-plagiat, Certificat Anti-Détection IA, JuryAI
+- Premium: 749 MAD — pages illimitées, PDF + Word, tout Pro inclus, Slides PowerPoint, JuryAI
+- Upgrade pricing: Essentiel→Pro = 300 MAD, Pro→Premium = 300 MAD
+- JuryAI and Bibliothèque: Pro + Premium ONLY
+
+## 9 Steps
+1. Informations Générales
+2. Page de Garde
+3. Dédicaces & Remerciements
+4. Résumé + Abstract + Abréviations
+5. Sommaire
+6. Introduction Générale
+7. Partie I — Cadre Théorique
+8. Partie II — Analyse Empirique
+9. Conclusion + Bibliographie + Annexes
+
+## Claude System Prompt (use in lib/prompts/system.ts)
+"Tu es RapportAI, un expert en rédaction académique francophone spécialisé dans les rapports de stage, PFE et mémoires pour les étudiants marocains (EMSI, ENCG, ISCAE, FST, ENSAM, UIR, UM5, ENSA, HEM, etc.).
+
+FORMAT DE SORTIE OBLIGATOIRE :
+- Utilise ## pour les titres de section (Heading 2)
+- Utilise ### pour les sous-sections (Heading 3)
+- Sépare chaque paragraphe par une ligne vide
+- Minimum 800 mots par section principale
+
+RÈGLES ABSOLUES :
+- Jamais de contenu générique — chaque phrase spécifique au thème, école, entreprise fournis
+- Jamais d'introduction du type 'Dans ce chapitre, nous allons...'
+- Commence directement par le contenu substantiel
+- N'invente jamais de chiffres ou de faits non fournis
+- Citations APA 7 par défaut : (Auteur, Année)"
+
+## .docx Formatting Rule (CRITICAL)
+Claude outputs ## and ### markers. The docx generator must parse them:
+- Lines starting with ## → Heading 2 style
+- Lines starting with ### → Heading 3 style  
+- Empty lines → new Paragraph object
+- NEVER concatenate all text into one Paragraph
+- Body: Times New Roman 12pt, justified, 1.5 line spacing
+
+## Freemium Logic
+- Steps 1-6: free
+- Step 7: streams freely → after ~600 words: blur + PaywallModal
+- Steps 8-9: locked if not paid
+- Essentiel: stops at 30 pages → UpsellModal
+- Pro: stops at 60 pages → UpsellModal
+- Essentiel: 10 revisions max → UpsellModal on 10th
+
+## Stripe
+Use STRIPE_SECRET_KEY from Replit secrets directly.
+- POST /api/create-checkout-session → Stripe Checkout
+- POST /api/stripe-webhook → update users.plan + reports.isPaid
+- Upgrade price = difference only (300 MAD)
+
+---
+
+## FIXES TO APPLY NOW (in this order):
+
+**Fix 1 — .docx formatting**
+Currently outputs one wall of text. Apply the ## marker system described above. Each paragraph must be a separate Paragraph object in the docx package.
+
+**Fix 2 — Revision panel → Claude**
+RevisionPanel.handleApply() currently does nothing. Wire it to Claude API: send revision request + current section content → stream revised text back into Word preview. Track count against plan limit.
+
+**Fix 3 — FloatingChat → real Claude**
+Dashboard chat returns hardcoded string. Connect to real Claude API endpoint.
+
+**Fix 4 — /rapports → real database**
+Replace MOCK_REPORTS with real database queries using getReport().
+
+**Fix 5 — Clear hardcoded demo text**
+Step 7 Partie I has a hardcoded finance problématique pre-filled. Clear it — placeholder text only.
+
+**Fix 6 — Security**
+- Lock CORS to this Replit domain only
+- Rate limit /api/generate: max 10 req/hour per user
+- Auth check on every API route
+- Error toast when Claude generation fails
+
+**Fix 7 — Real Stripe payment**
+Replace mock setTimeout with real Stripe Checkout using STRIPE_SECRET_KEY. After payment: toast "Paiement confirmé ✓ — Plan [X] activé", update database, unlock features.
+
+**Fix 8 — Sommaire Step 5**
+Save the drag-and-drop order to database so .docx uses student's arrangement.
+
+Start with Fix 1. Report after each fix before moving to the next.

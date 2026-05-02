@@ -1,0 +1,1203 @@
+# RapportAI — Full Build Prompt for Replit Agent (v2 — Updated)
+
+## What You Are Building
+
+A SaaS web application called **RapportAI** that takes a Moroccan student's inputs through a multi-step form and generates a complete, formatted, submission-ready academic report (PFE / rapport de stage / mémoire) as a Word .docx file using the Claude API. Every section is written in professional French academic language matching Moroccan university standards.
+
+**Core value proposition:** 3 mois de rédaction → 30 minutes avec RapportAI.
+
+**Freemium model:** Students go through the entire flow for free (Page de garde, Dédicaces, Remerciements, Sommaire). When Partie I starts generating, it streams 2–3 pages then blurs out and a paywall modal appears with the 3 plans. They've already seen quality → conversion is very high.
+
+---
+
+## Tech Stack
+
+- **Frontend:** Next.js 14 (App Router) + Tailwind CSS + ShadCN UI
+- **Auth:** Clerk (email + Google OAuth)
+- **Backend:** Next.js API routes
+- **AI:** Claude API — `claude-sonnet-4-6` for generation, `claude-haiku-4-5-20251001` for fast tasks
+- **Word export:** `docx` npm package (real .docx files)
+- **Payment:** Stripe (one-time payment per report, not subscription) — use STRIPE_SECRET_KEY env var directly, no Replit integration needed
+- **Database:** PostgreSQL via Neon + Drizzle ORM
+- **File storage:** Uploadthing (PDF/Excel/CSV uploads)
+- **Charts:** Chart.js (render on Canvas → capture PNG → embed in .docx)
+- **CSV parsing:** papaparse + xlsx
+
+---
+
+## Design System
+
+```
+Primary:        #7c3aed  (purple)
+Primary light:  #f5f0ff  (purple tint)
+Primary dark:   #5b21b6  (purple hover)
+Background:     #f9f8ff  (off-white)
+Card:           #ffffff
+Border:         #e5e7eb
+Text primary:   #111827
+Text secondary: #6b7280
+Text muted:     #9ca3af
+Success:        #10b981
+Error:          #ef4444
+Warning:        #f59e0b
+
+Fonts:
+- Headings: Plus Jakarta Sans (Google Fonts)
+- Body: DM Sans (Google Fonts)
+- Word preview: Times New Roman / Georgia
+
+Border radius: 12px cards, 8px inputs, 20px pills
+Shadows: 0 1px 3px rgba(0,0,0,0.08) cards
+         0 4px 24px rgba(124,58,237,0.12) primary buttons
+```
+
+---
+
+## Pricing Plans (UPDATED)
+
+| Plan | Price | Features |
+|---|---|---|
+| **Essentiel** | 149 MAD one-time | 30 pages, PDF + Word, 10 révisions, Chatbot IA, Canevas école |
+| **Pro** | 449 MAD one-time | 60 pages, PDF + Word, révisions illimitées, Chatbot IA, Canevas école, Rapport de citations, Vérification anti-plagiat, Certificat Anti-Détection IA, JuryAI |
+| **Premium** | 749 MAD one-time | Pages illimitées, PDF + Word, tout Pro inclus, Slides PowerPoint, JuryAI |
+
+Footer under plans: "Paiement sécurisé · Remboursement 48h · MAD"
+
+**Upgrade pricing (pay only the difference):**
+- Essentiel → Pro = 300 MAD
+- Pro → Premium = 300 MAD
+
+**JuryAI is Pro and Premium only — never show it as free.**
+**Bibliothèque is Pro and Premium only.**
+
+---
+
+## Upsell Modals (Contextual — show based on usage)
+
+Trigger 4 contextual upgrade modals. Each has: title, what they unlock, upgrade price (difference only), "Mettre à niveau — [X] MAD" (purple CTA), "Plus tard" (dismiss gray).
+
+1. **Essentiel hits 30 pages** → "Tu as atteint ta limite de 30 pages. Passe au Pro pour 60 pages + révisions illimitées + JuryAI — +300 MAD"
+2. **Essentiel uses 10th revision** → "Tu as utilisé tes 10 révisions. Débloquer les révisions illimitées — +300 MAD"
+3. **Pro hits 60 pages** → "Tu as atteint 60 pages. Passe au Premium pour des pages illimitées + PowerPoint — +300 MAD"
+4. **User clicks JuryAI, anti-plagiat, citations, or Certificat without required plan** → "Cette fonctionnalité est incluse dans le plan [Pro/Premium]. Mettre à niveau — +300 MAD"
+
+---
+
+## File Structure
+
+```
+rapportai/
+├── app/
+│   ├── page.tsx                          ← Landing page
+│   ├── (auth)/
+│   │   ├── sign-in/page.tsx
+│   │   └── sign-up/page.tsx
+│   ├── onboarding/page.tsx
+│   ├── pricing/page.tsx
+│   ├── (dashboard)/
+│   │   ├── layout.tsx                    ← Sidebar layout
+│   │   ├── dashboard/page.tsx
+│   │   ├── rapports/page.tsx
+│   │   ├── bibliotheque/page.tsx         ← Pro+
+│   │   ├── juryai/page.tsx               ← Pro+
+│   │   ├── figures/page.tsx
+│   │   └── parametres/page.tsx
+│   ├── rapport/[id]/
+│   │   ├── layout.tsx                    ← Step layout with sidebar
+│   │   └── step/[step]/page.tsx          ← Steps 1-9
+│   └── api/
+│       ├── generate/route.ts             ← Main generation endpoint
+│       ├── generate/partie1/route.ts
+│       ├── generate/partie2/route.ts
+│       ├── generate/dedicaces/route.ts
+│       ├── generate/remerciements/route.ts
+│       ├── revise/route.ts               ← Revision panel → Claude
+│       ├── export/docx/route.ts
+│       ├── ai/decide/route.ts
+│       ├── create-checkout-session/route.ts
+│       └── webhooks/stripe/route.ts
+├── components/
+│   ├── layout/
+│   │   ├── Sidebar.tsx
+│   │   └── StepperBar.tsx
+│   ├── step/
+│   │   ├── FormPanel.tsx
+│   │   ├── WordPreview.tsx
+│   │   ├── RevisionPanel.tsx             ← Must send to Claude, not fake
+│   │   ├── AIDecideButton.tsx
+│   │   ├── KeywordChips.tsx
+│   │   ├── WordModal.tsx
+│   │   └── PaywallModal.tsx
+│   ├── upsell/
+│   │   └── UpsellModal.tsx               ← Contextual upgrade modal
+│   ├── dashboard/
+│   │   ├── StatsRow.tsx
+│   │   ├── ActiveReportCard.tsx
+│   │   └── FiguresPanel.tsx
+│   └── ui/                               ← ShadCN components
+├── lib/
+│   ├── claude.ts
+│   ├── prompts/
+│   │   ├── system.ts                     ← Full system prompt below
+│   │   ├── partie1.ts
+│   │   ├── partie2.ts
+│   │   ├── dedicaces.ts
+│   │   └── remerciements.ts
+│   ├── docx-generator.ts
+│   ├── figures-generator.ts              ← Chart.js → PNG → docx
+│   ├── db/schema.ts
+│   └── stripe.ts
+└── middleware.ts
+```
+
+---
+
+## Database Schema
+
+```typescript
+export const users = pgTable('users', {
+  id: text('id').primaryKey(),           // Clerk user ID
+  email: text('email').notNull(),
+  plan: text('plan').default('free'),    // 'free' | 'essentiel' | 'pro' | 'premium'
+  createdAt: timestamp('created_at').defaultNow(),
+})
+
+export const reports = pgTable('reports', {
+  id: uuid('id').defaultRandom().primaryKey(),
+  userId: text('user_id').references(() => users.id),
+  title: text('title').notNull(),
+  type: text('type').notNull(),          // 'pfe' | 'rapport_stage' | 'memoire'
+  status: text('status').default('draft'),
+  currentStep: integer('current_step').default(1),
+  completedSteps: integer('completed_steps').array().default([]),
+  isPaid: boolean('is_paid').default(false),
+  plan: text('plan'),
+  pageCount: integer('page_count').default(0),
+  revisionCount: integer('revision_count').default(0),
+  createdAt: timestamp('created_at').defaultNow(),
+  updatedAt: timestamp('updated_at').defaultNow(),
+})
+
+export const reportData = pgTable('report_data', {
+  id: uuid('id').defaultRandom().primaryKey(),
+  reportId: uuid('report_id').references(() => reports.id),
+  step: integer('step').notNull(),
+  data: jsonb('data').notNull(),
+  generatedContent: text('generated_content'),
+  wordCount: integer('word_count'),
+  updatedAt: timestamp('updated_at').defaultNow(),
+})
+
+export const payments = pgTable('payments', {
+  id: uuid('id').defaultRandom().primaryKey(),
+  userId: text('user_id').references(() => users.id),
+  reportId: uuid('report_id').references(() => reports.id),
+  stripePaymentId: text('stripe_payment_id'),
+  amount: integer('amount').notNull(),   // MAD
+  plan: text('plan').notNull(),
+  previousPlan: text('previous_plan'),   // for upgrade tracking
+  status: text('status').default('pending'),
+  createdAt: timestamp('created_at').defaultNow(),
+})
+
+export const bibliotheque = pgTable('bibliotheque', {
+  id: uuid('id').defaultRandom().primaryKey(),
+  userId: text('user_id').references(() => users.id),
+  reportId: uuid('report_id').references(() => reports.id),
+  fileName: text('file_name').notNull(),
+  fileUrl: text('file_url').notNull(),
+  extractedText: text('extracted_text'),
+  authors: text('authors'),
+  year: text('year'),
+  title: text('title'),
+  doi: text('doi'),
+  citationStyle: text('citation_style').default('apa'),
+  createdAt: timestamp('created_at').defaultNow(),
+})
+```
+
+---
+
+## Claude System Prompt (lib/prompts/system.ts)
+
+```typescript
+export const SYSTEM_PROMPT = `Tu es RapportAI, un expert en rédaction académique francophone spécialisé dans les rapports de stage, PFE et mémoires pour les étudiants marocains (EMSI, ENCG, ISCAE, FST, ENSAM, UIR, UM5, ENSA, HEM, etc.).
+
+Tu rédiges en français académique formel. Tes textes sont :
+- Structurés avec des titres Heading 1/2/3 clairs, numérotés (1., 1.1, 1.2, etc.)
+- Écrits à la 3ème personne ou voix passive académique
+- Richement argumentés avec transitions fluides entre paragraphes
+- Adaptés au niveau Master/Licence selon le contexte
+- Conformes aux normes de rédaction scientifique marocaines
+
+FORMAT DE SORTIE OBLIGATOIRE :
+- Utilise ## pour les titres de section (Heading 2)
+- Utilise ### pour les sous-sections (Heading 3)
+- Sépare chaque paragraphe par une ligne vide
+- Minimum 800 mots par section principale
+- Chaque ## section doit avoir au moins 2-3 paragraphes substantiels
+
+CITATIONS :
+- Format APA 7 par défaut : (Auteur, Année)
+- Si des sources sont fournies dans la Bibliothèque, cite-les inline dans le texte
+- Si une donnée manque : [À COMPLÉTER PAR L'ÉTUDIANT]
+
+FIGURES :
+- Quand un graphique serait pertinent : [INSÉRER FIGURE N — description précise] en italique
+- Si des données CSV/Excel sont fournies : analyse-les et décris les tendances avec des chiffres précis
+
+RÈGLES ABSOLUES :
+- Jamais de contenu générique — chaque phrase spécifique au thème, école, entreprise fournis
+- Jamais d'introduction du type "Dans ce chapitre, nous allons..."
+- Commence directement par le contenu substantiel
+- N'invente jamais de chiffres ou de faits non fournis
+- Utilise les vraies données de l'étudiant dans chaque phrase`
+```
+
+---
+
+## Page 1 — Landing Page (`/`)
+
+**Page order:**
+1. Hero + CTA
+2. Product demo animation
+3. Scrolling bar
+4. Comment ça marche (3 steps)
+5. Core features (4 alternating)
+6. Comparison
+7. JuryAI spotlight
+8. FAQ
+9. Bottom CTA + stats
+10. Footer
+
+### Navbar
+- Left: RapportAI logo (purple square + text)
+- Right: "Se connecter" (ghost) + "Commencer gratuitement →" (purple button)
+- Sticky on scroll, white background, bottom border
+
+### Hero
+```
+Headline:  "Le premier outil IA pour les rapports
+            académiques marocains"
+Sub:       "3 mois de rédaction. 30 minutes avec RapportAI."
+CTA 1:     "Générer mon rapport →"  (purple, large)
+CTA 2:     "Voir la démo"  (ghost)
+```
+
+### Product Demo Animation (browser mockup)
+Gray browser window frame with 3 colored dots. Inside shows RapportAI step view. Animation loops every 6 seconds:
+1. User types theme: "Optimisation de portefeuille — EMSI Finance"
+2. Keywords appear as chips: [Markowitz] [Sharpe] [MASI] [Frontière efficiente]
+3. "✦ Générer la Partie I" button pulses → clicked
+4. Spinner 1 second
+5. Word document fills up with French academic text streaming in word by word
+6. Badge appears: "1 247 mots ✓"
+
+### Scrolling Bar
+Label above: "Compatible avec les canevas de +"
+Two rows infinite marquee, opposite directions, fade edges:
+
+Row 1 (left): `EMSI · ENCG · ENSA · ENSIAS · UIR · UM5 · ISCAE · HEM · FST · FSJES · ENCGT · UCA · UIZ · USMBA · INSEA · EHTP · EMI · IIHEM`
+Row 2 (right): `PFE ✓ · Rapport de Stage ✓ · Mémoire ✓ · Rapport d'Alternance ✓ · Thèse ✓ · Mémoire de Master ✓ · Rapport de Projet ✓`
+
+### Comment ça marche — 3 steps horizontal cards with dotted arrow between them
+```
+01 — DÉCRIS TON PROJET
+     Ton thème, ton école, ta filière.
+     2 minutes.
+
+02 — L'IA GÉNÈRE TON RAPPORT
+     Chaque section rédigée pour toi.
+     En 30 minutes.
+
+03 — TÉLÉCHARGE ET SOUMETS
+     Ton .docx prêt à imprimer.
+     Ton encadrant verra la différence.
+```
+
+### Core Features — 4 alternating sections (text + animated mini demo)
+
+**Feature 1** — text left, demo right
+```
+Tag:    RAPPORT COMPLET
+Title:  "Ton PFE entier rédigé.
+         Pas juste des phrases."
+Para 1: Entre ton thème, ta filière et ton école.
+        RapportAI génère chaque section — introduction,
+        cadre théorique, méthodologie, résultats.
+Para 2: Pas une aide à la rédaction. Le rapport complet.
+Demo:   theme typed → sections appear one by one
+        → Word document fills up
+```
+
+**Feature 2** — demo left, text right
+```
+Tag:    ANTI-DÉTECTION
+Title:  "0% détection de plagiat.
+         Garanti."
+Para 1: Chaque rapport est généré uniquement pour toi,
+        à partir de tes données. Aucun contenu partagé
+        entre étudiants.
+Para 2: Turnitin, iThenticate — aucun outil ne peut
+        détecter ce qui n'existe que pour toi.
+Demo:   two students, two themes →
+        two completely different Word documents
+```
+
+**Feature 3** — text left, demo right
+```
+Tag:    ÉCRIT DEPUIS TES DONNÉES
+Title:  "L'IA écrit depuis tes données,
+         pas depuis Google."
+Para 1: Importe tes fichiers Excel ou CSV.
+        RapportAI génère ton analyse à partir de tes
+        vrais résultats — pas des généralités du web.
+Para 2: Tes données. Ta méthodologie. Tes conclusions.
+Demo:   CSV dragged in → data rows flash →
+        specific analysis text streams into Word
+```
+
+**Feature 4** — demo left, text right
+```
+Tag:    JURIAI
+Title:  "Entraîne-toi avec un jury IA
+         avant le grand jour."
+Para 1: Ton jury va te poser des questions difficiles.
+        JuryAI lit ton rapport et simule exactement
+        ce moment.
+Para 2: Réponds. Reçois un feedback. Arrive préparé.
+Demo:   jury question in chat bubble →
+        student types → score 16/20 + feedback
+```
+
+### Comparison Section
+Title: "RapportAI vs les autres options"
+3 columns as phrase lists (not checkmarks). RapportAI column purple highlighted.
+
+**RapportAI ✓**
+- Rapport complet prêt à soumettre en 30 minutes
+- Compatible avec le canevas de ton école
+- 0% détection de plagiat, garanti
+- Écrit depuis tes données, pas depuis le web
+- Export .docx formaté automatiquement
+- Prépare ta soutenance avec JuryAI
+
+**Rédiger manuellement ✗**
+- 3 mois de rédaction, souvent la dernière semaine
+- Formatage manuel selon le canevas
+- Contenu original mais long et épuisant
+- Mise en page Word à faire soi-même
+- Révisions avec l'encadrant sans préparation
+
+**ChatGPT ✗**
+- Génère du texte général, pas un rapport complet
+- Ne connaît pas le canevas de ton école
+- Détectable par Turnitin
+- Écrit depuis ses données, pas les tiennes
+- Pas d'export .docx formaté
+- Pas de préparation soutenance
+
+### JuryAI Spotlight Section
+```
+Tag:   JURIAI
+Title: "Tu connais ton rapport.
+        Mais sauras-tu répondre au jury ?"
+Para 1: Le jour de ta soutenance, ton encadrant ne
+        sera pas là pour t'aider. Le jury va creuser.
+        Contredire. Tester.
+Para 2: JuryAI lit ton rapport et simule exactement
+        ce moment — les vraies questions, le vrai stress.
+        Arrive le jour J en sachant exactement quoi dire.
+CTA:   "Découvrir JuryAI →"
+```
+JuryAI is Pro and Premium only. Do NOT mention free anywhere near this section.
+
+### FAQ Section
+Title: "Questions fréquentes"
+4 accordion items:
+
+**Q1: Est-ce que Turnitin peut détecter du plagiat dans mon rapport ?**
+Non. Chaque rapport est généré uniquement pour toi, à partir de tes données. Aucun contenu n'est partagé entre étudiants. Turnitin, iThenticate, PlagScan — aucun outil ne détectera quoi que ce soit. C'est comme si tu l'avais écrit toi-même.
+
+**Q2: Puis-je modifier le rapport après génération ?**
+Oui. Chaque section est entièrement modifiable après génération. Tu peux réécrire, reformuler, ou demander à l'IA de réviser un paragraphe spécifique autant de fois que tu veux.
+
+**Q3: Que se passe-t-il si je ne suis pas satisfait ?**
+On rembourse sans question dans les 48h suivant ton paiement. Envoie-nous un message sur WhatsApp et c'est réglé.
+
+**Q4: Puis-je importer mes propres fichiers Excel ou PDF ?**
+Oui. Dans l'étape Partie II tu peux importer tes fichiers de données — Excel, CSV, PDF. L'IA analyse tes résultats et rédige ton analyse empirique à partir de tes vraies données, pas des généralités.
+
+### Bottom CTA Section
+Purple gradient background, centered:
+```
+Title:   "Commence ton rapport. Aujourd'hui."
+Sub:     "Génère ton PFE avec RapportAI et ne
+          reviens plus jamais en arrière."
+Button:  "Commencer gratuitement →"
+
+3 lines below button:
+Sans carte bancaire · Sans engagement · Commencer maintenant
+
+Stats row:
+30 min                  80+                   100%
+Temps moyen         Écoles et canevas      Contenu original
+de génération            supportés              garanti
+```
+
+### Footer
+```
+Left:   RapportAI logo + "Le rapport académique en 30 minutes"
+Mid:    Fonctionnalités · Tarifs · Blog · Contact
+Right:  CGU · Politique de confidentialité · Remboursement
+Bottom: © 2026 RapportAI · Fait au Maroc 🇲🇦
+```
+
+---
+
+## Page 2 — Auth Pages
+
+### Sign Up (`/sign-up`)
+- Split: left purple gradient with logo + "Le premier outil IA pour les rapports académiques marocains", right form
+- Google OAuth button (purple outline)
+- Divider "ou"
+- Fields: Prénom, Email, Mot de passe
+- CTA: "Créer mon compte →" (purple full width)
+- "Déjà un compte ? Se connecter"
+
+### Sign In (`/sign-in`)
+- Same split layout
+- Fields: Email, Mot de passe
+- "Mot de passe oublié ?" link
+- CTA: "Se connecter →"
+
+---
+
+## Page 3 — Onboarding (`/onboarding`)
+
+3-step centered card, progress dots top. Only shown after first sign-up.
+
+**Step 1 — Ton profil**
+- "Bienvenue sur RapportAI 👋"
+- Prénom (pre-filled from Clerk), École (searchable dropdown: EMSI, ENCG, ENSA, ENSIAS, UIR, UCA, UM5, ISCAE, HEM, Autre), Filière
+- "Continuer →"
+
+**Step 2 — Ton rapport**
+- "Quel type de rapport tu prépares ?"
+- 3 big selectable cards: PFE / Rapport de Stage / Mémoire
+- Année académique dropdown
+- "Continuer →"
+
+**Step 3 — C'est parti !**
+- Animated checkmark
+- "Tout est prêt. Créons ton rapport."
+- Summary of their choices
+- "Commencer mon rapport →" → /dashboard
+
+---
+
+## Page 4 — Dashboard (`/dashboard`)
+
+### Layout
+Sidebar (left, fixed) + main content (right, scrollable)
+
+### Topbar
+- "Bonjour, [Prénom] 👋" + "Votre rapport avance bien."
+- Right: notification bell + avatar
+
+### Empty State (0 reports)
+- Large centered card with illustration
+- "Aucun rapport en cours"
+- "Créer mon premier rapport →" (purple button)
+- 3 small feature pills below: "✓ Page de garde gratuite" "✓ Sans carte bancaire" "✓ 30 minutes"
+
+### Active State (has report)
+
+**Stats Row — 4 cards:**
+- Progression globale: percentage + circular ring (purple)
+- Sections complètes: "5 / 9"
+- Mots générés: "3 247"
+- Temps estimé restant: "~12 min"
+
+**Active Report Card:**
+- Report title + school · filière · année
+- 9 stepper pills: ✅✅✅✅✅🔵⬜⬜⬜
+- Progress bar purple
+- "Continuer →" button + "Voir l'aperçu complet" link
+
+**Floating chat button:** bottom right, purple circle with ✦ icon — connected to real Claude endpoint
+
+---
+
+## Sidebar Component (all dashboard + step pages)
+
+### Behavior
+- Default: 60px wide, icons only
+- Hover: expands to 220px, labels fade in, `width 200ms ease`
+- Main content margin-left transitions with sidebar
+
+### Items
+```
+[Logo: purple square → expands to "RapportAI"]
+
+📊 Tableau de bord      → /dashboard
+📄 Mes rapports         → /rapports
+📚 Bibliothèque         → /bibliotheque   [Pro badge]
+🎓 JuryAI               → /juryai         [Pro badge]
+🖼️  Figures             → /figures
+
+[flex-grow spacer]
+
+[Upgrade banner: collapsed = ⚡ icon only
+ Expanded = "Passez au Pro · Bibliothèque + JuryAI · Voir les offres →"]
+
+⚙️  Paramètres          → /parametres
+[Avatar + name + plan]
+```
+
+Active item: `#f5f0ff` bg + `#7c3aed` icon + text
+Inactive: `#6b7280` icon, hover `#f9f8ff` bg
+
+---
+
+## Report Steps — 9 Steps Total
+
+Steps follow the EMSI Architecture générale du PFE:
+
+1. Informations Générales
+2. Page de Garde
+3. Dédicaces & Remerciements
+4. Résumé + Abstract + Abréviations
+5. Sommaire
+6. Introduction Générale
+7. Partie I — Cadre Théorique
+8. Partie II — Analyse Empirique
+9. Conclusion + Bibliographie + Annexes
+
+---
+
+## Step View Layout (Steps 1–9)
+
+3-column layout, full height:
+```
+[Sidebar 60/220px] [Form Panel ~38%] [Word Preview ~62%]
+```
+
+### Form Panel Header (sticky)
+- Breadcrumb: "Mes rapports › [Titre]" muted
+- Step name: "Étape X sur 9 — [Nom de l'étape]" bold
+- 9 compact stepper pills: ✅ done, 🔵 current, ⬜ future — clickable
+- Thin purple progress line below
+
+### Word Preview Panel Header (sticky)
+- Left: "Aperçu du document" in `#6b7280`
+- Right: [📋 Copier] [⬇ Télécharger .docx] [✏️ Révision]
+
+### Word Document Styles (A4 simulation)
+```
+Panel bg:      #e5e7eb
+Page card:     white, max-width 700px, centered, padding 64px
+               box-shadow: 0 4px 24px rgba(0,0,0,0.12)
+Page header:   small centered gray — "Université [ÉCOLE] — Rapport de Fin d'Études [ANNÉE]"
+H2:            Times New Roman, 14pt, bold, centered, underlined, #111
+H3:            Times New Roman, 13pt, bold, left-aligned, #222
+Body:          Times New Roman, 12pt, #1a1a1a, text-align justify, line-height 1.75
+Page number:   centered bottom "— [N] —" gray
+```
+
+### Revision Slide-in Panel
+- Slides from right, overlays on document, width 320px
+- Header: "Révision ✏️" + close X
+- Textarea: "Que souhaitez-vous modifier ?"
+- "Appliquer la révision" button → sends to Claude API, streams revised text back
+- Last 3 revision history items collapsible below
+- Tracks revision count against plan limit (10 for Essentiel, unlimited for Pro+)
+
+---
+
+## Step 1 — Informations Générales
+
+Form fields:
+1. **Type de rapport** — 3 selectable cards: PFE / Rapport de Stage / Mémoire
+2. **Thème du rapport** — large text input — feeds ALL future AI generation
+3. **École / Université** — searchable select (EMSI, ENCG, ENSA, ENSIAS, UIR, UCA, UM5, ISCAE, HEM, Autre)
+4. **Filière / Spécialité** — text input
+5. **Année académique** — select
+6. **Style de citation** — select: APA 7th (default), Chicago, Harvard, IEEE, MLA
+7. **Encadrant(e) pédagogique** — text input
+8. **Encadrant(e) professionnel(le)** — text input (optional)
+9. **Entreprise d'accueil** — text input (optional, rapport de stage only)
+10. **Ville** — text input
+
+Auto-save every field on change (debounced 800ms). Bottom button: "Suivant — Page de garde →"
+
+---
+
+## Step 2 — Page de Garde
+
+Left form panel + right Word preview (live preview as they type):
+- All Step 1 fields editable here
+- Style selector: 3 thumbnails — Classique / Moderne / EMSI Standard
+- Logo upload option (optional)
+
+Word preview: Full A4 page de garde — university name top center, "Rapport de Fin d'Études", title bold centered, student name, supervisor, year, school address bottom.
+
+---
+
+## Step 3 — Dédicaces & Remerciements
+
+Two sub-sections on same page:
+
+**Dédicaces:**
+1. AI suggestion card (purple tint): "L'IA rédige vos dédicaces à partir de votre profil"
+2. Destinataires — textarea
+3. Ton — 3 pill selectors: Formel / Chaleureux / Poétique
+4. Message personnel — textarea (optional)
+5. "✦ Laisser l'IA décider" below every textarea
+6. "✦ Générer les Dédicaces" button
+
+**Remerciements:**
+1. AI card: reads encadrant name + school from Step 1
+2. Personnes à remercier — chips: [Mon encadrant pédagogique] [Mon encadrant professionnel] [Le jury] [Ma famille] [Mes collègues] [L'équipe de [entreprise]] [Mes amis] [+ Ajouter]
+3. Message additionnel — textarea
+4. "✦ Générer les Remerciements" button
+
+---
+
+## Step 4 — Résumé + Abstract + Abréviations
+
+Three sub-sections:
+
+**Résumé (French):** textarea + "✦ Générer le Résumé" — 150-250 mots, 5 mots-clés
+**Abstract (English):** auto-translated from Résumé + editable
+**Liste des abréviations:** add acronym + definition pairs, editable table, "✦ Générer automatiquement"
+
+---
+
+## Step 5 — Sommaire
+
+Full-width. Auto-generated from report structure.
+- Drag-and-drop list of chapters and sections — MUST save order to database
+- Each item: drag handle + number + title + dotted line + page number
+- "Aperçu Word" button generates formatted sommaire
+- Saves to reportData for inclusion in .docx
+
+---
+
+## Step 6 — Introduction Générale
+
+Form:
+1. Contexte général — textarea — "✦ Laisser l'IA décider"
+2. Problématique — textarea — "✦ Laisser l'IA décider"
+3. Objectifs du rapport — textarea
+4. Plan du rapport — auto-generated from steps 7-9 structure
+5. "✦ Générer l'Introduction Générale" sticky bottom
+
+Word preview: full streaming generation, ~400-600 mots
+
+---
+
+## Step 7 — Partie I (Cadre Théorique)
+
+### Form Panel
+
+**1. AI Cadrage du Sujet Card (purple tint)**
+- 5 keyword chips pre-generated from theme (selectable/deselectable)
+- Google Scholar links dynamically built: `https://scholar.google.com/scholar?q=[keywords+from+topic]`
+- Show 2-3 clickable keyword chips per section as badges — each opens in new tab with long-tail keywords from student's actual topic
+- Note below: "Pour de meilleurs résultats, importez 2-3 articles PDF dans cette section — Claude les utilisera comme sources directes."
+- "Regénérer les mots-clés ↺"
+
+**2. Problématique Centrale**
+- Textarea 4 rows — DO NOT pre-fill with demo text
+- Placeholder: "Ex: Comment construire un portefeuille optimal sur le marché boursier marocain..."
+- "✦ Laisser l'IA décider"
+
+**3. Upload Sources / PDFs**
+- Drag & drop: .pdf, .docx, max 10 files
+- Show uploaded files as chips with × remove
+
+**4. Résumé du Contexte**
+- Textarea 3 rows — "✦ Laisser l'IA décider"
+
+**5. Structure des Chapitres**
+- Chapter inputs, pre-filled from theme, removable
+- "+ Ajouter un chapitre"
+
+**6. Sources Bibliographiques**
+- Manual chips: [+ Ajouter]
+
+**Sticky Bottom: "✦ Générer la Partie I"**
+- Loading: spinner + "Génération en cours... (~45 secondes)"
+- Streaming: text appears word by word in Word preview
+- After ~600 words: blur + Paywall Modal
+- If paid: full generation continues
+- Success: green "Partie I générée ✓"
+
+---
+
+## Step 8 — Partie II (Analyse Empirique)
+
+### Form Panel
+
+**1. AI Context Card**
+- Shows pills: [thème] [problématique] [mots-clés] [Partie I]
+
+**2. Upload Données (CSV/Excel)**
+- Drag & drop: .csv, .xlsx
+- On upload: parse with papaparse/xlsx
+- Claude analyzes data and suggests figures with placement:
+  - "Figure 1 — Évolution du CA (2020-2024) → à insérer dans Section 2.3"
+  - Show as clickable approval cards — student approves/rejects before generation
+- Google Scholar chips with long-tail keywords from student's sector/topic
+- Note: "Pour de meilleurs résultats, importez 2-3 articles PDF"
+
+**3. Méthodologie** — textarea — "✦ Laisser l'IA décider"
+
+**4. Résultats Obtenus** — textarea — "✦ Laisser l'IA décider"
+
+**5. Figures & Tableaux** — chips from auto-detected + manual add
+
+**6. Limites & Perspectives** — textarea — "✦ Laisser l'IA décider"
+
+**Sticky Bottom: "✦ Générer la Partie II"** — same states as Partie I
+
+---
+
+## Step 9 — Conclusion + Bibliographie + Annexes
+
+**Conclusion Générale:**
+- Bilan — textarea — "✦ Laisser l'IA décider"
+- Apports du rapport — textarea
+- Perspectives futures — textarea
+- "✦ Générer la Conclusion"
+
+**Bibliographie:** auto-generated from all cited sources, formatted by citation style from Step 1
+
+**Annexes:** file upload for supporting documents
+
+**Final: "⬇ Télécharger le rapport complet (.docx)"** — big purple button, triggers full export
+
+---
+
+## Figures System (lib/figures-generator.ts)
+
+When CSV/Excel uploaded in Partie II:
+1. Parse with papaparse/xlsx
+2. Claude analyzes data → suggests chart types (bar, line, pie) + placement in document
+3. Render chart on hidden Canvas element using Chart.js
+4. Capture PNG via `canvas.toDataURL()`
+5. Insert PNG into .docx via `ImageRun` from docx package
+6. Claude writes "Comme le montre la Figure N ci-dessous..." naturally before each chart
+7. Auto-generate "Liste des figures" page with titles and page numbers
+
+If no file uploaded: Claude suggests what figures student SHOULD create:
+"Pour illustrer votre analyse, nous recommandons : Figure 1 — organigramme de l'entreprise, Figure 2 — évolution des ventes..."
+Insert [INSÉRER FIGURE N — description] in italic gray in .docx
+
+---
+
+## Google Scholar Integration
+
+For each section (Partie I, Partie II), generate 2-3 direct search URLs using keywords from student's actual topic, company, sector:
+
+```
+https://scholar.google.com/scholar?q=[dynamic+keywords]
+```
+
+Example for topic "gestion des risques PME Maroc":
+- `https://scholar.google.com/scholar?q=gestion+des+risques+PME+Maroc+2023`
+- `https://scholar.google.com/scholar?q=risk+management+small+business+Morocco`
+- `https://scholar.google.com/scholar?q=analyse+risques+financiers+entreprise+marocaine`
+
+Display as clickable chips/badges with Google Scholar icon — each opens new tab.
+Note below: "Pour de meilleurs résultats, importez 2-3 articles PDF dans cette section — Claude les utilisera comme sources directes dans votre rapport."
+
+Keywords generated dynamically by Claude based on student's topic, school, sector, section title.
+
+---
+
+## Citation Injection (.docx)
+
+When sources exist in Bibliothèque:
+- Claude references them inline in generated text: (Auteur, Année) — using citation style from Step 1
+- "Bibliographie" section at end of .docx auto-formatted with all cited sources
+- If no sources: insert [SOURCE À COMPLÉTER] placeholders
+
+---
+
+## Paywall Modal
+
+Triggered after Partie I streams ~600 words:
+- Background: document blurs `filter: blur(4px)`
+- Modal centered, white card, border-radius 16px
+- Lock icon 🔒 + "Ton rapport est presque prêt."
+- Sub: "Débloque la génération complète pour continuer."
+
+3 plan cards:
+```
+ESSENTIEL              PRO ⭐ Le plus populaire    PREMIUM
+149 MAD                449 MAD                     749 MAD
+
+30 pages               60 pages                    Pages illimitées
+PDF + Word             PDF + Word                  PDF + Word
+10 révisions           Révisions illimitées        Tout Pro inclus
+Chatbot IA             Chatbot IA                  Slides PowerPoint
+Canevas école          Canevas école               JuryAI
+                       Rapport de citations
+                       Vérification anti-plagiat
+                       Certificat Anti-Détection IA
+                       JuryAI
+
+"Choisir"              "Choisir Pro →"             "Choisir"
+                       (purple filled)
+```
+
+Footer: "Paiement sécurisé · Remboursement 48h · MAD"
+
+---
+
+## Page — Pricing (`/pricing`)
+
+Same 3 plan cards as paywall modal, full page layout.
+"Le plus populaire" badge on Pro.
+Each plan: "Choisir [Plan] →" button → Stripe Checkout.
+
+---
+
+## Page — Mes Rapports (`/rapports`)
+
+Grid of real report cards from database (NOT hardcoded mock data).
+Each card: title, type badge, school + filière, progress bar "X/9 étapes", last edited date, "Continuer →" + "⋯" menu (Renommer, Supprimer, Dupliquer).
+
+---
+
+## Page — Bibliothèque (`/bibliotheque`) — Pro + Premium only
+
+If free/essentiel: blur overlay with upgrade modal "Cette fonctionnalité est réservée au plan Pro — +300 MAD"
+
+**Layout inspired by Jenni.ai:**
+
+Center empty state:
+- Stacked cards visual (PDF/article icons)
+- Title: "Rendez vos rapports plus pertinents"
+- Sub: "Ajoutez vos sources et laissez RapportAI citer automatiquement dans votre rapport."
+
+Methods list:
+```
+Méthodes les plus populaires:
+📄 Télécharger des fichiers PDF
+🔗 Ajouter via DOI/URL
+
+Autres méthodes:
+📝 Importer .bib / .ris
+🔍 Rechercher sur Google Scholar (opens Scholar with student's topic keywords)
+```
+
+When sources uploaded:
+- List with: title (AI-extracted), authors, year, "Utilisé dans [Partie I / Partie II]" tag
+- Actions: "Citer ↗" | "Voir ↗" | "🗑"
+
+Dark theme matching rest of app.
+
+---
+
+## Page — JuryAI (`/juryai`) — Pro + Premium only
+
+If free/essentiel: upgrade wall "JuryAI est disponible à partir du plan Pro — +300 MAD"
+
+**Layout:** Chat-style, centered, max-width 800px.
+
+3 virtual jury members with distinct personalities:
+- **Pr. Amine** — rigoureux, pose des questions méthodologiques précises
+- **Pr. Fatima** — encourageante mais critique sur les conclusions
+- **Pr. Karim** — sceptique, challenge les hypothèses
+
+Chat interface:
+- AI messages: left-aligned, gray bubble, jury member avatar + name
+- Student: right-aligned, purple bubble
+- Textarea bottom + "Envoyer"
+- JuryAI reads student's actual report content to generate relevant questions
+
+First message: "Bonjour, je suis votre jury de soutenance. Commençons. Pouvez-vous nous exposer votre problématique et votre méthodologie en 3 minutes ?"
+
+After 5-6 exchanges: Score /20 + Points forts + Points à améliorer + "Recommencer"
+
+Connected to real Claude API — NOT hardcoded responses.
+
+---
+
+## Page — Figures (`/figures`)
+
+Grid layout, all figures from all steps:
+- Thumbnail preview
+- Figure title + step origin tag
+- "Voir" | "Télécharger" | "🗑" actions
+- Filter tabs: Toutes / Graphiques / Tableaux / Schémas
+
+---
+
+## Page — Paramètres (`/parametres`)
+
+3 sections:
+
+**Profil**
+- Avatar, Nom complet, Email (read-only from Clerk), École, Filière
+- "Sauvegarder"
+
+**Abonnement**
+- Current plan badge (purple highlight)
+- "Mettre à niveau →" if not Premium
+- Payment history table from database: date, plan, amount MAD, status
+
+**Préférences**
+- Langue: Français
+- Notifications email toggle
+- "Supprimer mon compte" — red, confirmation modal
+
+---
+
+## AI Integration — Claude API
+
+### Client (`lib/claude.ts`)
+```typescript
+import Anthropic from '@anthropic-ai/sdk'
+
+const client = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY })
+
+export async function generateWithCache(
+  systemPrompt: string,
+  userMessage: string,
+  model: 'claude-sonnet-4-6' | 'claude-haiku-4-5-20251001' = 'claude-sonnet-4-6'
+) {
+  return client.messages.create({
+    model,
+    max_tokens: 4096,
+    system: [{
+      type: 'text',
+      text: systemPrompt,
+      cache_control: { type: 'ephemeral' },
+    }],
+    messages: [{ role: 'user', content: userMessage }],
+    stream: true,
+  })
+}
+```
+
+### .docx Text Formatting (CRITICAL)
+Claude must output text with markers for the docx parser:
+
+```
+## 1.1 Titre de section
+
+Paragraph text here. Full paragraph, multiple sentences.
+
+## 1.2 Section suivante
+
+Next paragraph here.
+
+### 1.2.1 Sous-section
+
+Sub-section content here.
+```
+
+The docx generator MUST:
+- Lines starting with `##` → Heading 2 style
+- Lines starting with `###` → Heading 3 style
+- Empty lines → new Paragraph object (never concatenate into one paragraph)
+- Each paragraph = separate `new Paragraph({...})` in docx package
+- Body: Times New Roman 12pt, justified, 1.5 line spacing
+- 12pt space before each Heading 2, 6pt after each paragraph
+
+### Context Accumulation
+Every generation call includes ALL previous steps' data:
+- Partie I: theme + école + filière + keywords + problématique + résumé + chapitres + sources
+- Partie II: everything from Partie I + Partie I generated content summary + uploaded CSV data
+
+---
+
+## Freemium & Paywall Logic
+
+```
+Steps 1-6:  Fully free
+Step 7:     Generation streams freely
+            → After ~600 words: STOP, blur, PaywallModal
+            → If paid: continue from where stopped
+            → If closed: blur stays, sticky "Débloquer →" banner
+Steps 8-9:  Locked if not paid
+```
+
+Page limit enforcement:
+- Essentiel: stops at 30 pages → UpsellModal
+- Pro: stops at 60 pages → UpsellModal
+- Premium: unlimited
+
+Revision limit:
+- Essentiel: 10 revisions tracked in database → UpsellModal on 10th
+- Pro+: unlimited
+
+---
+
+## Stripe Integration
+
+Use `STRIPE_SECRET_KEY` environment variable directly (no Replit Stripe integration needed).
+
+### Flow
+```typescript
+// POST /api/create-checkout-session
+const session = await stripe.checkout.sessions.create({
+  payment_method_types: ['card'],
+  line_items: [{ price: PRICE_IDS[plan], quantity: 1 }],
+  mode: 'payment',
+  success_url: `${BASE_URL}/rapport/${reportId}/step/7?payment=success`,
+  cancel_url: `${BASE_URL}/rapport/${reportId}/step/7`,
+  metadata: { userId, reportId, plan, previousPlan }
+})
+```
+
+### Webhook
+- `checkout.session.completed` → update `users.plan` + `reports.isPaid = true`
+- Upgrade pricing: if previousPlan exists, charge only difference
+
+### After payment
+- Redirect to step 7, show toast "Paiement confirmé ✓ — Plan [X] activé"
+- Continue generation automatically
+
+---
+
+## Word Export (`lib/docx-generator.ts`)
+
+Complete .docx sections in order:
+1. Page de garde
+2. Dédicaces
+3. Remerciements
+4. Résumé + mots-clés
+5. Abstract + keywords
+6. Liste des abréviations
+7. Sommaire (from saved Step 5 order)
+8. Introduction Générale
+9. Partie I
+10. Partie II (with Chart.js PNG figures embedded via ImageRun)
+11. Conclusion Générale
+12. Bibliographie (auto-formatted by citation style)
+13. Table des figures (auto-generated)
+14. Liste des tableaux
+15. Annexes
+
+Formatting:
+- Times New Roman 12pt body, justified, 1.5 line spacing
+- Margins: top 2.5cm, bottom 2.5cm, left 3cm, right 2.5cm
+- Page numbers: centered bottom starting page 3
+- Heading 1: 16pt bold centered underlined
+- Heading 2: 14pt bold
+- Heading 3: 13pt bold
+- Cover page: no page number
+
+---
+
+## Security & Performance
+
+- CORS: lock to Replit domain only (not `origin: true`)
+- Rate limiting: max 10 requests/hour per authenticated user on `/api/generate`
+- JSON body size limit: 50kb max on all API routes
+- Auth check on every API route — reject unauthenticated requests
+- Share links stored in database (not in-memory Map — survives restarts)
+
+---
+
+## Interaction States
+
+### Buttons
+- Idle: purple fill
+- Hover: `#5b21b6`, scale 1.02
+- Loading: spinner, "Génération en cours..."
+- Success: green `#10b981`, "Généré ✓" — 3s then idle
+- Error: red `#ef4444`, "Erreur — Réessayer →"
+
+### Toast Notifications (bottom-left, 2.5s)
+- Save: "Sauvegardé ✓" green
+- Copy: "Copié ✓" green
+- Error: "Une erreur est survenue. Réessayez." red — shown when Claude fails
+- Payment: "Paiement confirmé ✓ — Plan [X] activé" green
+
+### Auto-save
+- Debounced 800ms every field — saved to database
+- Data persists across sessions (localStorage + database)
+- Returning users see their previous report pre-filled
+
+### Mobile
+- Sidebar → bottom tab bar
+- Steps: tabs "Formulaire" / "Aperçu"
+- Modals: full-screen
+
+---
+
+## Environment Variables
+
+```
+NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY=
+CLERK_SECRET_KEY=
+NEXT_PUBLIC_CLERK_SIGN_IN_URL=/sign-in
+NEXT_PUBLIC_CLERK_SIGN_UP_URL=/sign-up
+NEXT_PUBLIC_CLERK_AFTER_SIGN_IN_URL=/dashboard
+NEXT_PUBLIC_CLERK_AFTER_SIGN_UP_URL=/onboarding
+ANTHROPIC_API_KEY=
+DATABASE_URL=
+STRIPE_SECRET_KEY=
+STRIPE_WEBHOOK_SECRET=
+NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY=
+UPLOADTHING_SECRET=
+UPLOADTHING_APP_ID=
+```
+
+---
+
+## Current Build State (as of May 2, 2026)
+
+Already built and working:
+- Landing page ✅
+- Auth pages ✅
+- Onboarding ✅
+- Dashboard ✅
+- Sidebar (collapsible) ✅
+- All 9 steps UI ✅
+- Claude API streaming ✅
+- .docx export ✅
+- Pricing page ✅
+- Paywall modal ✅
+- JuryAI page ✅
+- Bibliothèque page (Jenni.ai style) ✅
+- Figures system ✅
+- Google Scholar dynamic links ✅
+- Citation injection ✅
+- Paramètres page ✅
+- Upsell modals ✅
+- Mock payment flow ✅
+
+Pending / needs fixing:
+- Real Stripe payment (STRIPE_SECRET_KEY added to secrets)
+- .docx formatting (wall of text → proper paragraphs with ## markers)
+- Revision panel → connect to Claude (currently does nothing)
+- FloatingChat → connect to real Claude (currently hardcoded)
+- /rapports page → read from database (currently MOCK_REPORTS)
+- Step 6 → clear hardcoded finance demo text
+- CORS lock to domain
+- Rate limiting on /api/generate
+- Error toasts on generation failure
+- Sommaire Step 5 → save order to database
+
+---
+
+## Critical Rules
+
+- ALL UI text in French — zero exceptions
+- Technical code and comments in English
+- Primary user: Moroccan student 18-25, mobile-first
+- JuryAI is Pro/Premium ONLY
+- No fake user counts on landing page
+- Stripe amounts in MAD
+- Auto-save every field, every step
+- Prompt caching on all Claude API calls
+- Never pre-fill form fields with demo/hardcoded content
+- .docx must output proper paragraphs — never one wall of text
+- All API routes must check authentication
