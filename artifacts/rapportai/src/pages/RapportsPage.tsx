@@ -8,7 +8,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Sidebar, SidebarSpacer } from "@/components/layout/Sidebar";
 import { FloatingChat } from "@/components/dashboard/FloatingChat";
-import { Link } from "wouter";
+import { useLocation } from "wouter";
 import { getReport, saveReport } from "@/lib/reportStore";
 
 interface Report {
@@ -79,7 +79,13 @@ const TYPE_COLORS: Record<string, string> = {
   "Mémoire": "bg-indigo-50 text-indigo-700",
 };
 
-function ReportCard({ report, onDelete }: { report: Report; onDelete: (id: string) => void }) {
+const STEP_PATHS: Record<number, string> = {
+  1: "/rapport/step-1", 2: "/rapport/step-2", 3: "/rapport/step-3",
+  4: "/rapport/step-4", 5: "/rapport/step-5", 6: "/rapport/step-6",
+  7: "/rapport/partie-i", 8: "/rapport/partie-ii", 9: "/rapport/step-9",
+};
+
+function ReportCard({ report, onDelete, onContinue }: { report: Report; onDelete: (id: string) => void; onContinue: (report: Report) => void }) {
   const [menuOpen, setMenuOpen] = useState(false);
   const status = STATUS_CONFIG[report.status];
   const progress = Math.round((report.completedSteps.length / 7) * 100);
@@ -217,6 +223,7 @@ function ReportCard({ report, onDelete }: { report: Report; onDelete: (id: strin
           </span>
           <button
             data-testid={`button-open-report-${report.id}`}
+            onClick={() => onContinue(report)}
             className="flex items-center gap-1 text-xs font-semibold text-purple-600 hover:text-purple-700 bg-purple-50 hover:bg-purple-100 px-3 py-1.5 rounded-lg transition-colors"
           >
             {report.status === "completed" ? "Voir" : "Continuer"}
@@ -228,7 +235,7 @@ function ReportCard({ report, onDelete }: { report: Report; onDelete: (id: strin
   );
 }
 
-function EmptyState() {
+function EmptyState({ onNew }: { onNew: () => void }) {
   return (
     <motion.div
       initial={{ opacity: 0, y: 12 }}
@@ -249,6 +256,7 @@ function EmptyState() {
       </p>
       <Button
         data-testid="button-create-first-report"
+        onClick={onNew}
         className="bg-purple-600 hover:bg-purple-700 text-white flex items-center gap-2"
         style={{ boxShadow: "0 4px 24px rgba(124,58,237,0.25)" }}
       >
@@ -263,10 +271,18 @@ export default function RapportsPage() {
   const [reports, setReports] = useState<Report[]>(() => loadRealReports());
   const [search, setSearch] = useState("");
   const [filter, setFilter] = useState<"all" | "draft" | "in_progress" | "completed">("all");
+  const [, navigate] = useLocation();
 
   useEffect(() => {
     setReports(loadRealReports());
   }, []);
+
+  const goToNewReport = () => navigate("/rapport/step-1");
+
+  const handleContinue = (report: Report) => {
+    const path = STEP_PATHS[report.currentStep] ?? STEP_PATHS[1];
+    navigate(path);
+  };
 
   const filtered = reports
     .filter((r) => filter === "all" || r.status === filter)
@@ -318,6 +334,7 @@ export default function RapportsPage() {
               </div>
               <Button
                 data-testid="button-new-report"
+                onClick={goToNewReport}
                 className="flex items-center gap-2 bg-purple-600 hover:bg-purple-700 text-white"
                 style={{ boxShadow: "0 4px 24px rgba(124,58,237,0.25)" }}
               >
@@ -359,10 +376,10 @@ export default function RapportsPage() {
             {/* Grid */}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               {filtered.length === 0 ? (
-                <EmptyState />
+                <EmptyState onNew={goToNewReport} />
               ) : (
                 filtered.map((report) => (
-                  <ReportCard key={report.id} report={report} onDelete={deleteReport} />
+                  <ReportCard key={report.id} report={report} onDelete={deleteReport} onContinue={handleContinue} />
                 ))
               )}
             </div>
