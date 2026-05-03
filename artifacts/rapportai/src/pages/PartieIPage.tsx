@@ -3,7 +3,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import { useLocation } from "wouter";
 import {
   Sparkles, RefreshCw, Upload, Plus, X,
-  Loader2, ChevronRight, GripVertical, Wand2,
+  Loader2, ChevronRight, GripVertical, Wand2, ArrowRight,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Sidebar } from "@/components/layout/Sidebar";
@@ -50,11 +50,15 @@ export default function PartieIPage() {
   const [addingSource, setAddingSource] = useState(false);
   const [dragOver, setDragOver] = useState(false);
   const [uploadedFile, setUploadedFile] = useState<string | null>(null);
-  const [wordCount, setWordCount] = useState(0);
-  const [previewContent, setPreviewContent] = useState("");
+  const [wordCount, setWordCount] = useState(() =>
+    report.partieI ? report.partieI.split(/\s+/).filter(Boolean).length : 0
+  );
+  const [previewContent, setPreviewContent] = useState(() =>
+    report.partieI ? markdownToHtml(report.partieI) : ""
+  );
   const [humanizing, setHumanizing] = useState(false);
   const fileRef = useRef<HTMLInputElement>(null);
-  const rawTextRef = useRef("");
+  const rawTextRef = useRef(report.partieI ?? "");
 
   const onChunk = useCallback((chunk: string) => {
     rawTextRef.current += chunk;
@@ -344,6 +348,14 @@ export default function PartieIPage() {
                   )}
                 </button>
               )}
+              {previewContent && !generating && !humanizing && (
+                <button
+                  onClick={() => setLocation("/rapport/partie-ii")}
+                  className="w-full h-10 rounded-xl font-semibold text-sm flex items-center justify-center gap-2 bg-gray-900 hover:bg-gray-800 text-white transition-all"
+                >
+                  Continuer — Partie II <ArrowRight className="w-3.5 h-3.5" />
+                </button>
+              )}
             </div>
           </div>
 
@@ -353,7 +365,7 @@ export default function PartieIPage() {
               content={previewContent || undefined}
               rawContent={rawTextRef.current || undefined}
               sectionTitle="Partie I"
-              wordCount={wordCount || 1247}
+              wordCount={wordCount}
             />
           </div>
         </div>

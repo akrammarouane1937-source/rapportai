@@ -3,7 +3,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import { useLocation } from "wouter";
 import {
   Sparkles, RefreshCw, Plus, X,
-  Loader2, GripVertical, Wand2,
+  Loader2, GripVertical, Wand2, ArrowRight,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Sidebar } from "@/components/layout/Sidebar";
@@ -40,7 +40,7 @@ function SourceChip({ label, onRemove }: { label: string; onRemove: () => void }
 export default function PartieIIPage() {
   const [, setLocation] = useLocation();
   const report = getReport();
-  const [keywords, setKeywords] = useState(INITIAL_KEYWORDS);
+  const [keywords, setKeywords] = useState<string[]>(report.motsCles?.length ? report.motsCles : INITIAL_KEYWORDS);
   const [resultats, setResultats] = useState("");
   const [methodo, setMethodo] = useState("");
   const [chapitres, setChapitres] = useState([
@@ -50,10 +50,14 @@ export default function PartieIIPage() {
   const [sources, setSources] = useState(INITIAL_SOURCES);
   const [newSource, setNewSource] = useState("");
   const [addingSource, setAddingSource] = useState(false);
-  const [wordCount, setWordCount] = useState(0);
-  const [previewContent, setPreviewContent] = useState("");
+  const [wordCount, setWordCount] = useState(() =>
+    report.partieII ? report.partieII.split(/\s+/).filter(Boolean).length : 0
+  );
+  const [previewContent, setPreviewContent] = useState(() =>
+    report.partieII ? markdownToHtml(report.partieII) : ""
+  );
   const [humanizing, setHumanizing] = useState(false);
-  const rawTextRef = useRef("");
+  const rawTextRef = useRef(report.partieII ?? "");
 
   const onChunk = useCallback((chunk: string) => {
     rawTextRef.current += chunk;
@@ -315,6 +319,14 @@ export default function PartieIIPage() {
                   )}
                 </button>
               )}
+              {previewContent && !generating && !humanizing && (
+                <button
+                  onClick={() => setLocation("/rapport/step-9")}
+                  className="w-full h-10 rounded-xl font-semibold text-sm flex items-center justify-center gap-2 bg-gray-900 hover:bg-gray-800 text-white transition-all"
+                >
+                  Continuer — Conclusion &amp; Export <ArrowRight className="w-3.5 h-3.5" />
+                </button>
+              )}
             </div>
           </div>
 
@@ -324,7 +336,7 @@ export default function PartieIIPage() {
               content={previewContent || undefined}
               rawContent={rawTextRef.current || undefined}
               sectionTitle="Partie II"
-              wordCount={wordCount || 1189}
+              wordCount={wordCount}
             />
           </div>
         </div>

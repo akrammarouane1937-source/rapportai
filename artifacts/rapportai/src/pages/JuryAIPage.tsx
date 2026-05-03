@@ -9,6 +9,8 @@ import { Button } from "@/components/ui/button";
 import { Sidebar, SidebarSpacer } from "@/components/layout/Sidebar";
 import { getReport } from "@/lib/reportStore";
 
+const BASE_PATH = (import.meta.env.BASE_URL as string).replace(/\/$/, "");
+
 /* ── Jury members ──────────────────────────────────────────────────────── */
 const JURY = [
   {
@@ -93,7 +95,7 @@ function useJuryStream() {
       }));
 
       try {
-        const res = await fetch("/api/jury", {
+        const res = await fetch(`${BASE_PATH}/api/jury`, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ messages: apiMessages, reportContext }),
