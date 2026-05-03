@@ -21,6 +21,7 @@ interface ActiveReportCardProps {
   completedSteps?: number[];
   updatedAt?: string;
   onContinue?: () => void;
+  onStepClick?: (stepId: number) => void;
 }
 
 export function ActiveReportCard({
@@ -30,6 +31,7 @@ export function ActiveReportCard({
   completedSteps = [],
   updatedAt = "Aujourd'hui",
   onContinue,
+  onStepClick,
 }: ActiveReportCardProps) {
   const progress = Math.round((completedSteps.length / STEPS.length) * 100);
 
@@ -101,14 +103,16 @@ export function ActiveReportCard({
 
             return (
               <div key={step.id} className="flex items-center gap-1.5">
-                <div
+                <button
                   title={step.label}
-                  className={`relative group flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium transition-all cursor-default
+                  onClick={() => onStepClick?.(step.id)}
+                  className={`relative group flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium transition-all cursor-pointer
+                    hover:scale-105 hover:shadow-md active:scale-95
                     ${isCompleted
-                      ? "bg-green-50 text-green-700 border border-green-200"
+                      ? "bg-green-50 text-green-700 border border-green-200 hover:bg-green-100"
                       : isCurrent
-                      ? "bg-purple-600 text-white border border-purple-600 shadow-sm shadow-purple-200"
-                      : "bg-gray-50 text-gray-400 border border-gray-200"
+                      ? "bg-purple-600 text-white border border-purple-600 shadow-sm shadow-purple-200 hover:bg-purple-700"
+                      : "bg-gray-50 text-gray-400 border border-gray-200 hover:bg-gray-100 hover:text-gray-600"
                     }
                   `}
                 >
@@ -122,7 +126,7 @@ export function ActiveReportCard({
                   <span className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 bg-gray-900 text-white text-xs rounded-lg px-2 py-1 whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none z-10">
                     {step.label}
                   </span>
-                </div>
+                </button>
                 {i < STEPS.length - 1 && (
                   <ChevronRight className="w-3 h-3 text-gray-300 flex-shrink-0" />
                 )}

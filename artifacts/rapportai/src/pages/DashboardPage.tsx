@@ -263,6 +263,7 @@ export default function DashboardPage() {
                 completedSteps={completedSteps}
                 updatedAt={hasActiveReport ? "Sauvegarde auto" : "Pas encore commencé"}
                 onContinue={handleContinue}
+                onStepClick={(stepId) => setLocation(stepPaths[stepId] ?? "/rapport/step-1")}
               />
             </div>
 
