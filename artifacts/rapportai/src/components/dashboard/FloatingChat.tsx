@@ -2,8 +2,6 @@ import { useState, useRef, useEffect } from "react";
 import { MessageSquare, X, Send, Sparkles, Loader2 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { getReport } from "@/lib/reportStore";
-import { getMyPlan, canUseFeature } from "@/lib/userPlan";
-import { Link } from "wouter";
 
 const BASE_PATH = (import.meta.env.BASE_URL as string).replace(/\/$/, "");
 
@@ -28,8 +26,6 @@ export function FloatingChat() {
   const bottomRef             = useRef<HTMLDivElement>(null);
   const abortRef              = useRef<AbortController | null>(null);
 
-  const plan     = getMyPlan();
-  const hasAccess = canUseFeature("juryai", plan.planId);
 
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -162,26 +158,7 @@ export function FloatingChat() {
               </button>
             </div>
 
-            {!hasAccess ? (
-              /* ── Upsell (free / essentiel) ── */
-              <div className="p-5 text-center">
-                <div className="w-12 h-12 bg-amber-50 rounded-2xl flex items-center justify-center mx-auto mb-3">
-                  <Sparkles className="w-6 h-6 text-amber-500" />
-                </div>
-                <p className="text-sm font-bold text-gray-900 mb-1" style={{ fontFamily: "'Plus Jakarta Sans', sans-serif" }}>
-                  Fonctionnalité Pro
-                </p>
-                <p className="text-xs text-gray-500 mb-4">
-                  JuryAI simule une vraie soutenance avec des questions personnalisées sur ton rapport. Disponible à partir du plan Pro.
-                </p>
-                <Link href="/pricing">
-                  <button className="w-full h-9 bg-purple-600 hover:bg-purple-700 text-white text-xs font-bold rounded-xl transition-colors">
-                    Voir les plans →
-                  </button>
-                </Link>
-              </div>
-            ) : (
-              <>
+            <>
                 {/* ── Messages ── */}
                 <div className="h-64 overflow-y-auto p-4 space-y-3 bg-gray-50/50">
                   {messages.map((msg) => (
@@ -232,7 +209,6 @@ export function FloatingChat() {
                   </button>
                 </div>
               </>
-            )}
           </motion.div>
         )}
       </AnimatePresence>

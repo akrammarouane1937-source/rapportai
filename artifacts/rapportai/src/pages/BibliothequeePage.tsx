@@ -7,8 +7,6 @@ import {
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Sidebar } from "@/components/layout/Sidebar";
-import { UpsellModal } from "@/components/report/UpsellModal";
-import { getMyPlan } from "@/lib/userPlan";
 import { getReport } from "@/lib/reportStore";
 import {
   getBibSources, addBibSource, removeBibSource, parseBib,
@@ -422,8 +420,6 @@ function SourcesView({
 // ─── Main page ────────────────────────────────────────────────────────────────
 
 export default function BibliothequeePage() {
-  const plan = getMyPlan();
-  const isLocked = plan.planId === "free";
 
   const [sources, setSources] = useState<BibSource[]>(() => {
     const report = getReport();
@@ -433,7 +429,6 @@ export default function BibliothequeePage() {
       usedIn: detectUsedIn(s, report.partieI, report.partieII, report.introduction),
     }));
   });
-  const [showUpsell, setShowUpsell] = useState(false);
   const [activeModal, setActiveModal] = useState<"pdf" | "doi" | "bib" | null>(null);
   const [pendingPdfName, setPendingPdfName] = useState<string | null>(null);
   const [bibLoading, setBibLoading] = useState(false);
@@ -507,7 +502,7 @@ export default function BibliothequeePage() {
               <p className="text-xs text-white/35">Sources · {sources.length}</p>
             </div>
           </div>
-          {!isLocked && sources.length > 0 && (
+          {sources.length > 0 && (
             <Button
               onClick={() => handleMethod("pdf")}
               className="h-9 px-4 bg-purple-600 hover:bg-purple-700 text-white text-xs font-bold rounded-xl gap-2"
@@ -517,52 +512,14 @@ export default function BibliothequeePage() {
           )}
         </div>
 
-        {/* Content (blurred when locked) */}
-        <div
-          className="flex-1 overflow-hidden"
-          style={{
-            filter: isLocked ? "blur(4px)" : undefined,
-            pointerEvents: isLocked ? "none" : undefined,
-            userSelect: isLocked ? "none" : undefined,
-          }}
-        >
+        {/* Content */}
+        <div className="flex-1 overflow-hidden">
           {sources.length === 0 ? (
             <EmptyState onMethod={handleMethod} />
           ) : (
             <SourcesView sources={sources} onRemove={handleRemove} onMethod={handleMethod} />
           )}
         </div>
-
-        {/* Pro gate overlay */}
-        {isLocked && (
-          <div className="absolute inset-0 flex items-center justify-center z-20"
-               style={{ background: "rgba(14,14,22,0.65)" }}>
-            <motion.div
-              initial={{ opacity: 0, scale: 0.95 }}
-              animate={{ opacity: 1, scale: 1 }}
-              className="text-center max-w-sm mx-4 rounded-2xl p-8"
-              style={{ background: "#1a1a2e", border: "1px solid rgba(124,58,237,0.3)" }}
-            >
-              <div className="w-12 h-12 rounded-2xl mx-auto mb-4 flex items-center justify-center"
-                   style={{ background: "rgba(124,58,237,0.2)" }}>
-                <BookOpen className="w-6 h-6 text-purple-400" />
-              </div>
-              <h3 className="text-lg font-black text-white mb-2" style={{ fontFamily: "'Plus Jakarta Sans', sans-serif" }}>
-                Bibliothèque Pro
-              </h3>
-              <p className="text-sm text-white/50 mb-6 leading-relaxed">
-                Importez vos sources et laissez Claude les citer automatiquement dans votre rapport. Disponible en Pro et Premium.
-              </p>
-              <Button
-                onClick={() => setShowUpsell(true)}
-                className="w-full h-11 bg-purple-600 hover:bg-purple-700 text-white font-bold rounded-xl text-sm gap-2"
-              >
-                Passer à Pro — 449 MAD
-              </Button>
-              <p className="text-xs text-white/30 mt-3">Paiement unique · Sans abonnement</p>
-            </motion.div>
-          </div>
-        )}
       </div>
 
       {/* Hidden file inputs */}
@@ -599,13 +556,6 @@ export default function BibliothequeePage() {
         </div>
       )}
 
-      {/* Upsell */}
-      <UpsellModal
-        open={showUpsell}
-        onClose={() => setShowUpsell(false)}
-        variant="feature"
-        currentPlan={plan.planId}
-      />
     </div>
   );
 }

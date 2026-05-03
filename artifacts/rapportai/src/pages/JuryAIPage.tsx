@@ -3,13 +3,11 @@ import { motion, AnimatePresence } from "framer-motion";
 import {
   Send, Sparkles, Mic, MicOff, RotateCcw,
   GraduationCap, Briefcase, BookOpen, ChevronRight,
-  MessageSquare, Lock,
+  MessageSquare,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Sidebar, SidebarSpacer } from "@/components/layout/Sidebar";
-import { UpsellModal } from "@/components/report/UpsellModal";
 import { getReport } from "@/lib/reportStore";
-import { getMyPlan } from "@/lib/userPlan";
 
 /* ── Jury members ──────────────────────────────────────────────────────── */
 const JURY = [
@@ -197,14 +195,11 @@ function Bubble({ msg, studentName }: { msg: ChatMessage; studentName: string })
 /* ── Main page ─────────────────────────────────────────────────────────── */
 export default function JuryAIPage() {
   const report       = getReport();
-  const plan         = getMyPlan();
-  const isAllowed    = plan.planId === "pro" || plan.planId === "premium";
   const studentName  = report.studentName ?? "Étudiant(e)";
 
   const [messages, setMessages]     = useState<ChatMessage[]>([]);
   const [input, setInput]           = useState("");
   const [started, setStarted]       = useState(false);
-  const [upsellOpen, setUpsellOpen] = useState(false);
   const [exchangeCount, setExchangeCount] = useState(0);
 
   const messagesEndRef = useRef<HTMLDivElement>(null);
@@ -271,7 +266,6 @@ export default function JuryAIPage() {
 
   /* ── Start simulation ── */
   const handleStart = () => {
-    if (!isAllowed) { setUpsellOpen(true); return; }
     setStarted(true);
     setMessages([]);
     setExchangeCount(0);
@@ -434,37 +428,7 @@ export default function JuryAIPage() {
           {/* Messages area */}
           <div className="flex-1 overflow-y-auto px-6 py-6">
             <AnimatePresence>
-              {!started && !isAllowed && (
-                /* Gate for non-pro users */
-                <motion.div
-                  initial={{ opacity: 0, y: 16 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  className="flex flex-col items-center justify-center h-full text-center"
-                >
-                  <div className="w-20 h-20 bg-purple-50 rounded-3xl flex items-center justify-center mb-5">
-                    <Lock className="w-9 h-9 text-purple-300" />
-                  </div>
-                  <h2
-                    className="text-xl font-bold text-gray-900 mb-2"
-                    style={{ fontFamily: "'Plus Jakarta Sans', sans-serif" }}
-                  >
-                    JuryAI est réservé au plan Pro
-                  </h2>
-                  <p className="text-sm text-gray-500 max-w-sm mb-6 leading-relaxed">
-                    Entraîne-toi à ta soutenance avec un jury IA qui pose des questions sur TON rapport. Disponible à partir du plan Pro.
-                  </p>
-                  <Button
-                    onClick={() => setUpsellOpen(true)}
-                    className="bg-purple-600 hover:bg-purple-700 text-white font-bold px-8 h-11 rounded-xl flex items-center gap-2"
-                    style={{ boxShadow: "0 4px 20px rgba(124,58,237,0.35)" }}
-                  >
-                    <Sparkles className="w-4 h-4" /> Passer au Pro — 449 MAD
-                  </Button>
-                  <p className="text-xs text-gray-400 mt-3">Paiement unique · Remboursement 48h</p>
-                </motion.div>
-              )}
-
-              {!started && isAllowed && (
+              {!started && (
                 /* Start screen */
                 <motion.div
                   initial={{ opacity: 0, y: 16 }}
@@ -572,13 +536,6 @@ export default function JuryAIPage() {
         </div>
       </main>
 
-      <UpsellModal
-        open={upsellOpen}
-        onClose={() => setUpsellOpen(false)}
-        variant="feature"
-        currentPlan={plan.planId}
-        featureName="JuryAI"
-      />
     </div>
   );
 }

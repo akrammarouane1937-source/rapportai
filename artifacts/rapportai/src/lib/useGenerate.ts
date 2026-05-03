@@ -12,7 +12,8 @@ export type GenerateSection =
   | "resume"
   | "dedicaces"
   | "remerciements"
-  | "laisser-ia";
+  | "laisser-ia"
+  | "abstract";
 
 export interface GenerateOptions {
   section: GenerateSection;
@@ -24,6 +25,14 @@ export interface GenerateOptions {
   motsCles?: string[];
   citationStyle?: string;
   extraContext?: string;
+  reportType?: string;
+  studentName?: string;
+  annee?: string;
+  encadrantPeda?: string;
+  encadrantPro?: string;
+  entreprise?: string;
+  ville?: string;
+  resume?: string;
 }
 
 /** Fallback demo context — used when the store has no data yet */

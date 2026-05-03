@@ -27,7 +27,7 @@ export function getMyPlan(): UserPlanData {
     const raw = localStorage.getItem(KEY);
     if (raw) return JSON.parse(raw) as UserPlanData;
   } catch {}
-  return { planId: "free", revisionCount: 0 };
+  return { planId: "pro", revisionCount: 0 };
 }
 
 export function saveMyPlan(patch: Partial<UserPlanData>): void {

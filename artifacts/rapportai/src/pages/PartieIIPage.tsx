@@ -8,12 +8,9 @@ import {
 import { Button } from "@/components/ui/button";
 import { Sidebar } from "@/components/layout/Sidebar";
 import { WordPreview } from "@/components/report/WordPreview";
-import { PaywallModal } from "@/components/report/PaywallModal";
-import { UpsellModal } from "@/components/report/UpsellModal";
 import { useGenerate } from "@/lib/useGenerate";
 import { markdownToHtml } from "@/lib/markdownToHtml";
 import { saveReport, getReport } from "@/lib/reportStore";
-import { getMyPlan, PLAN_LIMITS } from "@/lib/userPlan";
 import { ScholarChips } from "@/components/figures/ScholarChips";
 import { FigurePanel } from "@/components/figures/FigurePanel";
 
@@ -53,8 +50,6 @@ export default function PartieIIPage() {
   const [addingSource, setAddingSource] = useState(false);
   const [wordCount, setWordCount] = useState(0);
   const [previewContent, setPreviewContent] = useState("");
-  const [showPaywall, setShowPaywall] = useState(false);
-  const [showUpsell, setShowUpsell] = useState(false);
   const rawTextRef = useRef("");
 
   const onChunk = useCallback((chunk: string) => {
@@ -67,30 +62,17 @@ export default function PartieIIPage() {
 
   const onDone = useCallback(() => {
     saveReport({ partieII: rawTextRef.current });
-    // Check page limit after generation
-    const plan = getMyPlan();
-    const d = getReport();
-    const totalWords = [d.introduction, d.partieI, rawTextRef.current, d.conclusion]
-      .reduce((acc, s) => acc + (s ? s.split(/\s+/).filter(Boolean).length : 0), 0);
-    const estimatedPages = Math.round(totalWords / 250);
-    if (estimatedPages >= PLAN_LIMITS[plan.planId].pages) {
-      setTimeout(() => setShowUpsell(true), 800);
-    }
   }, []);
-  const onPaywall = useCallback(() => { setShowPaywall(true); }, []);
 
   const { generate, isStreaming: generating } = useGenerate({
     onChunk,
     onDone,
-    onPaywall,
-    paywallWords: 600,
   });
 
   const handleGenerate = () => {
     rawTextRef.current = "";
     setPreviewContent("");
     setWordCount(0);
-    setShowPaywall(false);
     generate({
       section: "partie-ii",
       problematique: resultats || undefined,
@@ -284,18 +266,10 @@ export default function PartieIIPage() {
               rawContent={rawTextRef.current || undefined}
               sectionTitle="Partie II"
               wordCount={wordCount || 1189}
-              blurred={showPaywall}
             />
-            <PaywallModal open={showPaywall} onClose={() => setShowPaywall(false)} />
           </div>
         </div>
       </div>
-      <UpsellModal
-        open={showUpsell}
-        onClose={() => setShowUpsell(false)}
-        variant={getMyPlan().planId === "pro" ? "page-pro" : "page-essentiel"}
-        currentPlan={getMyPlan().planId}
-      />
     </div>
   );
 }
