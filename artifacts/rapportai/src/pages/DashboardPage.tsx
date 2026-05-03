@@ -9,7 +9,6 @@ import { StatsRow } from "@/components/dashboard/StatsRow";
 import { ActiveReportCard } from "@/components/dashboard/ActiveReportCard";
 import { FiguresPanel } from "@/components/dashboard/FiguresPanel";
 import { FloatingChat } from "@/components/dashboard/FloatingChat";
-import { UpsellModal } from "@/components/report/UpsellModal";
 import { getReport } from "@/lib/reportStore";
 import { getMyPlan } from "@/lib/userPlan";
 
@@ -58,8 +57,6 @@ function computeDashboard() {
 export default function DashboardPage() {
   const [, setLocation] = useLocation();
   const { user } = useUser();
-  const [showUpsell, setShowUpsell] = useState(false);
-
   const {
     completedSteps, currentStep, totalWords, estimatedPages,
     title, tempsRestant, reportType,
@@ -75,7 +72,7 @@ export default function DashboardPage() {
   };
 
   const handleContinue = () => setLocation(stepPaths[currentStep] ?? "/rapport/step-1");
-  const handleJuryAI   = () => setShowUpsell(true);
+  const handleJuryAI   = () => setLocation("/juryai");
 
   return (
     <div className="flex min-h-screen bg-[#f9f8ff]">
@@ -200,13 +197,6 @@ export default function DashboardPage() {
 
       <FloatingChat />
 
-      <UpsellModal
-        open={showUpsell}
-        onClose={() => setShowUpsell(false)}
-        variant="feature"
-        currentPlan={plan.planId}
-        featureName="JuryAI"
-      />
     </div>
   );
 }

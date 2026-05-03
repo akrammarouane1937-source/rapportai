@@ -17,7 +17,7 @@ import { generateDocx, downloadBlob } from "@/lib/generateDocx";
 import { generatePdf } from "@/lib/generatePdf";
 import { getApprovedFigures } from "@/lib/figureStore";
 import { getBibSources } from "@/lib/bibliothequeStore";
-import { getMyPlan, PLAN_LIMITS, canUseFeature } from "@/lib/userPlan";
+import { getMyPlan, canUseFeature } from "@/lib/userPlan";
 
 // ─── Constants ────────────────────────────────────────────────────────────────
 
@@ -88,7 +88,6 @@ export default function Step9Page() {
   );
   const [streamedWordCount, setStreamedWordCount] = useState(wordCount(report.conclusion));
   const [exportingFull, setExportingFull] = useState(false);
-  const [showUpsell, setShowUpsell]       = useState(false);
   const [exported, setExported]           = useState(false);
   const [sharing, setSharing]             = useState(false);
   const [shareUrl, setShareUrl]           = useState<string | null>(null);
@@ -131,7 +130,6 @@ export default function Step9Page() {
     rawTextRef.current || report.conclusion,
   ]);
   const estimatedPages = Math.max(1, Math.round(totalWords / 250));
-  const withinLimit    = estimatedPages <= PLAN_LIMITS[plan.planId].pages;
 
   // ── Section checklist ────────────────────────────────────────────────────
   const sections = [
@@ -188,8 +186,6 @@ export default function Step9Page() {
   // ── Export ───────────────────────────────────────────────────────────────
   const handleFullExport = async () => {
     if (exportingFull) return;
-
-    if (!withinLimit) { setShowUpsell(true); return; }
 
     setExportingFull(true);
     try {
@@ -256,20 +252,6 @@ export default function Step9Page() {
               </div>
             </div>
 
-            {/* ── Page limit warning ── */}
-            {!withinLimit && (
-              <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }}
-                className="rounded-xl p-4" style={{ background: "#fff7ed", border: "1px solid #fed7aa" }}>
-                <p className="text-xs font-bold text-orange-700 mb-1">⚠ Limite de pages atteinte</p>
-                <p className="text-xs text-orange-600">
-                  Ton rapport fait ~{estimatedPages} pages. Le plan {plan.planId === "free" ? "Gratuit" : "Essentiel"} est limité à {PLAN_LIMITS[plan.planId].pages} pages.
-                </p>
-                <button onClick={() => setShowUpsell(true)}
-                  className="mt-2 text-xs font-bold text-orange-700 underline underline-offset-2">
-                  Passer au plan supérieur →
-                </button>
-              </motion.div>
-            )}
 
             {/* ── Synthesis IA card ── */}
             <div className="rounded-2xl p-4" style={{ background: "#f5f0ff" }}>
@@ -431,37 +413,26 @@ export default function Step9Page() {
                 )}
               </button>
 
-              {/* PDF button — gated to paid plans */}
-              {canPdf ? (
-                <button
-                  onClick={() => {
-                    saveReport({
-                      conclusion:   rawTextRef.current || report.conclusion || undefined,
-                      apports:      apports || undefined,
-                      perspectives: perspectives || undefined,
-                    });
-                    generatePdf(getReport());
-                  }}
-                  className="flex-1 h-14 rounded-xl font-black text-sm flex items-center justify-center gap-2 transition-all relative overflow-hidden"
-                  style={{
-                    background: "linear-gradient(135deg, #dc2626, #b91c1c)",
-                    boxShadow: "0 6px 24px rgba(220,38,38,0.35)",
-                    color: "white",
-                    fontFamily: "'Plus Jakarta Sans', sans-serif",
-                  }}
-                >
-                  <Download className="w-4 h-4" /> PDF
-                </button>
-              ) : (
-                <button
-                  onClick={() => setShowUpsell(true)}
-                  className="flex-1 h-14 rounded-xl font-black text-sm flex items-center justify-center gap-2 transition-all relative overflow-hidden border-2 border-dashed"
-                  style={{ borderColor: "#e5e7eb", color: "#9ca3af", background: "#fafafa", fontFamily: "'Plus Jakarta Sans', sans-serif" }}
-                  title="Disponible dès le plan Essentiel (149 MAD)"
-                >
-                  <Lock className="w-4 h-4" /> PDF
-                </button>
-              )}
+              {/* PDF button */}
+              <button
+                onClick={() => {
+                  saveReport({
+                    conclusion:   rawTextRef.current || report.conclusion || undefined,
+                    apports:      apports || undefined,
+                    perspectives: perspectives || undefined,
+                  });
+                  generatePdf(getReport());
+                }}
+                className="flex-1 h-14 rounded-xl font-black text-sm flex items-center justify-center gap-2 transition-all relative overflow-hidden"
+                style={{
+                  background: "linear-gradient(135deg, #dc2626, #b91c1c)",
+                  boxShadow: "0 6px 24px rgba(220,38,38,0.35)",
+                  color: "white",
+                  fontFamily: "'Plus Jakarta Sans', sans-serif",
+                }}
+              >
+                <Download className="w-4 h-4" /> PDF
+              </button>
             </div>
 
             {/* ── Share link ── */}
@@ -577,12 +548,6 @@ export default function Step9Page() {
         </div>
       </div>
 
-      <UpsellModal
-        open={showUpsell}
-        onClose={() => setShowUpsell(false)}
-        variant={plan.planId === "free" ? "page-essentiel" : "page-pro"}
-        currentPlan={plan.planId}
-      />
     </StepLayout>
   );
 }
