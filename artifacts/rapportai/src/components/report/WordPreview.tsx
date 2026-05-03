@@ -2,7 +2,7 @@ import { useState, useCallback, useRef } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Copy, Download, PenLine, X, Check, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { generatePartialDocx, downloadBlob } from "@/lib/generateDocx";
+import { generateDocx, downloadBlob } from "@/lib/generateDocx";
 import { UpsellModal } from "@/components/report/UpsellModal";
 import { getMyPlan, incrementRevision, PLAN_LIMITS } from "@/lib/userPlan";
 import { getReport } from "@/lib/reportStore";
@@ -267,16 +267,16 @@ export function WordPreview({
     if (downloading) return;
     setDownloading(true);
     try {
-      const text = rawContent || html.replace(/<[^>]+>/g, " ").replace(/\s+/g, " ").trim();
-      const blob = await generatePartialDocx(sectionTitle, text);
-      const slug = sectionTitle.toLowerCase().replace(/\s+/g, "-").replace(/[^a-z0-9-]/g, "");
-      downloadBlob(blob, `rapportai-${slug}.docx`);
+      const report = getReport();
+      const blob = await generateDocx(report);
+      const theme = report.theme?.slice(0, 40).replace(/\s+/g, "-").replace(/[^a-z0-9\-]/gi, "") || "rapport";
+      downloadBlob(blob, `RapportAI-${theme}.docx`);
     } catch (err) {
       console.error("docx export error", err);
     } finally {
       setDownloading(false);
     }
-  }, [downloading, rawContent, html, sectionTitle]);
+  }, [downloading]);
 
   return (
     <div className="relative h-full flex flex-col overflow-hidden">

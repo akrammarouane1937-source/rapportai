@@ -133,13 +133,15 @@ function buildPrompt(ctx: GenerateBody): string {
 
 ## Chapitre 1 — Cadre théorique et revue de littérature
 ### 1.1 Fondements théoriques
-### 1.2 Revue de la littérature internationale
+### 1.2 Revue de la littérature internationale et nationale
 ### 1.3 Contexte marocain et spécificités locales
+### 1.4 Positionnement théorique de l'étude
 
 ## Chapitre 2 — Méthodologie de recherche
 ### 2.1 Approche et design de recherche
 ### 2.2 Collecte et traitement des données
 ### 2.3 Modèles et outils d'analyse
+### 2.4 Validité et fiabilité de la démarche
 
 Problématique centrale : ${prob}
 Mots-clés : ${kw}
@@ -149,20 +151,29 @@ ${ctx.resume ? `Résumé existant (cohérence requise) :\n"${snippet(ctx.resume)
 ${ctx.introduction ? `Introduction existante (s'appuyer dessus) :\n"${snippet(ctx.introduction)}"\n` : ""}
 ${buildCitationBlock(ctx.sources, style)}
 
-Exigences : minimum 1 000 mots, placeholders figures : [INSÉRER FIGURE N — Titre], analyses spécifiques au marché marocain.`;
+EXIGENCES IMPÉRATIVES DE LONGUEUR ET DE QUALITÉ :
+- Rédige un contenu dense et complet d'au moins 2 500 mots pour cette section
+- Développe chaque sous-section avec des exemples concrets, des références théoriques citées et des analyses approfondies propres au contexte marocain
+- Chaque sous-section (###) doit contenir au minimum 3 paragraphes substantiels de 80 à 120 mots chacun
+- Intègre des statistiques, chiffres et données contextualisées au Maroc (MASI, HCP, Bank Al-Maghrib, secteur concerné…)
+- Alterne entre présentation théorique, critique de la littérature et application au terrain marocain
+- Placeholders figures obligatoires : [INSÉRER FIGURE N — Titre descriptif]
+- NE T'ARRÊTE PAS avant d'avoir rédigé les 4 sous-sections du Chapitre 1 ET les 4 sous-sections du Chapitre 2 en intégralité`;
 
     case "partie-ii":
       return `Rédige la Partie II du ${type} intitulé "${theme}", réalisé par ${student} à ${school} en ${filiere} (${annee}).
 
 ## Chapitre 3 — Présentation et analyse des résultats
-### 3.1 Statistiques descriptives
+### 3.1 Statistiques descriptives et présentation de l'échantillon
 ### 3.2 Résultats de l'analyse principale
-### 3.3 Interprétation des résultats
+### 3.3 Interprétation des résultats et validation des hypothèses
+### 3.4 Synthèse des findings empiriques
 
-## Chapitre 4 — Discussion et recommandations
-### 4.1 Discussion des résultats
-### 4.2 Implications théoriques et pratiques
-### 4.3 Recommandations opérationnelles
+## Chapitre 4 — Discussion, limites et recommandations
+### 4.1 Discussion des résultats au regard de la littérature
+### 4.2 Implications théoriques et contributions académiques
+### 4.3 Implications pratiques et managériales
+### 4.4 Limites de l'étude et voies de recherche futures
 
 Problématique centrale : ${prob}
 Mots-clés : ${kw}
@@ -171,7 +182,15 @@ Style de citation : ${style}
 ${ctx.partieI ? `Partie I déjà rédigée (assure la continuité) :\n"${snippet(ctx.partieI)}"\n` : ""}
 ${buildCitationBlock(ctx.sources, style)}
 
-Exigences : minimum 1 000 mots, analyses chiffrées fictives mais cohérentes, placeholders : [INSÉRER FIGURE N — Titre descriptif].`;
+EXIGENCES IMPÉRATIVES DE LONGUEUR ET DE QUALITÉ :
+- Rédige un contenu dense et complet d'au moins 2 500 mots pour cette section
+- Développe chaque sous-section avec des analyses chiffrées (statistiques descriptives, tests, ratios) cohérentes avec le thème
+- Chaque sous-section (###) doit contenir au minimum 3 paragraphes substantiels de 80 à 120 mots chacun
+- Inclus des tableaux de résultats fictifs mais réalistes décrits en texte (ex : "Le tableau 3.1 montre que…")
+- Ancre les analyses dans le contexte marocain avec des données sectorielles spécifiques
+- Formule des recommandations concrètes et actionnables pour les praticiens
+- Placeholders figures obligatoires : [INSÉRER FIGURE N — Titre descriptif]
+- NE T'ARRÊTE PAS avant d'avoir rédigé les 4 sous-sections du Chapitre 3 ET les 4 sous-sections du Chapitre 4 en intégralité`;
 
     case "introduction":
       return `Rédige l'Introduction Générale du ${type} intitulé "${theme}" (${school} — ${filiere}, ${annee}).
