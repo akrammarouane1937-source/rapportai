@@ -43,8 +43,8 @@ const LINE_SPACING = { line: 360, lineRule: LineRuleType.AUTO };
 // 6 pt before / 6 pt after (1 pt = 20 twips → 6 pt = 120 twips)
 const PARA_SPACING = { ...LINE_SPACING, before: 120, after: 120 };
 
-// First-line indent: 1 cm
-const FIRST_LINE = convertMillimetersToTwip(10);
+// First-line indent: 1.25 cm (matches Moroccan academic standard)
+const FIRST_LINE = convertMillimetersToTwip(12.5);
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
 
@@ -217,43 +217,159 @@ function buildFooterArabic(): Footer {
 // ─── Section builders ─────────────────────────────────────────────────────────
 
 function buildPageDeGarde(d: ReportData): Paragraph[] {
-  const school   = d.school      || "École";
-  const filiere  = d.filiere     || "Filière";
-  const annee    = d.annee       || "2024–2025";
-  const type     = d.reportType  || "Rapport";
-  const theme    = d.theme       || "Titre du rapport";
-  const student  = d.studentName || "Prénom Nom";
-  const encPeda  = d.encadrantPeda || "";
-  const encPro   = d.encadrantPro  || "";
-  const ville    = d.ville       || "Casablanca";
+  const school     = d.school       || "École";
+  const filiere    = d.filiere      || "Filière";
+  const annee      = d.annee        || "2024–2025";
+  const type       = d.reportType   || "Mémoire de Fin d'Études";
+  const theme      = d.theme        || "Titre du rapport";
+  const student    = d.studentName  || "Prénom Nom";
+  const encPeda    = d.encadrantPeda || "";
+  const encPro     = d.encadrantPro  || "";
+  const ville      = d.ville        || "Casablanca";
+  const entreprise = d.entreprise   || "";
 
-  return [
-    centerPara(school, H1_PT, true),
-    centerPara(`Filière : ${filiere}`, BODY_PT),
-    emptyLine(),
-    centerPara(`Année universitaire ${annee}`, BODY_PT),
-    emptyLine(),
-    emptyLine(),
+  // Diploma subtitle based on report type
+  const typeLC = type.toLowerCase();
+  let diplomaLine = "";
+  if (typeLC.includes("ingénieur") || typeLC.includes("ingenieur") || typeLC.includes("pfe") || typeLC.includes("projet de fin")) {
+    diplomaLine = "POUR OBTENIR LE DIPLÔME D'INGÉNIEUR D'ÉTAT";
+  } else if (typeLC.includes("master") || typeLC.includes("mémoire") || typeLC.includes("memoire")) {
+    diplomaLine = "POUR OBTENIR LE DIPLÔME DE MASTER";
+  } else if (typeLC.includes("licence")) {
+    diplomaLine = "POUR OBTENIR LA LICENCE PROFESSIONNELLE";
+  }
+
+  const para = (
+    text: string,
+    align: (typeof AlignmentType)[keyof typeof AlignmentType],
+    size: number,
+    bold = false,
+    italic = false,
+    opts: Record<string, unknown> = {}
+  ) =>
     new Paragraph({
-      alignment: AlignmentType.CENTER,
-      children: [new TextRun({ text: type, font: FONT, size: H1_PT + 8, bold: true })],
-      spacing: { before: 720, after: 240 },
-    }),
-    emptyLine(),
-    new Paragraph({
-      alignment: AlignmentType.CENTER,
-      border: { bottom: { style: "single", size: 6, color: "7c3aed" } },
-      spacing: { after: 480 },
-      children: [new TextRun({ text: theme, font: FONT, size: H2_PT + 2, bold: true })],
-    }),
-    emptyLine(),
-    centerPara(`Réalisé par : ${student}`, BODY_PT),
-    ...(encPeda ? [centerPara(`Encadrant pédagogique : ${encPeda}`, BODY_PT)] : []),
-    ...(encPro  ? [centerPara(`Encadrant professionnel : ${encPro}`, BODY_PT)] : []),
-    ...(d.entreprise ? [centerPara(`Entreprise d'accueil : ${d.entreprise}`, BODY_PT)] : []),
-    emptyLine(),
-    centerPara(`${ville} — ${annee}`, BODY_PT),
-  ];
+      alignment: align,
+      spacing: { line: 320, lineRule: LineRuleType.AUTO, before: 0, after: 100 },
+      children: [new TextRun({ text, font: FONT, size, bold, italics: italic })],
+      ...opts,
+    });
+
+  const C = AlignmentType.CENTER;
+  const L = AlignmentType.LEFT;
+  const R = AlignmentType.RIGHT;
+
+  const paras: Paragraph[] = [];
+
+  // ── School name ─────────────────────────────────────────────────────────────
+  paras.push(new Paragraph({
+    alignment: C,
+    spacing: { line: 320, lineRule: LineRuleType.AUTO, before: 0, after: 180 },
+    children: [new TextRun({ text: school.toUpperCase(), font: FONT, size: H1_PT, bold: true })],
+  }));
+
+  // ── Report type ──────────────────────────────────────────────────────────────
+  paras.push(new Paragraph({
+    alignment: C,
+    spacing: { line: 320, lineRule: LineRuleType.AUTO, before: 480, after: 120 },
+    children: [new TextRun({ text: type.toUpperCase(), font: FONT, size: H2_PT, bold: true })],
+  }));
+
+  // ── Diploma line (optional) ──────────────────────────────────────────────────
+  if (diplomaLine) {
+    paras.push(para(diplomaLine, C, BODY_PT, false, true, { spacing: { line: 280, lineRule: LineRuleType.AUTO, before: 0, after: 80 } }));
+  }
+
+  // ── Filière ──────────────────────────────────────────────────────────────────
+  paras.push(para(`FILIÈRE : ${filiere.toUpperCase()}`, C, BODY_PT, true, false, {
+    spacing: { line: 280, lineRule: LineRuleType.AUTO, before: 160, after: 80 },
+  }));
+
+  paras.push(emptyLine());
+  paras.push(emptyLine());
+
+  // ── Title in bordered box ────────────────────────────────────────────────────
+  paras.push(new Paragraph({
+    alignment: C,
+    border: {
+      top:    { style: "single", size: 4, color: "000000", space: 12 },
+      bottom: { style: "single", size: 4, color: "000000", space: 12 },
+      left:   { style: "single", size: 4, color: "000000", space: 12 },
+      right:  { style: "single", size: 4, color: "000000", space: 12 },
+    },
+    spacing: { line: 420, lineRule: LineRuleType.AUTO, before: 160, after: 160 },
+    indent: { left: convertMillimetersToTwip(15), right: convertMillimetersToTwip(15) },
+    children: [new TextRun({ text: theme, font: FONT, size: H2_PT, bold: true })],
+  }));
+
+  paras.push(emptyLine());
+  paras.push(emptyLine());
+
+  // ── Right-aligned: student name & defense date ───────────────────────────────
+  paras.push(para(`Réalisé par : M. ${student}`, R, BODY_PT, false, false, {
+    spacing: { line: 280, lineRule: LineRuleType.AUTO, before: 80, after: 60 },
+  }));
+  paras.push(para("Soutenu publiquement le : ………………………", R, BODY_PT, false, false, {
+    spacing: { line: 280, lineRule: LineRuleType.AUTO, before: 0, after: 240 },
+  }));
+
+  // ── Left-aligned: supervisors ────────────────────────────────────────────────
+  if (encPeda) {
+    paras.push(para(`Encadrant pédagogique : ${encPeda}`, L, BODY_PT, false, false, {
+      spacing: { line: 280, lineRule: LineRuleType.AUTO, before: 80, after: 60 },
+    }));
+  }
+  if (encPro) {
+    const encProFull = entreprise ? `${encPro}, ${entreprise}` : encPro;
+    paras.push(para(`Encadrant professionnel : ${encProFull}`, L, BODY_PT, false, false, {
+      spacing: { line: 280, lineRule: LineRuleType.AUTO, before: 0, after: 200 },
+    }));
+  }
+
+  // ── Jury section ─────────────────────────────────────────────────────────────
+  paras.push(emptyLine());
+  paras.push(para("Membres de jury :", C, BODY_PT, true, false, {
+    spacing: { line: 280, lineRule: LineRuleType.AUTO, before: 120, after: 80 },
+  }));
+
+  const juryList = encPeda
+    ? [encPeda, "Pr. …………………………………", "Pr. ……………………………………"]
+    : ["Pr. …………………………………", "Pr. …………………………………", "Pr. ……………………………………"];
+
+  for (const member of juryList) {
+    paras.push(para(`○   ${member}`, C, BODY_PT, false, false, {
+      spacing: { line: 280, lineRule: LineRuleType.AUTO, before: 40, after: 40 },
+    }));
+  }
+
+  paras.push(emptyLine());
+  paras.push(emptyLine());
+
+  // ── Stage info (left-indented, only if entreprise provided) ─────────────────
+  if (entreprise) {
+    const stageLines = [
+      `Lieu de stage : ${entreprise}, ${ville}`,
+      "Date du début de stage : …… / …… / ………",
+      "Date de la fin de stage : …… / …… / ………",
+    ];
+    for (const line of stageLines) {
+      paras.push(new Paragraph({
+        alignment: L,
+        spacing: { line: 280, lineRule: LineRuleType.AUTO, before: 40, after: 40 },
+        indent: { left: convertMillimetersToTwip(10) },
+        children: [new TextRun({ text: line, font: FONT, size: BODY_PT })],
+      }));
+    }
+    paras.push(emptyLine());
+  }
+
+  // ── Year at bottom, centered ─────────────────────────────────────────────────
+  paras.push(new Paragraph({
+    alignment: C,
+    spacing: { line: 280, lineRule: LineRuleType.AUTO, before: 240, after: 0 },
+    children: [new TextRun({ text: `Année universitaire : ${annee}`, font: FONT, size: BODY_PT, bold: true })],
+  }));
+
+  return paras;
 }
 
 function buildDedicaces(d: ReportData): Paragraph[] {
@@ -588,19 +704,19 @@ export async function generateDocx(data: ReportData): Promise<Blob> {
         children: buildPageDeGarde(data),
       },
 
-      // ── Section 2: Preliminary pages — Roman numerals (I, II, III…) ──
+      // ── Section 2: Preliminary pages — Arabic from page 2 (matches reference PDF) ──
       {
         properties: {
           page: {
             margin: MARGIN,
             pageNumbers: {
-              start: 1,
-              formatType: NumberFormat.UPPER_ROMAN,
+              start: 2,
+              formatType: NumberFormat.DECIMAL,
             },
           },
         },
         headers: { default: header },
-        footers: { default: buildFooterRoman() },
+        footers: { default: buildFooterArabic() },
         children: [
           ...buildDedicaces(data),
           ...buildRemerciements(data),
@@ -610,13 +726,12 @@ export async function generateDocx(data: ReportData): Promise<Blob> {
         ],
       },
 
-      // ── Section 3: Body — Arabic numerals starting at 1 ──
+      // ── Section 3: Body — Arabic numerals, continues from section 2 ──
       {
         properties: {
           page: {
             margin: MARGIN,
             pageNumbers: {
-              start: 1,
               formatType: NumberFormat.DECIMAL,
             },
           },
