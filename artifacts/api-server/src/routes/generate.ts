@@ -266,17 +266,24 @@ Style : solennel mais sincère, gratitude authentique visible dans chaque phrase
 200 à 250 mots. Commence directement par "Au terme de ce travail..." ou similaire. Utilise les vrais noms fournis.`;
 
     case "keywords":
-      return `Génère exactement 6 mots-clés académiques pour un ${type} intitulé "${theme}" (${school} — ${filiere}).
+      return `Tu es un expert en référencement académique (Google Scholar, CNKI, ResearchGate).
 
-Les mots-clés doivent :
-- Être directement et spécifiquement liés au thème "${theme}"
-- Couvrir : 2 concepts théoriques principaux, 2 outils/méthodes, 2 contextes/applications
-- Être utilisés dans la littérature académique du domaine
-- Être en français (ou en anglais si le terme international est plus courant)
-- NE PAS être génériques (pas "analyse", "étude", "recherche")
+Génère exactement 8 mots-clés / expressions de recherche pour un ${type} intitulé :
+"${theme}"
+Filière : ${filiere} | École : ${school}
 
-Format de sortie STRICT : retourne UNIQUEMENT les 6 mots-clés séparés par des virgules, sur une seule ligne. Aucun numéro, aucune explication, aucun autre texte.
-Exemple : optimisation de portefeuille, frontière efficiente, Value-at-Risk, GARCH, Bourse de Casablanca, agent autonome`;
+RÈGLES ABSOLUES :
+1. Les 3 premiers mots-clés doivent être des CORRESPONDANCES EXACTES tirées mot pour mot du titre "${theme}" — découpe le titre en segments clés de 2 à 5 mots.
+2. Les 5 suivants doivent être des mots-clés LONGUE TRAÎNE (4 à 7 mots) qui utilisent les mots exacts du titre et ajoutent un contexte précis : méthode, outil technologique, secteur, contexte marocain, ou problème spécifique.
+3. Chaque expression doit correspondre à ce qu'un chercheur taperait réellement dans Google Scholar pour trouver ce travail.
+4. Langue : français en priorité, anglais accepté si le terme technique international est plus utilisé (ex : "machine learning", "ERP", "RPA").
+5. INTERDIT : mots génériques seuls ("analyse", "étude", "gestion", "système", "recherche", "approche").
+6. INTERDIT : répéter exactement le titre complet.
+
+Format de sortie STRICT : 8 expressions séparées par des virgules, sur une seule ligne, sans numéro ni explication.
+
+Exemple pour le thème "automatisation des processus d'achat" :
+automatisation des processus d'achat, processus d'achat automatisé, gestion des achats, automatisation RPA processus d'achat entreprise, optimisation des processus d'achat ERP, digitalisation des achats en milieu industriel, système automatisé de gestion des commandes fournisseurs, purchase order automation supply chain Maroc`;
 
     case "problematique":
       return `Génère une problématique de recherche académique pour un ${type} intitulé "${theme}" (${school} — ${filiere}).
