@@ -11,7 +11,6 @@ import OnboardingPage from "@/pages/OnboardingPage";
 import DashboardPage from "@/pages/DashboardPage";
 import RapportsPage from "@/pages/RapportsPage";
 import DemoPage from "@/pages/DemoPage";
-import PricingPage from "@/pages/PricingPage";
 import Step1Page from "@/pages/Step1Page";
 import Step4Page from "@/pages/Step4Page";
 import Step5Page from "@/pages/Step5Page";
@@ -294,7 +293,6 @@ function ClerkProviderWithRoutes() {
               <ProtectedRoute component={RapportsPage} />
             </Route>
             <Route path="/demo" component={DemoPage} />
-            <Route path="/pricing" component={PricingPage} />
             <Route path="/rapport/step-1">
               <ProtectedRoute component={Step1Page} />
             </Route>

@@ -1,7 +1,6 @@
 import { motion, AnimatePresence } from "framer-motion";
 import { Check, Lock, Sparkles, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { Link } from "wouter";
 
 interface PaywallModalProps {
   open: boolean;
@@ -106,7 +105,6 @@ export function PaywallModal({ open, onClose }: PaywallModalProps) {
                       </ul>
                     </div>
                     <div className="p-4 pt-0">
-                      <Link href="/pricing">
                         <Button
                           className={`w-full h-9 text-xs font-semibold rounded-lg ${
                             plan.popular
@@ -117,7 +115,6 @@ export function PaywallModal({ open, onClose }: PaywallModalProps) {
                         >
                           Choisir {plan.name}
                         </Button>
-                      </Link>
                     </div>
                   </div>
                 ))}

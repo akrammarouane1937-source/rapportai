@@ -144,10 +144,10 @@ export default function PaymentSuccessPage() {
               Nous n'avons pas pu vérifier ton paiement. Si tu as été débité, contacte-nous.
             </p>
             <button
-              onClick={() => setLocation("/pricing")}
+              onClick={() => setLocation("/dashboard")}
               className="w-full h-11 rounded-xl font-bold text-sm border-2 border-purple-200 text-purple-600 hover:bg-purple-50 transition-colors"
             >
-              Retour aux plans
+              Retour au tableau de bord
             </button>
           </>
         )}

@@ -48,11 +48,6 @@ export default function LandingPage() {
             </span>
           </div>
           <div className="flex items-center gap-4">
-            <Link href="/pricing">
-              <Button variant="ghost" className="hidden sm:inline-flex text-foreground hover:text-primary hover:bg-primary-light/50">
-                Tarifs
-              </Button>
-            </Link>
             <Link href="/sign-in">
               <Button variant="ghost" className="hidden sm:inline-flex text-foreground hover:text-primary hover:bg-primary-light/50">
                 Se connecter
@@ -418,7 +413,6 @@ export default function LandingPage() {
             
             <div className="flex flex-wrap gap-x-8 gap-y-4 text-sm font-medium text-secondary-foreground">
               <a href="#" className="hover:text-primary transition-colors">Fonctionnalités</a>
-              <a href="#" className="hover:text-primary transition-colors">Tarifs</a>
               <a href="#" className="hover:text-primary transition-colors">Blog</a>
               <a href="#" className="hover:text-primary transition-colors">Contact</a>
             </div>

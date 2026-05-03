@@ -1,7 +1,6 @@
 import { motion, AnimatePresence } from "framer-motion";
 import { X, Zap, Check, Lock, AlertTriangle, FileText } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { Link } from "wouter";
 import { type PlanId, PLAN_LIMITS, upgradeCost, nextPlan } from "@/lib/userPlan";
 
 export type UpsellVariant =
@@ -174,7 +173,6 @@ export function UpsellModal({
 
               {/* CTAs */}
               <div className="space-y-2.5">
-                <Link href="/pricing">
                   <Button
                     onClick={onClose}
                     className="w-full h-12 bg-purple-600 hover:bg-purple-700 text-white font-bold rounded-xl text-sm flex items-center justify-center gap-2"
@@ -183,7 +181,6 @@ export function UpsellModal({
                     <Zap className="w-4 h-4" />
                     {cfg.upgradeLabel} — +{cfg.price} MAD
                   </Button>
-                </Link>
                 <button
                   onClick={onClose}
                   className="w-full h-10 rounded-xl text-sm text-gray-500 hover:text-gray-700 hover:bg-gray-50 transition-colors font-medium"
