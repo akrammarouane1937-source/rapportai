@@ -2,7 +2,7 @@ import { useState, useEffect } from "react";
 import { motion } from "framer-motion";
 import {
   Plus, Search, FileText, Clock, ChevronRight,
-  Trash2,
+  Trash2, MoreVertical, Edit3, Download,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";

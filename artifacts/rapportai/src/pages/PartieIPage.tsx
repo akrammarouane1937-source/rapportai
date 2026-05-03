@@ -17,8 +17,6 @@ import { getMyPlan, PLAN_LIMITS } from "@/lib/userPlan";
 import { ScholarChips } from "@/components/figures/ScholarChips";
 import { FigurePanel } from "@/components/figures/FigurePanel";
 
-const INITIAL_KEYWORDS = ["portefeuille", "MEDAF", "Markowitz", "risque financier", "Bourse de Casablanca"];
-const INITIAL_SOURCES = ["Markowitz (1952)", "Fama (1970)", "Sharpe (1964)"];
 
 function KeywordChip({ label, onRemove }: { label: string; onRemove: () => void }) {
   return (
@@ -41,14 +39,14 @@ function SourceChip({ label, onRemove }: { label: string; onRemove: () => void }
 export default function PartieIPage() {
   const [, setLocation] = useLocation();
   const report = getReport();
-  const [keywords, setKeywords] = useState(INITIAL_KEYWORDS);
+  const [keywords, setKeywords] = useState<string[]>(report.motsCles ?? []);
   const [problematique, setProblematique] = useState("");
   const [contexte, setContexte] = useState("");
   const [chapitres, setChapitres] = useState([
     "Cadre théorique et revue de littérature",
     "Méthodologie et collecte de données",
   ]);
-  const [sources, setSources] = useState(INITIAL_SOURCES);
+  const [sources, setSources] = useState<string[]>([]);
   const [newSource, setNewSource] = useState("");
   const [addingSource, setAddingSource] = useState(false);
   const [dragOver, setDragOver] = useState(false);
