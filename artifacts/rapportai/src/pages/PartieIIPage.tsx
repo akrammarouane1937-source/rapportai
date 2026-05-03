@@ -3,7 +3,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import { useLocation } from "wouter";
 import {
   Sparkles, RefreshCw, Plus, X,
-  Loader2, GripVertical,
+  Loader2, GripVertical, Wand2,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Sidebar } from "@/components/layout/Sidebar";
@@ -13,6 +13,8 @@ import { markdownToHtml } from "@/lib/markdownToHtml";
 import { saveReport, getReport } from "@/lib/reportStore";
 import { ScholarChips } from "@/components/figures/ScholarChips";
 import { FigurePanel } from "@/components/figures/FigurePanel";
+
+const BASE_PATH = (import.meta.env.BASE_URL as string).replace(/\/$/, "");
 
 const INITIAL_KEYWORDS = ["analyse empirique", "frontière efficiente", "rendement ajusté", "ratio de Sharpe", "BVC"];
 const INITIAL_SOURCES = ["Fama & French (1993)", "Elton et al. (1976)", "AMMC (2023)"];
@@ -50,6 +52,7 @@ export default function PartieIIPage() {
   const [addingSource, setAddingSource] = useState(false);
   const [wordCount, setWordCount] = useState(0);
   const [previewContent, setPreviewContent] = useState("");
+  const [humanizing, setHumanizing] = useState(false);
   const rawTextRef = useRef("");
 
   const onChunk = useCallback((chunk: string) => {
@@ -79,6 +82,48 @@ export default function PartieIIPage() {
       motsCles: keywords,
       extraContext: methodo || undefined,
     });
+  };
+
+  const handleHumanize = async () => {
+    const original = rawTextRef.current.trim();
+    if (!original || humanizing || generating) return;
+    setHumanizing(true);
+    rawTextRef.current = "";
+    setPreviewContent("");
+    setWordCount(0);
+    try {
+      const r = getReport();
+      const resp = await fetch(`${BASE_PATH}/api/humanize`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ content: original, theme: r.theme, reportType: r.reportType, school: r.school, filiere: r.filiere }),
+      });
+      const reader = resp.body?.getReader();
+      if (!reader) return;
+      const dec = new TextDecoder();
+      let buf = "";
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+        buf += dec.decode(value, { stream: true });
+        const lines = buf.split("\n");
+        buf = lines.pop() ?? "";
+        for (const line of lines) {
+          if (!line.startsWith("data: ")) continue;
+          try {
+            const j = JSON.parse(line.slice(6)) as { content?: string; done?: boolean };
+            if (j.content) {
+              rawTextRef.current += j.content;
+              setPreviewContent(markdownToHtml(rawTextRef.current));
+              setWordCount(rawTextRef.current.split(/\s+/).filter(Boolean).length);
+            }
+            if (j.done) saveReport({ partieII: rawTextRef.current });
+          } catch { /* ignore */ }
+        }
+      }
+    } finally {
+      setHumanizing(false);
+    }
   };
 
   const addChapitre = () => setChapitres((prev) => [...prev, ""]);
@@ -243,10 +288,10 @@ export default function PartieIIPage() {
             </div>
 
             {/* Sticky bottom button */}
-            <div className="sticky bottom-0 bg-white border-t border-gray-100 p-4 flex-shrink-0">
+            <div className="sticky bottom-0 bg-white border-t border-gray-100 p-4 flex-shrink-0 space-y-2">
               <Button
                 onClick={handleGenerate}
-                disabled={generating}
+                disabled={generating || humanizing}
                 className="w-full h-12 bg-purple-600 hover:bg-purple-700 text-white font-bold text-sm rounded-xl flex items-center justify-center gap-2"
                 style={{ boxShadow: "0 4px 20px rgba(124,58,237,0.35)" }}
               >
@@ -256,6 +301,20 @@ export default function PartieIIPage() {
                   <><Sparkles className="w-4 h-4" /> Générer la Partie II</>
                 )}
               </Button>
+              {previewContent && (
+                <button
+                  onClick={handleHumanize}
+                  disabled={humanizing || generating}
+                  className="w-full h-10 rounded-xl font-semibold text-sm flex items-center justify-center gap-2 transition-all border"
+                  style={{ borderColor: "#10b981", color: humanizing ? "#6b7280" : "#059669", background: humanizing ? "#f3f4f6" : "#f0fdf4" }}
+                >
+                  {humanizing ? (
+                    <><Loader2 className="w-3.5 h-3.5 animate-spin" /> Humanisation en cours...</>
+                  ) : (
+                    <><Wand2 className="w-3.5 h-3.5" /> Humaniser (Anti-plagiat IA)</>
+                  )}
+                </button>
+              )}
             </div>
           </div>
 
