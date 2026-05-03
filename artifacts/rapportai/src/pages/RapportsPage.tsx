@@ -85,7 +85,17 @@ const STEP_PATHS: Record<number, string> = {
   7: "/rapport/partie-i", 8: "/rapport/partie-ii", 9: "/rapport/step-9",
 };
 
-function ReportCard({ report, onDelete, onContinue }: { report: Report; onDelete: (id: string) => void; onContinue: (report: Report) => void }) {
+const STEP_LABEL_PATHS = [
+  "/rapport/step-1",
+  "/rapport/step-2",
+  "/rapport/step-3",
+  "/rapport/step-4",
+  "/rapport/step-5",
+  "/rapport/partie-i",
+  "/rapport/partie-ii",
+];
+
+function ReportCard({ report, onDelete, onContinue, onStepClick }: { report: Report; onDelete: (id: string) => void; onContinue: (report: Report) => void; onStepClick: (path: string) => void }) {
   const [menuOpen, setMenuOpen] = useState(false);
   const status = STATUS_CONFIG[report.status];
   const progress = Math.round((report.completedSteps.length / 7) * 100);
@@ -197,20 +207,22 @@ function ReportCard({ report, onDelete, onContinue }: { report: Report; onDelete
             const done = report.completedSteps.includes(stepId);
             const current = report.currentStep === stepId;
             return (
-              <span
+              <button
                 key={stepId}
-                title={label}
-                className={`text-xs px-2 py-0.5 rounded-full font-medium border transition-colors
+                title={`Aller à : ${label}`}
+                onClick={() => onStepClick(STEP_LABEL_PATHS[i])}
+                className={`text-xs px-2 py-0.5 rounded-full font-medium border transition-all cursor-pointer
+                  hover:scale-105 hover:shadow-sm active:scale-95
                   ${done
-                    ? "bg-green-50 text-green-700 border-green-200"
+                    ? "bg-green-50 text-green-700 border-green-200 hover:bg-green-100"
                     : current
-                    ? "bg-purple-600 text-white border-purple-600"
-                    : "bg-gray-50 text-gray-400 border-gray-200"
+                    ? "bg-purple-600 text-white border-purple-600 hover:bg-purple-700"
+                    : "bg-gray-50 text-gray-400 border-gray-200 hover:bg-gray-100 hover:text-gray-600"
                   }
                 `}
               >
                 {label}
-              </span>
+              </button>
             );
           })}
         </div>
@@ -379,7 +391,7 @@ export default function RapportsPage() {
                 <EmptyState onNew={goToNewReport} />
               ) : (
                 filtered.map((report) => (
-                  <ReportCard key={report.id} report={report} onDelete={deleteReport} onContinue={handleContinue} />
+                  <ReportCard key={report.id} report={report} onDelete={deleteReport} onContinue={handleContinue} onStepClick={navigate} />
                 ))
               )}
             </div>
