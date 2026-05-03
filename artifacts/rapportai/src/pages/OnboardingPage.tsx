@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { useLocation } from "wouter";
 import { useUser } from "@clerk/react";
+import { saveReport } from "@/lib/reportStore";
 import { motion, AnimatePresence } from "framer-motion";
 import { ChevronRight, ChevronLeft, GraduationCap, BookOpen, Building2, CheckCircle2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -60,6 +61,12 @@ export default function OnboardingPage() {
   };
 
   const handleFinish = () => {
+    saveReport({
+      reportType:  data.reportType || undefined,
+      school:      data.school     || undefined,
+      filiere:     data.field      || undefined,
+      studentName: data.firstName  || user?.firstName || undefined,
+    });
     setLocation("/dashboard");
   };
 
