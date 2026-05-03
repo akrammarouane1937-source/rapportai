@@ -10,6 +10,7 @@ interface ChatMessage {
 
 interface ChatBody {
   messages: ChatMessage[];
+  mode?: "jury" | "assistant";
   // Report context — injected from the client
   theme?: string;
   reportType?: string;
@@ -20,7 +21,7 @@ interface ChatBody {
 }
 
 router.post("/chat", async (req: Request, res: Response) => {
-  const { messages, theme, reportType, school, filiere, problematique, studentName } = req.body as ChatBody;
+  const { messages, mode, theme, reportType, school, filiere, problematique, studentName } = req.body as ChatBody;
 
   if (!messages || !Array.isArray(messages) || messages.length === 0) {
     res.status(400).json({ error: "messages array is required" });
@@ -38,7 +39,8 @@ router.post("/chat", async (req: Request, res: Response) => {
   const prob    = problematique ?? `Comment ${subject} peut-il être approfondi ?`;
   const student = studentName  ?? "l'étudiant(e)";
 
-  const systemPrompt = `Tu es un jury de soutenance académique marocain — un professeur expérimenté, rigoureux mais bienveillant. Tu simules une soutenance du ${type} intitulé "${subject}", réalisé par ${student} à ${ecole} — ${fil}.
+  const systemPrompt = mode === "jury"
+    ? `Tu es un jury de soutenance académique marocain — un professeur expérimenté, rigoureux mais bienveillant. Tu simules une soutenance du ${type} intitulé "${subject}", réalisé par ${student} à ${ecole} — ${fil}.
 
 Problématique du rapport : "${prob}"
 
@@ -49,7 +51,17 @@ Ton rôle :
 - Rester en français formel académique
 - Limiter chaque réponse à 2-3 phrases maximum — c'est une vraie soutenance orale, pas un cours
 - NE PAS donner de feedback sur la qualité des réponses ("Très bien!" etc.) — être neutre comme un vrai jury
-- Poser UNE SEULE question à la fois`;
+- Poser UNE SEULE question à la fois`
+    : `Tu es un assistant IA expert en rédaction académique marocaine. Tu aides ${student} (${ecole} — ${fil}) à rédiger son ${type} intitulé "${subject}".
+
+Ton rôle :
+- Répondre à toutes les questions liées au rapport, à la rédaction académique, aux méthodes, aux citations, à la structure
+- Donner des conseils précis et actionnables adaptés au contexte marocain
+- Proposer des formulations, des améliorations, des exemples concrets
+- Rester en français académique clair et accessible
+- Réponses courtes et directes (3-5 phrases max) — aller à l'essentiel
+- Si l'étudiant partage un extrait, proposer des améliorations concrètes
+- Toujours encourager et motiver l'étudiant(e)`;
 
   try {
     const stream = anthropic.messages.stream({

@@ -1,11 +1,12 @@
-import { TrendingUp, CheckSquare, FileText, Clock } from "lucide-react";
+import { TrendingUp, CheckSquare, FileText, PenLine } from "lucide-react";
 
 interface StatsRowProps {
   progressionGlobale?: number;
   sectionsCompletes?: number;
   totalSections?: number;
   motsGeneres?: number;
-  tempsRestant?: number;
+  revisionCount?: number;
+  revisionLimit?: number;
 }
 
 export function StatsRow({
@@ -13,8 +14,10 @@ export function StatsRow({
   sectionsCompletes = 0,
   totalSections = 7,
   motsGeneres = 0,
-  tempsRestant = 0,
+  revisionCount = 0,
+  revisionLimit = 10,
 }: StatsRowProps) {
+  const revLimit = revisionLimit === Infinity ? "∞" : revisionLimit;
   const stats = [
     {
       label: "Progression globale",
@@ -22,7 +25,6 @@ export function StatsRow({
       icon: TrendingUp,
       color: "text-purple-600",
       bg: "bg-purple-50",
-      accent: "#7c3aed",
       sub: progressionGlobale > 0 ? "En cours" : "Pas encore commencé",
     },
     {
@@ -31,8 +33,7 @@ export function StatsRow({
       icon: CheckSquare,
       color: "text-green-600",
       bg: "bg-green-50",
-      accent: "#10b981",
-      sub: sectionsCompletes === totalSections ? "Terminé" : `${totalSections - sectionsCompletes} restantes`,
+      sub: sectionsCompletes === totalSections ? "Terminé ✓" : `${totalSections - sectionsCompletes} restantes`,
     },
     {
       label: "Mots générés",
@@ -40,17 +41,15 @@ export function StatsRow({
       icon: FileText,
       color: "text-blue-600",
       bg: "bg-blue-50",
-      accent: "#3b82f6",
       sub: motsGeneres > 0 ? `~${Math.round(motsGeneres / 250)} pages` : "Aucun contenu",
     },
     {
-      label: "Temps estimé restant",
-      value: tempsRestant > 0 ? `${tempsRestant} min` : "—",
-      icon: Clock,
-      color: "text-amber-600",
-      bg: "bg-amber-50",
-      accent: "#f59e0b",
-      sub: tempsRestant > 0 ? "Estimation IA" : "Aucun rapport actif",
+      label: "Révisions utilisées",
+      value: `${revisionCount} / ${revLimit}`,
+      icon: PenLine,
+      color: revisionCount >= (revisionLimit === Infinity ? Infinity : revisionLimit) ? "text-red-500" : "text-amber-600",
+      bg: revisionCount >= (revisionLimit === Infinity ? Infinity : revisionLimit) ? "bg-red-50" : "bg-amber-50",
+      sub: revisionCount === 0 ? "Aucune révision" : `${revisionLimit === Infinity || revisionCount < revisionLimit ? "Disponibles" : "Limite atteinte"}`,
     },
   ];
 

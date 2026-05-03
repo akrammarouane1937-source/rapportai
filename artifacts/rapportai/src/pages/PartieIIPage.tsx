@@ -16,13 +16,11 @@ import { FigurePanel } from "@/components/figures/FigurePanel";
 
 const BASE_PATH = (import.meta.env.BASE_URL as string).replace(/\/$/, "");
 
-const INITIAL_KEYWORDS = ["analyse empirique", "frontière efficiente", "rendement ajusté", "ratio de Sharpe", "BVC"];
-const INITIAL_SOURCES = ["Fama & French (1993)", "Elton et al. (1976)", "AMMC (2023)"];
-
 function KeywordChip({ label, onRemove }: { label: string; onRemove: () => void }) {
+  const scholarUrl = `https://scholar.google.com/scholar?q=${encodeURIComponent(label)}`;
   return (
     <span className="inline-flex items-center gap-1.5 bg-purple-100 text-purple-700 text-xs font-medium px-3 py-1.5 rounded-full">
-      {label}
+      <a href={scholarUrl} target="_blank" rel="noopener noreferrer" className="hover:underline decoration-purple-400">{label}</a>
       <button onClick={onRemove} className="text-purple-400 hover:text-purple-700"><X className="w-3 h-3" /></button>
     </span>
   );
@@ -40,14 +38,14 @@ function SourceChip({ label, onRemove }: { label: string; onRemove: () => void }
 export default function PartieIIPage() {
   const [, setLocation] = useLocation();
   const report = getReport();
-  const [keywords, setKeywords] = useState<string[]>(report.motsCles?.length ? report.motsCles : INITIAL_KEYWORDS);
+  const [keywords, setKeywords] = useState<string[]>(report.motsCles ?? []);
   const [resultats, setResultats] = useState("");
   const [methodo, setMethodo] = useState("");
   const [chapitres, setChapitres] = useState([
     "Analyse empirique et présentation des résultats",
     "Discussion, limites et recommandations",
   ]);
-  const [sources, setSources] = useState(INITIAL_SOURCES);
+  const [sources, setSources] = useState<string[]>([]);
   const [newSource, setNewSource] = useState("");
   const [addingSource, setAddingSource] = useState(false);
   const [wordCount, setWordCount] = useState(() =>
@@ -130,6 +128,64 @@ export default function PartieIIPage() {
     }
   };
 
+  const [generatingField, setGeneratingField] = useState<string | null>(null);
+
+  const handleRegenerateKeywords = useCallback(async () => {
+    if (generatingField) return;
+    setGeneratingField("keywords");
+    const r = getReport();
+    try {
+      const resp = await fetch(`${BASE_PATH}/api/generate`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ section: "keywords", theme: r.theme, reportType: r.reportType, school: r.school, filiere: r.filiere }),
+      });
+      if (!resp.ok || !resp.body) return;
+      const reader = resp.body.getReader();
+      const dec = new TextDecoder();
+      let buf = ""; let raw = "";
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+        buf += dec.decode(value, { stream: true });
+        const lines = buf.split("\n\n"); buf = lines.pop() ?? "";
+        for (const line of lines) {
+          if (!line.startsWith("data: ")) continue;
+          try { const j = JSON.parse(line.slice(6)) as { content?: string }; if (j.content) raw += j.content; } catch { /* skip */ }
+        }
+      }
+      const parsed = raw.split(",").map((k) => k.trim()).filter(Boolean).slice(0, 8);
+      if (parsed.length > 0) { setKeywords(parsed); saveReport({ motsCles: parsed }); }
+    } finally { setGeneratingField(null); }
+  }, [generatingField]);
+
+  const streamField = useCallback(async (section: string, setter: (v: string) => void) => {
+    if (generatingField) return;
+    setGeneratingField(section);
+    const r = getReport();
+    try {
+      const resp = await fetch(`${BASE_PATH}/api/generate`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ section, theme: r.theme, reportType: r.reportType, school: r.school, filiere: r.filiere }),
+      });
+      if (!resp.ok || !resp.body) return;
+      const reader = resp.body.getReader();
+      const dec = new TextDecoder();
+      let buf = ""; let result = "";
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+        buf += dec.decode(value, { stream: true });
+        const lines = buf.split("\n\n"); buf = lines.pop() ?? "";
+        for (const line of lines) {
+          if (!line.startsWith("data: ")) continue;
+          try { const j = JSON.parse(line.slice(6)) as { content?: string }; if (j.content) { result += j.content; setter(result); } } catch { /* skip */ }
+        }
+      }
+    } finally { setGeneratingField(null); }
+  }, [generatingField]);
+
   const addChapitre = () => setChapitres((prev) => [...prev, ""]);
   const updateChapitre = (i: number, val: string) =>
     setChapitres((prev) => prev.map((c, idx) => (idx === i ? val : c)));
@@ -169,8 +225,14 @@ export default function PartieIIPage() {
                     </span>
                   </div>
                   <div className="flex items-center gap-2">
-                    <button className="text-xs text-purple-500 hover:text-purple-700 flex items-center gap-1 font-medium">
-                      <RefreshCw className="w-3 h-3" /> Regénérer
+                    <button
+                      onClick={handleRegenerateKeywords}
+                      disabled={!!generatingField}
+                      className="text-xs text-purple-500 hover:text-purple-700 flex items-center gap-1 font-medium disabled:opacity-50">
+                      {generatingField === "keywords"
+                        ? <Loader2 className="w-3 h-3 animate-spin" />
+                        : <RefreshCw className="w-3 h-3" />
+                      } Regénérer
                     </button>
                   </div>
                 </div>
@@ -201,9 +263,13 @@ export default function PartieIIPage() {
                   className="w-full text-sm border border-gray-200 rounded-xl p-3 resize-none focus:outline-none focus:ring-2 focus:ring-purple-300 focus:border-purple-400 placeholder:text-gray-300"
                 />
                 <button
-                  onClick={() => setResultats("La frontière efficiente calculée sur 30 titres du MASI confirme que la diversification sectorielle réduit le risque de 18 % pour un rendement équivalent. Le ratio de Sharpe du portefeuille optimal atteint 1.23, surpassant le benchmark MASI. Ces résultats valident partiellement l'hypothèse d'efficience faible du marché boursier marocain.")}
-                  className="mt-1.5 text-xs text-purple-600 hover:text-purple-700 font-medium flex items-center gap-1">
-                  <Sparkles className="w-3 h-3" /> Laisser l'IA décider
+                  onClick={() => streamField("contexte", setResultats)}
+                  disabled={!!generatingField}
+                  className="mt-1.5 text-xs text-purple-600 hover:text-purple-700 font-medium flex items-center gap-1 disabled:opacity-50">
+                  {generatingField === "contexte"
+                    ? <Loader2 className="w-3 h-3 animate-spin" />
+                    : <Sparkles className="w-3 h-3" />
+                  } Laisser l'IA décider
                 </button>
               </div>
 
@@ -218,9 +284,13 @@ export default function PartieIIPage() {
                   className="w-full text-sm border border-gray-200 rounded-xl p-3 resize-none focus:outline-none focus:ring-2 focus:ring-purple-300 focus:border-purple-400 placeholder:text-gray-300"
                 />
                 <button
-                  onClick={() => setMethodo("Modèle moyenne-variance de Markowitz appliqué à 30 titres du MASI sur données journalières 2018-2023. Optimisation quadratique via Python (scipy.optimize), calcul du ratio de Sharpe, test de stationnarité ADF.")}
-                  className="mt-1.5 text-xs text-purple-600 hover:text-purple-700 font-medium flex items-center gap-1">
-                  <Sparkles className="w-3 h-3" /> Laisser l'IA décider
+                  onClick={() => streamField("problematique", setMethodo)}
+                  disabled={!!generatingField}
+                  className="mt-1.5 text-xs text-purple-600 hover:text-purple-700 font-medium flex items-center gap-1 disabled:opacity-50">
+                  {generatingField === "problematique"
+                    ? <Loader2 className="w-3 h-3 animate-spin" />
+                    : <Sparkles className="w-3 h-3" />
+                  } Laisser l'IA décider
                 </button>
               </div>
 

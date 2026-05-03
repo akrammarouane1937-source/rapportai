@@ -144,7 +144,7 @@ function DashboardView({ setActive }: { setActive: (v: string) => void }) {
         </Button>
       </div>
       <div className="mb-6">
-        <StatsRow progressionGlobale={28} sectionsCompletes={2} totalSections={7} motsGeneres={3240} tempsRestant={18} />
+        <StatsRow progressionGlobale={28} sectionsCompletes={2} totalSections={7} motsGeneres={3240} revisionCount={2} revisionLimit={10} />
       </div>
       <div className="mb-6">
         <div className="flex items-center justify-between mb-3">

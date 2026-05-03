@@ -1,0 +1,53 @@
+Full audit and fixes needed. Apply all of these:
+
+## DASHBOARD
+1. Show revision count on dashboard stats (not sessions — remove sessions). Student needs to see "X / 10 révisions utilisées" to know their limit.
+2. Replace JuryAI widget at bottom of dashboard with a real AI Chat Assistant (connected to Claude API). JuryAI stays on its own /juryai page — it should NOT appear on dashboard.
+
+## REVISION PANEL
+3. Revision must work like Claude Code — user types what they want changed, Claude reads the current section content, fixes it, and streams the corrected version back word by word into the Word preview. Show a "Je travaille dessus..." typing indicator while Claude is generating. This must actually call the Claude API.
+
+## PAGE DE GARDE
+4. Elements must be drag-and-drop repositionable inside the preview — user can move logo, name, title, supervisor anywhere on the A4 page.
+5. If user doesn't upload a school logo, search for the school's official logo PNG automatically (based on school name from Step 1) and insert it. If not found, leave space empty — never insert a wrong logo.
+6. Add option: "Laisser l'IA trouver le logo de mon école" as a button.
+7. Deeply analyze the reference PDF I uploaded — reproduce the exact page de garde layout, spacing, and structure.
+
+## DÉDICACES & REMERCIEMENTS
+8. Improve Claude output quality — more personal, more emotional, better academic French. Prompt Claude to write something genuinely touching, not generic.
+
+## LISTE DES ABRÉVIATIONS
+9. Auto-update list as abbreviations appear in the report — every time an abbreviation appears in Partie I, Partie II, or any section, automatically add it to the abbreviations list in Step 4.
+
+## SOMMAIRE
+10. Generate sommaire from the student's actual theme and subject — not from a fixed template. Claude should suggest a logical plan based on the topic entered in Step 1.
+
+## "LAISSER L'IA DÉCIDER" BUTTON
+11. Fix this button everywhere — it is completely broken in Introduction Générale, Partie I, and Partie II. When clicked, Claude must read all context from previous steps and fill the field automatically.
+
+## KEYWORDS (Partie I and Partie II)
+12. Keywords are showing template/demo keywords (Markowitz, BVC, etc.) instead of the student's real topic keywords. Fix: Claude must generate keywords based on the student's actual theme from Step 1.
+13. "Regénérer les mots-clés" button is broken — fix it.
+14. Same keyword problems exist in Partie II — apply same fix to both.
+
+## Google Scholar correction:
+The keywords that Claude generates (from the student's topic) must each have a direct Google Scholar link attached. Student clicks a keyword chip → opens Google Scholar search for that keyword or a long tail keywprds as well → finds the paper → downloads PDF → uploads to Bibliothèque.
+
+## WORD PREVIEW
+16. Word preview only shows one page. Fix: show multiple A4 pages separated from each other, each with its own page number at the bottom. Like a real Word document with visible page breaks.
+
+## TABLES IN DOCUMENT
+17. When Claude generates a table in the text, it must render as a real formatted table in both the Word preview and the .docx export — not as plain text.
+
+## STEP 9 — CONCLUSION (LAST STEP)
+18. Step 9 currently only shows the conclusion section. Add the full output:
+- Conclusion Générale
+- Bibliographie (auto-formatted from all cited sources)
+- Table des figures (auto-generated)
+- Liste des tableaux (auto-generated)
+- Annexes (file upload)  and Table des matières
+
+This must match the architecture in the reference PDF I uploaded.
+
+## REFERENCE PDF
+19. Re-analyze the reference PDF I uploaded deeply. Use it as the exact template for: page de garde layout, section structure, formatting, header/footer, everything. Every student's output must look identical in structure to this document.

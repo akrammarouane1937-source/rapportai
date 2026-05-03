@@ -43,7 +43,7 @@ pnpm workspace monorepo. SaaS for Moroccan students to generate academic reports
 | Endpoint | Description |
 |---|---|
 | `GET /api/healthz` | Health check |
-| `POST /api/generate` | SSE streaming — generates report sections via Claude |
+| `POST /api/generate` | SSE streaming — generates report sections via Claude (sections: partie-i, partie-ii, introduction, conclusion, resume, dedicaces, remerciements, keywords, problematique, contexte) |
 | `POST /api/jury` | SSE streaming — JuryAI simulation with 3 jury members |
 | `POST /api/figures/analyze` | JSON — Claude suggests 2-4 figure ideas from CSV/Excel data or topic |
 

@@ -240,20 +240,66 @@ Termine par : Mots-clés : ${kw || "À définir"}
 Ne dépasse pas 300 mots.`;
 
     case "dedicaces":
-      return `Rédige une page de Dédicaces sobre et élégante pour le ${type} intitulé "${theme}" de ${student} (${school}).
+      return `Rédige une page de Dédicaces profondément personnelle et touchante pour le ${type} intitulé "${theme}" de ${student} (${school}).
 
-La dédicace doit être sobre, sincère et académiquement appropriée. Mise en forme poétique avec une dédicace principale à la famille et une ligne pour les proches et ami(e)s. 4 à 6 lignes maximum.`;
+La dédicace doit :
+- Commencer directement par "À..." sans titre, sans préambule
+- Être authentique, émotionnelle et sincère — comme si l'étudiant(e) écrivait depuis son cœur
+- Toucher les lecteurs : parents, frères/sœurs, amis, mentors
+- Utiliser un style sobre et poétique à la fois — pas générique, pas officiel
+- Inclure une citation inspirante en fin de page (française ou traduite)
+- Faire 8 à 12 lignes maximum, chaque ligne sur une ligne séparée avec des sauts de ligne clairs
+- NE PAS utiliser de tirets de liste — utiliser des sauts de ligne naturels
+Commence directement par "À mes chers parents," ou similaire. Aucun titre, aucun préambule.`;
 
     case "remerciements":
-      return `Rédige une page de Remerciements formelle pour le ${type} intitulé "${theme}" de ${student} (${school} — ${filiere}).
+      return `Rédige une page de Remerciements formelle, chaleureuse et authentique pour le ${type} intitulé "${theme}" de ${student} (${school} — ${filiere}).
 
-Personnes à remercier nominativement :
-- Encadrant pédagogique : ${encPeda}
-- Encadrant professionnel : ${encPro}
-- Entreprise d'accueil : ${entreprise}
-- Corps professoral et administratif de ${school}
+Personnes à remercier nominativement et avec des détails spécifiques :
+- Encadrant pédagogique : ${encPeda} — pour la qualité de l'encadrement, la rigueur scientifique, la disponibilité
+- Encadrant professionnel : ${encPro} — pour l'accueil au sein de ${entreprise}, la confiance accordée, le suivi professionnel
+- L'équipe de ${entreprise} — pour l'intégration, l'esprit d'équipe, le cadre stimulant
+- Le corps professoral et administratif de ${school} — pour la formation de qualité
+- La famille et les proches — pour le soutien moral et affectif
 
-Ton solennel et sincère. 150 à 200 mots. Utilise les vrais noms fournis.`;
+Style : solennel mais sincère, gratitude authentique visible dans chaque phrase.
+200 à 250 mots. Commence directement par "Au terme de ce travail..." ou similaire. Utilise les vrais noms fournis.`;
+
+    case "keywords":
+      return `Génère exactement 6 mots-clés académiques pour un ${type} intitulé "${theme}" (${school} — ${filiere}).
+
+Les mots-clés doivent :
+- Être directement et spécifiquement liés au thème "${theme}"
+- Couvrir : 2 concepts théoriques principaux, 2 outils/méthodes, 2 contextes/applications
+- Être utilisés dans la littérature académique du domaine
+- Être en français (ou en anglais si le terme international est plus courant)
+- NE PAS être génériques (pas "analyse", "étude", "recherche")
+
+Format de sortie STRICT : retourne UNIQUEMENT les 6 mots-clés séparés par des virgules, sur une seule ligne. Aucun numéro, aucune explication, aucun autre texte.
+Exemple : optimisation de portefeuille, frontière efficiente, Value-at-Risk, GARCH, Bourse de Casablanca, agent autonome`;
+
+    case "problematique":
+      return `Génère une problématique de recherche académique pour un ${type} intitulé "${theme}" (${school} — ${filiere}).
+
+La problématique doit :
+- Être une seule question de recherche principale, précise et ouverte
+- Être spécifique au thème "${theme}" dans le contexte marocain ou local
+- Utiliser un langage académique formel
+- Faire entre 25 et 45 mots
+- NE PAS commencer par "Comment" si possible — varier la formulation
+
+Retourne UNIQUEMENT la question de recherche, sans préambule, sans guillemets, sans explication.`;
+
+    case "contexte":
+      return `Génère un résumé du contexte académique en 3 phrases pour un ${type} intitulé "${theme}" (${school} — ${filiere}).
+
+Le contexte doit :
+- Situer le sujet "${theme}" dans le contexte marocain ou sectoriel pertinent
+- Justifier la pertinence académique et pratique du sujet
+- Mentionner brièvement l'approche ou la méthode envisagée
+- Faire 60 à 90 mots maximum
+
+Retourne UNIQUEMENT le texte du contexte, sans préambule, directement.`;
 
     default:
       return `Génère du contenu académique formel de 250 à 400 mots pour un ${type} sur le thème "${theme}" (${school} — ${filiere}).

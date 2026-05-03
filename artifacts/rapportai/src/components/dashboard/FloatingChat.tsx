@@ -15,17 +15,16 @@ interface Message {
 const INTRO: Message = {
   id: "intro",
   role: "assistant",
-  text: "Bonjour. Je suis ton jury IA. Je vais simuler ta soutenance selon ton rapport. Quelle est la problématique principale de ton travail ?",
+  text: "Bonjour ! Je suis ton assistant IA pour ton rapport. Pose-moi n'importe quelle question : structure, formulations académiques, citations, méthodologie… Je suis là pour t'aider.",
 };
 
 export function FloatingChat() {
-  const [open, setOpen]       = useState(false);
+  const [open, setOpen]         = useState(false);
   const [messages, setMessages] = useState<Message[]>([INTRO]);
-  const [input, setInput]     = useState("");
-  const [loading, setLoading] = useState(false);
-  const bottomRef             = useRef<HTMLDivElement>(null);
-  const abortRef              = useRef<AbortController | null>(null);
-
+  const [input, setInput]       = useState("");
+  const [loading, setLoading]   = useState(false);
+  const bottomRef               = useRef<HTMLDivElement>(null);
+  const abortRef                = useRef<AbortController | null>(null);
 
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -49,7 +48,6 @@ export function FloatingChat() {
     const ctrl = new AbortController();
     abortRef.current = ctrl;
 
-    // Build API message history (exclude the streaming placeholder + intro)
     const history = [...messages, userMsg]
       .filter((m) => m.id !== "intro")
       .map((m) => ({ role: m.role as "user" | "assistant", content: m.text }));
@@ -61,13 +59,13 @@ export function FloatingChat() {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          messages:      history,
-          theme:         report.theme,
-          reportType:    report.reportType,
-          school:        report.school,
-          filiere:       report.filiere,
-          problematique: report.partieI ? undefined : undefined,
-          studentName:   report.studentName,
+          messages:   history,
+          mode:       "assistant",
+          theme:      report.theme,
+          reportType: report.reportType,
+          school:     report.school,
+          filiere:    report.filiere,
+          studentName: report.studentName,
         }),
         signal: ctrl.signal,
       });
@@ -133,7 +131,6 @@ export function FloatingChat() {
               border: "1px solid rgba(124,58,237,0.12)",
             }}
           >
-            {/* Header */}
             <div
               className="flex items-center justify-between px-4 py-3.5 border-b border-gray-100"
               style={{ background: "linear-gradient(135deg, #7c3aed 0%, #5b21b6 100%)" }}
@@ -144,9 +141,9 @@ export function FloatingChat() {
                 </div>
                 <div>
                   <div className="text-white text-sm font-semibold leading-none" style={{ fontFamily: "'Plus Jakarta Sans', sans-serif" }}>
-                    JuryAI
+                    Assistant IA
                   </div>
-                  <div className="text-purple-200 text-xs mt-0.5">Simulation de soutenance</div>
+                  <div className="text-purple-200 text-xs mt-0.5">Pose-moi n'importe quelle question</div>
                 </div>
               </div>
               <button
@@ -158,62 +155,57 @@ export function FloatingChat() {
               </button>
             </div>
 
-            <>
-                {/* ── Messages ── */}
-                <div className="h-64 overflow-y-auto p-4 space-y-3 bg-gray-50/50">
-                  {messages.map((msg) => (
-                    <div key={msg.id} className={`flex ${msg.role === "user" ? "justify-end" : "justify-start"}`}>
-                      <div
-                        className={`max-w-[85%] px-3.5 py-2.5 rounded-2xl text-xs leading-relaxed
-                          ${msg.role === "assistant"
-                            ? "bg-white text-gray-700 border border-gray-100 rounded-tl-sm"
-                            : "bg-purple-600 text-white rounded-tr-sm"
-                          }`}
-                        style={{ boxShadow: "0 1px 2px rgba(0,0,0,0.05)" }}
-                      >
-                        {msg.text || (
-                          msg.streaming && (
-                            <span className="flex items-center gap-1">
-                              <Loader2 className="w-3 h-3 animate-spin" />
-                              <span className="text-gray-400">En train d'écrire…</span>
-                            </span>
-                          )
-                        )}
-                      </div>
-                    </div>
-                  ))}
-                  <div ref={bottomRef} />
-                </div>
-
-                {/* ── Input ── */}
-                <div className="p-3 border-t border-gray-100 bg-white flex items-center gap-2">
-                  <input
-                    data-testid="input-chat-message"
-                    value={input}
-                    onChange={(e) => setInput(e.target.value)}
-                    onKeyDown={(e) => e.key === "Enter" && !e.shiftKey && sendMessage()}
-                    disabled={loading}
-                    placeholder="Répondre au jury…"
-                    className="flex-1 text-xs bg-gray-50 border border-gray-200 rounded-xl px-3 py-2.5 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent disabled:opacity-50"
-                  />
-                  <button
-                    data-testid="button-send-chat"
-                    onClick={sendMessage}
-                    disabled={!input.trim() || loading}
-                    className="w-8 h-8 bg-purple-600 hover:bg-purple-700 disabled:opacity-40 rounded-xl flex items-center justify-center transition-colors flex-shrink-0"
+            <div className="h-64 overflow-y-auto p-4 space-y-3 bg-gray-50/50">
+              {messages.map((msg) => (
+                <div key={msg.id} className={`flex ${msg.role === "user" ? "justify-end" : "justify-start"}`}>
+                  <div
+                    className={`max-w-[85%] px-3.5 py-2.5 rounded-2xl text-xs leading-relaxed
+                      ${msg.role === "assistant"
+                        ? "bg-white text-gray-700 border border-gray-100 rounded-tl-sm"
+                        : "bg-purple-600 text-white rounded-tr-sm"
+                      }`}
+                    style={{ boxShadow: "0 1px 2px rgba(0,0,0,0.05)" }}
                   >
-                    {loading
-                      ? <Loader2 className="w-3.5 h-3.5 text-white animate-spin" />
-                      : <Send className="w-3.5 h-3.5 text-white" />
-                    }
-                  </button>
+                    {msg.text || (
+                      msg.streaming && (
+                        <span className="flex items-center gap-1">
+                          <Loader2 className="w-3 h-3 animate-spin" />
+                          <span className="text-gray-400">En train d'écrire…</span>
+                        </span>
+                      )
+                    )}
+                  </div>
                 </div>
-              </>
+              ))}
+              <div ref={bottomRef} />
+            </div>
+
+            <div className="p-3 border-t border-gray-100 bg-white flex items-center gap-2">
+              <input
+                data-testid="input-chat-message"
+                value={input}
+                onChange={(e) => setInput(e.target.value)}
+                onKeyDown={(e) => e.key === "Enter" && !e.shiftKey && sendMessage()}
+                disabled={loading}
+                placeholder="Comment améliorer ma Partie I ?"
+                className="flex-1 text-xs bg-gray-50 border border-gray-200 rounded-xl px-3 py-2.5 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent disabled:opacity-50"
+              />
+              <button
+                data-testid="button-send-chat"
+                onClick={sendMessage}
+                disabled={!input.trim() || loading}
+                className="w-8 h-8 bg-purple-600 hover:bg-purple-700 disabled:opacity-40 rounded-xl flex items-center justify-center transition-colors flex-shrink-0"
+              >
+                {loading
+                  ? <Loader2 className="w-3.5 h-3.5 text-white animate-spin" />
+                  : <Send className="w-3.5 h-3.5 text-white" />
+                }
+              </button>
+            </div>
           </motion.div>
         )}
       </AnimatePresence>
 
-      {/* Toggle button */}
       <motion.button
         data-testid="button-open-chat"
         onClick={() => setOpen(!open)}
@@ -237,7 +229,7 @@ export function FloatingChat() {
           )}
         </AnimatePresence>
         {!open && (
-          <span className="absolute top-0.5 right-0.5 w-3.5 h-3.5 bg-amber-400 rounded-full border-2 border-white" />
+          <span className="absolute top-0.5 right-0.5 w-3.5 h-3.5 bg-green-400 rounded-full border-2 border-white" />
         )}
       </motion.button>
     </div>

@@ -1,4 +1,4 @@
-import { useState, useCallback, useRef } from "react";
+import { useState, useCallback } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Copy, Download, PenLine, X, Check, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -32,20 +32,34 @@ const MOCK_CONTENT = `
 <p>Markowitz (1952) a démontré que pour un niveau de risque donné, il existe un portefeuille qui maximise le rendement espéré — et réciproquement, pour un niveau de rendement donné, il existe un portefeuille qui minimise le risque. L'ensemble de ces portefeuilles constitue ce que l'on appelle la frontière efficiente.</p>
 
 <p>Cette approche quantitative repose sur trois hypothèses fondamentales : les investisseurs sont rationnels et averses au risque, les marchés sont efficients au sens semi-fort, et les distributions de rendements peuvent être caractérisées par leur espérance et leur variance. Ces hypothèses, bien que simplificatrices, permettent de développer un cadre analytique rigoureux et opérationnel.</p>
-
-<h3>1.3 Évolution des modèles d'optimisation</h3>
-
-<p>À la suite des travaux de Markowitz, Sharpe (1964) a proposé le modèle d'évaluation des actifs financiers (MEDAF), qui lie le rendement d'un actif à sa sensibilité aux fluctuations du marché. Ce coefficient de sensibilité, communément appelé bêta, est devenu l'un des outils les plus utilisés dans la gestion de portefeuille contemporaine.</p>
-
-<p>Plus récemment, les modèles factoriels ont enrichi cette approche en introduisant des facteurs supplémentaires tels que la taille des entreprises, le ratio valeur comptable sur valeur de marché, et la momentum. Ces développements théoriques ont permis d'améliorer significativement le pouvoir explicatif des modèles d'évaluation.</p>
 `;
 
+// ── Split HTML into ~N-word pages at h2 boundaries ────────────────────────────
+function splitIntoPages(html: string, wordsPerPage = 450): string[] {
+  if (!html.trim()) return [""];
+  const chunks = html.split(/(?=<h2\b)/);
+  const pages: string[] = [];
+  let cur = "";
+  let curWords = 0;
+
+  for (const chunk of chunks) {
+    const wc = chunk.replace(/<[^>]+>/g, " ").split(/\s+/).filter(Boolean).length;
+    if (curWords + wc > wordsPerPage && cur.trim()) {
+      pages.push(cur);
+      cur = chunk;
+      curWords = wc;
+    } else {
+      cur += chunk;
+      curWords += wc;
+    }
+  }
+  if (cur.trim()) pages.push(cur);
+  return pages.length > 0 ? pages : [html];
+}
+
+// ── Revision panel ────────────────────────────────────────────────────────────
 function RevisionPanel({
-  open,
-  onClose,
-  onRevisionLimitHit,
-  content,
-  onContentChange,
+  open, onClose, onRevisionLimitHit, content, onContentChange,
 }: {
   open: boolean;
   onClose: () => void;
@@ -53,28 +67,22 @@ function RevisionPanel({
   content: string;
   onContentChange?: (newContent: string) => void;
 }) {
-  const [text, setText] = useState("");
+  const [text, setText]           = useState("");
   const [isRevising, setIsRevising] = useState(false);
-  const [done, setDone] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-  const abortRef = useRef<AbortController | null>(null);
+  const [revised, setRevised]     = useState("");
+  const [done, setDone]           = useState(false);
+  const [error, setError]         = useState<string | null>(null);
 
   const handleApply = async () => {
     if (!text.trim() || isRevising) return;
 
-    const next = incrementRevision();
+    const next  = incrementRevision();
     const limit = PLAN_LIMITS[next.planId].revisions;
-
-    if (next.revisionCount > limit) {
-      onRevisionLimitHit();
-      return;
-    }
+    if (next.revisionCount > limit) { onRevisionLimitHit(); return; }
 
     setIsRevising(true);
+    setRevised("");
     setError(null);
-
-    const ctrl = new AbortController();
-    abortRef.current = ctrl;
 
     const report = getReport();
 
@@ -90,17 +98,14 @@ function RevisionPanel({
           school:     report.school,
           filiere:    report.filiere,
         }),
-        signal: ctrl.signal,
       });
 
-      if (!resp.ok || !resp.body) {
-        throw new Error(`HTTP ${resp.status}`);
-      }
+      if (!resp.ok || !resp.body) throw new Error(`HTTP ${resp.status}`);
 
-      const reader = resp.body.getReader();
+      const reader  = resp.body.getReader();
       const decoder = new TextDecoder();
       let buf = "";
-      let revised = "";
+      let result = "";
 
       while (true) {
         const { done: streamDone, value } = await reader.read();
@@ -116,37 +121,24 @@ function RevisionPanel({
             const msg = JSON.parse(line.slice(6)) as { content?: string; done?: boolean; error?: string };
             if (msg.error) throw new Error(msg.error);
             if (msg.done) break;
-            if (msg.content) revised += msg.content;
+            if (msg.content) {
+              result += msg.content;
+              setRevised(result);
+            }
           } catch (e) {
             if (e instanceof Error && e.message !== "JSON") throw e;
           }
         }
       }
 
-      if (revised.trim()) {
-        onContentChange?.(revised);
-      }
-
+      if (result.trim()) onContentChange?.(result);
       setDone(true);
-      setTimeout(() => {
-        setDone(false);
-        setText("");
-        onClose();
-        if (next.revisionCount >= limit) {
-          onRevisionLimitHit();
-        }
-      }, 1500);
+      setTimeout(() => { setDone(false); setText(""); setRevised(""); onClose(); }, 1500);
     } catch (err) {
-      if (err instanceof Error && err.name === "AbortError") return;
       setError(err instanceof Error ? err.message : "Erreur inconnue");
     } finally {
       setIsRevising(false);
     }
-  };
-
-  const handleCancel = () => {
-    abortRef.current?.abort();
-    setIsRevising(false);
   };
 
   return (
@@ -162,12 +154,9 @@ function RevisionPanel({
         >
           <div className="flex items-center justify-between px-5 py-4 border-b border-gray-100">
             <h3 className="font-semibold text-gray-900 text-sm" style={{ fontFamily: "'Plus Jakarta Sans', sans-serif" }}>
-              Révision du document
+              Révision IA du document
             </h3>
-            <button
-              onClick={onClose}
-              className="w-7 h-7 rounded-lg flex items-center justify-center hover:bg-gray-100 text-gray-400 hover:text-gray-600 transition-colors"
-            >
+            <button onClick={onClose} className="w-7 h-7 rounded-lg flex items-center justify-center hover:bg-gray-100 text-gray-400 hover:text-gray-600 transition-colors">
               <X className="w-4 h-4" />
             </button>
           </div>
@@ -182,36 +171,40 @@ function RevisionPanel({
                 onChange={(e) => setText(e.target.value)}
                 disabled={isRevising}
                 placeholder="Ex: Rends la section 1.2 plus concise et ajoute une transition vers la section suivante..."
-                rows={6}
+                rows={5}
                 className="w-full text-sm text-gray-700 border border-gray-200 rounded-xl p-3 resize-none focus:outline-none focus:ring-2 focus:ring-purple-300 focus:border-purple-400 placeholder:text-gray-300 disabled:opacity-50"
               />
             </div>
 
             <div className="bg-purple-50 rounded-xl p-3">
-              <p className="text-xs text-purple-600 font-medium mb-1">Exemples de révisions :</p>
-              {["Raccourcir ce paragraphe", "Ajouter une citation académique", "Reformuler en style académique"].map((s) => (
-                <button
-                  key={s}
-                  onClick={() => setText(s)}
-                  disabled={isRevising}
-                  className="block text-xs text-purple-500 hover:text-purple-700 mt-1 disabled:opacity-50 text-left"
-                >
+              <p className="text-xs text-purple-600 font-medium mb-1">Exemples :</p>
+              {["Raccourcir ce paragraphe", "Ajouter une citation académique", "Reformuler en style académique", "Rendre plus analytique"].map((s) => (
+                <button key={s} onClick={() => setText(s)} disabled={isRevising}
+                  className="block text-xs text-purple-500 hover:text-purple-700 mt-1 disabled:opacity-50 text-left">
                   {s}
                 </button>
               ))}
             </div>
 
+            {/* Live streaming preview */}
+            {isRevising && revised && (
+              <div className="bg-gray-50 border border-gray-200 rounded-xl p-3 max-h-40 overflow-y-auto">
+                <p className="text-xs text-gray-400 font-semibold mb-1">Je travaille dessus…</p>
+                <p className="text-xs text-gray-700 leading-relaxed">{revised.slice(0, 300)}{revised.length > 300 ? "…" : ""}</p>
+              </div>
+            )}
+
+            {isRevising && !revised && (
+              <div className="bg-purple-50 rounded-xl p-3 flex items-center gap-2">
+                <Loader2 className="w-3.5 h-3.5 text-purple-500 animate-spin flex-shrink-0" />
+                <p className="text-xs text-purple-600">Je travaille dessus…</p>
+              </div>
+            )}
+
             {error && (
               <div className="bg-red-50 border border-red-100 rounded-xl p-3 flex items-start gap-2">
                 <X className="w-3.5 h-3.5 text-red-400 flex-shrink-0 mt-0.5" />
                 <p className="text-xs text-red-600">{error}</p>
-              </div>
-            )}
-
-            {isRevising && (
-              <div className="bg-purple-50 rounded-xl p-3 flex items-center gap-2">
-                <Loader2 className="w-3.5 h-3.5 text-purple-500 animate-spin flex-shrink-0" />
-                <p className="text-xs text-purple-600">L'IA révise le texte…</p>
               </div>
             )}
           </div>
@@ -228,14 +221,6 @@ function RevisionPanel({
                 <span className="flex items-center gap-2"><Loader2 className="w-4 h-4 animate-spin" /> Révision en cours…</span>
               ) : "Appliquer la révision"}
             </Button>
-            {isRevising && (
-              <button
-                onClick={handleCancel}
-                className="text-xs text-gray-400 hover:text-gray-600 text-center"
-              >
-                Annuler
-              </button>
-            )}
           </div>
         </motion.div>
       )}
@@ -243,19 +228,22 @@ function RevisionPanel({
   );
 }
 
+// ── Main component ────────────────────────────────────────────────────────────
 export function WordPreview({
   content,
-  rawContent,
   sectionTitle = "Section",
-  wordCount = 1247,
+  wordCount = 0,
   blurred = false,
   onContentChange,
 }: WordPreviewProps) {
-  const [revisionOpen, setRevisionOpen] = useState(false);
+  const [revisionOpen, setRevisionOpen]   = useState(false);
   const [revisionUpsell, setRevisionUpsell] = useState(false);
-  const [copied, setCopied] = useState(false);
-  const [downloading, setDownloading] = useState(false);
-  const html = content || MOCK_CONTENT;
+  const [copied, setCopied]               = useState(false);
+  const [downloading, setDownloading]     = useState(false);
+
+  const html  = content || MOCK_CONTENT;
+  const pages = splitIntoPages(html);
+  const report = getReport();
 
   const handleCopy = () => {
     navigator.clipboard.writeText(html.replace(/<[^>]+>/g, ""));
@@ -267,9 +255,9 @@ export function WordPreview({
     if (downloading) return;
     setDownloading(true);
     try {
-      const report = getReport();
-      const blob = await generateDocx(report);
-      const theme = report.theme?.slice(0, 40).replace(/\s+/g, "-").replace(/[^a-z0-9\-]/gi, "") || "rapport";
+      const data  = getReport();
+      const blob  = await generateDocx(data);
+      const theme = data.theme?.slice(0, 40).replace(/\s+/g, "-").replace(/[^a-z0-9\-]/gi, "") || "rapport";
       downloadBlob(blob, `RapportAI-${theme}.docx`);
     } catch (err) {
       console.error("docx export error", err);
@@ -283,80 +271,76 @@ export function WordPreview({
       {/* Top bar */}
       <div className="flex items-center justify-between px-5 py-3 bg-white border-b border-gray-200 flex-shrink-0 z-10">
         <span className="text-sm font-semibold text-gray-700" style={{ fontFamily: "'Plus Jakarta Sans', sans-serif" }}>
-          Aperçu du document
+          {sectionTitle} · {pages.length} page{pages.length > 1 ? "s" : ""}
         </span>
         <div className="flex items-center gap-2">
           <Button variant="ghost" size="sm" onClick={handleCopy} className="h-8 px-3 text-xs text-gray-600 hover:text-gray-900 gap-1.5">
             {copied ? <Check className="w-3.5 h-3.5 text-green-600" /> : <Copy className="w-3.5 h-3.5" />}
             {copied ? "Copié" : "Copier"}
           </Button>
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={handleDownload}
-            disabled={downloading}
-            className="h-8 px-3 text-xs text-gray-600 hover:text-gray-900 gap-1.5 disabled:opacity-60"
-          >
+          <Button variant="ghost" size="sm" onClick={handleDownload} disabled={downloading}
+            className="h-8 px-3 text-xs text-gray-600 hover:text-gray-900 gap-1.5 disabled:opacity-60">
             {downloading
               ? <><Loader2 className="w-3.5 h-3.5 animate-spin" /> Export...</>
               : <><Download className="w-3.5 h-3.5" /> .docx</>
             }
           </Button>
-          <Button
-            onClick={() => setRevisionOpen(true)}
-            size="sm"
-            className="h-8 px-3 text-xs bg-purple-50 hover:bg-purple-100 text-purple-700 font-semibold gap-1.5 rounded-lg"
-            variant="ghost"
-          >
-            <PenLine className="w-3.5 h-3.5" /> Révision
+          <Button onClick={() => setRevisionOpen(true)} size="sm" variant="ghost"
+            className="h-8 px-3 text-xs bg-purple-50 hover:bg-purple-100 text-purple-700 font-semibold gap-1.5 rounded-lg">
+            <PenLine className="w-3.5 h-3.5" /> Révision IA
           </Button>
         </div>
       </div>
 
-      {/* A4 preview area */}
-      <div className="flex-1 overflow-y-auto relative" style={{ background: "#e5e7eb" }}>
-        <div className="flex justify-center py-8 px-6 min-h-full">
-          <div
-            className="relative w-full max-w-[680px] bg-white"
-            style={{
-              padding: "64px 72px",
-              boxShadow: "0 4px 32px rgba(0,0,0,0.12)",
-              minHeight: "calc(297mm * 0.75)",
-              filter: blurred ? "blur(4px)" : "none",
-              transition: "filter 0.3s ease",
-            }}
-          >
-            {/* Page header */}
-            <div className="text-center mb-8 pb-4 border-b border-gray-200">
-              <p className="text-xs text-gray-400" style={{ fontFamily: "Times New Roman, serif" }}>
-                {getReport().theme ?? "RapportAI"} · {getReport().annee ?? "2024–2025"}
-              </p>
-            </div>
-
-            {/* Content */}
+      {/* Multi-page A4 preview */}
+      <div className="flex-1 overflow-y-auto relative" style={{ background: "#d1d5db" }}>
+        <div className="flex flex-col items-center py-8 px-6 gap-6 min-h-full">
+          {pages.map((pageHtml, idx) => (
             <div
-              className="word-preview-content"
+              key={idx}
+              className="w-full max-w-[680px] bg-white flex-shrink-0"
               style={{
-                fontFamily: "Times New Roman, serif",
-                fontSize: "11pt",
-                color: "#1a1a1a",
-                textAlign: "justify",
-                lineHeight: "1.75",
+                padding: "56px 64px",
+                boxShadow: "0 2px 24px rgba(0,0,0,0.14)",
+                minHeight: "880px",
+                filter: blurred ? "blur(4px)" : "none",
+                transition: "filter 0.3s ease",
               }}
-              dangerouslySetInnerHTML={{ __html: html }}
-            />
+            >
+              {/* Page header */}
+              <div className="text-center mb-6 pb-3 border-b border-gray-100">
+                <p className="text-[9pt] text-gray-400" style={{ fontFamily: "Times New Roman, serif" }}>
+                  {report.theme ?? "RapportAI"} — {report.annee ?? "2024–2025"}
+                </p>
+              </div>
 
-            {/* Page number */}
-            <div className="text-center mt-12 pt-4 border-t border-gray-200">
-              <p className="text-xs text-gray-400" style={{ fontFamily: "Times New Roman, serif" }}>— 12 —</p>
+              {/* Content */}
+              <div
+                className="word-preview-content"
+                style={{
+                  fontFamily: "Times New Roman, serif",
+                  fontSize: "11pt",
+                  color: "#1a1a1a",
+                  textAlign: "justify",
+                  lineHeight: "1.75",
+                }}
+                dangerouslySetInnerHTML={{ __html: pageHtml }}
+              />
+
+              {/* Page number */}
+              <div className="text-center mt-10 pt-3 border-t border-gray-100">
+                <p className="text-[9pt] text-gray-400" style={{ fontFamily: "Times New Roman, serif" }}>
+                  — {idx + 1} —
+                </p>
+              </div>
             </div>
-          </div>
+          ))}
         </div>
 
         {/* Word count badge */}
-        <div className="absolute bottom-4 right-4 z-10">
-          <div className="bg-white border border-gray-200 rounded-full px-3 py-1.5 text-xs font-semibold text-gray-600 shadow-sm">
-            {wordCount.toLocaleString("fr-FR")} mots
+        <div className="sticky bottom-4 left-0 right-0 flex justify-end pr-4 pointer-events-none z-10">
+          <div className="bg-white border border-gray-200 rounded-full px-3 py-1.5 text-xs font-semibold text-gray-600 shadow-sm pointer-events-auto">
+            {wordCount > 0 ? wordCount.toLocaleString("fr-FR") : "0"} mots · {pages.length} p.
           </div>
         </div>
       </div>
