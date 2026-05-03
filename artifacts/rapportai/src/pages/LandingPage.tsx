@@ -75,6 +75,14 @@ export default function LandingPage() {
           </div>
           
           <div className="container mx-auto px-4 text-center max-w-4xl relative z-10">
+            <motion.div
+              initial={{ opacity: 0, y: 12 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.4 }}
+              className="inline-flex items-center gap-2 bg-purple-50 border border-purple-100 text-purple-700 text-sm font-semibold px-4 py-2 rounded-full mb-8"
+            >
+              <span>🎓</span> Utilisé par <span className="font-black">500+</span> étudiants au Maroc
+            </motion.div>
             <motion.h1 
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
@@ -310,9 +318,11 @@ export default function LandingPage() {
               JuryAI lit ton rapport et simule exactement ce moment — les vraies questions, le vrai stress. Arrive le jour J en sachant exactement quoi dire.
             </p>
             
-            <Button size="lg" variant="outline" className="bg-transparent border-white/30 text-white hover:bg-white hover:text-[#2e1065] text-lg h-14 px-8 rounded-full">
-              Découvrir JuryAI <ArrowRight className="w-5 h-5 ml-2" />
-            </Button>
+            <Link href="/sign-up">
+              <Button size="lg" variant="outline" className="bg-transparent border-white/30 text-white hover:bg-white hover:text-[#2e1065] text-lg h-14 px-8 rounded-full">
+                Essayer JuryAI <ArrowRight className="w-5 h-5 ml-2" />
+              </Button>
+            </Link>
           </div>
         </section>
 
