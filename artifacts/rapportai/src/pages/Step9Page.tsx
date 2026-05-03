@@ -2,9 +2,9 @@ import { useState, useRef, useCallback, useMemo } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { useLocation } from "wouter";
 import {
-  Sparkles, Loader2, X, Upload, Download,
+  Sparkles, Loader2, X, Upload, Download, Plus,
   CheckCircle2, Circle, FileText, BookOpen,
-  BarChart2, Hash, ArrowRight, Share2, Link2, Check, Lock, Wand2,
+  BarChart2, Hash, ArrowRight, Share2, Link2, Check, Lock, Wand2, Table2,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { StepLayout } from "@/components/report/StepLayout";
@@ -83,6 +83,9 @@ export default function Step9Page() {
   const [apports, setApports]           = useState(report.apports ?? "");
   const [perspectives, setPerspectives] = useState(report.perspectives ?? "");
   const [annexes, setAnnexes]           = useState<string[]>(report.annexes ?? []);
+  const [tableaux, setTableaux]         = useState<Array<{ n: number; title: string; page: number }>>(report.tableaux ?? []);
+  const [newTableTitle, setNewTableTitle] = useState("");
+  const [newTablePage, setNewTablePage]   = useState("");
   const [streamedContent, setStreamedContent]   = useState(
     report.conclusion ? markdownToHtml(report.conclusion) : ""
   );
@@ -103,15 +106,15 @@ export default function Step9Page() {
   }, []);
 
   const onDone = useCallback(() => {
-    // Parse the generated text to split conclusion / apports / perspectives
     const text = rawTextRef.current;
     saveReport({
       conclusion:   text,
       apports:      apports || undefined,
       perspectives: perspectives || undefined,
       annexes:      annexes.length > 0 ? annexes : undefined,
+      tableaux:     tableaux.length > 0 ? tableaux : undefined,
     });
-  }, [apports, perspectives, annexes]);
+  }, [apports, perspectives, annexes, tableaux]);
 
   const { generate, isStreaming: generating } = useGenerate({ onChunk, onDone });
 
@@ -200,6 +203,7 @@ export default function Step9Page() {
         apports:      apports || undefined,
         perspectives: perspectives || undefined,
         annexes:      annexes.length > 0 ? annexes : undefined,
+        tableaux:     tableaux.length > 0 ? tableaux : undefined,
       });
       const data = getReport();
       const resp = await fetch(`${BASE_PATH}/api/share`, {
@@ -237,6 +241,7 @@ export default function Step9Page() {
         apports:      apports || undefined,
         perspectives: perspectives || undefined,
         annexes:      annexes.length > 0 ? annexes : undefined,
+        tableaux:     tableaux.length > 0 ? tableaux : undefined,
       });
       const data = getReport();
       const blob = await generateDocx(data);
@@ -389,6 +394,77 @@ export default function Step9Page() {
                 </div>
               </div>
             )}
+
+            {/* ── Liste des tableaux ── */}
+            <div>
+              <label className="block text-sm font-semibold text-gray-700 mb-2">
+                Liste des tableaux
+                <span className="ml-2 text-xs font-normal text-gray-400">
+                  (auto-incluse dans le .docx)
+                </span>
+              </label>
+              <AnimatePresence>
+                {tableaux.map((t, i) => (
+                  <motion.div key={i} initial={{ opacity: 0, x: -10 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -10 }}
+                    className="flex items-center gap-2 mb-2 bg-blue-50 rounded-xl px-3 py-2.5 group">
+                    <div className="w-6 h-6 rounded-lg flex-shrink-0 flex items-center justify-center bg-blue-100">
+                      <Table2 className="w-3 h-3 text-blue-500" />
+                    </div>
+                    <span className="text-xs text-gray-500 w-20 flex-shrink-0">Tableau {t.n}</span>
+                    <span className="flex-1 text-xs text-gray-700 truncate">{t.title}</span>
+                    <span className="text-[10px] text-gray-400 flex-shrink-0">p. {t.page}</span>
+                    <button
+                      onClick={() => setTableaux((prev) => prev.filter((_, j) => j !== i))}
+                      className="opacity-0 group-hover:opacity-100 transition-opacity text-gray-300 hover:text-red-400"
+                    >
+                      <X className="w-3.5 h-3.5" />
+                    </button>
+                  </motion.div>
+                ))}
+              </AnimatePresence>
+              {/* Add row */}
+              <div className="flex items-center gap-2">
+                <input
+                  value={newTableTitle}
+                  onChange={(e) => setNewTableTitle(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter" && newTableTitle.trim()) {
+                      setTableaux((prev) => [
+                        ...prev,
+                        { n: prev.length + 1, title: newTableTitle.trim(), page: parseInt(newTablePage) || 0 },
+                      ]);
+                      setNewTableTitle("");
+                      setNewTablePage("");
+                    }
+                  }}
+                  placeholder="Titre du tableau…"
+                  className="flex-1 text-xs bg-gray-50 border border-gray-200 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-200"
+                />
+                <input
+                  value={newTablePage}
+                  onChange={(e) => setNewTablePage(e.target.value)}
+                  placeholder="Page"
+                  type="number"
+                  min={1}
+                  className="w-16 text-xs bg-gray-50 border border-gray-200 rounded-lg px-2 py-2 text-center focus:outline-none focus:ring-2 focus:ring-blue-200"
+                />
+                <button
+                  onClick={() => {
+                    if (!newTableTitle.trim()) return;
+                    setTableaux((prev) => [
+                      ...prev,
+                      { n: prev.length + 1, title: newTableTitle.trim(), page: parseInt(newTablePage) || 0 },
+                    ]);
+                    setNewTableTitle("");
+                    setNewTablePage("");
+                  }}
+                  disabled={!newTableTitle.trim()}
+                  className="w-8 h-8 bg-blue-500 hover:bg-blue-600 disabled:opacity-40 rounded-lg flex items-center justify-center transition-colors flex-shrink-0"
+                >
+                  <Plus className="w-3.5 h-3.5 text-white" />
+                </button>
+              </div>
+            </div>
 
             {/* ── Annexes ── */}
             <div>
