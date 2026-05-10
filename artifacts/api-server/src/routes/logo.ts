@@ -1,107 +1,82 @@
 import { Router, type Request, type Response } from "express";
-import Anthropic from "@anthropic-ai/sdk";
+import { randomUUID } from "crypto";
+import { AgentSession } from "../lib/agent-session";
 
 const router = Router();
 
-const client = new Anthropic({
-  apiKey: process.env.ANTHROPIC_API_KEY ?? process.env.AI_INTEGRATIONS_ANTHROPIC_API_KEY,
-});
+const FETCH_URL_TOOL: import("@anthropic-ai/sdk").Tool = {
+  name: "fetch_url",
+  description: "Fetch the HTML content of a URL",
+  input_schema: {
+    type: "object" as const,
+    properties: {
+      url: { type: "string", description: "URL to fetch" },
+    },
+    required: ["url"],
+  },
+};
+
+class LogoAgent extends AgentSession {
+  constructor() {
+    super(
+      randomUUID(),
+      `You are a logo finder. Given a Moroccan school name or abbreviation:
+1. Use fetch_url to visit their official website (try <abbr>.ma then <abbr>.ac.ma)
+2. Scan the HTML for <img> tags whose src, alt or class contains "logo"
+3. Pick the best logo URL (prefer SVG or PNG, absolute URL)
+4. Reply with ONLY valid JSON: {"logoUrl":"https://..."} or {"logoUrl":null}
+No explanation, no markdown, just the JSON object.`,
+      [FETCH_URL_TOOL]
+    );
+  }
+
+  protected override async handleTool(name: string, input: unknown): Promise<string> {
+    if (name === "fetch_url") {
+      const { url } = input as { url: string };
+      try {
+        const r = await fetch(url, {
+          headers: { "User-Agent": "Mozilla/5.0 (compatible; RapportAI/1.0)" },
+          signal: AbortSignal.timeout(6000),
+        });
+        if (!r.ok) return `HTTP ${r.status}`;
+        const html = await r.text();
+        // Return only img tags + head meta to keep token count low
+        const imgs = (html.match(/<img[^>]{0,300}>/gi) ?? []).slice(0, 40).join("\n");
+        const head = html.slice(0, 2000);
+        return `HEAD:\n${head}\n\nIMGS:\n${imgs}`.slice(0, 4000);
+      } catch (e) {
+        return `Error: ${e instanceof Error ? e.message : String(e)}`;
+      }
+    }
+    return "Unknown tool";
+  }
+}
 
 router.get("/logo", async (req: Request, res: Response) => {
   const school = ((req.query.school as string) ?? "").trim();
-
   if (!school) {
     res.status(400).json({ error: "school query param required" });
     return;
   }
 
   try {
-    const response = await client.messages.create({
-      model: "claude-haiku-4-5-20251001",
-      max_tokens: 512,
-      tools: [
-        {
-          name: "fetch_url",
-          description: "Fetch the content of a URL",
-          input_schema: {
-            type: "object" as const,
-            properties: {
-              url: { type: "string", description: "URL to fetch" },
-            },
-            required: ["url"],
-          },
-        },
-      ],
-      messages: [
-        {
-          role: "user",
-          content: `Find the direct URL of the official logo image for the Moroccan school: "${school}".
+    const agent = new LogoAgent();
+    let text = "";
 
-Steps:
-1. Use fetch_url to visit the school's official website (e.g. ${school.toLowerCase()}.ma or ${school.toLowerCase()}.ac.ma)
-2. Look for <img> tags with "logo" in src, alt, or class
-3. Return ONLY a JSON object: {"logoUrl": "https://..."} or {"logoUrl": null} if not found.
-Return only the JSON, nothing else.`,
-        },
-      ],
-    });
-
-    // Process tool calls if any
-    let logoUrl: string | null = null;
-    const messages: Anthropic.Messages.MessageParam[] = [
-      { role: "user", content: `Find the direct URL of the official logo image for the Moroccan school: "${school}". Return ONLY JSON: {"logoUrl": "https://..."} or {"logoUrl": null}` },
-      { role: "assistant", content: response.content },
-    ];
-
-    let current = response;
-    let iterations = 0;
-
-    while (current.stop_reason === "tool_use" && iterations < 3) {
-      iterations++;
-      const toolUses = current.content.filter((b): b is Anthropic.Messages.ToolUseBlock => b.type === "tool_use");
-      const toolResults: Anthropic.Messages.ToolResultBlockParam[] = [];
-
-      for (const tu of toolUses) {
-        const { url } = tu.input as { url: string };
-        let content = "";
-        try {
-          const r = await fetch(url, {
-            headers: { "User-Agent": "Mozilla/5.0" },
-            signal: AbortSignal.timeout(5000),
-          });
-          const html = await r.text();
-          // Extract just img tags to keep it small
-          const imgs = html.match(/<img[^>]+>/gi)?.slice(0, 30).join("\n") ?? "No images found";
-          content = imgs.slice(0, 3000);
-        } catch {
-          content = "Failed to fetch URL";
-        }
-        toolResults.push({ type: "tool_result", tool_use_id: tu.id, content });
-      }
-
-      messages.push({ role: "user", content: toolResults });
-
-      current = await client.messages.create({
-        model: "claude-haiku-4-5-20251001",
-        max_tokens: 256,
-        tools: [],
-        messages,
-      });
-
-      messages.push({ role: "assistant", content: current.content });
+    for await (const event of agent.stream(`Find the official logo for this Moroccan school: "${school}"`)) {
+      if (event.type === "text") text += event.content;
     }
 
-    // Extract JSON from final response
-    const text = current.content.find((b): b is Anthropic.Messages.TextBlock => b.type === "text")?.text ?? "";
+    // Extract JSON from response
     const match = text.match(/\{[^}]*"logoUrl"[^}]*\}/);
     if (match) {
       const parsed = JSON.parse(match[0]) as { logoUrl: string | null };
-      logoUrl = parsed.logoUrl ?? null;
+      res.json({ logoUrl: parsed.logoUrl ?? null });
+    } else {
+      res.json({ logoUrl: null });
     }
-
-    res.json({ logoUrl });
   } catch (err) {
-    console.error("Logo fetch error:", err);
+    console.error("Logo agent error:", err);
     res.json({ logoUrl: null });
   }
 });
