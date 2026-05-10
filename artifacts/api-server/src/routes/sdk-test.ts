@@ -5,27 +5,17 @@ import { execSync } from "child_process";
 
 const router = Router();
 
-// GET /api/debug-sdk — finds actual node_modules location + claude binary
+// GET /api/debug-sdk — finds claude binary in pnpm store
 router.get("/debug-sdk", (_req: Request, res: Response) => {
   try {
-    let cwd = "";
-    try { cwd = execSync("pwd").toString().trim(); } catch { cwd = "error"; }
+    const run = (cmd: string) => { try { return execSync(cmd, { encoding: "utf8" }).trim(); } catch { return ""; } };
 
-    let nodeModulesFind = "";
-    try {
-      nodeModulesFind = execSync(
-        `find / -name "claude-agent-sdk" -maxdepth 10 -type d 2>/dev/null | head -5`
-      ).toString().trim();
-    } catch { nodeModulesFind = "error"; }
+    const pnpmAnthropicPkgs = run("ls /opt/render/project/src/node_modules/.pnpm/ | grep anthropic");
+    const dotBinClaude = run("ls /opt/render/project/src/node_modules/.bin/ | grep claude");
+    const findClaudeBin = run("find /opt/render/project/src/node_modules -name 'claude' -type f 2>/dev/null | head -10");
+    const findClaudeCode = run("find /opt/render/project/src/node_modules -path '*claude-code*' -name '*.mjs' 2>/dev/null | head -10");
 
-    let whichClaude = "";
-    try { whichClaude = execSync("which claude 2>/dev/null || echo not-found").toString().trim(); } catch { whichClaude = "not-found"; }
-
-    let envPath = process.env.PATH ?? "";
-    let resolvedSdk = "";
-    try { resolvedSdk = require.resolve("@anthropic-ai/claude-agent-sdk"); } catch (e) { resolvedSdk = String(e); }
-
-    res.json({ cwd, nodeModulesFind, whichClaude, envPath, resolvedSdk });
+    res.json({ pnpmAnthropicPkgs, dotBinClaude, findClaudeBin, findClaudeCode });
   } catch (err) {
     res.status(500).json({ error: String(err) });
   }
