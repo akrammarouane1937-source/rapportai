@@ -40,7 +40,7 @@ export default function LandingPage() {
       >
         <div className="container mx-auto px-4 h-16 flex items-center justify-between">
           <div className="flex items-center gap-2">
-            <div className="w-8 h-8 bg-primary rounded flex items-center justify-center text-white">
+            <div className="w-8 h-8 rounded flex items-center justify-center text-white" style={{ background: "#7c3aed" }}>
               <Sparkles size={18} />
             </div>
             <span className="font-bold font-heading text-xl tracking-tight text-foreground">
