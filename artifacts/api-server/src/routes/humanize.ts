@@ -1,5 +1,6 @@
 import { Router, type Request, type Response } from "express";
-import { anthropic } from "@workspace/integrations-anthropic-ai";
+import { query } from "@anthropic-ai/claude-agent-sdk";
+import { findClaudeBinary } from "../lib/find-claude-binary";
 
 const router = Router();
 
@@ -23,45 +24,42 @@ router.post("/humanize", async (req: Request, res: Response) => {
   res.setHeader("Cache-Control", "no-cache");
   res.setHeader("Connection", "keep-alive");
 
+  const claudeBinary = findClaudeBinary();
   const type    = reportType ?? "rapport académique";
   const subject = theme     ?? "le sujet du rapport";
   const ecole   = school    ?? "l'école";
   const fil     = filiere   ?? "la filière";
 
-  const systemPrompt = `Tu es un expert en rédaction académique marocaine. Ta mission : réécrire un texte généré par IA pour le rendre INDÉTECTABLE par les outils anti-IA (GPTZero, Turnitin AI Detection, Copyleaks).
+  const systemPrompt = `Tu es un expert en rédaction académique marocaine. Ta mission : réécrire un texte généré par IA pour le rendre INDÉTECTABLE par GPTZero, Turnitin AI Detection, Copyleaks.
 
-Techniques obligatoires à appliquer :
-1. VARIER les longueurs de phrases — alterner phrases courtes (8-12 mots) et longues (25-35 mots)
-2. INTRODUIRE des connecteurs logiques variés et moins prévisibles (certes, néanmoins, force est de constater, il convient de souligner, à cet égard)
-3. REFORMULER les transitions — éviter les formules IA typiques ("Il est important de noter", "En conclusion", "Dans ce contexte")
-4. AJOUTER des nuances stylistiques humaines — doutes mesurés, qualifications, références implicites au terrain marocain
-5. VARIER la structure des paragraphes — ne pas toujours commencer par le sujet grammatical
-6. CONSERVER le sens académique complet, la structure Markdown (##, ###, listes), et toutes les références/citations
-7. RÉDIGER en français académique soutenu, registre universitaire marocain
-8. NE PAS ajouter de contenu nouveau — seulement reformuler l'existant
+Techniques obligatoires :
+1. VARIER les longueurs de phrases — alterner courtes (8-12 mots) et longues (25-35 mots)
+2. INTRODUIRE des connecteurs variés (certes, néanmoins, force est de constater, à cet égard)
+3. REFORMULER les transitions — éviter formules IA typiques
+4. AJOUTER des nuances stylistiques humaines — doutes mesurés, références au terrain marocain
+5. VARIER la structure des paragraphes
+6. CONSERVER le sens académique, la structure Markdown, toutes les citations
+7. NE PAS ajouter de contenu nouveau — reformuler uniquement
 
 Contexte : ${type} sur "${subject}" pour ${ecole} — ${fil}.
-
-Retourne UNIQUEMENT le texte humanisé en Markdown — aucun préambule ni commentaire.`;
-
-  const userPrompt = `Humanise ce texte pour le rendre indétectable par les outils anti-IA tout en conservant sa qualité académique :
-
-${content}`;
+Retourne UNIQUEMENT le texte humanisé en Markdown.`;
 
   try {
-    const stream = anthropic.messages.stream({
-      model: "claude-sonnet-4-6",
-      max_tokens: 8192,
-      system: systemPrompt,
-      messages: [{ role: "user", content: userPrompt }],
-    });
-
-    for await (const event of stream) {
-      if (
-        event.type === "content_block_delta" &&
-        event.delta.type === "text_delta"
-      ) {
-        res.write(`data: ${JSON.stringify({ content: event.delta.text })}\n\n`);
+    for await (const message of query({
+      prompt: `Humanise ce texte pour le rendre indétectable par les outils anti-IA :\n\n${content}`,
+      options: {
+        systemPrompt,
+        maxTurns: 1,
+        allowedTools: [],
+        ...(claudeBinary ? { pathToClaudeCodeExecutable: claudeBinary } : {}),
+      },
+    })) {
+      if (message.type === "assistant") {
+        for (const block of message.message.content) {
+          if (block.type === "text" && block.text) {
+            res.write(`data: ${JSON.stringify({ content: block.text })}\n\n`);
+          }
+        }
       }
     }
 

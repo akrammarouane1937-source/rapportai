@@ -1,5 +1,6 @@
 import { Router, type Request, type Response } from "express";
-import { anthropic } from "@workspace/integrations-anthropic-ai";
+import { query } from "@anthropic-ai/claude-agent-sdk";
+import { findClaudeBinary } from "../lib/find-claude-binary";
 
 const router = Router();
 
@@ -11,7 +12,6 @@ interface ChatMessage {
 interface ChatBody {
   messages: ChatMessage[];
   mode?: "jury" | "assistant";
-  // Report context — injected from the client
   theme?: string;
   reportType?: string;
   school?: string;
@@ -32,6 +32,7 @@ router.post("/chat", async (req: Request, res: Response) => {
   res.setHeader("Cache-Control", "no-cache");
   res.setHeader("Connection", "keep-alive");
 
+  const claudeBinary = findClaudeBinary();
   const type    = reportType   ?? "rapport de fin d'études";
   const subject = theme        ?? "le sujet du rapport";
   const ecole   = school       ?? "l'école";
@@ -40,46 +41,35 @@ router.post("/chat", async (req: Request, res: Response) => {
   const student = studentName  ?? "l'étudiant(e)";
 
   const systemPrompt = mode === "jury"
-    ? `Tu es un jury de soutenance académique marocain — un professeur expérimenté, rigoureux mais bienveillant. Tu simules une soutenance du ${type} intitulé "${subject}", réalisé par ${student} à ${ecole} — ${fil}.
-
-Problématique du rapport : "${prob}"
-
-Ton rôle :
-- Poser des questions précises et pertinentes sur le contenu du rapport, la méthodologie, les résultats, et les apports
-- Réagir aux réponses de l'étudiant(e) de manière naturelle (demander des précisions, rebondir, approuver, challenger)
-- Alterner entre questions théoriques, méthodologiques et pratiques
-- Rester en français formel académique
-- Limiter chaque réponse à 2-3 phrases maximum — c'est une vraie soutenance orale, pas un cours
-- NE PAS donner de feedback sur la qualité des réponses ("Très bien!" etc.) — être neutre comme un vrai jury
-- Poser UNE SEULE question à la fois`
+    ? `Tu es un jury de soutenance académique marocain — rigoureux mais bienveillant. Tu simules une soutenance du ${type} intitulé "${subject}", réalisé par ${student} à ${ecole} — ${fil}.
+Problématique : "${prob}"
+Règles : UNE seule question par tour, 2-3 phrases max, français formel, alterner théorique/méthodologique/pratique.`
     : `Tu es un assistant IA expert en rédaction académique marocaine. Tu aides ${student} (${ecole} — ${fil}) à rédiger son ${type} intitulé "${subject}".
+Règles : Réponses courtes et directes (3-5 phrases), conseils actionnables adaptés au contexte marocain, toujours encourager.`;
 
-Ton rôle :
-- Répondre à toutes les questions liées au rapport, à la rédaction académique, aux méthodes, aux citations, à la structure
-- Donner des conseils précis et actionnables adaptés au contexte marocain
-- Proposer des formulations, des améliorations, des exemples concrets
-- Rester en français académique clair et accessible
-- Réponses courtes et directes (3-5 phrases max) — aller à l'essentiel
-- Si l'étudiant partage un extrait, proposer des améliorations concrètes
-- Toujours encourager et motiver l'étudiant(e)`;
+  // Inject conversation history into the prompt
+  const history = messages.slice(0, -1)
+    .map(m => `${m.role === "user" ? "Étudiant" : "Assistant"}: ${m.content}`)
+    .join("\n\n");
+  const lastMessage = messages[messages.length - 1].content;
+  const prompt = history ? `[Historique]\n${history}\n\n[Message actuel]\n${lastMessage}` : lastMessage;
 
   try {
-    const stream = anthropic.messages.stream({
-      model: "claude-sonnet-4-6",
-      max_tokens: 512,
-      system: systemPrompt,
-      messages: messages.map((m) => ({
-        role: m.role,
-        content: m.content,
-      })),
-    });
-
-    for await (const event of stream) {
-      if (
-        event.type === "content_block_delta" &&
-        event.delta.type === "text_delta"
-      ) {
-        res.write(`data: ${JSON.stringify({ content: event.delta.text })}\n\n`);
+    for await (const message of query({
+      prompt,
+      options: {
+        systemPrompt,
+        maxTurns: 1,
+        allowedTools: [],
+        ...(claudeBinary ? { pathToClaudeCodeExecutable: claudeBinary } : {}),
+      },
+    })) {
+      if (message.type === "assistant") {
+        for (const block of message.message.content) {
+          if (block.type === "text" && block.text) {
+            res.write(`data: ${JSON.stringify({ content: block.text })}\n\n`);
+          }
+        }
       }
     }
 

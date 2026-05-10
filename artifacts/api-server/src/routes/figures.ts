@@ -1,5 +1,6 @@
 import { Router, type Request, type Response } from "express";
-import { anthropic } from "@workspace/integrations-anthropic-ai";
+import { query } from "@anthropic-ai/claude-agent-sdk";
+import { findClaudeBinary } from "../lib/find-claude-binary";
 
 const router = Router();
 
@@ -24,9 +25,9 @@ export interface FigureSuggestion {
   placement: "Partie I" | "Partie II";
   x_column: string | null;
   y_columns: string[];
-  description: string;   // e.g. "Comme le montre la Figure 1 ci-dessous..."
-  caption: string;       // e.g. "Figure 1 — Évolution du CA (2020-2024)"
-  suggested_data?: string; // when no data uploaded
+  description: string;
+  caption: string;
+  suggested_data?: string;
 }
 
 router.post("/figures/analyze", async (req: Request, res: Response) => {
@@ -34,48 +35,56 @@ router.post("/figures/analyze", async (req: Request, res: Response) => {
   const ctx = body.reportContext ?? {};
   const hasData = Array.isArray(body.columns) && body.columns.length > 0;
 
-  const theme   = ctx.theme   ?? "sujet non précisé";
-  const filiere = ctx.filiere ?? "gestion";
+  const theme   = ctx.theme      ?? "sujet non précisé";
+  const filiere = ctx.filiere    ?? "gestion";
   const type    = ctx.reportType ?? "rapport de fin d'études";
 
+  const claudeBinary = findClaudeBinary();
+
   const dataSection = hasData
-    ? `Les données importées contiennent ${body.rowCount ?? "?"} lignes.\nColonnes disponibles : ${body.columns.join(", ")}\n\nAperçu des données (5 premières lignes) :\n${body.preview}`
-    : `Aucune donnée importée. Suggère quelles figures l'étudiant DEVRAIT créer pour son sujet, et précise les données à collecter dans "suggested_data".`;
+    ? `Données importées : ${body.rowCount ?? "?"} lignes.\nColonnes : ${body.columns.join(", ")}\n\nAperçu (5 premières lignes) :\n${body.preview}`
+    : `Aucune donnée importée. Suggère quelles figures l'étudiant DEVRAIT créer, précise les données à collecter dans "suggested_data".`;
 
   const prompt = `Tu es un expert en visualisation de données pour rapports académiques marocains (${type}).
-
-Contexte du rapport :
-- Thème : ${theme}
-- Filière : ${filiere}
+Thème : ${theme} | Filière : ${filiere}
 
 ${dataSection}
 
-Génère exactement 2 à 4 suggestions de figures pertinentes pour ce rapport. Chaque figure doit être concrète et académiquement pertinente.
-
-Retourne UNIQUEMENT un tableau JSON valide (zéro texte avant ou après), selon ce format strict :
+Génère exactement 2 à 4 suggestions de figures pertinentes.
+Retourne UNIQUEMENT un tableau JSON valide (zéro texte avant ou après) :
 [
   {
     "id": "fig-1",
     "figureNumber": 1,
-    "title": "Titre court descriptif (6 mots max)",
+    "title": "Titre court (6 mots max)",
     "type": "bar",
     "placement": "Partie I",
-    "x_column": "Nom exact de la colonne X (ou null)",
-    "y_columns": ["Nom exact de la colonne Y"],
-    "description": "Comme le montre la Figure 1 ci-dessous, [phrase académique spécifique au sujet].",
-    "caption": "Figure 1 — Titre complet de la figure"${!hasData ? ',\n    "suggested_data": "Description des données à collecter"' : ""}
+    "x_column": "Colonne X ou null",
+    "y_columns": ["Colonne Y"],
+    "description": "Comme le montre la Figure 1 ci-dessous, [phrase académique].",
+    "caption": "Figure 1 — Titre complet"${!hasData ? ',\n    "suggested_data": "Données à collecter"' : ""}
   }
 ]`;
 
   try {
-    const response = await anthropic.messages.create({
-      model: "claude-sonnet-4-6",
-      max_tokens: 1200,
-      messages: [{ role: "user", content: prompt }],
-    });
+    let fullText = "";
 
-    const raw = response.content[0].type === "text" ? response.content[0].text : "[]";
-    const jsonMatch = raw.match(/\[[\s\S]*\]/);
+    for await (const message of query({
+      prompt,
+      options: {
+        maxTurns: 1,
+        allowedTools: [],
+        ...(claudeBinary ? { pathToClaudeCodeExecutable: claudeBinary } : {}),
+      },
+    })) {
+      if (message.type === "assistant") {
+        for (const block of message.message.content) {
+          if (block.type === "text") fullText += block.text;
+        }
+      }
+    }
+
+    const jsonMatch = fullText.match(/\[[\s\S]*\]/);
     let figures: FigureSuggestion[] = [];
     if (jsonMatch) {
       try { figures = JSON.parse(jsonMatch[0]) as FigureSuggestion[]; } catch { figures = []; }
