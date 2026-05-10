@@ -1,7 +1,8 @@
 import { Router, type Request, type Response } from "express";
 import { query } from "@anthropic-ai/claude-agent-sdk";
-import { readdirSync, existsSync } from "fs";
+import { existsSync } from "fs";
 import { execSync } from "child_process";
+import { findClaudeBinary } from "../lib/find-claude-binary";
 
 const router = Router();
 
@@ -25,6 +26,7 @@ router.get("/debug-sdk", (_req: Request, res: Response) => {
 // Runs a minimal Agent SDK query — verifies the SDK works on this server.
 router.get("/sdk-test", async (_req: Request, res: Response) => {
   try {
+    const claudeBinary = findClaudeBinary();
     let result = "";
 
     for await (const message of query({
@@ -32,6 +34,7 @@ router.get("/sdk-test", async (_req: Request, res: Response) => {
       options: {
         maxTurns: 1,
         allowedTools: [],
+        ...(claudeBinary ? { pathToClaudeCodeExecutable: claudeBinary } : {}),
       },
     })) {
       if (message.type === "assistant") {
@@ -41,7 +44,7 @@ router.get("/sdk-test", async (_req: Request, res: Response) => {
       }
     }
 
-    res.json({ ok: true, response: result });
+    res.json({ ok: true, response: result, binaryUsed: claudeBinary ?? "PATH" });
   } catch (err) {
     res.status(500).json({ ok: false, error: err instanceof Error ? err.message : String(err) });
   }
