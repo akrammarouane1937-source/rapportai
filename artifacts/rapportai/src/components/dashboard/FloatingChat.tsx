@@ -3,7 +3,7 @@ import { MessageSquare, X, Send, Sparkles, Loader2 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { getReport } from "@/lib/reportStore";
 
-const BASE_PATH = (import.meta.env.BASE_URL as string).replace(/\/$/, "");
+import { API_BASE as BASE_PATH } from "@/lib/apiBase";
 
 interface Message {
   id: string;

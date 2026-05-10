@@ -4,7 +4,7 @@ import { motion } from "framer-motion";
 import { CheckCircle2, Loader2, XCircle, ArrowRight } from "lucide-react";
 import { saveMyPlan, type PlanId } from "@/lib/userPlan";
 
-const BASE_PATH = (import.meta.env.BASE_URL as string).replace(/\/$/, "");
+import { API_BASE as BASE_PATH } from "@/lib/apiBase";
 
 export default function PaymentSuccessPage() {
   const [, setLocation] = useLocation();

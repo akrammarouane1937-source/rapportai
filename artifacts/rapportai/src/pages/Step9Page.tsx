@@ -21,7 +21,7 @@ import { getMyPlan, canUseFeature } from "@/lib/userPlan";
 
 // ─── Constants ────────────────────────────────────────────────────────────────
 
-const BASE_PATH = (import.meta.env.BASE_URL as string).replace(/\/$/, "");
+import { API_BASE as BASE_PATH } from "@/lib/apiBase";
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 

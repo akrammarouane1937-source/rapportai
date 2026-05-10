@@ -3,6 +3,9 @@ import { useEffect } from "react";
 const KEY = "rapportai_v1";
 
 export interface ReportData {
+  // Agent session ID — stored once after /api/session/start, reused for all generation calls
+  sessionId?: string;
+
   reportType?: string;
   theme?: string;
   school?: string;

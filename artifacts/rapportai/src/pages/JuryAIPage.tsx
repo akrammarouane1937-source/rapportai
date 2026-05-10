@@ -9,7 +9,7 @@ import { Button } from "@/components/ui/button";
 import { Sidebar, SidebarSpacer } from "@/components/layout/Sidebar";
 import { getReport } from "@/lib/reportStore";
 
-const BASE_PATH = (import.meta.env.BASE_URL as string).replace(/\/$/, "");
+import { API_BASE as BASE_PATH } from "@/lib/apiBase";
 
 /* ── Jury members ──────────────────────────────────────────────────────── */
 const JURY = [

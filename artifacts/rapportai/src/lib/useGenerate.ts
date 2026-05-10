@@ -1,8 +1,7 @@
 import { useRef, useState, useCallback } from "react";
-import { getReport } from "@/lib/reportStore";
+import { getReport, saveReport } from "@/lib/reportStore";
 import { getBibSources } from "@/lib/bibliothequeStore";
-
-const BASE_PATH = import.meta.env.BASE_URL.replace(/\/$/, "");
+import { API_BASE as BASE_PATH } from "@/lib/apiBase";
 
 export type GenerateSection =
   | "partie-i"
@@ -17,7 +16,6 @@ export type GenerateSection =
 
 export interface GenerateOptions {
   section: GenerateSection;
-  // Callers may override any field; everything else is auto-filled from the store
   theme?: string;
   school?: string;
   filiere?: string;
@@ -35,155 +33,349 @@ export interface GenerateOptions {
   resume?: string;
 }
 
-/** Fallback demo context — used when the store has no data yet */
+// The agent asks the student a question — caller must call answerQuestion() to resume
+export interface AgentQuestion {
+  question: string;
+  choices?: string[];
+  toolUseId: string;
+  sessionId: string;
+}
+
+// Sections that use the persistent agent session (full document memory + all tools)
+const SESSION_SECTIONS = new Set<GenerateSection>([
+  "partie-i",
+  "partie-ii",
+  "introduction",
+  "conclusion",
+  "resume",
+]);
+
 const DEMO: Record<string, unknown> = {
-  reportType:   "PFE",
-  theme:        "Optimisation de portefeuille d'actifs financiers à la Bourse de Casablanca",
-  school:       "EMSI",
-  filiere:      "Finance",
-  annee:        "2023–2024",
-  studentName:  "Youssef El Amrani",
-  encadrantPeda:"Pr. Mohamed Alami",
-  encadrantPro: "M. Karim Benali",
-  entreprise:   "Attijariwafa Bank",
-  ville:        "Casablanca",
-  problematique:"Dans quelle mesure la théorie moderne du portefeuille peut-elle être appliquée aux spécificités du marché boursier marocain ?",
-  motsCles:     ["optimisation", "portefeuille", "Markowitz", "MASI", "marché émergent"],
-  citationStyle:"APA 7th ed.",
+  reportType:    "PFE",
+  theme:         "Optimisation de portefeuille d'actifs financiers à la Bourse de Casablanca",
+  school:        "EMSI",
+  filiere:       "Finance",
+  annee:         "2023–2024",
+  studentName:   "Youssef El Amrani",
+  encadrantPeda: "Pr. Mohamed Alami",
+  encadrantPro:  "M. Karim Benali",
+  entreprise:    "Attijariwafa Bank",
+  ville:         "Casablanca",
+  problematique: "Dans quelle mesure la théorie moderne du portefeuille peut-elle être appliquée aux spécificités du marché boursier marocain ?",
+  motsCles:      ["optimisation", "portefeuille", "Markowitz", "MASI", "marché émergent"],
+  citationStyle: "APA 7th ed.",
 };
 
 function countWords(text: string): number {
   return text.trim() ? text.trim().split(/\s+/).length : 0;
 }
 
+// ─── Session management ───────────────────────────────────────────────────────
+
+export async function ensureSession(signal?: AbortSignal): Promise<string> {
+  signal = signal ?? new AbortController().signal;
+  const stored = getReport();
+  if (stored.sessionId) return stored.sessionId;
+
+  const profile = {
+    studentName:   stored.studentName   ?? (DEMO.studentName   as string),
+    school:        stored.school        ?? (DEMO.school        as string),
+    filiere:       stored.filiere       ?? (DEMO.filiere       as string),
+    reportType:    stored.reportType    ?? (DEMO.reportType    as string),
+    theme:         stored.theme         ?? (DEMO.theme         as string),
+    problematique: stored.problematique ?? (DEMO.problematique as string),
+    citationStyle: stored.citationStyle ?? (DEMO.citationStyle as string),
+    annee:         stored.annee         ?? (DEMO.annee         as string),
+    encadrantPeda: stored.encadrantPeda ?? (DEMO.encadrantPeda as string),
+    encadrantPro:  stored.encadrantPro  ?? (DEMO.encadrantPro  as string),
+    entreprise:    stored.entreprise    ?? (DEMO.entreprise    as string),
+    ville:         stored.ville         ?? (DEMO.ville         as string),
+    existingSections: {
+      ...(stored.resume        ? { resume:        stored.resume        } : {}),
+      ...(stored.introduction  ? { introduction:  stored.introduction  } : {}),
+      ...(stored.partieI       ? { "partie-i":    stored.partieI       } : {}),
+      ...(stored.partieII      ? { "partie-ii":   stored.partieII      } : {}),
+      ...(stored.conclusion    ? { conclusion:    stored.conclusion    } : {}),
+      ...(stored.dedicaces     ? { dedicaces:     stored.dedicaces     } : {}),
+      ...(stored.remerciements ? { remerciements: stored.remerciements } : {}),
+    },
+  };
+
+  const resp = await fetch(`${BASE_PATH}/api/session/start`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(profile),
+    signal,
+  });
+
+  if (!resp.ok) throw new Error(`Session start failed: HTTP ${resp.status}`);
+  const { sessionId } = (await resp.json()) as { sessionId: string };
+  saveReport({ sessionId });
+  return sessionId;
+}
+
+// ─── SSE reader ───────────────────────────────────────────────────────────────
+
+type SSEMessage = {
+  content?: string;
+  done?: boolean;
+  error?: string;
+  tool_call?: string;
+  question?: string;
+  choices?: string[];
+  toolUseId?: string;
+  paused?: boolean;
+  sections?: Record<string, string>;
+};
+
+async function readSSE(
+  resp: Response,
+  handlers: {
+    onChunk: (text: string) => void;
+    onDone: () => void;
+    onQuestion: (q: AgentQuestion, sessionId: string) => void;
+    onPaywall?: () => void;
+    paywallWords?: number;
+    ctrl: AbortController;
+    wordCountRef: { current: number };
+    paywallTriggeredRef: { current: boolean };
+    sessionId: string;
+  }
+): Promise<void> {
+  if (!resp.body) throw new Error("No response body");
+
+  const {
+    onChunk, onDone, onQuestion, onPaywall, paywallWords,
+    ctrl, wordCountRef, paywallTriggeredRef, sessionId,
+  } = handlers;
+
+  const reader = resp.body.getReader();
+  const decoder = new TextDecoder();
+  let buf = "";
+
+  while (true) {
+    const { done, value } = await reader.read();
+    if (done) break;
+
+    buf += decoder.decode(value, { stream: true });
+    const lines = buf.split("\n\n");
+    buf = lines.pop() ?? "";
+
+    for (const line of lines) {
+      if (!line.startsWith("data: ")) continue;
+      try {
+        const msg = JSON.parse(line.slice(6)) as SSEMessage;
+
+        if (msg.error) throw new Error(msg.error);
+
+        // Agent is asking the student a question — pause and surface it
+        if (msg.paused && msg.question && msg.toolUseId) {
+          onQuestion(
+            { question: msg.question, choices: msg.choices, toolUseId: msg.toolUseId, sessionId },
+            sessionId
+          );
+          return;
+        }
+
+        // Stream complete — sync written sections back to localStorage
+        if (msg.done) {
+          if (msg.sections) {
+            const patch: Record<string, string> = {};
+            if (msg.sections["resume"])        patch.resume        = msg.sections["resume"];
+            if (msg.sections["introduction"])  patch.introduction  = msg.sections["introduction"];
+            if (msg.sections["partie-i"])      patch.partieI       = msg.sections["partie-i"];
+            if (msg.sections["partie-ii"])     patch.partieII      = msg.sections["partie-ii"];
+            if (msg.sections["conclusion"])    patch.conclusion    = msg.sections["conclusion"];
+            if (msg.sections["dedicaces"])     patch.dedicaces     = msg.sections["dedicaces"];
+            if (msg.sections["remerciements"]) patch.remerciements = msg.sections["remerciements"];
+            if (Object.keys(patch).length > 0) saveReport(patch);
+          }
+          onDone();
+          return;
+        }
+
+        // Tool call notification (informational)
+        if (msg.tool_call) continue;
+
+        // Text chunk
+        if (msg.content) {
+          if (paywallWords && !paywallTriggeredRef.current) {
+            wordCountRef.current += countWords(msg.content);
+            if (wordCountRef.current >= paywallWords) {
+              paywallTriggeredRef.current = true;
+              onChunk(msg.content);
+              ctrl.abort();
+              onPaywall?.();
+              return;
+            }
+          }
+          onChunk(msg.content);
+        }
+      } catch (e) {
+        if (e instanceof Error && e.message !== "No response body") throw e;
+      }
+    }
+  }
+}
+
+// ─── useGenerate hook ─────────────────────────────────────────────────────────
+
 export function useGenerate(opts: {
   onChunk: (text: string) => void;
   onDone: () => void;
   onPaywall?: () => void;
+  onQuestion?: (q: AgentQuestion) => void;
   paywallWords?: number;
 }) {
-  const { onChunk, onDone, onPaywall, paywallWords } = opts;
+  const { onChunk, onDone, onPaywall, onQuestion, paywallWords } = opts;
   const [isStreaming, setIsStreaming] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [pendingQuestion, setPendingQuestion] = useState<AgentQuestion | null>(null);
   const abortRef = useRef<AbortController | null>(null);
   const wordCountRef = useRef(0);
   const paywallTriggeredRef = useRef(false);
 
-  const generate = useCallback(async (options: GenerateOptions) => {
-    if (isStreaming) return;
-    setIsStreaming(true);
-    setError(null);
-    wordCountRef.current = 0;
-    paywallTriggeredRef.current = false;
+  const generate = useCallback(
+    async (options: GenerateOptions) => {
+      if (isStreaming) return;
+      setIsStreaming(true);
+      setError(null);
+      setPendingQuestion(null);
+      wordCountRef.current = 0;
+      paywallTriggeredRef.current = false;
 
-    const ctrl = new AbortController();
-    abortRef.current = ctrl;
+      const ctrl = new AbortController();
+      abortRef.current = ctrl;
 
-    try {
-      // Load everything from the store so Claude has maximum context
-      const stored = getReport();
+      try {
+        const stored = getReport();
+        const bibSources = getBibSources().map((s) => ({
+          title: s.title, authors: s.authors, year: s.year,
+          journal: s.journal, doi: s.doi,
+        }));
 
-      // Collect library sources — stripped to just what Claude needs
-      const bibSources = getBibSources().map((s) => ({
-        title:   s.title,
-        authors: s.authors,
-        year:    s.year,
-        journal: s.journal,
-        doi:     s.doi,
-      }));
+        const useSession = SESSION_SECTIONS.has(options.section);
 
-      const body = {
-        // 1. Demo defaults (lowest priority — only when store is empty)
-        ...DEMO,
-        // 2. Stored user data (the real profile + previously generated sections)
-        reportType:    stored.reportType,
-        theme:         stored.theme,
-        school:        stored.school,
-        filiere:       stored.filiere,
-        annee:         stored.annee,
-        studentName:   stored.studentName,
-        encadrantPeda: stored.encadrantPeda,
-        encadrantPro:  stored.encadrantPro,
-        entreprise:    stored.entreprise,
-        ville:         stored.ville,
-        citationStyle: stored.citationStyle,
-        motsCles:      stored.motsCles,
-        // Previously generated sections → Claude can cross-reference them
-        resume:        stored.resume,
-        introduction:  stored.introduction,
-        partieI:       stored.partieI,
-        partieII:      stored.partieII,
-        // Library sources from Bibliothèque page
-        sources:       bibSources.length > 0 ? bibSources : undefined,
-        // 3. Explicit call-site options override everything
-        ...options,
-      };
+        let resp: Response;
+        let sessionId = "";
 
-      // Strip undefined so JSON body stays clean
-      const cleanBody = Object.fromEntries(
-        Object.entries(body).filter(([, v]) => v !== undefined)
-      );
-
-      const resp = await fetch(`${BASE_PATH}/api/generate`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(cleanBody),
-        signal: ctrl.signal,
-      });
-
-      if (!resp.ok || !resp.body) {
-        throw new Error(`HTTP ${resp.status}`);
-      }
-
-      const reader = resp.body.getReader();
-      const decoder = new TextDecoder();
-      let buf = "";
-
-      while (true) {
-        const { done, value } = await reader.read();
-        if (done) break;
-
-        buf += decoder.decode(value, { stream: true });
-        const lines = buf.split("\n\n");
-        buf = lines.pop() ?? "";
-
-        for (const line of lines) {
-          if (!line.startsWith("data: ")) continue;
-          const json = line.slice(6);
-          try {
-            const msg = JSON.parse(json) as { content?: string; done?: boolean; error?: string };
-            if (msg.error) { setError(msg.error); break; }
-            if (msg.done)  { onDone(); break; }
-            if (msg.content) {
-              if (paywallWords && !paywallTriggeredRef.current) {
-                wordCountRef.current += countWords(msg.content);
-                if (wordCountRef.current >= paywallWords) {
-                  paywallTriggeredRef.current = true;
-                  onChunk(msg.content);
-                  ctrl.abort();
-                  onPaywall?.();
-                  return;
-                }
-              }
-              onChunk(msg.content);
-            }
-          } catch {
-            // malformed JSON chunk, skip
-          }
+        if (useSession) {
+          sessionId = await ensureSession(ctrl.signal);
+          resp = await fetch(`${BASE_PATH}/api/session/${sessionId}/generate`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              section: options.section,
+              sources: bibSources.length > 0 ? bibSources : undefined,
+            }),
+            signal: ctrl.signal,
+          });
+        } else {
+          const body = {
+            ...DEMO,
+            reportType: stored.reportType, theme: stored.theme,
+            school: stored.school, filiere: stored.filiere, annee: stored.annee,
+            studentName: stored.studentName, encadrantPeda: stored.encadrantPeda,
+            encadrantPro: stored.encadrantPro, entreprise: stored.entreprise,
+            ville: stored.ville, citationStyle: stored.citationStyle,
+            motsCles: stored.motsCles,
+            resume: stored.resume, introduction: stored.introduction,
+            partieI: stored.partieI, partieII: stored.partieII,
+            conclusion: stored.conclusion, dedicaces: stored.dedicaces,
+            remerciements: stored.remerciements,
+            sources: bibSources.length > 0 ? bibSources : undefined,
+            ...options,
+          };
+          resp = await fetch(`${BASE_PATH}/api/generate`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify(
+              Object.fromEntries(Object.entries(body).filter(([, v]) => v !== undefined))
+            ),
+            signal: ctrl.signal,
+          });
         }
+
+        if (!resp.ok || !resp.body) throw new Error(`HTTP ${resp.status}`);
+
+        await readSSE(resp, {
+          onChunk,
+          onDone,
+          onPaywall,
+          onQuestion: (q) => {
+            setPendingQuestion(q);
+            onQuestion?.(q);
+          },
+          paywallWords,
+          ctrl,
+          wordCountRef,
+          paywallTriggeredRef,
+          sessionId,
+        });
+      } catch (err: unknown) {
+        if (err instanceof Error && err.name === "AbortError") return;
+        setError(err instanceof Error ? err.message : String(err));
+      } finally {
+        setIsStreaming(false);
       }
-    } catch (err: unknown) {
-      if (err instanceof Error && err.name === "AbortError") return;
-      setError(err instanceof Error ? err.message : String(err));
-    } finally {
-      setIsStreaming(false);
-    }
-  }, [isStreaming, onChunk, onDone, onPaywall, paywallWords]);
+    },
+    [isStreaming, onChunk, onDone, onPaywall, onQuestion, paywallWords]
+  );
+
+  // Call this after showing the question to the student and collecting their answer
+  const answerQuestion = useCallback(
+    async (answer: string) => {
+      if (!pendingQuestion || isStreaming) return;
+      setIsStreaming(true);
+      setError(null);
+      setPendingQuestion(null);
+      wordCountRef.current = 0;
+      paywallTriggeredRef.current = false;
+
+      const ctrl = new AbortController();
+      abortRef.current = ctrl;
+
+      try {
+        const resp = await fetch(
+          `${BASE_PATH}/api/session/${pendingQuestion.sessionId}/answer`,
+          {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ toolUseId: pendingQuestion.toolUseId, answer }),
+            signal: ctrl.signal,
+          }
+        );
+
+        if (!resp.ok || !resp.body) throw new Error(`HTTP ${resp.status}`);
+
+        await readSSE(resp, {
+          onChunk,
+          onDone,
+          onPaywall,
+          onQuestion: (q) => {
+            setPendingQuestion(q);
+            onQuestion?.(q);
+          },
+          paywallWords,
+          ctrl,
+          wordCountRef,
+          paywallTriggeredRef,
+          sessionId: pendingQuestion.sessionId,
+        });
+      } catch (err: unknown) {
+        if (err instanceof Error && err.name === "AbortError") return;
+        setError(err instanceof Error ? err.message : String(err));
+      } finally {
+        setIsStreaming(false);
+      }
+    },
+    [pendingQuestion, isStreaming, onChunk, onDone, onPaywall, onQuestion, paywallWords]
+  );
 
   const abort = useCallback(() => {
     abortRef.current?.abort();
     setIsStreaming(false);
   }, []);
 
-  return { generate, abort, isStreaming, error };
+  return { generate, abort, answerQuestion, isStreaming, error, pendingQuestion };
 }

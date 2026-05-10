@@ -35,10 +35,14 @@ app.use(
 
 app.use(CLERK_PROXY_PATH, clerkProxyMiddleware());
 
-// ── CORS — locked to the Replit proxy domain ──────────────────────────────
+// ── CORS ──────────────────────────────────────────────────────────────────
+// Priority: CORS_ORIGIN env var (Vercel/Railway) → REPLIT_DOMAINS → allow all
 const ALLOWED_ORIGINS = (() => {
+  if (process.env.CORS_ORIGIN) {
+    return process.env.CORS_ORIGIN.split(",").map((o) => o.trim());
+  }
   const domains = process.env.REPLIT_DOMAINS;
-  if (!domains) return null; // dev: allow all
+  if (!domains) return null; // dev / Railway without explicit origin: allow all
   return domains.split(",").map((d) => `https://${d.trim()}`);
 })();
 

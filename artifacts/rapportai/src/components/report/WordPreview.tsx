@@ -7,7 +7,7 @@ import { UpsellModal } from "@/components/report/UpsellModal";
 import { getMyPlan, incrementRevision, PLAN_LIMITS } from "@/lib/userPlan";
 import { getReport } from "@/lib/reportStore";
 
-const BASE_PATH = (import.meta.env.BASE_URL as string).replace(/\/$/, "");
+import { API_BASE as BASE_PATH } from "@/lib/apiBase";
 
 interface WordPreviewProps {
   content?: string;
@@ -16,6 +16,8 @@ interface WordPreviewProps {
   wordCount?: number;
   blurred?: boolean;
   onContentChange?: (newContent: string) => void;
+  // Pass the section ID (e.g. "partie-i") to enable session-based targeted revision
+  sectionId?: string;
 }
 
 const MOCK_CONTENT = `
@@ -58,20 +60,89 @@ function splitIntoPages(html: string, wordsPerPage = 450): string[] {
 }
 
 // ── Revision panel ────────────────────────────────────────────────────────────
+type PendingRevisionQuestion = {
+  question: string;
+  choices?: string[];
+  toolUseId: string;
+  sessionId: string;
+};
+
 function RevisionPanel({
-  open, onClose, onRevisionLimitHit, content, onContentChange,
+  open, onClose, onRevisionLimitHit, content, onContentChange, sectionId,
 }: {
   open: boolean;
   onClose: () => void;
   onRevisionLimitHit: () => void;
   content: string;
   onContentChange?: (newContent: string) => void;
+  sectionId?: string;
 }) {
-  const [text, setText]           = useState("");
+  const [text, setText]             = useState("");
   const [isRevising, setIsRevising] = useState(false);
-  const [revised, setRevised]     = useState("");
-  const [done, setDone]           = useState(false);
-  const [error, setError]         = useState<string | null>(null);
+  const [statusMsg, setStatusMsg]   = useState("");
+  const [done, setDone]             = useState(false);
+  const [error, setError]           = useState<string | null>(null);
+  const [pendingQ, setPendingQ]     = useState<PendingRevisionQuestion | null>(null);
+  const [qaText, setQaText]         = useState("");
+
+  // Shared SSE reader used by both the initial revise call and the /answer resume
+  const readRevisionSSE = async (
+    respBody: ReadableStream<Uint8Array>,
+    sessionId: string
+  ): Promise<void> => {
+    const reader  = respBody.getReader();
+    const decoder = new TextDecoder();
+    let buf = "";
+
+    while (true) {
+      const { done: streamDone, value } = await reader.read();
+      if (streamDone) break;
+
+      buf += decoder.decode(value, { stream: true });
+      const lines = buf.split("\n\n");
+      buf = lines.pop() ?? "";
+
+      for (const line of lines) {
+        if (!line.startsWith("data: ")) continue;
+        try {
+          const msg = JSON.parse(line.slice(6)) as {
+            content?: string;
+            tool_call?: string;
+            done?: boolean;
+            updatedContent?: string;
+            error?: string;
+            paused?: boolean;
+            question?: string;
+            choices?: string[];
+            toolUseId?: string;
+          };
+
+          if (msg.error) throw new Error(msg.error);
+
+          if (msg.tool_call === "read_section")   setStatusMsg("Lecture de la section…");
+          if (msg.tool_call === "edit_section")   setStatusMsg("Application des modifications…");
+          if (msg.tool_call === "search_content") setStatusMsg("Vérification de la cohérence…");
+          if (msg.tool_call === "ask_user")       setStatusMsg("L'IA a besoin d'une précision…");
+
+          // Agent paused — needs clarification from the student
+          if (msg.paused && msg.question && msg.toolUseId) {
+            setPendingQ({ question: msg.question, choices: msg.choices, toolUseId: msg.toolUseId, sessionId });
+            setIsRevising(false);
+            return;
+          }
+
+          if (msg.done && msg.updatedContent) onContentChange?.(msg.updatedContent);
+          if (msg.done) {
+            setDone(true);
+            setTimeout(() => { setDone(false); setText(""); setStatusMsg(""); onClose(); }, 1500);
+            return;
+          }
+        } catch (e) {
+          if (e instanceof Error && e.message !== "JSON") throw e;
+        }
+      }
+    }
+  };
 
   const handleApply = async () => {
     if (!text.trim() || isRevising) return;
@@ -81,59 +152,93 @@ function RevisionPanel({
     if (next.revisionCount > limit) { onRevisionLimitHit(); return; }
 
     setIsRevising(true);
-    setRevised("");
+    setStatusMsg("");
     setError(null);
+    setPendingQ(null);
 
     const report = getReport();
+    const sessionId = report.sessionId;
 
     try {
-      const resp = await fetch(`${BASE_PATH}/api/revise`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          content,
-          instruction: text,
-          theme:      report.theme,
-          reportType: report.reportType,
-          school:     report.school,
-          filiere:    report.filiere,
-        }),
-      });
+      if (sessionId && sectionId) {
+        const resp = await fetch(
+          `${BASE_PATH}/api/session/${sessionId}/revise`,
+          {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ sectionId, instruction: text }),
+          }
+        );
+        if (!resp.ok || !resp.body) throw new Error(`HTTP ${resp.status}`);
+        await readRevisionSSE(resp.body, sessionId);
+      } else {
+        // Fallback: stateless full-rewrite
+        const resp = await fetch(`${BASE_PATH}/api/revise`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            content,
+            instruction: text,
+            theme:      report.theme,
+            reportType: report.reportType,
+            school:     report.school,
+            filiere:    report.filiere,
+          }),
+        });
+        if (!resp.ok || !resp.body) throw new Error(`HTTP ${resp.status}`);
 
-      if (!resp.ok || !resp.body) throw new Error(`HTTP ${resp.status}`);
+        const reader  = resp.body.getReader();
+        const decoder = new TextDecoder();
+        let buf = "";
+        let result = "";
 
-      const reader  = resp.body.getReader();
-      const decoder = new TextDecoder();
-      let buf = "";
-      let result = "";
-
-      while (true) {
-        const { done: streamDone, value } = await reader.read();
-        if (streamDone) break;
-
-        buf += decoder.decode(value, { stream: true });
-        const lines = buf.split("\n\n");
-        buf = lines.pop() ?? "";
-
-        for (const line of lines) {
-          if (!line.startsWith("data: ")) continue;
-          try {
-            const msg = JSON.parse(line.slice(6)) as { content?: string; done?: boolean; error?: string };
-            if (msg.error) throw new Error(msg.error);
-            if (msg.done) break;
-            if (msg.content) {
-              result += msg.content;
-              setRevised(result);
-            }
-          } catch (e) {
-            if (e instanceof Error && e.message !== "JSON") throw e;
+        while (true) {
+          const { done: streamDone, value } = await reader.read();
+          if (streamDone) break;
+          buf += decoder.decode(value, { stream: true });
+          const lines = buf.split("\n\n");
+          buf = lines.pop() ?? "";
+          for (const line of lines) {
+            if (!line.startsWith("data: ")) continue;
+            try {
+              const msg = JSON.parse(line.slice(6)) as { content?: string; done?: boolean; error?: string };
+              if (msg.error) throw new Error(msg.error);
+              if (msg.done) break;
+              if (msg.content) { result += msg.content; setStatusMsg(result.slice(0, 80) + "…"); }
+            } catch { /* skip malformed */ }
           }
         }
-      }
 
-      if (result.trim()) onContentChange?.(result);
-      setDone(true);
-      setTimeout(() => { setDone(false); setText(""); setRevised(""); onClose(); }, 1500);
+        if (result.trim()) onContentChange?.(result);
+        setDone(true);
+        setTimeout(() => { setDone(false); setText(""); setStatusMsg(""); onClose(); }, 1500);
+      }
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Erreur inconnue");
+    } finally {
+      setIsRevising(false);
+    }
+  };
+
+  const handleAnswerQuestion = async () => {
+    if (!pendingQ || !qaText.trim() || isRevising) return;
+    setIsRevising(true);
+    setStatusMsg("Reprise de la révision…");
+    setError(null);
+
+    try {
+      const resp = await fetch(
+        `${BASE_PATH}/api/session/${pendingQ.sessionId}/answer`,
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ toolUseId: pendingQ.toolUseId, answer: qaText }),
+        }
+      );
+      if (!resp.ok || !resp.body) throw new Error(`HTTP ${resp.status}`);
+      setPendingQ(null);
+      setQaText("");
+      await readRevisionSSE(resp.body, pendingQ.sessionId);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Erreur inconnue");
     } finally {
@@ -162,42 +267,69 @@ function RevisionPanel({
           </div>
 
           <div className="flex-1 p-5 flex flex-col gap-4 overflow-y-auto">
-            <div>
-              <label className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2 block">
-                Que souhaitez-vous modifier ?
-              </label>
-              <textarea
-                value={text}
-                onChange={(e) => setText(e.target.value)}
-                disabled={isRevising}
-                placeholder="Ex: Rends la section 1.2 plus concise et ajoute une transition vers la section suivante..."
-                rows={5}
-                className="w-full text-sm text-gray-700 border border-gray-200 rounded-xl p-3 resize-none focus:outline-none focus:ring-2 focus:ring-purple-300 focus:border-purple-400 placeholder:text-gray-300 disabled:opacity-50"
-              />
-            </div>
-
-            <div className="bg-purple-50 rounded-xl p-3">
-              <p className="text-xs text-purple-600 font-medium mb-1">Exemples :</p>
-              {["Raccourcir ce paragraphe", "Ajouter une citation académique", "Reformuler en style académique", "Rendre plus analytique"].map((s) => (
-                <button key={s} onClick={() => setText(s)} disabled={isRevising}
-                  className="block text-xs text-purple-500 hover:text-purple-700 mt-1 disabled:opacity-50 text-left">
-                  {s}
-                </button>
-              ))}
-            </div>
-
-            {/* Live streaming preview */}
-            {isRevising && revised && (
-              <div className="bg-gray-50 border border-gray-200 rounded-xl p-3 max-h-40 overflow-y-auto">
-                <p className="text-xs text-gray-400 font-semibold mb-1">Je travaille dessus…</p>
-                <p className="text-xs text-gray-700 leading-relaxed">{revised.slice(0, 300)}{revised.length > 300 ? "…" : ""}</p>
+            {/* Question from agent — shown when ask_user fires during revision */}
+            {pendingQ ? (
+              <div className="flex flex-col gap-3">
+                <div className="bg-amber-50 border border-amber-200 rounded-xl p-3">
+                  <p className="text-xs font-semibold text-amber-700 mb-1">L'IA a besoin d'une précision :</p>
+                  <p className="text-sm text-amber-900">{pendingQ.question}</p>
+                </div>
+                {pendingQ.choices && pendingQ.choices.length > 0 && (
+                  <div className="flex flex-col gap-1">
+                    {pendingQ.choices.map((c) => (
+                      <button key={c} onClick={() => setQaText(c)}
+                        className={`text-left text-xs px-3 py-2 rounded-lg border transition-colors ${qaText === c ? "border-purple-400 bg-purple-50 text-purple-800 font-semibold" : "border-gray-200 text-gray-700 hover:border-purple-300"}`}>
+                        {c}
+                      </button>
+                    ))}
+                  </div>
+                )}
+                <textarea
+                  value={qaText}
+                  onChange={(e) => setQaText(e.target.value)}
+                  placeholder="Votre réponse…"
+                  rows={3}
+                  className="w-full text-sm text-gray-700 border border-gray-200 rounded-xl p-3 resize-none focus:outline-none focus:ring-2 focus:ring-purple-300"
+                />
+                <Button onClick={handleAnswerQuestion} disabled={!qaText.trim() || isRevising}
+                  className="w-full bg-purple-600 hover:bg-purple-700 text-white font-semibold h-10 rounded-xl text-sm">
+                  {isRevising
+                    ? <span className="flex items-center gap-2"><Loader2 className="w-4 h-4 animate-spin" /> Reprise…</span>
+                    : "Envoyer la réponse"}
+                </Button>
               </div>
+            ) : (
+              <>
+                <div>
+                  <label className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2 block">
+                    Que souhaitez-vous modifier ?
+                  </label>
+                  <textarea
+                    value={text}
+                    onChange={(e) => setText(e.target.value)}
+                    disabled={isRevising}
+                    placeholder="Ex: Rends la section 1.2 plus concise et ajoute une transition vers la section suivante..."
+                    rows={5}
+                    className="w-full text-sm text-gray-700 border border-gray-200 rounded-xl p-3 resize-none focus:outline-none focus:ring-2 focus:ring-purple-300 focus:border-purple-400 placeholder:text-gray-300 disabled:opacity-50"
+                  />
+                </div>
+
+                <div className="bg-purple-50 rounded-xl p-3">
+                  <p className="text-xs text-purple-600 font-medium mb-1">Exemples :</p>
+                  {["Raccourcir ce paragraphe", "Ajouter une citation académique", "Reformuler en style académique", "Rendre plus analytique"].map((s) => (
+                    <button key={s} onClick={() => setText(s)} disabled={isRevising}
+                      className="block text-xs text-purple-500 hover:text-purple-700 mt-1 disabled:opacity-50 text-left">
+                      {s}
+                    </button>
+                  ))}
+                </div>
+              </>
             )}
 
-            {isRevising && !revised && (
+            {isRevising && (
               <div className="bg-purple-50 rounded-xl p-3 flex items-center gap-2">
                 <Loader2 className="w-3.5 h-3.5 text-purple-500 animate-spin flex-shrink-0" />
-                <p className="text-xs text-purple-600">Je travaille dessus…</p>
+                <p className="text-xs text-purple-600">{statusMsg || "Je travaille dessus…"}</p>
               </div>
             )}
 
@@ -209,19 +341,21 @@ function RevisionPanel({
             )}
           </div>
 
-          <div className="p-5 border-t border-gray-100 flex flex-col gap-2">
-            <Button
-              onClick={handleApply}
-              disabled={!text.trim() || isRevising || done}
-              className="w-full bg-purple-600 hover:bg-purple-700 text-white font-semibold h-10 rounded-xl text-sm"
-            >
-              {done ? (
-                <span className="flex items-center gap-2"><Check className="w-4 h-4" /> Révision appliquée</span>
-              ) : isRevising ? (
-                <span className="flex items-center gap-2"><Loader2 className="w-4 h-4 animate-spin" /> Révision en cours…</span>
-              ) : "Appliquer la révision"}
-            </Button>
-          </div>
+          {!pendingQ && (
+            <div className="p-5 border-t border-gray-100 flex flex-col gap-2">
+              <Button
+                onClick={handleApply}
+                disabled={!text.trim() || isRevising || done}
+                className="w-full bg-purple-600 hover:bg-purple-700 text-white font-semibold h-10 rounded-xl text-sm"
+              >
+                {done ? (
+                  <span className="flex items-center gap-2"><Check className="w-4 h-4" /> Révision appliquée</span>
+                ) : isRevising ? (
+                  <span className="flex items-center gap-2"><Loader2 className="w-4 h-4 animate-spin" /> Révision en cours…</span>
+                ) : "Appliquer la révision"}
+              </Button>
+            </div>
+          )}
         </motion.div>
       )}
     </AnimatePresence>
@@ -235,6 +369,7 @@ export function WordPreview({
   wordCount = 0,
   blurred = false,
   onContentChange,
+  sectionId,
 }: WordPreviewProps) {
   const [revisionOpen, setRevisionOpen]   = useState(false);
   const [revisionUpsell, setRevisionUpsell] = useState(false);
@@ -351,6 +486,7 @@ export function WordPreview({
         onClose={() => setRevisionOpen(false)}
         onRevisionLimitHit={() => setRevisionUpsell(true)}
         content={html}
+        sectionId={sectionId}
         onContentChange={(newContent) => {
           onContentChange?.(newContent);
           setRevisionOpen(false);

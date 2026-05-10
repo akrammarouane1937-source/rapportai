@@ -8,7 +8,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { getMyPlan, type PlanId } from "@/lib/userPlan";
 
-const BASE_PATH = (import.meta.env.BASE_URL as string).replace(/\/$/, "");
+import { API_BASE as BASE_PATH } from "@/lib/apiBase";
 
 /* ─── Plan definitions ─────────────────────────────────────────────────── */
 interface Plan {

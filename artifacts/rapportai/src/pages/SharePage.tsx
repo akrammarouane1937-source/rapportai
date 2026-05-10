@@ -10,7 +10,7 @@ import { generateDocx, downloadBlob } from "@/lib/generateDocx";
 import { generatePdf } from "@/lib/generatePdf";
 import type { ReportData } from "@/lib/reportStore";
 
-const BASE_PATH = import.meta.env.BASE_URL.replace(/\/$/, "");
+import { API_BASE as BASE_PATH } from "@/lib/apiBase";
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 

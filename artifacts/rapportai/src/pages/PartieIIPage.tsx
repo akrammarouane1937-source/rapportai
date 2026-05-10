@@ -14,7 +14,9 @@ import { saveReport, getReport } from "@/lib/reportStore";
 import { ScholarChips } from "@/components/figures/ScholarChips";
 import { FigurePanel } from "@/components/figures/FigurePanel";
 
-const BASE_PATH = (import.meta.env.BASE_URL as string).replace(/\/$/, "");
+import { API_BASE as BASE_PATH } from "@/lib/apiBase";
+import { ensureSession } from "@/lib/useGenerate";
+import { Upload } from "lucide-react";
 
 function KeywordChip({ label, onRemove }: { label: string; onRemove: () => void }) {
   const scholarUrl = `https://scholar.google.com/scholar?q=${encodeURIComponent(label)}`;
@@ -55,6 +57,11 @@ export default function PartieIIPage() {
     report.partieII ? markdownToHtml(report.partieII) : ""
   );
   const [humanizing, setHumanizing] = useState(false);
+  const [dragOver, setDragOver] = useState(false);
+  const [uploadedFile, setUploadedFile] = useState<File | null>(null);
+  const [uploadStatus, setUploadStatus] = useState<"idle" | "uploading" | "ready" | "error">("idle");
+  const [uploadError, setUploadError] = useState<string | null>(null);
+  const fileRef = useRef<HTMLInputElement>(null);
   const rawTextRef = useRef(report.partieII ?? "");
 
   const onChunk = useCallback((chunk: string) => {
@@ -186,6 +193,29 @@ export default function PartieIIPage() {
     } finally { setGeneratingField(null); }
   }, [generatingField]);
 
+  const handleFileUpload = useCallback(async (file: File) => {
+    setUploadedFile(file);
+    setUploadStatus("uploading");
+    setUploadError(null);
+    try {
+      const sessionId = await ensureSession();
+      const formData = new FormData();
+      formData.append("file", file);
+      const resp = await fetch(`${BASE_PATH}/api/session/${sessionId}/upload-document`, {
+        method: "POST",
+        body: formData,
+      });
+      if (!resp.ok) {
+        const err = await resp.json() as { error?: string };
+        throw new Error(err.error ?? `HTTP ${resp.status}`);
+      }
+      setUploadStatus("ready");
+    } catch (err) {
+      setUploadStatus("error");
+      setUploadError(err instanceof Error ? err.message : "Erreur d'upload");
+    }
+  }, []);
+
   const addChapitre = () => setChapitres((prev) => [...prev, ""]);
   const updateChapitre = (i: number, val: string) =>
     setChapitres((prev) => prev.map((c, idx) => (idx === i ? val : c)));
@@ -292,6 +322,43 @@ export default function PartieIIPage() {
                     : <Sparkles className="w-3 h-3" />
                   } Laisser l'IA décider
                 </button>
+              </div>
+
+              {/* Document upload */}
+              <div>
+                <label className="block text-sm font-semibold text-gray-700 mb-2">
+                  Documents de référence <span className="text-xs font-normal text-gray-400">(résultats, données, rapport de stage…)</span>
+                </label>
+                <div
+                  onDragOver={(e) => { e.preventDefault(); setDragOver(true); }}
+                  onDragLeave={() => setDragOver(false)}
+                  onDrop={(e) => { e.preventDefault(); setDragOver(false); const f = e.dataTransfer.files[0]; if (f) handleFileUpload(f); }}
+                  onClick={() => fileRef.current?.click()}
+                  className={`border-2 border-dashed rounded-xl p-5 text-center cursor-pointer transition-all ${dragOver ? "border-purple-400 bg-purple-50" : "border-gray-200 hover:border-purple-300 hover:bg-purple-50/30"}`}
+                >
+                  <input ref={fileRef} type="file" accept=".pdf,.doc,.docx,.txt" className="hidden"
+                    onChange={(e) => { if (e.target.files?.[0]) handleFileUpload(e.target.files[0]); }} />
+                  {uploadedFile ? (
+                    <div className="flex flex-col items-center gap-1.5">
+                      <div className="flex items-center gap-2">
+                        <div className="w-8 h-8 bg-purple-100 rounded-lg flex items-center justify-center flex-shrink-0">
+                          {uploadStatus === "uploading" ? <Loader2 className="w-4 h-4 text-purple-500 animate-spin" /> : <span className="text-xs font-bold text-purple-600">DOC</span>}
+                        </div>
+                        <span className="text-sm font-medium text-gray-700 truncate max-w-[160px]">{uploadedFile.name}</span>
+                        <button onClick={(e) => { e.stopPropagation(); setUploadedFile(null); setUploadStatus("idle"); setUploadError(null); }} className="text-gray-400 hover:text-gray-600 flex-shrink-0"><X className="w-4 h-4" /></button>
+                      </div>
+                      {uploadStatus === "uploading" && <p className="text-xs text-purple-500">Extraction du texte…</p>}
+                      {uploadStatus === "ready" && <p className="text-xs text-green-600 font-medium">✓ Document prêt — l'IA va le lire</p>}
+                      {uploadStatus === "error" && <p className="text-xs text-red-500">{uploadError}</p>}
+                    </div>
+                  ) : (
+                    <>
+                      <Upload className="w-6 h-6 text-gray-300 mx-auto mb-2" />
+                      <p className="text-sm text-gray-400 font-medium">Glisse ton document ici</p>
+                      <p className="text-xs text-gray-300 mt-1">PDF, Word, TXT · max 20 Mo</p>
+                    </>
+                  )}
+                </div>
               </div>
 
               <FigurePanel defaultPlacement="Partie II" />

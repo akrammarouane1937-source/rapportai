@@ -14,7 +14,8 @@ import { saveReport, getReport } from "@/lib/reportStore";
 import { ScholarChips } from "@/components/figures/ScholarChips";
 import { FigurePanel } from "@/components/figures/FigurePanel";
 
-const BASE_PATH = (import.meta.env.BASE_URL as string).replace(/\/$/, "");
+import { API_BASE as BASE_PATH } from "@/lib/apiBase";
+import { ensureSession } from "@/lib/useGenerate";
 
 
 function KeywordChip({ label, onRemove }: { label: string; onRemove: () => void }) {
@@ -50,7 +51,9 @@ export default function PartieIPage() {
   const [newSource, setNewSource] = useState("");
   const [addingSource, setAddingSource] = useState(false);
   const [dragOver, setDragOver] = useState(false);
-  const [uploadedFile, setUploadedFile] = useState<string | null>(null);
+  const [uploadedFile, setUploadedFile] = useState<File | null>(null);
+  const [uploadStatus, setUploadStatus] = useState<"idle" | "uploading" | "ready" | "error">("idle");
+  const [uploadError, setUploadError] = useState<string | null>(null);
   const [wordCount, setWordCount] = useState(() =>
     report.partieI ? report.partieI.split(/\s+/).filter(Boolean).length : 0
   );
@@ -189,6 +192,29 @@ export default function PartieIPage() {
     } finally { setGeneratingField(null); }
   }, [generatingField]);
 
+  const handleFileUpload = useCallback(async (file: File) => {
+    setUploadedFile(file);
+    setUploadStatus("uploading");
+    setUploadError(null);
+    try {
+      const sessionId = await ensureSession();
+      const formData = new FormData();
+      formData.append("file", file);
+      const resp = await fetch(`${BASE_PATH}/api/session/${sessionId}/upload-document`, {
+        method: "POST",
+        body: formData,
+      });
+      if (!resp.ok) {
+        const err = await resp.json() as { error?: string };
+        throw new Error(err.error ?? `HTTP ${resp.status}`);
+      }
+      setUploadStatus("ready");
+    } catch (err) {
+      setUploadStatus("error");
+      setUploadError(err instanceof Error ? err.message : "Erreur d'upload");
+    }
+  }, []);
+
   const addChapitre = () => setChapitres((prev) => [...prev, ""]);
   const updateChapitre = (i: number, val: string) =>
     setChapitres((prev) => prev.map((c, idx) => (idx === i ? val : c)));
@@ -280,29 +306,38 @@ export default function PartieIPage() {
                     e.preventDefault();
                     setDragOver(false);
                     const file = e.dataTransfer.files[0];
-                    if (file) setUploadedFile(file.name);
+                    if (file) handleFileUpload(file);
                   }}
                   onClick={() => fileRef.current?.click()}
                   className={`border-2 border-dashed rounded-xl p-5 text-center cursor-pointer transition-all ${
                     dragOver ? "border-purple-400 bg-purple-50" : "border-gray-200 hover:border-purple-300 hover:bg-purple-50/30"
                   }`}
                 >
-                  <input ref={fileRef} type="file" accept=".pdf,.doc,.docx" className="hidden"
-                    onChange={(e) => { if (e.target.files?.[0]) setUploadedFile(e.target.files[0].name); }} />
+                  <input ref={fileRef} type="file" accept=".pdf,.doc,.docx,.txt" className="hidden"
+                    onChange={(e) => { if (e.target.files?.[0]) handleFileUpload(e.target.files[0]); }} />
                   {uploadedFile ? (
-                    <div className="flex items-center justify-center gap-2">
-                      <div className="w-8 h-8 bg-purple-100 rounded-lg flex items-center justify-center">
-                        <span className="text-xs font-bold text-purple-600">PDF</span>
+                    <div className="flex flex-col items-center gap-1.5">
+                      <div className="flex items-center gap-2">
+                        <div className="w-8 h-8 bg-purple-100 rounded-lg flex items-center justify-center flex-shrink-0">
+                          {uploadStatus === "uploading" ? (
+                            <Loader2 className="w-4 h-4 text-purple-500 animate-spin" />
+                          ) : (
+                            <span className="text-xs font-bold text-purple-600">DOC</span>
+                          )}
+                        </div>
+                        <span className="text-sm font-medium text-gray-700 truncate max-w-[160px]">{uploadedFile.name}</span>
+                        <button onClick={(e) => { e.stopPropagation(); setUploadedFile(null); setUploadStatus("idle"); setUploadError(null); }}
+                          className="text-gray-400 hover:text-gray-600 flex-shrink-0"><X className="w-4 h-4" /></button>
                       </div>
-                      <span className="text-sm font-medium text-gray-700 truncate max-w-[180px]">{uploadedFile}</span>
-                      <button onClick={(e) => { e.stopPropagation(); setUploadedFile(null); }}
-                        className="text-gray-400 hover:text-gray-600"><X className="w-4 h-4" /></button>
+                      {uploadStatus === "uploading" && <p className="text-xs text-purple-500">Extraction du texte…</p>}
+                      {uploadStatus === "ready" && <p className="text-xs text-green-600 font-medium">✓ Document prêt — l'IA va le lire</p>}
+                      {uploadStatus === "error" && <p className="text-xs text-red-500">{uploadError}</p>}
                     </div>
                   ) : (
                     <>
                       <Upload className="w-6 h-6 text-gray-300 mx-auto mb-2" />
-                      <p className="text-sm text-gray-400 font-medium">Glisse ton PDF ici</p>
-                      <p className="text-xs text-gray-300 mt-1">PDF, Word · max 20 Mo</p>
+                      <p className="text-sm text-gray-400 font-medium">Glisse ton document ici</p>
+                      <p className="text-xs text-gray-300 mt-1">PDF, Word, TXT · max 20 Mo</p>
                     </>
                   )}
                 </div>
