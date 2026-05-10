@@ -76,7 +76,13 @@ export default function Step2Page() {
     if (!file) return;
     setTemplateStatus("uploading");
     try {
-      // Save current form state first so ensureSession has the profile data
+      // Convert docx → HTML client-side for instant preview
+      const arrayBuffer = await file.arrayBuffer();
+      const mammoth = await import("mammoth");
+      const result = await mammoth.convertToHtml({ arrayBuffer });
+      if (result.value) setTemplateHtml(result.value);
+
+      // Upload to session so the agent can read its content during generation
       saveReport({ reportType, theme, school, filiere, annee, studentName: student, encadrantPeda: encPeda, encadrantPro: encPro, entreprise, ville });
       const sessionId = await ensureSession();
       const formData = new FormData();
@@ -86,12 +92,11 @@ export default function Step2Page() {
         body: formData,
       });
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
-      const data = await res.json() as { success: boolean; filename: string; html?: string | null };
       setTemplateName(file.name);
       saveReport({ coverTemplate: file.name });
-      if (data.html) setTemplateHtml(data.html);
       setTemplateStatus("ready");
-    } catch {
+    } catch (err) {
+      console.error("Template upload error:", err);
       setTemplateStatus("error");
     }
   };
