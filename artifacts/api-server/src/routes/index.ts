@@ -9,6 +9,7 @@ import stripeRouter from "./stripe";
 import reviseRouter from "./revise";
 import chatRouter from "./chat";
 import humanizeRouter from "./humanize";
+import logoRouter from "./logo";
 
 const router: IRouter = Router();
 
@@ -22,5 +23,6 @@ router.use(stripeRouter);
 router.use(reviseRouter);
 router.use(chatRouter);
 router.use(humanizeRouter);
+router.use(logoRouter);
 
 export default router;

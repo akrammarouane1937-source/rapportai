@@ -1,10 +1,12 @@
 import { useState, useRef } from "react";
 import { motion } from "framer-motion";
 import { useLocation } from "wouter";
-import { Upload, X, ArrowRight, Sparkles, University } from "lucide-react";
+import { Upload, X, ArrowRight, Sparkles, University, FileText, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { StepLayout } from "@/components/report/StepLayout";
 import { saveReport, getReport, useAutoSave } from "@/lib/reportStore";
+import { ensureSession } from "@/lib/useGenerate";
+import { API_BASE } from "@/lib/apiBase";
 
 const REPORT_TYPES = [
   { id: "PFE", label: "PFE", desc: "Projet de Fin d'Études" },
@@ -36,8 +38,12 @@ export default function Step2Page() {
   const [entreprise, setEntreprise] = useState(stored.entreprise   || "");
   const [ville,      setVille]      = useState(stored.ville         || "");
   const [color,      setColor]      = useState(COLORS[0]);
-  const [logoUrl,    setLogoUrl]    = useState<string | null>(null);
-  const fileRef = useRef<HTMLInputElement>(null);
+  const [logoUrl,        setLogoUrl]        = useState<string | null>(stored.logoUrl ?? null);
+  const [logoFetching,   setLogoFetching]   = useState(false);
+  const [templateName,   setTemplateName]   = useState<string | null>(stored.coverTemplate ?? null);
+  const [templateStatus, setTemplateStatus] = useState<"idle"|"uploading"|"ready"|"error">("idle");
+  const fileRef     = useRef<HTMLInputElement>(null);
+  const templateRef = useRef<HTMLInputElement>(null);
 
   const handleLogo = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -47,11 +53,48 @@ export default function Step2Page() {
     reader.readAsDataURL(file);
   };
 
+  const handleAILogo = async () => {
+    if (!school.trim()) return;
+    setLogoFetching(true);
+    try {
+      const res = await fetch(`${API_BASE}/api/logo?school=${encodeURIComponent(school)}`);
+      const data = await res.json() as { logoUrl: string | null };
+      if (data.logoUrl) setLogoUrl(data.logoUrl);
+      else alert("Logo introuvable pour cette école. Importe-le manuellement.");
+    } catch {
+      alert("Erreur lors de la recherche du logo.");
+    } finally {
+      setLogoFetching(false);
+    }
+  };
+
+  const handleTemplateUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setTemplateStatus("uploading");
+    try {
+      const sessionId = await ensureSession();
+      const formData = new FormData();
+      formData.append("file", file);
+      const res = await fetch(`${API_BASE}/api/session/${sessionId}/upload-document`, {
+        method: "POST",
+        body: formData,
+      });
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      setTemplateName(file.name);
+      saveReport({ coverTemplate: file.name });
+      setTemplateStatus("ready");
+    } catch {
+      setTemplateStatus("error");
+    }
+  };
+
   const handleContinue = () => {
     saveReport({
       reportType, theme, school, filiere, annee,
       studentName: student, encadrantPeda: encPeda,
       encadrantPro: encPro, entreprise, ville,
+      logoUrl: logoUrl ?? undefined,
     });
     setLocation("/rapport/step-3");
   };
@@ -159,6 +202,42 @@ export default function Step2Page() {
               </div>
             </div>
 
+            {/* Template Word upload */}
+            <div>
+              <label className="block text-sm font-semibold text-gray-700 mb-1.5">
+                Modèle Word de votre école <span className="text-xs font-normal text-gray-400">(recommandé)</span>
+              </label>
+              <p className="text-xs text-gray-400 mb-2">90% des encadrants imposent leur propre template. Importez-le et l'IA respectera sa structure exacte.</p>
+              <input ref={templateRef} type="file" accept=".docx,.doc" className="hidden" onChange={handleTemplateUpload} />
+              {templateStatus === "ready" || templateName ? (
+                <div className="flex items-center gap-3 border border-green-200 bg-green-50 rounded-xl p-3">
+                  <div className="w-8 h-8 rounded-lg bg-green-100 flex items-center justify-center flex-shrink-0">
+                    <FileText className="w-4 h-4 text-green-600" />
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm font-medium text-green-700 truncate">{templateName}</p>
+                    <p className="text-xs text-green-500">L'IA utilisera ce modèle</p>
+                  </div>
+                  <button onClick={() => { setTemplateName(null); setTemplateStatus("idle"); saveReport({ coverTemplate: undefined }); }}
+                    className="text-xs text-red-400 hover:text-red-600">
+                    <X className="w-3.5 h-3.5" />
+                  </button>
+                </div>
+              ) : (
+                <button onClick={() => templateRef.current?.click()} disabled={templateStatus === "uploading"}
+                  className="flex items-center gap-3 border-2 border-dashed border-gray-200 rounded-xl p-3 w-full hover:border-purple-300 hover:bg-purple-50/30 transition-colors text-left disabled:opacity-50">
+                  <div className="w-10 h-10 rounded-lg bg-gray-100 flex items-center justify-center flex-shrink-0">
+                    {templateStatus === "uploading" ? <Loader2 className="w-4 h-4 text-purple-500 animate-spin" /> : <FileText className="w-4 h-4 text-gray-400" />}
+                  </div>
+                  <div>
+                    <p className="text-sm font-medium text-gray-600">{templateStatus === "uploading" ? "Chargement..." : "Importer le modèle Word"}</p>
+                    <p className="text-xs text-gray-400">.docx · max 20 Mo</p>
+                  </div>
+                </button>
+              )}
+              {templateStatus === "error" && <p className="text-xs text-red-500 mt-1">Erreur lors de l'import. Réessaie.</p>}
+            </div>
+
             {/* Logo upload */}
             <div>
               <label className="block text-sm font-semibold text-gray-700 mb-2">Logo de l'école <span className="text-xs font-normal text-gray-400">(optionnel)</span></label>
@@ -171,16 +250,24 @@ export default function Step2Page() {
                   </button>
                 </div>
               ) : (
-                <button onClick={() => fileRef.current?.click()}
-                  className="flex items-center gap-3 border-2 border-dashed border-gray-200 rounded-xl p-3 w-full hover:border-purple-300 hover:bg-purple-50/30 transition-colors text-left">
-                  <div className="w-10 h-10 rounded-lg bg-gray-100 flex items-center justify-center flex-shrink-0">
-                    <Upload className="w-4 h-4 text-gray-400" />
-                  </div>
-                  <div>
-                    <p className="text-sm font-medium text-gray-600">Importer le logo</p>
-                    <p className="text-xs text-gray-400">PNG, JPG · max 2 Mo</p>
-                  </div>
-                </button>
+                <div className="flex gap-2">
+                  <button onClick={() => fileRef.current?.click()}
+                    className="flex items-center gap-3 border-2 border-dashed border-gray-200 rounded-xl p-3 flex-1 hover:border-purple-300 hover:bg-purple-50/30 transition-colors text-left">
+                    <div className="w-10 h-10 rounded-lg bg-gray-100 flex items-center justify-center flex-shrink-0">
+                      <Upload className="w-4 h-4 text-gray-400" />
+                    </div>
+                    <div>
+                      <p className="text-sm font-medium text-gray-600">Importer le logo</p>
+                      <p className="text-xs text-gray-400">PNG, JPG · max 2 Mo</p>
+                    </div>
+                  </button>
+                  <button onClick={handleAILogo} disabled={logoFetching || !school.trim()}
+                    title="Trouver automatiquement avec l'IA"
+                    className="flex flex-col items-center justify-center gap-1 border-2 border-dashed border-purple-200 rounded-xl p-3 w-20 hover:border-purple-400 hover:bg-purple-50/30 transition-colors disabled:opacity-40">
+                    {logoFetching ? <Loader2 className="w-4 h-4 text-purple-500 animate-spin" /> : <Sparkles className="w-4 h-4 text-purple-500" />}
+                    <p className="text-[10px] text-purple-500 font-medium text-center leading-tight">IA auto</p>
+                  </button>
+                </div>
               )}
             </div>
 

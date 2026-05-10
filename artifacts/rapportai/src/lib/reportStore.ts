@@ -18,6 +18,9 @@ export interface ReportData {
   ville?: string;
   citationStyle?: string;
 
+  logoUrl?: string;
+  coverTemplate?: string;
+
   dedicaces?: string;
   remerciements?: string;
 
