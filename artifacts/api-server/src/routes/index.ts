@@ -10,6 +10,7 @@ import reviseRouter from "./revise";
 import chatRouter from "./chat";
 import humanizeRouter from "./humanize";
 import logoRouter from "./logo";
+import sdkTestRouter from "./sdk-test";
 
 const router: IRouter = Router();
 
@@ -24,5 +25,6 @@ router.use(reviseRouter);
 router.use(chatRouter);
 router.use(humanizeRouter);
 router.use(logoRouter);
+router.use(sdkTestRouter);
 
 export default router;
