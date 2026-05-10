@@ -358,8 +358,8 @@ function NoAuthApp() {
       <TooltipProvider>
         <Switch>
           <Route path="/" component={LandingPage} />
-          <Route path="/sign-in/*?" component={LandingPage} />
-          <Route path="/sign-up/*?" component={LandingPage} />
+          <Route path="/sign-in/*?"><Redirect to="/onboarding" /></Route>
+          <Route path="/sign-up/*?"><Redirect to="/onboarding" /></Route>
           <Route path="/onboarding" component={OnboardingPage} />
           <Route path="/dashboard" component={DashboardPage} />
           <Route path="/rapports" component={RapportsPage} />
