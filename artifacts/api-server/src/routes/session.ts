@@ -267,9 +267,23 @@ router.post(
     }
 
     try {
+      const ext = file.originalname.toLowerCase().split(".").pop() ?? "";
       const text = await extractText(file.buffer, file.originalname);
       agent.uploadDocument(file.originalname, text);
-      res.json({ success: true, filename: file.originalname, chars: text.length });
+
+      // For Word files, also return an HTML preview so the frontend can render it
+      let html: string | null = null;
+      if (ext === "docx" || ext === "doc") {
+        try {
+          const { default: mammoth } = await import("mammoth") as { default: { convertToHtml: (o: { buffer: Buffer }) => Promise<{ value: string }> } };
+          const result = await mammoth.convertToHtml({ buffer: file.buffer });
+          html = result.value;
+        } catch {
+          // HTML preview is optional — don't fail the upload
+        }
+      }
+
+      res.json({ success: true, filename: file.originalname, chars: text.length, html });
     } catch (err: unknown) {
       const message = err instanceof Error ? err.message : "Erreur d'extraction";
       res.status(422).json({ error: message });

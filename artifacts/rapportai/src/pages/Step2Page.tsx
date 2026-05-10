@@ -43,6 +43,7 @@ export default function Step2Page() {
   const [logoNotFound,   setLogoNotFound]   = useState(false);
   const [templateName,   setTemplateName]   = useState<string | null>(stored.coverTemplate ?? null);
   const [templateStatus, setTemplateStatus] = useState<"idle"|"uploading"|"ready"|"error">("idle");
+  const [templateHtml,   setTemplateHtml]   = useState<string | null>(null);
   const fileRef     = useRef<HTMLInputElement>(null);
   const templateRef = useRef<HTMLInputElement>(null);
 
@@ -85,8 +86,10 @@ export default function Step2Page() {
         body: formData,
       });
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      const data = await res.json() as { success: boolean; filename: string; html?: string | null };
       setTemplateName(file.name);
       saveReport({ coverTemplate: file.name });
+      if (data.html) setTemplateHtml(data.html);
       setTemplateStatus("ready");
     } catch {
       setTemplateStatus("error");
@@ -222,7 +225,7 @@ export default function Step2Page() {
                     <p className="text-sm font-medium text-green-700 truncate">{templateName}</p>
                     <p className="text-xs text-green-500">L'IA utilisera ce modèle</p>
                   </div>
-                  <button onClick={() => { setTemplateName(null); setTemplateStatus("idle"); saveReport({ coverTemplate: undefined }); }}
+                  <button onClick={() => { setTemplateName(null); setTemplateStatus("idle"); setTemplateHtml(null); saveReport({ coverTemplate: undefined }); }}
                     className="text-xs text-red-400 hover:text-red-600">
                     <X className="w-3.5 h-3.5" />
                   </button>
@@ -302,6 +305,27 @@ export default function Step2Page() {
         {/* RIGHT — Live cover preview 60% */}
         <div className="flex-1 overflow-y-auto flex items-center justify-center" style={{ background: "#e5e7eb" }}>
           <div className="py-10 px-6 flex justify-center w-full">
+
+            {/* Template HTML preview — shown when a Word template was uploaded */}
+            {templateHtml ? (
+              <motion.div
+                initial={{ opacity: 0, y: 8 }}
+                animate={{ opacity: 1, y: 0 }}
+                className="relative bg-white w-full max-w-[600px]"
+                style={{ boxShadow: "0 8px 40px rgba(0,0,0,0.15)", padding: "48px 56px", fontFamily: "Times New Roman, serif", fontSize: "11pt", lineHeight: 1.6 }}
+              >
+                <div className="flex items-center gap-2 mb-4 pb-3 border-b border-gray-100">
+                  <FileText className="w-4 h-4 text-green-600 flex-shrink-0" />
+                  <p className="text-xs font-semibold text-green-700">{templateName} — aperçu du modèle</p>
+                </div>
+                <div
+                  className="template-preview"
+                  style={{ color: "#1a1a1a" }}
+                  dangerouslySetInnerHTML={{ __html: templateHtml }}
+                />
+              </motion.div>
+            ) : (
+
             <motion.div
               layout
               className="relative bg-white w-full max-w-[500px]"
@@ -388,6 +412,8 @@ export default function Step2Page() {
               {/* Accent bar bottom */}
               <div className="h-1 w-full" style={{ background: color.hex, opacity: 0.5 }} />
             </motion.div>
+
+            )} {/* end templateHtml conditional */}
           </div>
         </div>
 
