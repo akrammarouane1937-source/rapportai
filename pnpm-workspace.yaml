@@ -35,6 +35,8 @@ minimumReleaseAgeExclude:
   - stripe-replit-sync
   # Anthropic Agent SDK — actively updated, trusted publisher
   - '@anthropic-ai/claude-agent-sdk'
+  # Vercel Sandbox — same vendor as our deployment
+  - '@vercel/sandbox'
 
 packages:
   - artifacts/*
