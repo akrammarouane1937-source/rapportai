@@ -1,71 +1,11 @@
 import { Router, type Request, type Response } from "express";
+import Anthropic from "@anthropic-ai/sdk";
 
 const router = Router();
 
-// Each entry: [abbreviation variants, domain]
-const SCHOOLS: [string[], string][] = [
-  [["EMSI", "ECOLE MAROCAINE DES SCIENCES DE L'INGENIEUR"], "emsi.ma"],
-  [["ISCAE", "INSTITUT SUPERIEUR DE COMMERCE ET D'ADMINISTRATION DES ENTREPRISES"], "iscae.ac.ma"],
-  [["HEM", "HAUTES ETUDES DE MANAGEMENT"], "hem.ac.ma"],
-  [["UIR", "UNIVERSITE INTERNATIONALE DE RABAT"], "uir.ac.ma"],
-  [["UM5", "UM6", "UNIVERSITE MOHAMMED V", "UNIVERSITE MOHAMMED 5"], "um5.ac.ma"],
-  [["UH2", "UH2C", "UNIVERSITE HASSAN II", "UNIVERSITE HASSAN 2"], "uh2c.ac.ma"],
-  [["UCA", "UNIVERSITE CADI AYYAD"], "uca.ma"],
-  [["ENCG", "ECOLE NATIONALE DE COMMERCE ET DE GESTION"], "encg.ac.ma"],
-  [["INSEA", "INSTITUT NATIONAL DE STATISTIQUE ET D'ECONOMIE APPLIQUEE"], "insea.ac.ma"],
-  [["EHTP", "ECOLE HASSANIA DES TRAVAUX PUBLICS"], "ehtp.ac.ma"],
-  [["EMI", "ECOLE MOHAMMADIA D'INGENIEURS"], "emi.ac.ma"],
-  [["IAV", "INSTITUT AGRONOMIQUE ET VETERINAIRE"], "iav.ac.ma"],
-  [["ENIM", "ECOLE NATIONALE DE L'INDUSTRIE MINERALE"], "enim.ac.ma"],
-  [["ENSMR", "ECOLE NATIONALE SUPERIEURE DES MINES DE RABAT"], "ensmr.ac.ma"],
-  [["ENSA", "ECOLE NATIONALE DES SCIENCES APPLIQUEES"], "ensa.ac.ma"],
-  [["SUPDECO", "SUP DE CO"], "supdeco.ac.ma"],
-  [["ESCA", "ECOLE SUPERIEURE DE COMMERCE ET D'AFFAIRES"], "esca.ma"],
-  [["ISGA", "INSTITUT SUPERIEUR DE GESTION ET D'ADMINISTRATION"], "isga.ma"],
-  [["IGA", "INSTITUT DE GESTION ET D'ADMINISTRATION"], "iga.ac.ma"],
-  [["ENAM", "ECOLE NATIONALE D'ADMINISTRATION ET DE MANAGEMENT"], "enam.ac.ma"],
-  [["FSJES", "FACULTE DES SCIENCES JURIDIQUES"], "fsjes-agdal.um5.ac.ma"],
-  [["FSEG", "FACULTE DES SCIENCES ECONOMIQUES"], "fseg.ac.ma"],
-  [["FSAC", "FACULTE DES SCIENCES AIN CHOCK"], "fsac.ac.ma"],
-  [["ESTC", "ECOLE SUPERIEURE DE TECHNOLOGIE DE CASABLANCA"], "estc.ac.ma"],
-  [["EST", "ECOLE SUPERIEURE DE TECHNOLOGIE"], "est.usmba.ac.ma"],
-  [["GINF", "GROUPE INFORMATIQUE"], "ginf.ma"],
-  [["EEAC", "ECOLE EUROPEENNE DES AFFAIRES"], "eeac.ma"],
-  [["USMBA", "UNIVERSITE SIDI MOHAMMED BEN ABDELLAH"], "usmba.ac.ma"],
-  [["UM6P", "UNIVERSITE MOHAMMED VI POLYTECHNIQUE"], "um6p.ma"],
-  [["AUI", "AL AKHAWAYN", "UNIVERSITE AL AKHAWAYN"], "aui.ma"],
-  [["MUNDIAPOLIS"], "mundiapolis.ma"],
-  [["UNIVERSIAPOLIS"], "universiapolis.ma"],
-  [["UCAM", "UNIVERSITE CHOUAIB DOUKKALI"], "ucd.ac.ma"],
-  [["UIT", "UNIVERSITE IBN TOFAIL"], "uit.ac.ma"],
-  [["ENSA MARRAKECH"], "ensa-marrakech.ac.ma"],
-  [["ENSET", "ECOLE NORMALE SUPERIEURE DE L'ENSEIGNEMENT TECHNIQUE"], "enset.ac.ma"],
-];
-
-function normalize(s: string): string {
-  return s
-    .toUpperCase()
-    .normalize("NFD")
-    .replace(/[̀-ͯ]/g, "") // strip accents
-    .replace(/[^A-Z0-9\s]/g, " ")
-    .replace(/\s+/g, " ")
-    .trim();
-}
-
-function findDomain(input: string): string | null {
-  const q = normalize(input);
-
-  for (const [variants, domain] of SCHOOLS) {
-    for (const v of variants) {
-      const nv = normalize(v);
-      // exact match or contained
-      if (q === nv || q.includes(nv) || nv.includes(q)) {
-        return domain;
-      }
-    }
-  }
-  return null;
-}
+const client = new Anthropic({
+  apiKey: process.env.ANTHROPIC_API_KEY ?? process.env.AI_INTEGRATIONS_ANTHROPIC_API_KEY,
+});
 
 router.get("/logo", async (req: Request, res: Response) => {
   const school = ((req.query.school as string) ?? "").trim();
@@ -75,23 +15,93 @@ router.get("/logo", async (req: Request, res: Response) => {
     return;
   }
 
-  const domain = findDomain(school);
-
-  if (!domain) {
-    res.json({ logoUrl: null });
-    return;
-  }
-
-  const logoUrl = `https://logo.clearbit.com/${domain}`;
-
   try {
-    const check = await fetch(logoUrl, { method: "HEAD" });
-    if (check.ok) {
-      res.json({ logoUrl });
-    } else {
-      res.json({ logoUrl: null });
+    const response = await client.messages.create({
+      model: "claude-haiku-4-5-20251001",
+      max_tokens: 512,
+      tools: [
+        {
+          name: "fetch_url",
+          description: "Fetch the content of a URL",
+          input_schema: {
+            type: "object" as const,
+            properties: {
+              url: { type: "string", description: "URL to fetch" },
+            },
+            required: ["url"],
+          },
+        },
+      ],
+      messages: [
+        {
+          role: "user",
+          content: `Find the direct URL of the official logo image for the Moroccan school: "${school}".
+
+Steps:
+1. Use fetch_url to visit the school's official website (e.g. ${school.toLowerCase()}.ma or ${school.toLowerCase()}.ac.ma)
+2. Look for <img> tags with "logo" in src, alt, or class
+3. Return ONLY a JSON object: {"logoUrl": "https://..."} or {"logoUrl": null} if not found.
+Return only the JSON, nothing else.`,
+        },
+      ],
+    });
+
+    // Process tool calls if any
+    let logoUrl: string | null = null;
+    const messages: Anthropic.Messages.MessageParam[] = [
+      { role: "user", content: `Find the direct URL of the official logo image for the Moroccan school: "${school}". Return ONLY JSON: {"logoUrl": "https://..."} or {"logoUrl": null}` },
+      { role: "assistant", content: response.content },
+    ];
+
+    let current = response;
+    let iterations = 0;
+
+    while (current.stop_reason === "tool_use" && iterations < 3) {
+      iterations++;
+      const toolUses = current.content.filter((b): b is Anthropic.Messages.ToolUseBlock => b.type === "tool_use");
+      const toolResults: Anthropic.Messages.ToolResultBlockParam[] = [];
+
+      for (const tu of toolUses) {
+        const { url } = tu.input as { url: string };
+        let content = "";
+        try {
+          const r = await fetch(url, {
+            headers: { "User-Agent": "Mozilla/5.0" },
+            signal: AbortSignal.timeout(5000),
+          });
+          const html = await r.text();
+          // Extract just img tags to keep it small
+          const imgs = html.match(/<img[^>]+>/gi)?.slice(0, 30).join("\n") ?? "No images found";
+          content = imgs.slice(0, 3000);
+        } catch {
+          content = "Failed to fetch URL";
+        }
+        toolResults.push({ type: "tool_result", tool_use_id: tu.id, content });
+      }
+
+      messages.push({ role: "user", content: toolResults });
+
+      current = await client.messages.create({
+        model: "claude-haiku-4-5-20251001",
+        max_tokens: 256,
+        tools: [],
+        messages,
+      });
+
+      messages.push({ role: "assistant", content: current.content });
     }
-  } catch {
+
+    // Extract JSON from final response
+    const text = current.content.find((b): b is Anthropic.Messages.TextBlock => b.type === "text")?.text ?? "";
+    const match = text.match(/\{[^}]*"logoUrl"[^}]*\}/);
+    if (match) {
+      const parsed = JSON.parse(match[0]) as { logoUrl: string | null };
+      logoUrl = parsed.logoUrl ?? null;
+    }
+
+    res.json({ logoUrl });
+  } catch (err) {
+    console.error("Logo fetch error:", err);
     res.json({ logoUrl: null });
   }
 });
