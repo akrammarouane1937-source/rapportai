@@ -2,68 +2,88 @@ import { Router, type Request, type Response } from "express";
 
 const router = Router();
 
-// Known Moroccan schools mapped to their website domain for Clearbit logo lookup
-const SCHOOL_DOMAINS: Record<string, string> = {
-  "EMSI":    "emsi.ma",
-  "ISCAE":   "iscae.ac.ma",
-  "HEM":     "hem.ac.ma",
-  "UIR":     "uir.ac.ma",
-  "UM5":     "um5.ac.ma",
-  "UH2":     "uh2c.ac.ma",
-  "UCA":     "uca.ma",
-  "ENCG":    "encg.ac.ma",
-  "FSJES":   "fsjes-agdal.um5.ac.ma",
-  "INSEA":   "insea.ac.ma",
-  "EHTP":    "ehtp.ac.ma",
-  "EMI":     "emi.ac.ma",
-  "IAV":     "iav.ac.ma",
-  "ENIM":    "enim.ac.ma",
-  "ENSMR":   "ensmr.ac.ma",
-  "ESTC":    "estc.ac.ma",
-  "ENSA":    "ensa.ac.ma",
-  "EST":     "est.usmba.ac.ma",
-  "ENCGJ":   "encg.uae.ac.ma",
-  "FSAC":    "fsac.ac.ma",
-  "GINF":    "ginf.ma",
-  "SUPDECO": "supdeco.ac.ma",
-  "ESCA":    "esca.ma",
-  "EEAC":    "eeac.ma",
-  "ISGA":    "isga.ma",
-  "ENAM":    "enam.ac.ma",
-  "IGA":     "iga.ac.ma",
-  "FSEG":    "fseg.ac.ma",
-};
+// Each entry: [abbreviation variants, domain]
+const SCHOOLS: [string[], string][] = [
+  [["EMSI", "ECOLE MAROCAINE DES SCIENCES DE L'INGENIEUR"], "emsi.ma"],
+  [["ISCAE", "INSTITUT SUPERIEUR DE COMMERCE ET D'ADMINISTRATION DES ENTREPRISES"], "iscae.ac.ma"],
+  [["HEM", "HAUTES ETUDES DE MANAGEMENT"], "hem.ac.ma"],
+  [["UIR", "UNIVERSITE INTERNATIONALE DE RABAT"], "uir.ac.ma"],
+  [["UM5", "UM6", "UNIVERSITE MOHAMMED V", "UNIVERSITE MOHAMMED 5"], "um5.ac.ma"],
+  [["UH2", "UH2C", "UNIVERSITE HASSAN II", "UNIVERSITE HASSAN 2"], "uh2c.ac.ma"],
+  [["UCA", "UNIVERSITE CADI AYYAD"], "uca.ma"],
+  [["ENCG", "ECOLE NATIONALE DE COMMERCE ET DE GESTION"], "encg.ac.ma"],
+  [["INSEA", "INSTITUT NATIONAL DE STATISTIQUE ET D'ECONOMIE APPLIQUEE"], "insea.ac.ma"],
+  [["EHTP", "ECOLE HASSANIA DES TRAVAUX PUBLICS"], "ehtp.ac.ma"],
+  [["EMI", "ECOLE MOHAMMADIA D'INGENIEURS"], "emi.ac.ma"],
+  [["IAV", "INSTITUT AGRONOMIQUE ET VETERINAIRE"], "iav.ac.ma"],
+  [["ENIM", "ECOLE NATIONALE DE L'INDUSTRIE MINERALE"], "enim.ac.ma"],
+  [["ENSMR", "ECOLE NATIONALE SUPERIEURE DES MINES DE RABAT"], "ensmr.ac.ma"],
+  [["ENSA", "ECOLE NATIONALE DES SCIENCES APPLIQUEES"], "ensa.ac.ma"],
+  [["SUPDECO", "SUP DE CO"], "supdeco.ac.ma"],
+  [["ESCA", "ECOLE SUPERIEURE DE COMMERCE ET D'AFFAIRES"], "esca.ma"],
+  [["ISGA", "INSTITUT SUPERIEUR DE GESTION ET D'ADMINISTRATION"], "isga.ma"],
+  [["IGA", "INSTITUT DE GESTION ET D'ADMINISTRATION"], "iga.ac.ma"],
+  [["ENAM", "ECOLE NATIONALE D'ADMINISTRATION ET DE MANAGEMENT"], "enam.ac.ma"],
+  [["FSJES", "FACULTE DES SCIENCES JURIDIQUES"], "fsjes-agdal.um5.ac.ma"],
+  [["FSEG", "FACULTE DES SCIENCES ECONOMIQUES"], "fseg.ac.ma"],
+  [["FSAC", "FACULTE DES SCIENCES AIN CHOCK"], "fsac.ac.ma"],
+  [["ESTC", "ECOLE SUPERIEURE DE TECHNOLOGIE DE CASABLANCA"], "estc.ac.ma"],
+  [["EST", "ECOLE SUPERIEURE DE TECHNOLOGIE"], "est.usmba.ac.ma"],
+  [["GINF", "GROUPE INFORMATIQUE"], "ginf.ma"],
+  [["EEAC", "ECOLE EUROPEENNE DES AFFAIRES"], "eeac.ma"],
+  [["USMBA", "UNIVERSITE SIDI MOHAMMED BEN ABDELLAH"], "usmba.ac.ma"],
+  [["UM6P", "UNIVERSITE MOHAMMED VI POLYTECHNIQUE"], "um6p.ma"],
+  [["AUI", "AL AKHAWAYN", "UNIVERSITE AL AKHAWAYN"], "aui.ma"],
+  [["MUNDIAPOLIS"], "mundiapolis.ma"],
+  [["UNIVERSIAPOLIS"], "universiapolis.ma"],
+  [["UCAM", "UNIVERSITE CHOUAIB DOUKKALI"], "ucd.ac.ma"],
+  [["UIT", "UNIVERSITE IBN TOFAIL"], "uit.ac.ma"],
+  [["ENSA MARRAKECH"], "ensa-marrakech.ac.ma"],
+  [["ENSET", "ECOLE NORMALE SUPERIEURE DE L'ENSEIGNEMENT TECHNIQUE"], "enset.ac.ma"],
+];
+
+function normalize(s: string): string {
+  return s
+    .toUpperCase()
+    .normalize("NFD")
+    .replace(/[̀-ͯ]/g, "") // strip accents
+    .replace(/[^A-Z0-9\s]/g, " ")
+    .replace(/\s+/g, " ")
+    .trim();
+}
+
+function findDomain(input: string): string | null {
+  const q = normalize(input);
+
+  for (const [variants, domain] of SCHOOLS) {
+    for (const v of variants) {
+      const nv = normalize(v);
+      // exact match or contained
+      if (q === nv || q.includes(nv) || nv.includes(q)) {
+        return domain;
+      }
+    }
+  }
+  return null;
+}
 
 router.get("/logo", async (req: Request, res: Response) => {
-  const school = ((req.query.school as string) ?? "").trim().toUpperCase();
+  const school = ((req.query.school as string) ?? "").trim();
 
   if (!school) {
     res.status(400).json({ error: "school query param required" });
     return;
   }
 
-  // Exact match first
-  let domain = SCHOOL_DOMAINS[school];
-
-  // Partial match — e.g. "EMSI Casablanca" → still finds "EMSI"
-  if (!domain) {
-    for (const [key, val] of Object.entries(SCHOOL_DOMAINS)) {
-      if (school.includes(key) || key.includes(school)) {
-        domain = val;
-        break;
-      }
-    }
-  }
+  const domain = findDomain(school);
 
   if (!domain) {
     res.json({ logoUrl: null });
     return;
   }
 
-  // Clearbit logo API — free, no key needed, returns PNG
   const logoUrl = `https://logo.clearbit.com/${domain}`;
 
-  // Verify it exists with a HEAD request
   try {
     const check = await fetch(logoUrl, { method: "HEAD" });
     if (check.ok) {

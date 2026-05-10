@@ -40,6 +40,7 @@ export default function Step2Page() {
   const [color,      setColor]      = useState(COLORS[0]);
   const [logoUrl,        setLogoUrl]        = useState<string | null>(stored.logoUrl ?? null);
   const [logoFetching,   setLogoFetching]   = useState(false);
+  const [logoNotFound,   setLogoNotFound]   = useState(false);
   const [templateName,   setTemplateName]   = useState<string | null>(stored.coverTemplate ?? null);
   const [templateStatus, setTemplateStatus] = useState<"idle"|"uploading"|"ready"|"error">("idle");
   const fileRef     = useRef<HTMLInputElement>(null);
@@ -56,13 +57,14 @@ export default function Step2Page() {
   const handleAILogo = async () => {
     if (!school.trim()) return;
     setLogoFetching(true);
+    setLogoNotFound(false);
     try {
       const res = await fetch(`${API_BASE}/api/logo?school=${encodeURIComponent(school)}`);
       const data = await res.json() as { logoUrl: string | null };
-      if (data.logoUrl) setLogoUrl(data.logoUrl);
-      else alert("Logo introuvable pour cette école. Importe-le manuellement.");
+      if (data.logoUrl) { setLogoUrl(data.logoUrl); setLogoNotFound(false); }
+      else setLogoNotFound(true);
     } catch {
-      alert("Erreur lors de la recherche du logo.");
+      setLogoNotFound(true);
     } finally {
       setLogoFetching(false);
     }
@@ -271,6 +273,7 @@ export default function Step2Page() {
                   </button>
                 </div>
               )}
+              {logoNotFound && <p className="text-xs text-orange-500 mt-1">Logo introuvable automatiquement — importe-le manuellement.</p>}
             </div>
 
             {/* Accent color */}
