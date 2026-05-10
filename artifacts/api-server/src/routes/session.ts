@@ -1,9 +1,9 @@
 import { Router, type Request, type Response } from "express";
 import { randomUUID } from "crypto";
 import multer from "multer";
-import { SDKReportAgent, type ReportProfile } from "../lib/sdk-agent";
-import type { StreamEvent } from "../lib/agent-session";
+import { ReportAgent, type ReportProfile, type BibEntry } from "../lib/report-agent";
 import { sessionStore } from "../lib/session-store";
+import type { StreamEvent } from "../lib/agent-session";
 
 const upload = multer({ storage: multer.memoryStorage(), limits: { fileSize: 20 * 1024 * 1024 } });
 
@@ -75,7 +75,7 @@ router.post("/session/start", (req: Request, res: Response) => {
   }
 
   const sessionId = randomUUID();
-  const agent = new SDKReportAgent(sessionId, profile);
+  const agent = new ReportAgent(sessionId, profile);
 
   if (profile.existingSections && Object.keys(profile.existingSections).length > 0) {
     agent.loadSections(profile.existingSections);
@@ -92,14 +92,14 @@ router.post(
   "/session/:sessionId/generate",
   async (req: Request, res: Response) => {
     const { sessionId } = req.params;
-    const { section } = req.body as { section: string };
+    const { section, sources } = req.body as { section: string; sources?: BibEntry[] };
 
     if (!section) {
       res.status(400).json({ error: "section is required" });
       return;
     }
 
-    const agent = sessionStore.get(sessionId) as SDKReportAgent | undefined;
+    const agent = sessionStore.get(sessionId) as ReportAgent | undefined;
     if (!agent) {
       res.status(404).json({ error: "Session introuvable ou expirée. Relance /api/session/start." });
       return;
@@ -110,7 +110,7 @@ router.post(
     res.setHeader("Connection", "keep-alive");
 
     try {
-      const task = agent.buildSectionTask(section);
+      const task = agent.buildSectionTask(section, sources);
       const finished = await streamToSSE(res, agent.stream(task));
 
       if (finished) {
@@ -144,7 +144,7 @@ router.post(
       return;
     }
 
-    const agent = sessionStore.get(sessionId) as SDKReportAgent | undefined;
+    const agent = sessionStore.get(sessionId) as ReportAgent | undefined;
     if (!agent) {
       res.status(404).json({ error: "Session introuvable ou expirée." });
       return;
@@ -155,8 +155,8 @@ router.post(
     res.setHeader("Connection", "keep-alive");
 
     try {
-      // SDK manages its own conversation — resume by streaming the answer as a new message
-      const finished = await streamToSSE(res, agent.stream(`Réponse de l'étudiant : ${answer}`));
+      agent.injectToolResult(toolUseId, answer);
+      const finished = await streamToSSE(res, agent.resume());
 
       if (finished) {
         res.write(
@@ -208,7 +208,7 @@ router.post(
       return;
     }
 
-    const agent = sessionStore.get(sessionId) as SDKReportAgent | undefined;
+    const agent = sessionStore.get(sessionId) as ReportAgent | undefined;
     if (!agent) {
       res.status(404).json({ error: "Session introuvable ou expirée." });
       return;
@@ -257,7 +257,7 @@ router.post(
       return;
     }
 
-    const agent = sessionStore.get(sessionId) as SDKReportAgent | undefined;
+    const agent = sessionStore.get(sessionId) as ReportAgent | undefined;
     if (!agent) {
       res.status(404).json({ error: "Session introuvable ou expirée." });
       return;
