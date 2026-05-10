@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useLocation } from "wouter";
-import { useUser, useClerk } from "@clerk/react";
+import { useOptionalUser as useUser, useOptionalClerk as useClerk } from "@/lib/useOptionalClerk";
 import {
   LayoutDashboard, FileText, BookOpen, MessageSquare,
   ImageIcon, Settings, LogOut,

@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useLocation } from "wouter";
-import { useUser } from "@clerk/react";
+import { useOptionalUser as useUser } from "@/lib/useOptionalClerk";
 import { saveReport } from "@/lib/reportStore";
 import { motion, AnimatePresence } from "framer-motion";
 import { ChevronRight, ChevronLeft, GraduationCap, BookOpen, Building2, CheckCircle2 } from "lucide-react";

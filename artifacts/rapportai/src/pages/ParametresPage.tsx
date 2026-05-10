@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Sidebar, SidebarSpacer } from "@/components/layout/Sidebar";
 import { getReport, saveReport } from "@/lib/reportStore";
-import { useUser } from "@clerk/react";
+import { useOptionalUser as useUser } from "@/lib/useOptionalClerk";
 
 const FIELDS: { key: string; label: string; placeholder: string; section: string }[] = [
   { key: "studentName",   label: "Nom complet",              placeholder: "Ex: Youssef El Amrani",       section: "Profil étudiant" },

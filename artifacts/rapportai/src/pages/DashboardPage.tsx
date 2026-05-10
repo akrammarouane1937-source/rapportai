@@ -1,4 +1,4 @@
-import { useUser } from "@clerk/react";
+import { useOptionalUser as useUser } from "@/lib/useOptionalClerk";
 import { motion } from "framer-motion";
 import { Plus, ChevronRight } from "lucide-react";
 import { useLocation } from "wouter";
