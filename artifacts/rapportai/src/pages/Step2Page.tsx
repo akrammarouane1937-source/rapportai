@@ -73,6 +73,8 @@ export default function Step2Page() {
     if (!file) return;
     setTemplateStatus("uploading");
     try {
+      // Save current form state first so ensureSession has the profile data
+      saveReport({ reportType, theme, school, filiere, annee, studentName: student, encadrantPeda: encPeda, encadrantPro: encPro, entreprise, ville });
       const sessionId = await ensureSession();
       const formData = new FormData();
       formData.append("file", file);
@@ -207,7 +209,7 @@ export default function Step2Page() {
               <label className="block text-sm font-semibold text-gray-700 mb-1.5">
                 Modèle Word de votre école <span className="text-xs font-normal text-gray-400">(recommandé)</span>
               </label>
-              <p className="text-xs text-gray-400 mb-2">90% des encadrants imposent leur propre template. Importez-le et l'IA respectera sa structure exacte.</p>
+              <p className="text-xs text-gray-400 mb-2">90% des encadrants imposent leur propre template. Importez-le et l'IA respectera sa structure exacte.{!canContinue && <span className="text-orange-400"> (Remplis d'abord les champs obligatoires *)</span>}</p>
               <input ref={templateRef} type="file" accept=".docx,.doc" className="hidden" onChange={handleTemplateUpload} />
               {templateStatus === "ready" || templateName ? (
                 <div className="flex items-center gap-3 border border-green-200 bg-green-50 rounded-xl p-3">
@@ -224,7 +226,7 @@ export default function Step2Page() {
                   </button>
                 </div>
               ) : (
-                <button onClick={() => templateRef.current?.click()} disabled={templateStatus === "uploading"}
+                <button onClick={() => templateRef.current?.click()} disabled={templateStatus === "uploading" || !canContinue}
                   className="flex items-center gap-3 border-2 border-dashed border-gray-200 rounded-xl p-3 w-full hover:border-purple-300 hover:bg-purple-50/30 transition-colors text-left disabled:opacity-50">
                   <div className="w-10 h-10 rounded-lg bg-gray-100 flex items-center justify-center flex-shrink-0">
                     {templateStatus === "uploading" ? <Loader2 className="w-4 h-4 text-purple-500 animate-spin" /> : <FileText className="w-4 h-4 text-gray-400" />}
