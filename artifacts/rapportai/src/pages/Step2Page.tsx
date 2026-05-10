@@ -311,23 +311,39 @@ export default function Step2Page() {
         <div className="flex-1 overflow-y-auto flex items-center justify-center" style={{ background: "#e5e7eb" }}>
           <div className="py-10 px-6 flex justify-center w-full">
 
-            {/* Template HTML preview — shown when a Word template was uploaded */}
-            {templateHtml ? (
+            {/* Template active — shown when a Word template was uploaded */}
+            {(templateStatus === "ready" || templateName) ? (
               <motion.div
-                initial={{ opacity: 0, y: 8 }}
-                animate={{ opacity: 1, y: 0 }}
-                className="relative bg-white w-full max-w-[600px]"
-                style={{ boxShadow: "0 8px 40px rgba(0,0,0,0.15)", padding: "48px 56px", fontFamily: "Times New Roman, serif", fontSize: "11pt", lineHeight: 1.6 }}
+                initial={{ opacity: 0, scale: 0.97 }}
+                animate={{ opacity: 1, scale: 1 }}
+                className="relative bg-white w-full max-w-[500px] flex flex-col items-center justify-center text-center"
+                style={{ minHeight: 500, boxShadow: "0 8px 40px rgba(0,0,0,0.15)", borderRadius: 16, padding: "56px 48px" }}
               >
-                <div className="flex items-center gap-2 mb-4 pb-3 border-b border-gray-100">
-                  <FileText className="w-4 h-4 text-green-600 flex-shrink-0" />
-                  <p className="text-xs font-semibold text-green-700">{templateName} — aperçu du modèle</p>
+                <div className="w-16 h-16 rounded-2xl bg-green-50 flex items-center justify-center mb-6">
+                  <FileText className="w-8 h-8 text-green-600" />
                 </div>
-                <div
-                  className="template-preview"
-                  style={{ color: "#1a1a1a" }}
-                  dangerouslySetInnerHTML={{ __html: templateHtml }}
-                />
+                <h2 className="text-lg font-bold text-gray-900 mb-2">Modèle Word actif</h2>
+                <p className="text-sm text-gray-500 mb-4 max-w-xs">
+                  L'IA respectera exactement la mise en page de votre école lors de l'export final.
+                </p>
+                <div className="bg-green-50 border border-green-100 rounded-xl px-4 py-3 mb-6 w-full">
+                  <p className="text-xs font-semibold text-green-700 truncate">{templateName}</p>
+                </div>
+                <div className="space-y-2 w-full text-left">
+                  {[
+                    "Structure de pages respectée",
+                    "En-têtes et pieds de page conservés",
+                    "Polices et marges identiques",
+                    "Mise en page de l'école préservée",
+                  ].map(item => (
+                    <div key={item} className="flex items-center gap-2">
+                      <div className="w-4 h-4 rounded-full bg-green-100 flex items-center justify-center flex-shrink-0">
+                        <div className="w-1.5 h-1.5 rounded-full bg-green-500" />
+                      </div>
+                      <p className="text-xs text-gray-600">{item}</p>
+                    </div>
+                  ))}
+                </div>
               </motion.div>
             ) : (
 
