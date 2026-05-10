@@ -2,6 +2,7 @@ import { query, type SDKMessage } from "@anthropic-ai/claude-agent-sdk";
 import { mkdirSync, writeFileSync, readFileSync, existsSync, rmSync } from "fs";
 import path from "path";
 import type { StreamEvent } from "./agent-session";
+import { findClaudeBinary } from "./find-claude-binary";
 
 // Per-user working directory — each session gets isolated storage
 const SESSIONS_ROOT = "/tmp/rapportai-sessions";
@@ -111,6 +112,8 @@ export class SDKReportAgent {
     this.lastActiveAt = new Date();
     this.abortController = new AbortController();
 
+    const claudeBinary = findClaudeBinary();
+
     for await (const message of query({
       prompt,
       options: {
@@ -119,6 +122,7 @@ export class SDKReportAgent {
         cwd: this.workDir,
         systemPrompt: buildSystemPrompt(this.profile),
         permissionMode: "acceptEdits",
+        ...(claudeBinary ? { pathToClaudeCodeExecutable: claudeBinary } : {}),
       },
     })) {
       yield* this._processMessage(message);

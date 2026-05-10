@@ -1,7 +1,7 @@
 import { Router, type Request, type Response } from "express";
 import { randomUUID } from "crypto";
 import multer from "multer";
-import { ReportAgent, type ReportProfile, type BibEntry } from "../lib/report-agent";
+import { SDKReportAgent, type ReportProfile } from "../lib/sdk-agent";
 import { sessionStore } from "../lib/session-store";
 import type { StreamEvent } from "../lib/agent-session";
 
@@ -75,7 +75,7 @@ router.post("/session/start", (req: Request, res: Response) => {
   }
 
   const sessionId = randomUUID();
-  const agent = new ReportAgent(sessionId, profile);
+  const agent = new SDKReportAgent(sessionId, profile);
 
   if (profile.existingSections && Object.keys(profile.existingSections).length > 0) {
     agent.loadSections(profile.existingSections);
@@ -92,14 +92,14 @@ router.post(
   "/session/:sessionId/generate",
   async (req: Request, res: Response) => {
     const { sessionId } = req.params;
-    const { section, sources } = req.body as { section: string; sources?: BibEntry[] };
+    const { section } = req.body as { section: string };
 
     if (!section) {
       res.status(400).json({ error: "section is required" });
       return;
     }
 
-    const agent = sessionStore.get(sessionId) as ReportAgent | undefined;
+    const agent = sessionStore.get(sessionId) as SDKReportAgent | undefined;
     if (!agent) {
       res.status(404).json({ error: "Session introuvable ou expirée. Relance /api/session/start." });
       return;
@@ -110,7 +110,7 @@ router.post(
     res.setHeader("Connection", "keep-alive");
 
     try {
-      const task = agent.buildSectionTask(section, sources);
+      const task = agent.buildSectionTask(section);
       const finished = await streamToSSE(res, agent.stream(task));
 
       if (finished) {
@@ -127,50 +127,7 @@ router.post(
   }
 );
 
-// ─── POST /api/session/:sessionId/answer ─────────────────────────────────────
-// Resume a session after the student answered an ask_user question.
-
-router.post(
-  "/session/:sessionId/answer",
-  async (req: Request, res: Response) => {
-    const { sessionId } = req.params;
-    const { toolUseId, answer } = req.body as {
-      toolUseId: string;
-      answer: string;
-    };
-
-    if (!toolUseId || !answer) {
-      res.status(400).json({ error: "toolUseId and answer are required" });
-      return;
-    }
-
-    const agent = sessionStore.get(sessionId) as ReportAgent | undefined;
-    if (!agent) {
-      res.status(404).json({ error: "Session introuvable ou expirée." });
-      return;
-    }
-
-    res.setHeader("Content-Type", "text/event-stream");
-    res.setHeader("Cache-Control", "no-cache");
-    res.setHeader("Connection", "keep-alive");
-
-    try {
-      agent.injectToolResult(toolUseId, answer);
-      const finished = await streamToSSE(res, agent.resume());
-
-      if (finished) {
-        res.write(
-          `data: ${JSON.stringify({ done: true, sections: agent.getSections() })}\n\n`
-        );
-      }
-    } catch (err: unknown) {
-      const message = err instanceof Error ? err.message : "Unknown error";
-      res.write(`data: ${JSON.stringify({ error: message })}\n\n`);
-    } finally {
-      res.end();
-    }
-  }
-);
+// /answer is not needed with the Agent SDK — multi-turn is handled internally.
 
 // ─── GET /api/session/:sessionId/state ───────────────────────────────────────
 
@@ -208,7 +165,7 @@ router.post(
       return;
     }
 
-    const agent = sessionStore.get(sessionId) as ReportAgent | undefined;
+    const agent = sessionStore.get(sessionId) as SDKReportAgent | undefined;
     if (!agent) {
       res.status(404).json({ error: "Session introuvable ou expirée." });
       return;
@@ -257,7 +214,7 @@ router.post(
       return;
     }
 
-    const agent = sessionStore.get(sessionId) as ReportAgent | undefined;
+    const agent = sessionStore.get(sessionId) as SDKReportAgent | undefined;
     if (!agent) {
       res.status(404).json({ error: "Session introuvable ou expirée." });
       return;
