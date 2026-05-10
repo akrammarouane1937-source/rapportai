@@ -1,14 +1,42 @@
 import { Sandbox } from "@vercel/sandbox";
-import { readFileSync } from "fs";
-import path from "path";
 import type { StreamEvent } from "./agent-session";
 import type { ReportProfile } from "./sdk-agent";
 
-// The runner script is bundled alongside this file at build time
-const RUNNER_SCRIPT = readFileSync(
-  path.join(import.meta.dirname, "agent-runner.mjs"),
-  "utf-8"
-);
+// Inlined runner script — executes inside the Vercel Sandbox microVM
+const RUNNER_SCRIPT = `
+import { query } from "@anthropic-ai/claude-agent-sdk";
+import { readFileSync } from "fs";
+
+const input = JSON.parse(readFileSync("/work/input.json", "utf-8"));
+const { prompt, systemPrompt, maxTurns = 25, cwd = "/work" } = input;
+
+process.chdir(cwd);
+
+for await (const message of query({
+  prompt,
+  options: {
+    maxTurns,
+    cwd,
+    systemPrompt,
+    permissionMode: "acceptEdits",
+    allowedTools: ["Read", "Write", "Edit", "WebFetch", "Glob", "Bash"],
+  },
+})) {
+  if (message.type === "assistant") {
+    for (const block of message.message.content) {
+      if (block.type === "text" && block.text) {
+        process.stdout.write(JSON.stringify({ type: "text", content: block.text }) + "\\n");
+      }
+      if (block.type === "tool_use") {
+        process.stdout.write(JSON.stringify({ type: "tool_call", name: block.name }) + "\\n");
+      }
+    }
+  }
+  if (message.type === "result") {
+    process.stdout.write(JSON.stringify({ type: "done", subtype: message.subtype }) + "\\n");
+  }
+}
+`;
 
 const SECTION_IDS = [
   "dedicaces", "remerciements", "resume",
@@ -91,32 +119,18 @@ export class SandboxSession {
         args: ["install", "--prefix", "/work", "@anthropic-ai/claude-agent-sdk"],
       });
 
-      // 7. Run the agent inside the sandbox
-      const input = JSON.stringify({
+      // 7. Write runner script + input, then execute
+      await sandbox.fs.writeFile("/work/runner.mjs", RUNNER_SCRIPT);
+      await sandbox.fs.writeFile("/work/input.json", JSON.stringify({
         prompt,
         systemPrompt: buildSystemPrompt(this.profile),
         maxTurns: 25,
         cwd: "/work",
-      });
+      }));
 
-      const cmd = await sandbox.runCommand({
-        cmd: "node",
-        args: ["/work/agent-runner.mjs"],
-        cwd: "/work",
-        env: { ANTHROPIC_API_KEY: process.env.ANTHROPIC_API_KEY ?? "" },
-        detached: true,
-      });
-
-      // Write input to stdin then stream logs
-      // Pipe input via a temp file since runCommand doesn't support stdin directly
-      await sandbox.fs.writeFile("/work/input.json", input);
       const runCmd = await sandbox.runCommand({
         cmd: "node",
-        args: ["-e", `
-          import { createReadStream } from 'fs';
-          process.stdin = createReadStream('/work/input.json');
-          await import('/work/agent-runner.mjs');
-        `],
+        args: ["/work/runner.mjs"],
         cwd: "/work",
         env: { ANTHROPIC_API_KEY: process.env.ANTHROPIC_API_KEY ?? "" },
         detached: true,
