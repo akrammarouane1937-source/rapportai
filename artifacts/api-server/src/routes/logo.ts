@@ -16,17 +16,31 @@ router.get("/logo", async (req: Request, res: Response) => {
   try {
     let fullText = "";
 
+    const abbr = school.toLowerCase().replace(/\s+/g, "");
+    const urls = [
+      `https://${abbr}.ac.ma`,
+      `https://www.${abbr}.ac.ma`,
+      `https://${abbr}.ma`,
+      `https://www.${abbr}.ma`,
+      `https://${abbr}-casablanca.ac.ma`,
+      `https://${abbr}-rabat.ac.ma`,
+    ].join(", ");
+
     for await (const message of query({
       prompt: `Find the official logo URL for this Moroccan school: "${school}".
-Steps:
-1. Use WebFetch to visit their official website. Try: https://${school.toLowerCase().replace(/\s+/g, "")}.ma then https://${school.toLowerCase().replace(/\s+/g, "")}.ac.ma
-2. Scan the HTML for <img> tags whose src, alt or class contains "logo"
-3. Pick the best logo URL (prefer SVG or PNG, must be absolute URL)
-4. Reply with ONLY valid JSON: {"logoUrl":"https://..."} or {"logoUrl":null}
-No explanation, no markdown, just the JSON object.`,
+
+Try these URLs in order using WebFetch until one works: ${urls}
+
+For each URL that responds:
+- Look in the HTML for <img> tags where src, alt, or class contains "logo", "brand", or the school abbreviation
+- Also check <link rel="icon"> for favicon as fallback
+- Prefer PNG or SVG, must be an absolute URL (starting with https://)
+
+Reply with ONLY this JSON (no explanation, no markdown):
+{"logoUrl":"https://..."} or {"logoUrl":null}`,
       options: {
-        systemPrompt: "You are a logo finder agent. Use WebFetch to browse school websites and extract logo URLs. Always reply with JSON only.",
-        maxTurns: 5,
+        systemPrompt: "You are a logo finder. Use WebFetch to browse Moroccan school websites and find their logo image URL. Always reply with JSON only: {\"logoUrl\":\"...\"} or {\"logoUrl\":null}.",
+        maxTurns: 8,
         allowedTools: ["WebFetch"],
         ...(claudeBinary ? { pathToClaudeCodeExecutable: claudeBinary } : {}),
       },
