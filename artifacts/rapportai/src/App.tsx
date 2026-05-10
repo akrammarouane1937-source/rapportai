@@ -352,10 +352,45 @@ function ClerkProviderWithRoutes() {
   );
 }
 
+function NoAuthApp() {
+  return (
+    <QueryClientProvider client={queryClient}>
+      <TooltipProvider>
+        <Switch>
+          <Route path="/" component={LandingPage} />
+          <Route path="/sign-in/*?" component={LandingPage} />
+          <Route path="/sign-up/*?" component={LandingPage} />
+          <Route path="/onboarding" component={OnboardingPage} />
+          <Route path="/dashboard" component={DashboardPage} />
+          <Route path="/rapports" component={RapportsPage} />
+          <Route path="/demo" component={DemoPage} />
+          <Route path="/rapport/step-1" component={Step1Page} />
+          <Route path="/rapport/step-2" component={Step2Page} />
+          <Route path="/rapport/step-3" component={Step3Page} />
+          <Route path="/rapport/step-4" component={Step4Page} />
+          <Route path="/rapport/step-5" component={Step5Page} />
+          <Route path="/rapport/step-6" component={Step6Page} />
+          <Route path="/rapport/step-9" component={Step9Page} />
+          <Route path="/rapport/partie-i" component={PartieIPage} />
+          <Route path="/rapport/partie-ii" component={PartieIIPage} />
+          <Route path="/juryai" component={JuryAIPage} />
+          <Route path="/bibliotheque" component={BibliothequeePage} />
+          <Route path="/parametres" component={ParametresPage} />
+          <Route path="/figures" component={FiguresPage} />
+          <Route path="/share/:id" component={SharePage} />
+          <Route path="/payment/success" component={PaymentSuccessPage} />
+          <Route component={NotFound} />
+        </Switch>
+        <Toaster />
+      </TooltipProvider>
+    </QueryClientProvider>
+  );
+}
+
 function App() {
   return (
     <WouterRouter base={basePath}>
-      <ClerkProviderWithRoutes />
+      {clerkPubKey ? <ClerkProviderWithRoutes /> : <NoAuthApp />}
     </WouterRouter>
   );
 }
