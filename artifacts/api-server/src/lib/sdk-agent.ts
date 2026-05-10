@@ -1,4 +1,4 @@
-import { query, type SDKMessage } from "@anthropic-ai/claude-code";
+import { query, type SDKMessage } from "@anthropic-ai/claude-agent-sdk";
 import { mkdirSync, writeFileSync, readFileSync, existsSync, rmSync } from "fs";
 import path from "path";
 import type { StreamEvent } from "./agent-session";
@@ -113,8 +113,8 @@ export class SDKReportAgent {
 
     for await (const message of query({
       prompt,
-      abortController: this.abortController,
       options: {
+        abortController: this.abortController,
         maxTurns: 25,
         cwd: this.workDir,
         systemPrompt: buildSystemPrompt(this.profile),
@@ -136,6 +136,7 @@ export class SDKReportAgent {
         }
       }
     }
+    // result message signals completion — no event needed, loop ends naturally
   }
 
   abort(): void {
