@@ -74,6 +74,7 @@ autoInstallPeers: false
 
 onlyBuiltDependencies:
   - '@swc/core'
+  - '@anthropic-ai/claude-agent-sdk'
   - esbuild
   - msw
   - unrs-resolver
