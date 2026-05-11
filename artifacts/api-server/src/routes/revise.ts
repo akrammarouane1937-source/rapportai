@@ -75,7 +75,15 @@ Follow this process to complete the revision:
 
 Think through the target and the change before editing, but do not include your reasoning in the output.
 
-Return the complete section with ONLY the requested change applied. Do not return a summary, explanation, or partial excerpt. Do not add any text before or after the revised section. The output is the full section — nothing else.`;
+Format your response EXACTLY like this — two XML blocks, nothing else:
+
+<summary>
+[One sentence in French describing only what changed. Example: "J'ai remplacé 'inconditionnel' par 'profond' à la première ligne."]
+</summary>
+
+<revised_section>
+[The complete section with ONLY the requested change applied. Every other word is identical to the original.]
+</revised_section>`;
 
   try {
     for await (const message of query({

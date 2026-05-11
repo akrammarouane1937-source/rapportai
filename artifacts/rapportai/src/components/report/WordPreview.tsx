@@ -36,10 +36,20 @@ const FUN_STATUSES = [
 type ChatMsg = {
   id: string;
   role: "user" | "assistant";
-  text: string;
+  text: string;        // what the user sees (summary for revisions)
+  fullText?: string;   // full revised section (applied on click)
   isRevision?: boolean;
   applied?: boolean;
 };
+
+function parseRevisionResponse(raw: string): { summary: string; revised: string } | null {
+  const summaryMatch = raw.match(/<summary>([\s\S]*?)<\/summary>/);
+  const revisedMatch = raw.match(/<revised_section>([\s\S]*?)<\/revised_section>/);
+  if (summaryMatch && revisedMatch) {
+    return { summary: summaryMatch[1].trim(), revised: revisedMatch[1].trim() };
+  }
+  return null;
+}
 
 const MOCK_CONTENT = `
 <h2>Chapitre I — Cadre théorique et revue de littérature</h2>
@@ -186,10 +196,12 @@ function RevisionPanel({
       }
 
       if (result.trim()) {
+        const parsed = parseRevisionResponse(result);
         setMessages(prev => [...prev, {
           id: crypto.randomUUID(),
           role: "assistant",
-          text: result.trim(),
+          text: parsed ? parsed.summary : result.trim(),
+          fullText: parsed ? parsed.revised : result.trim(),
           isRevision: true,
         }]);
       } else {
@@ -203,9 +215,10 @@ function RevisionPanel({
     }
   };
 
-  const handleApply = (msgId: string, text: string) => {
-    workingContentRef.current = text;
-    onContentChange?.(text);
+  const handleApply = (msgId: string, text: string, fullText?: string) => {
+    const toApply = fullText ?? text;
+    workingContentRef.current = toApply;
+    onContentChange?.(toApply);
     setMessages(prev => prev.map(m => m.id === msgId ? { ...m, applied: true } : m));
   };
 
@@ -273,7 +286,7 @@ function RevisionPanel({
                     </div>
                     {msg.isRevision && (
                       <button
-                        onClick={() => !msg.applied && handleApply(msg.id, msg.text)}
+                        onClick={() => !msg.applied && handleApply(msg.id, msg.text, msg.fullText)}
                         className={`self-start flex items-center gap-1.5 text-xs px-3 py-1.5 rounded-lg font-semibold transition-all ${
                           msg.applied
                             ? "bg-green-100 text-green-700 cursor-default"
