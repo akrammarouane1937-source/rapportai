@@ -221,9 +221,18 @@ router.post(
     }
 
     try {
-      const text = await extractText(file.buffer, file.originalname);
-      agent.uploadDocument(file.originalname, text);
-      res.json({ success: true, filename: file.originalname, chars: text.length });
+      const ext = file.originalname.toLowerCase().split(".").pop() ?? "";
+      const imageExts = new Set(["png", "jpg", "jpeg", "gif", "webp", "bmp", "svg"]);
+
+      if (imageExts.has(ext)) {
+        // Write image buffer directly — agent reads it as a vision file
+        agent.uploadDocument(file.originalname, file.buffer);
+        res.json({ success: true, filename: file.originalname, chars: file.buffer.length });
+      } else {
+        const text = await extractText(file.buffer, file.originalname);
+        agent.uploadDocument(file.originalname, text);
+        res.json({ success: true, filename: file.originalname, chars: text.length });
+      }
     } catch (err: unknown) {
       const message = err instanceof Error ? err.message : "Erreur d'extraction";
       res.status(422).json({ error: message });

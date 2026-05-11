@@ -21,6 +21,11 @@ export interface ReportProfile {
   encadrantPro?: string;
   entreprise?: string;
   ville?: string;
+  dateDebutStage?: string;
+  dateFinStage?: string;
+  juryMember1?: string;
+  juryMember2?: string;
+  juryMember3?: string;
 }
 
 const SECTION_IDS = [
@@ -76,8 +81,8 @@ export class SDKReportAgent {
   }
 
   // Upload a document so Claude can read it with the Read tool
-  uploadDocument(filename: string, text: string): void {
-    writeFileSync(path.join(this.workDir, filename), text);
+  uploadDocument(filename: string, content: string | Buffer): void {
+    writeFileSync(path.join(this.workDir, filename), content);
   }
 
   getDocumentNames(): string[] {
@@ -234,14 +239,32 @@ Enregistre dans resume.md.`;
 
 1. Utilise Glob pour lister tous les fichiers du dossier
 2. Si template-screenshot.png existe, lis-le avec Read pour voir visuellement la mise en page (couleurs, bordures, logo position, typographie)
-3. Si un fichier .docx existe, lis-le avec Read pour extraire la structure textuelle exacte (placeholders, labels)
-4. Lis profile.json pour les informations de l'étudiant
+3. Si un fichier .docx existe, lis-le avec Read pour extraire la structure textuelle exacte (placeholders, labels, disposition)
+4. Lis profile.json pour les informations complètes de l'étudiant
 
-Génère ensuite page-de-garde.md avec le contenu exact de la page de garde en respectant :
-- La structure visuelle du template (couleurs, titres, disposition)
-- Les informations réelles de l'étudiant (nom, école, thème, encadrants, entreprise, année)
-- Les placeholders du template remplacés par les vraies données
+Informations de l'étudiant à insérer :
+- Nom : ${p.studentName}
+- École : ${p.school}
+- Filière : ${p.filiere}
+- Type de rapport : ${p.reportType}
+- Thème : ${p.theme}
+- Année : ${p.annee ?? "2024–2025"}
+${p.encadrantPeda ? `- Encadrant pédagogique : ${p.encadrantPeda}` : ""}
+${p.encadrantPro ? `- Encadrant professionnel : ${p.encadrantPro}` : ""}
+${p.entreprise ? `- Entreprise d'accueil : ${p.entreprise}` : ""}
+${p.ville ? `- Ville : ${p.ville}` : ""}
+${p.dateDebutStage ? `- Date de début de stage : ${p.dateDebutStage}` : ""}
+${p.dateFinStage ? `- Date de fin de stage : ${p.dateFinStage}` : ""}
+${p.juryMember1 ? `- Membre du jury 1 : ${p.juryMember1}` : ""}
+${p.juryMember2 ? `- Membre du jury 2 : ${p.juryMember2}` : ""}
+${p.juryMember3 ? `- Membre du jury 3 : ${p.juryMember3}` : ""}
+
+Génère page-de-garde.md avec le contenu exact en respectant :
+- La structure visuelle du template si fourni (couleurs, titres, disposition, bordures)
+- TOUS les placeholders remplacés par les vraies données de l'étudiant ci-dessus
+- Aucun placeholder restant — tout doit être rempli
 - Format Markdown fidèle à la mise en page Word
+- Si aucun template fourni, structure académique standard marocaine
 
 Enregistre dans page-de-garde.md.`;
 
@@ -321,7 +344,12 @@ Tu travailles dans un dossier dédié à ce rapport. Tous les fichiers sont là 
 - Type : ${p.reportType} | Thème : "${p.theme}"
 ${p.encadrantPeda ? `- Encadrant péda : ${p.encadrantPeda}` : ""}
 ${p.encadrantPro ? `- Encadrant pro : ${p.encadrantPro}` : ""}
-${p.entreprise ? `- Entreprise : ${p.entreprise}` : ""}`;
+${p.entreprise ? `- Entreprise : ${p.entreprise}` : ""}
+${p.dateDebutStage ? `- Début de stage : ${p.dateDebutStage}` : ""}
+${p.dateFinStage ? `- Fin de stage : ${p.dateFinStage}` : ""}
+${p.juryMember1 ? `- Jury 1 : ${p.juryMember1}` : ""}
+${p.juryMember2 ? `- Jury 2 : ${p.juryMember2}` : ""}
+${p.juryMember3 ? `- Jury 3 : ${p.juryMember3}` : ""}`;
 }
 
 // ─── Instructions file written to disk ───────────────────────────────────────
@@ -339,6 +367,11 @@ ${p.encadrantPeda ? `- Encadrant pédagogique : ${p.encadrantPeda}` : ""}
 ${p.encadrantPro ? `- Encadrant professionnel : ${p.encadrantPro}` : ""}
 ${p.entreprise ? `- Entreprise : ${p.entreprise}` : ""}
 ${p.ville ? `- Ville : ${p.ville}` : ""}
+${p.dateDebutStage ? `- Date de début de stage : ${p.dateDebutStage}` : ""}
+${p.dateFinStage ? `- Date de fin de stage : ${p.dateFinStage}` : ""}
+${p.juryMember1 ? `- Membre du jury 1 : ${p.juryMember1}` : ""}
+${p.juryMember2 ? `- Membre du jury 2 : ${p.juryMember2}` : ""}
+${p.juryMember3 ? `- Membre du jury 3 : ${p.juryMember3}` : ""}
 
 ## Sections du rapport (ordre canonique)
 1. dedicaces.md

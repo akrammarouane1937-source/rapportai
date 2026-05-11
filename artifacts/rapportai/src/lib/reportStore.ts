@@ -21,6 +21,12 @@ export interface ReportData {
   logoUrl?: string;
   coverTemplate?: string;
 
+  dateDebutStage?: string;
+  dateFinStage?: string;
+  juryMember1?: string;
+  juryMember2?: string;
+  juryMember3?: string;
+
   dedicaces?: string;
   remerciements?: string;
 
