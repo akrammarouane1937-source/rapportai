@@ -5,6 +5,7 @@ const KEY = "rapportai_v1";
 export interface ReportData {
   // Agent session ID — stored once after /api/session/start, reused for all generation calls
   sessionId?: string;
+  sessionCreatedAt?: number; // epoch ms — sessions expire after 45 min (server restarts)
 
   reportType?: string;
   theme?: string;

@@ -72,10 +72,27 @@ function countWords(text: string): number {
 
 // ─── Session management ───────────────────────────────────────────────────────
 
+const SESSION_TTL_MS = 45 * 60 * 1000; // 45 min — matches Render free-tier container uptime
+
+export function clearSession(): void {
+  saveReport({ sessionId: undefined, sessionCreatedAt: undefined });
+}
+
 export async function ensureSession(signal?: AbortSignal): Promise<string> {
   signal = signal ?? new AbortController().signal;
   const stored = getReport();
-  if (stored.sessionId) return stored.sessionId;
+
+  // Return cached session only if it's still within TTL
+  if (stored.sessionId && stored.sessionCreatedAt) {
+    if (Date.now() - stored.sessionCreatedAt < SESSION_TTL_MS) {
+      return stored.sessionId;
+    }
+    // Expired — clear and recreate
+    clearSession();
+  } else if (stored.sessionId) {
+    // Legacy entry without timestamp — treat as expired
+    clearSession();
+  }
 
   const profile = {
     studentName:    stored.studentName   ?? (DEMO.studentName   as string),
@@ -115,7 +132,7 @@ export async function ensureSession(signal?: AbortSignal): Promise<string> {
 
   if (!resp.ok) throw new Error(`Session start failed: HTTP ${resp.status}`);
   const { sessionId } = (await resp.json()) as { sessionId: string };
-  saveReport({ sessionId });
+  saveReport({ sessionId, sessionCreatedAt: Date.now() });
   return sessionId;
 }
 

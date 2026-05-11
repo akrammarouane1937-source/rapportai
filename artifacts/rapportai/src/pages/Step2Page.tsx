@@ -5,7 +5,7 @@ import { Upload, X, ArrowRight, Sparkles, University, FileText, Loader2, Downloa
 import { Button } from "@/components/ui/button";
 import { StepLayout } from "@/components/report/StepLayout";
 import { saveReport, getReport, useAutoSave } from "@/lib/reportStore";
-import { ensureSession } from "@/lib/useGenerate";
+import { ensureSession, clearSession } from "@/lib/useGenerate";
 import { API_BASE } from "@/lib/apiBase";
 import { fillDocxTemplate, type DocxFillData } from "@/lib/fillDocxTemplate";
 
@@ -132,12 +132,18 @@ export default function Step2Page() {
           canvas.toBlob(async (blob) => {
             if (!blob) return;
             try {
-              const sessionId = await ensureSession();
-              const fd = new FormData();
-              fd.append("file", blob, "template-screenshot.png");
-              await fetch(`${API_BASE}/api/session/${sessionId}/upload-document`, {
-                method: "POST", body: fd,
-              });
+              let sessionId = await ensureSession();
+              const uploadScreenshot = async (sid: string) => {
+                const fd = new FormData();
+                fd.append("file", blob, "template-screenshot.png");
+                return fetch(`${API_BASE}/api/session/${sid}/upload-document`, { method: "POST", body: fd });
+              };
+              let resp = await uploadScreenshot(sessionId);
+              if (resp.status === 404) {
+                clearSession();
+                sessionId = await ensureSession();
+                await uploadScreenshot(sessionId);
+              }
             } catch { /* non-blocking */ }
           }, "image/png");
         } catch { /* non-blocking */ }
@@ -200,10 +206,18 @@ export default function Step2Page() {
 
       // Upload raw .docx to session in background
       try {
-        const sessionId = await ensureSession();
+        let sessionId = await ensureSession();
         const fd = new FormData();
         fd.append("file", file);
-        await fetch(`${API_BASE}/api/session/${sessionId}/upload-document`, { method: "POST", body: fd });
+        let resp = await fetch(`${API_BASE}/api/session/${sessionId}/upload-document`, { method: "POST", body: fd });
+        if (resp.status === 404) {
+          // Server restarted — clear stale session and retry with new one
+          clearSession();
+          sessionId = await ensureSession();
+          const fd2 = new FormData();
+          fd2.append("file", file);
+          resp = await fetch(`${API_BASE}/api/session/${sessionId}/upload-document`, { method: "POST", body: fd2 });
+        }
       } catch { /* non-blocking */ }
     } catch (err) {
       console.error("Template upload error:", err);
