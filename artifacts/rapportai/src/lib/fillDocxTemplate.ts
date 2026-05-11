@@ -143,71 +143,54 @@ function replaceParagraphValue(para: string, value: string): string {
 // ─── Theme injection (two-pass) ───────────────────────────────────────────────
 
 /**
- * If no labeled theme field was found, inject the theme into the largest blank
- * paragraph between the last "header field" (FILIERE/OPTION) and the first
- * "body field" (Réalisé par / Soutenu publiquement le).
+ * If no labeled theme field was found, insert a brand-new theme paragraph
+ * directly before the first "body" paragraph (Réalisé par / Encadrant…).
  *
- * This handles EMSI-style templates where the theme area is a blank space with
- * no placeholder text — the student was expected to type directly.
+ * Why insert rather than modify an existing blank paragraph?
+ * Blank paragraphs in EMSI-style templates often carry inherited run properties
+ * (white color, hidden text, zero size) that make injected text invisible in
+ * docx-preview even though Word renders it. A freshly constructed paragraph
+ * with explicit formatting is guaranteed to be visible everywhere.
  */
-function injectThemeBetweenHeaderAndBody(xml: string, theme: string): string {
+function insertThemeBeforeBody(xml: string, theme: string): string {
   if (!theme.trim()) return xml;
 
-  // ── Locate boundaries ─────────────────────────────────────────────────────
-  // "Header" = last labeled field that comes before the blank theme area.
-  // We try several tiers in order of reliability.
-  // "Body" = first field that comes after the blank theme area.
-  let lastHeaderEnd = -1;
-  let firstBodyStart = -1;
-
+  // Find the first "body" paragraph (student info section)
   const scan = /<w:p[ >][\s\S]*?<\/w:p>/g;
   let m: RegExpExecArray | null;
+  let firstBodyStart = -1;
 
-  // Tier-1 header: labeled fields (FILIERE, OPTION, SPÉCIALITÉ, DÉPARTEMENT…)
-  // Tier-2 header: degree/report type heading (MÉMOIRE, PFE, RAPPORT…) — uppercase
-  // We keep the LAST match so lastHeaderEnd is as close as possible to the blank area.
   while ((m = scan.exec(xml)) !== null) {
     const t = getParaText(m[0]).trim();
     if (!t) continue;
-
-    const isLabeledHeader = /^(fili[eè]re|option|sp[eé]cialit[eé]|formation|cycle|d[eé]partement|branche|niv[eé]au)\s*:/i.test(t);
-    const isDegreeHeader  = /^(m[eé]moire|rapport|pfe|pfm|licence|master|doctorat|th[eè]se)\b/i.test(t);
-
-    if (isLabeledHeader || isDegreeHeader) {
-      lastHeaderEnd = m.index + m[0].length;
-    }
-
-    // Body starts at any student-info field
-    if (firstBodyStart === -1 &&
-      /r[eé]alis[eé]\s*par|pr[eé]sent[eé]\s*par|soutenu\s*publiquement|encadrant|encadreur|tuteur|ma[iî]tre\s*de\s*stage|par\s*:/i.test(t)) {
+    if (/r[eé]alis[eé]\s*par|pr[eé]sent[eé]\s*par|soutenu\s*publiquement|encadrant|encadreur|tuteur|ma[iî]tre\s*de\s*stage/i.test(t)) {
       firstBodyStart = m.index;
+      break;
     }
   }
 
-  if (lastHeaderEnd === -1 || firstBodyStart === -1 || lastHeaderEnd >= firstBodyStart) {
-    return xml; // can't identify the blank area
-  }
+  if (firstBodyStart === -1) return xml;
 
-  // ── Find blank paragraphs in the gap ──────────────────────────────────────
-  const gap = xml.slice(lastHeaderEnd, firstBodyStart);
-  const blankRe = /<w:p[ >][\s\S]*?<\/w:p>/g;
-  let lastBlank: { match: string; offsetInGap: number } | null = null;
+  // Build a new paragraph with fully explicit formatting so it renders in any
+  // viewer (Word, docx-preview, LibreOffice…).
+  const newPara =
+    `<w:p>` +
+      `<w:pPr>` +
+        `<w:jc w:val="center"/>` +
+        `<w:spacing w:before="160" w:after="160"/>` +
+      `</w:pPr>` +
+      `<w:r>` +
+        `<w:rPr>` +
+          `<w:b/>` +
+          `<w:color w:val="000000"/>` +
+          `<w:sz w:val="24"/>` +
+          `<w:szCs w:val="24"/>` +
+        `</w:rPr>` +
+        `<w:t xml:space="preserve">${xmlEsc(theme)}</w:t>` +
+      `</w:r>` +
+    `</w:p>`;
 
-  while ((m = blankRe.exec(gap)) !== null) {
-    if (!getParaText(m[0]).trim()) {
-      lastBlank = { match: m[0], offsetInGap: m.index };
-    }
-  }
-
-  if (!lastBlank) return xml; // no blank paragraphs to inject into
-
-  // ── Inject theme into the last blank paragraph ────────────────────────────
-  // Keep the paragraph's <w:pPr> (formatting), add a bold run with the theme.
-  const themeRunXml = `<w:r><w:rPr><w:b/><w:color w:val="auto"/></w:rPr><w:t xml:space="preserve">${xmlEsc(theme)}</w:t></w:r>`;
-  const filled = lastBlank.match.replace(/<\/w:p>$/, `${themeRunXml}</w:p>`);
-
-  const absPos = lastHeaderEnd + lastBlank.offsetInGap;
-  return xml.slice(0, absPos) + filled + xml.slice(absPos + lastBlank.match.length);
+  return xml.slice(0, firstBodyStart) + newPara + xml.slice(firstBodyStart);
 }
 
 // ─── Main export ──────────────────────────────────────────────────────────────
@@ -233,10 +216,9 @@ export async function fillDocxTemplate(
     processPara(para, d, juryValues, jury, themeState)
   );
 
-  // ── Pass 2: inject theme into blank area if not yet placed ────────────────
+  // ── Pass 2: insert theme before body if not yet placed by a label ────────
   if (!themeState.filled && d.theme) {
-    console.debug("[fillDocx] theme not found in pass 1 — injecting between header and body");
-    filled = injectThemeBetweenHeaderAndBody(filled, d.theme);
+    filled = insertThemeBeforeBody(filled, d.theme);
   }
 
   zip.file("word/document.xml", filled);

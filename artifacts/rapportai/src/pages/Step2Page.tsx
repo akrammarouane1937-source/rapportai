@@ -110,8 +110,8 @@ export default function Step2Page() {
       renderAsync(filledBuf, container, undefined, {
         className: "docx-preview-inner",
         inWrapper: false,
-        ignoreWidth: true,
-        ignoreHeight: false,
+        ignoreWidth: false,
+        ignoreHeight: true,
         ignoreFonts: false,
         breakPages: false,
         renderHeaders: true,
@@ -533,7 +533,7 @@ export default function Step2Page() {
               <motion.div
                 initial={{ opacity: 0, y: 8 }}
                 animate={{ opacity: 1, y: 0 }}
-                className="relative bg-white w-full max-w-[620px]"
+                className="relative bg-white w-full max-w-[780px]"
                 style={{ boxShadow: "0 8px 40px rgba(0,0,0,0.15)" }}
               >
                 <div className="flex items-center gap-2 px-4 py-2.5 border-b border-purple-100 bg-purple-50">
@@ -542,7 +542,7 @@ export default function Step2Page() {
                     : <><FileText className="w-3.5 h-3.5 text-purple-600 flex-shrink-0" /><p className="text-xs font-semibold text-purple-700 truncate flex-1">{templateName}</p><span className="text-[10px] text-purple-400 flex-shrink-0">Données insérées ✓</span></>
                   }
                 </div>
-                <div ref={previewContainerRef} className="docx-preview-container" style={{ minHeight: 600, overflow: "hidden" }} />
+                <div ref={previewContainerRef} className="docx-preview-container" />
               </motion.div>
             ) : (
 
