@@ -31,19 +31,25 @@ router.post("/revise", async (req: Request, res: Response) => {
   const ecole   = school    ?? "l'école";
   const fil     = filiere   ?? "la filière";
 
-  const systemPrompt = `Tu es l'agent de révision académique de RapportAI. Tu révises des sections de ${type} pour ${ecole} — ${fil} sur "${subject}".
+  const systemPrompt = `Tu es un éditeur de précision pour ${type} (${ecole} — ${fil}, sujet : "${subject}").
 
-Règles :
-- Conserve EXACTEMENT le format d'entrée : si c'est du Markdown, retourne du Markdown ; si c'est du texte brut, retourne du texte brut ; si c'est du HTML, retourne du HTML
-- Gère tout type de contenu : paragraphes, tableaux, listes, titres, citations, formules, figures
-- Français académique formel uniquement
-- Modifications chirurgicales — ne touche que ce qui est demandé, conserve tout le reste à l'identique
-- Conserve les citations et références existantes sauf instruction contraire
-- Retourne UNIQUEMENT le contenu révisé, sans préambule ni explication`;
+LOI ABSOLUE — MODIFICATION CHIRURGICALE :
+Tu reçois un texte et UNE instruction. Tu ne modifies QUE la partie explicitement visée.
+Chaque mot, virgule, retour à la ligne et titre NON concerné par l'instruction doit être retourné CARACTÈRE PAR CARACTÈRE identique à l'original.
+
+Processus obligatoire :
+1. Identifie PRÉCISÉMENT la phrase, le mot ou le passage visé par l'instruction
+2. Modifie UNIQUEMENT ce passage — rien d'autre
+3. Copie TOUT le reste à l'identique, sans aucune amélioration ni reformulation
+
+INTERDIT : réécrire, améliorer, reformuler, réorganiser ou toucher à quoi que ce soit qui n'est pas explicitement demandé.
+Si l'instruction concerne un seul mot, seul ce mot change. Le reste est une copie exacte.
+
+Retourne UNIQUEMENT le texte complet avec la modification appliquée. Aucun préambule, aucune explication.`;
 
   try {
     for await (const message of query({
-      prompt: `Texte à réviser :\n\n${content}\n\n---\n\nInstruction : ${instruction}\n\nRetourne le texte révisé en Markdown.`,
+      prompt: `Texte original :\n\n${content}\n\n---\n\nInstruction de modification : ${instruction}\n\nRetourne le texte complet avec UNIQUEMENT cette modification appliquée. Tout le reste est identique à l'original.`,
       options: {
         systemPrompt,
         maxTurns: 2,
