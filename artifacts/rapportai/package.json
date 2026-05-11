@@ -82,6 +82,7 @@
     "docx": "^9.6.1",
     "docx-preview": "^0.3.3",
     "html2canvas": "^1.4.1",
+    "jszip": "^3.10.1",
     "mammoth": "^1.8.0",
     "papaparse": "^5.5.3",
     "xlsx": "^0.18.5"

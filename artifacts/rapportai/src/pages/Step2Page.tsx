@@ -1,12 +1,13 @@
-import { useState, useRef, useEffect } from "react";
+import { useState, useRef, useEffect, useCallback } from "react";
 import { motion } from "framer-motion";
 import { useLocation } from "wouter";
-import { Upload, X, ArrowRight, Sparkles, University, FileText, Loader2, Download, Users } from "lucide-react";
+import { Upload, X, ArrowRight, Sparkles, University, FileText, Loader2, Download, Users, RefreshCw } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { StepLayout } from "@/components/report/StepLayout";
 import { saveReport, getReport, useAutoSave } from "@/lib/reportStore";
 import { ensureSession } from "@/lib/useGenerate";
 import { API_BASE } from "@/lib/apiBase";
+import { fillDocxTemplate, type DocxFillData } from "@/lib/fillDocxTemplate";
 
 const REPORT_TYPES = [
   { id: "PFE", label: "PFE", desc: "Projet de Fin d'Études" },
@@ -46,12 +47,103 @@ export default function Step2Page() {
   const [logoUrl,        setLogoUrl]        = useState<string | null>(stored.logoUrl ?? null);
   const [logoFetching,   setLogoFetching]   = useState(false);
   const [logoNotFound,   setLogoNotFound]   = useState(false);
+
   const [templateName,     setTemplateName]     = useState<string | null>(stored.coverTemplate ?? null);
   const [templateStatus,   setTemplateStatus]   = useState<"idle"|"uploading"|"ready"|"error">("idle");
-  const [templateArrayBuf, setTemplateArrayBuf] = useState<ArrayBuffer | null>(null);
+  const [rawTemplateBuf,   setRawTemplateBuf]   = useState<ArrayBuffer | null>(null);
+  const [filledBuf,        setFilledBuf]        = useState<ArrayBuffer | null>(null);
+  const [filling,          setFilling]          = useState(false);
+
   const previewContainerRef = useRef<HTMLDivElement>(null);
   const fileRef      = useRef<HTMLInputElement>(null);
   const templateRef  = useRef<HTMLInputElement>(null);
+  const fillTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  // Build fill data from current form state
+  const getFillData = useCallback((): DocxFillData => ({
+    studentName: student,
+    school,
+    filiere,
+    theme,
+    annee,
+    reportType,
+    encPeda,
+    encPro,
+    entreprise,
+    ville,
+    dateDebut,
+    dateFin,
+    jury1,
+    jury2,
+    jury3,
+  }), [student, school, filiere, theme, annee, reportType, encPeda, encPro, entreprise, ville, dateDebut, dateFin, jury1, jury2, jury3]);
+
+  // Fill the template and update filledBuf
+  const runFill = useCallback(async (buf: ArrayBuffer) => {
+    setFilling(true);
+    try {
+      const result = await fillDocxTemplate(buf, getFillData());
+      setFilledBuf(result);
+    } catch (e) {
+      console.error("fillDocxTemplate error:", e);
+      setFilledBuf(buf); // Fallback: use raw
+    } finally {
+      setFilling(false);
+    }
+  }, [getFillData]);
+
+  // Debounced re-fill when any form field changes (only if template is loaded)
+  useEffect(() => {
+    if (!rawTemplateBuf) return;
+    if (fillTimerRef.current) clearTimeout(fillTimerRef.current);
+    fillTimerRef.current = setTimeout(() => runFill(rawTemplateBuf), 800);
+    return () => { if (fillTimerRef.current) clearTimeout(fillTimerRef.current); };
+  }, [rawTemplateBuf, student, school, filiere, theme, annee, reportType, encPeda, encPro, entreprise, ville, dateDebut, dateFin, jury1, jury2, jury3, runFill]);
+
+  // Render filledBuf in docx-preview whenever it changes
+  useEffect(() => {
+    if (!filledBuf || !previewContainerRef.current) return;
+    const container = previewContainerRef.current;
+    container.innerHTML = "";
+
+    import("docx-preview").then(({ renderAsync }) => {
+      renderAsync(filledBuf, container, undefined, {
+        className: "docx-preview-inner",
+        inWrapper: false,
+        ignoreWidth: true,
+        ignoreHeight: false,
+        ignoreFonts: false,
+        breakPages: false,
+        renderHeaders: true,
+        renderFooters: true,
+        renderFootnotes: true,
+      }).then(async () => {
+        // Screenshot the rendered template and upload to session for agent vision
+        await new Promise(r => setTimeout(r, 500));
+        try {
+          const html2canvas = (await import("html2canvas")).default;
+          const canvas = await html2canvas(container, {
+            scale: 1.5,
+            useCORS: true,
+            allowTaint: true,
+            backgroundColor: "#ffffff",
+            logging: false,
+          });
+          canvas.toBlob(async (blob) => {
+            if (!blob) return;
+            try {
+              const sessionId = await ensureSession();
+              const fd = new FormData();
+              fd.append("file", blob, "template-screenshot.png");
+              await fetch(`${API_BASE}/api/session/${sessionId}/upload-document`, {
+                method: "POST", body: fd,
+              });
+            } catch { /* non-blocking */ }
+          }, "image/png");
+        } catch { /* non-blocking */ }
+      }).catch(console.error);
+    });
+  }, [filledBuf]);
 
   const handleLogo = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -77,51 +169,6 @@ export default function Step2Page() {
     }
   };
 
-  // Render docx-preview, then screenshot it and upload to session
-  useEffect(() => {
-    if (!templateArrayBuf || !previewContainerRef.current) return;
-    const container = previewContainerRef.current;
-    container.innerHTML = "";
-
-    import("docx-preview").then(({ renderAsync }) => {
-      renderAsync(templateArrayBuf, container, undefined, {
-        className: "docx-preview-inner",
-        inWrapper: false,
-        ignoreWidth: true,
-        ignoreHeight: false,
-        ignoreFonts: false,
-        breakPages: false,
-        renderHeaders: true,
-        renderFooters: true,
-        renderFootnotes: true,
-      }).then(async () => {
-        // Give DOM time to paint fully
-        await new Promise(r => setTimeout(r, 500));
-        try {
-          const html2canvas = (await import("html2canvas")).default;
-          const canvas = await html2canvas(container, {
-            scale: 1.5,
-            useCORS: true,
-            allowTaint: true,
-            backgroundColor: "#ffffff",
-            logging: false,
-          });
-          canvas.toBlob(async (blob) => {
-            if (!blob) return;
-            try {
-              const sessionId = await ensureSession();
-              const fd = new FormData();
-              fd.append("file", blob, "template-screenshot.png");
-              await fetch(`${API_BASE}/api/session/${sessionId}/upload-document`, {
-                method: "POST", body: fd,
-              });
-            } catch { /* non-blocking */ }
-          }, "image/png");
-        } catch { /* non-blocking */ }
-      }).catch(console.error);
-    });
-  }, [templateArrayBuf]);
-
   const handleTemplateUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
@@ -129,7 +176,7 @@ export default function Step2Page() {
     try {
       const arrayBuffer = await file.arrayBuffer();
 
-      // Use mammoth only to extract the logo image
+      // Extract logo from template with mammoth
       const mammoth = await import("mammoth");
       let extractedLogoUrl: string | null = null;
       await mammoth.convertToHtml(
@@ -146,105 +193,69 @@ export default function Step2Page() {
       );
       if (extractedLogoUrl && !logoUrl) setLogoUrl(extractedLogoUrl);
 
-      // Store buffer for docx-preview rendering
-      setTemplateArrayBuf(arrayBuffer);
+      setRawTemplateBuf(arrayBuffer);
       setTemplateName(file.name);
       setTemplateStatus("ready");
       saveReport({ coverTemplate: file.name });
 
-      // Upload .docx to session in background (non-blocking)
+      // Upload raw .docx to session in background
       try {
-        saveReport({ reportType, theme, school, filiere, annee, studentName: student, encadrantPeda: encPeda, encadrantPro: encPro, entreprise, ville, dateDebutStage: dateDebut, dateFinStage: dateFin, juryMember1: jury1, juryMember2: jury2, juryMember3: jury3 });
         const sessionId = await ensureSession();
-        const formData = new FormData();
-        formData.append("file", file);
-        await fetch(`${API_BASE}/api/session/${sessionId}/upload-document`, { method: "POST", body: formData });
-      } catch {
-        // Session upload failure doesn't block preview
-      }
+        const fd = new FormData();
+        fd.append("file", file);
+        await fetch(`${API_BASE}/api/session/${sessionId}/upload-document`, { method: "POST", body: fd });
+      } catch { /* non-blocking */ }
     } catch (err) {
       console.error("Template upload error:", err);
       setTemplateStatus("error");
     }
   };
 
-  // Word download — generates a .doc (HTML-based, opens in Word)
-  const handleDownloadWord = () => {
-    const accentHex = color.hex;
-    const html = `<!DOCTYPE html>
-<html>
-<head>
-<meta charset="UTF-8">
-<style>
-  @page { margin: 2.5cm; size: A4; }
-  body { font-family: 'Times New Roman', Times, serif; font-size: 12pt; color: #1a1a1a; margin: 0; padding: 0; }
-  .accent-bar-top { height: 8px; background: ${accentHex}; margin: -2.5cm -2.5cm 0 -2.5cm; }
-  .accent-bar-bottom { height: 4px; background: ${accentHex}; opacity: 0.6; margin: 0 -2.5cm -2.5cm -2.5cm; }
-  .cover { display: flex; flex-direction: column; min-height: 26cm; padding: 1cm 0; }
-  .school-block { text-align: center; margin-bottom: 2cm; }
-  .school-name { font-size: 14pt; font-weight: bold; text-transform: uppercase; letter-spacing: 2px; color: #1a1a1a; margin: 0; }
-  .filiere { font-size: 10pt; color: #555; margin-top: 4px; }
-  .divider { border: none; border-top: 1px solid ${accentHex}; opacity: 0.4; margin: 0.5cm 0; }
-  .type-badge { text-align: center; margin: 0.8cm 0; }
-  .type-badge span { font-size: 9pt; font-weight: bold; text-transform: uppercase; letter-spacing: 3px; color: ${accentHex}; border: 1px solid ${accentHex}; padding: 4px 16px; border-radius: 20px; }
-  .theme-block { flex: 1; display: flex; align-items: center; justify-content: center; text-align: center; padding: 1cm 0; }
-  .theme-title { font-size: 16pt; font-weight: bold; line-height: 1.5; color: #1a1a1a; }
-  .info-table { width: 100%; border-collapse: collapse; font-size: 10pt; margin-top: 1cm; }
-  .info-table td { padding: 3px 0; vertical-align: top; }
-  .info-table td:first-child { color: #888; width: 45%; }
-  .info-table td:last-child { font-weight: 600; text-align: right; }
-  .footer-row { display: flex; justify-content: space-between; margin-top: 0.8cm; font-size: 9pt; color: #888; border-top: 1px solid #e5e7eb; padding-top: 6px; }
-  .logo-placeholder { width: 64px; height: 64px; border: 1px dashed #ddd; display: inline-block; margin-bottom: 12px; text-align: center; line-height: 64px; font-size: 8pt; color: #bbb; }
-  img.logo { max-height: 64px; max-width: 160px; margin-bottom: 12px; display: block; margin-left: auto; margin-right: auto; }
-  .jury-section { margin-top: 0.5cm; }
-  .jury-title { font-size: 9pt; color: #888; margin-bottom: 3px; }
-  .jury-member { font-size: 10pt; font-weight: 600; }
-</style>
-</head>
-<body>
-<div class="accent-bar-top"></div>
-<div class="cover">
-  <div class="school-block">
-    ${logoUrl ? `<img class="logo" src="${logoUrl}" alt="Logo école" />` : '<div class="logo-placeholder">Logo</div>'}
-    <p class="school-name">${school || "École / Université"}</p>
-    ${filiere ? `<p class="filiere">${filiere}</p>` : ""}
-  </div>
-  <hr class="divider" />
-  <div class="type-badge"><span>${reportType}</span></div>
-  <div class="theme-block">
-    <p class="theme-title">${theme || "Titre du rapport"}</p>
-  </div>
-  <hr class="divider" />
-  <table class="info-table">
-    <tr><td>Réalisé par</td><td>${student || "—"}</td></tr>
-    ${encPeda ? `<tr><td>Encadrant pédagogique</td><td>${encPeda}</td></tr>` : ""}
-    ${encPro ? `<tr><td>Encadrant professionnel</td><td>${encPro}</td></tr>` : ""}
-    ${entreprise ? `<tr><td>Entreprise d'accueil</td><td>${entreprise}</td></tr>` : ""}
-    ${dateDebut || dateFin ? `<tr><td>Période de stage</td><td>${dateDebut || ""}${dateDebut && dateFin ? " — " : ""}${dateFin || ""}</td></tr>` : ""}
-  </table>
-  ${jury1 || jury2 || jury3 ? `
-  <div class="jury-section">
-    <p class="jury-title">Membres du jury</p>
-    ${jury1 ? `<p class="jury-member">${jury1}</p>` : ""}
-    ${jury2 ? `<p class="jury-member">${jury2}</p>` : ""}
-    ${jury3 ? `<p class="jury-member">${jury3}</p>` : ""}
-  </div>` : ""}
-  <div class="footer-row">
-    <span>${ville || ""}</span>
-    <span>${annee}</span>
-  </div>
-</div>
-<div class="accent-bar-bottom"></div>
-</body>
-</html>`;
-
-    const blob = new Blob(["﻿", html], { type: "application/msword" });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement("a");
-    a.href = url;
-    a.download = `page-de-garde-${student.replace(/\s+/g, "-") || "rapport"}.doc`;
-    a.click();
-    URL.revokeObjectURL(url);
+  // Download the filled .docx template (or a generated cover if no template)
+  const handleDownloadWord = async () => {
+    if (filledBuf) {
+      // Download the JSZip-filled template as a proper .docx
+      const blob = new Blob([filledBuf], {
+        type: "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+      });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = `page-de-garde-${(student || "rapport").replace(/\s+/g, "-")}.docx`;
+      a.click();
+      URL.revokeObjectURL(url);
+    } else {
+      // No template — generate a clean .docx using the docx package
+      const { Document, Packer, Paragraph, TextRun, AlignmentType, HeadingLevel } = await import("docx");
+      const doc = new Document({
+        sections: [{
+          properties: {},
+          children: [
+            new Paragraph({ alignment: AlignmentType.CENTER, spacing: { after: 400 }, children: [new TextRun({ text: school.toUpperCase() || "ÉCOLE", bold: true, size: 28, font: "Times New Roman" })] }),
+            filiere ? new Paragraph({ alignment: AlignmentType.CENTER, spacing: { after: 600 }, children: [new TextRun({ text: filiere, size: 22, font: "Times New Roman" })] }) : null,
+            new Paragraph({ alignment: AlignmentType.CENTER, spacing: { after: 200 }, children: [new TextRun({ text: reportType, bold: true, size: 20, font: "Times New Roman" })] }),
+            new Paragraph({ alignment: AlignmentType.CENTER, spacing: { after: 800 }, children: [new TextRun({ text: theme || "Titre du rapport", bold: true, size: 24, font: "Times New Roman" })] }),
+            new Paragraph({ alignment: AlignmentType.LEFT, spacing: { after: 200 }, children: [new TextRun({ text: `Réalisé par : ${student || "—"}`, size: 22, font: "Times New Roman" })] }),
+            encPeda ? new Paragraph({ alignment: AlignmentType.LEFT, spacing: { after: 100 }, children: [new TextRun({ text: `Encadrant pédagogique : ${encPeda}`, size: 22, font: "Times New Roman" })] }) : null,
+            encPro ? new Paragraph({ alignment: AlignmentType.LEFT, spacing: { after: 100 }, children: [new TextRun({ text: `Encadrant professionnel : ${encPro}`, size: 22, font: "Times New Roman" })] }) : null,
+            entreprise ? new Paragraph({ alignment: AlignmentType.LEFT, spacing: { after: 100 }, children: [new TextRun({ text: `Entreprise : ${entreprise}`, size: 22, font: "Times New Roman" })] }) : null,
+            dateDebut || dateFin ? new Paragraph({ alignment: AlignmentType.LEFT, spacing: { after: 100 }, children: [new TextRun({ text: `Période de stage : ${dateDebut ? new Date(dateDebut).toLocaleDateString("fr-FR") : ""} — ${dateFin ? new Date(dateFin).toLocaleDateString("fr-FR") : ""}`, size: 22, font: "Times New Roman" })] }) : null,
+            jury1 || jury2 || jury3 ? new Paragraph({ alignment: AlignmentType.LEFT, spacing: { before: 400, after: 100 }, children: [new TextRun({ text: "Membres du jury :", bold: true, size: 22, font: "Times New Roman" })] }) : null,
+            jury1 ? new Paragraph({ alignment: AlignmentType.LEFT, spacing: { after: 60 }, children: [new TextRun({ text: jury1, size: 22, font: "Times New Roman" })] }) : null,
+            jury2 ? new Paragraph({ alignment: AlignmentType.LEFT, spacing: { after: 60 }, children: [new TextRun({ text: jury2, size: 22, font: "Times New Roman" })] }) : null,
+            jury3 ? new Paragraph({ alignment: AlignmentType.LEFT, spacing: { after: 60 }, children: [new TextRun({ text: jury3, size: 22, font: "Times New Roman" })] }) : null,
+            new Paragraph({ alignment: AlignmentType.CENTER, spacing: { before: 600 }, children: [new TextRun({ text: `${ville || ""}   ${annee}`, size: 22, font: "Times New Roman" })] }),
+          ].filter(Boolean) as Paragraph[],
+        }],
+      });
+      const blob = await Packer.toBlob(doc);
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = `page-de-garde-${(student || "rapport").replace(/\s+/g, "-")}.docx`;
+      a.click();
+      URL.revokeObjectURL(url);
+    }
   };
 
   const handleContinue = () => {
@@ -273,7 +284,7 @@ export default function Step2Page() {
     <StepLayout stepId={2} fullHeight>
       <div className="flex h-full overflow-hidden">
 
-        {/* LEFT — Form 40% */}
+        {/* LEFT — Form */}
         <div className="overflow-y-auto flex-shrink-0 flex flex-col" style={{ width: "40%", borderRight: "1px solid #e5e7eb" }}>
           <div className="flex-1 p-6 space-y-5 pb-32">
             <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }}>
@@ -400,7 +411,10 @@ export default function Step2Page() {
               <label className="block text-sm font-semibold text-gray-700 mb-1.5">
                 Modèle Word de votre école <span className="text-xs font-normal text-gray-400">(recommandé)</span>
               </label>
-              <p className="text-xs text-gray-400 mb-2">90% des encadrants imposent leur propre template. Importez-le et l'IA respectera sa structure exacte.{!canContinue && <span className="text-orange-400"> (Remplis d'abord les champs obligatoires *)</span>}</p>
+              <p className="text-xs text-gray-400 mb-2">
+                Importez le template de votre école — vos données seront insérées automatiquement dans l'aperçu.
+                {!canContinue && <span className="text-orange-400"> (Remplis d'abord les champs * ci-dessus)</span>}
+              </p>
               <input ref={templateRef} type="file" accept=".docx,.doc" className="hidden" onChange={handleTemplateUpload} />
               {templateStatus === "ready" || templateName ? (
                 <div className="flex items-center gap-3 border border-green-200 bg-green-50 rounded-xl p-3">
@@ -409,9 +423,9 @@ export default function Step2Page() {
                   </div>
                   <div className="flex-1 min-w-0">
                     <p className="text-sm font-medium text-green-700 truncate">{templateName}</p>
-                    <p className="text-xs text-green-500">L'IA utilisera ce modèle</p>
+                    <p className="text-xs text-green-500">{filling ? "Remplissage en cours…" : "Aperçu mis à jour automatiquement"}</p>
                   </div>
-                  <button onClick={() => { setTemplateName(null); setTemplateStatus("idle"); setTemplateArrayBuf(null); saveReport({ coverTemplate: undefined }); }}
+                  <button onClick={() => { setTemplateName(null); setTemplateStatus("idle"); setRawTemplateBuf(null); setFilledBuf(null); saveReport({ coverTemplate: undefined }); }}
                     className="text-xs text-red-400 hover:text-red-600">
                     <X className="w-3.5 h-3.5" />
                   </button>
@@ -465,9 +479,9 @@ export default function Step2Page() {
               {logoNotFound && <p className="text-xs text-orange-500 mt-1">Logo introuvable automatiquement — importe-le manuellement.</p>}
             </div>
 
-            {/* Accent color */}
+            {/* Accent color (used for no-template preview only) */}
             <div>
-              <label className="block text-sm font-semibold text-gray-700 mb-2">Couleur d'accentuation</label>
+              <label className="block text-sm font-semibold text-gray-700 mb-2">Couleur d'accentuation <span className="text-xs font-normal text-gray-400">(aperçu sans template)</span></label>
               <div className="flex gap-2">
                 {COLORS.map(c => (
                   <button key={c.id} onClick={() => setColor(c)} title={c.label}
@@ -480,10 +494,13 @@ export default function Step2Page() {
 
           {/* Sticky buttons */}
           <div className="sticky bottom-0 bg-white border-t border-gray-100 p-4 flex-shrink-0 space-y-2">
-            <Button onClick={handleDownloadWord}
+            <Button onClick={handleDownloadWord} disabled={filling}
               variant="outline"
               className="w-full h-10 border-purple-200 text-purple-700 hover:bg-purple-50 font-semibold text-sm rounded-xl flex items-center justify-center gap-2">
-              <Download className="w-4 h-4" /> Télécharger en Word (.doc)
+              {filling
+                ? <><Loader2 className="w-4 h-4 animate-spin" /> Remplissage…</>
+                : <><Download className="w-4 h-4" /> Télécharger (.docx)</>
+              }
             </Button>
             <Button onClick={handleContinue} disabled={!canContinue}
               className="w-full h-12 bg-purple-600 hover:bg-purple-700 text-white font-bold text-sm rounded-xl flex items-center justify-center gap-2 disabled:opacity-40"
@@ -493,104 +510,59 @@ export default function Step2Page() {
           </div>
         </div>
 
-        {/* RIGHT — Live cover preview 60% */}
+        {/* RIGHT — Preview */}
         <div className="flex-1 overflow-y-auto flex items-start justify-center" style={{ background: "#e5e7eb" }}>
           <div className="py-10 px-6 flex flex-col items-center w-full gap-4">
 
-            {/* Template preview — rendered by docx-preview (faithful Word rendering) */}
-            {templateArrayBuf ? (
+            {filledBuf ? (
+              /* Filled template preview */
               <motion.div
                 initial={{ opacity: 0, y: 8 }}
                 animate={{ opacity: 1, y: 0 }}
                 className="relative bg-white w-full max-w-[620px]"
                 style={{ boxShadow: "0 8px 40px rgba(0,0,0,0.15)" }}
               >
-                <div className="flex items-center gap-2 px-6 py-3 border-b border-green-100 bg-green-50">
-                  <FileText className="w-4 h-4 text-green-600 flex-shrink-0" />
-                  <p className="text-xs font-semibold text-green-700 truncate flex-1">{templateName}</p>
-                  <span className="text-[10px] text-green-500 flex-shrink-0">Aperçu fidèle</span>
+                <div className="flex items-center gap-2 px-4 py-2.5 border-b border-purple-100 bg-purple-50">
+                  {filling
+                    ? <><Loader2 className="w-3.5 h-3.5 text-purple-500 animate-spin flex-shrink-0" /><p className="text-xs text-purple-600 font-medium">Mise à jour de l'aperçu…</p></>
+                    : <><FileText className="w-3.5 h-3.5 text-purple-600 flex-shrink-0" /><p className="text-xs font-semibold text-purple-700 truncate flex-1">{templateName}</p><span className="text-[10px] text-purple-400 flex-shrink-0">Données insérées ✓</span></>
+                  }
                 </div>
                 <div ref={previewContainerRef} className="docx-preview-container" style={{ minHeight: 600, overflow: "hidden" }} />
               </motion.div>
             ) : (
 
-            /* Live preview — built from form data in real-time */
-            <motion.div
-              layout
-              className="relative bg-white w-full max-w-[500px]"
-              style={{ minHeight: 720, boxShadow: "0 8px 40px rgba(0,0,0,0.15)" }}
-            >
-              {/* Accent bar top */}
+            /* Live preview — no template loaded */
+            <motion.div layout className="relative bg-white w-full max-w-[500px]"
+              style={{ minHeight: 720, boxShadow: "0 8px 40px rgba(0,0,0,0.15)" }}>
               <div className="h-2 w-full" style={{ background: color.hex }} />
-
-              {/* Body */}
               <div className="px-12 py-10 flex flex-col" style={{ minHeight: 700, fontFamily: "Times New Roman, serif" }}>
-
-                {/* Logo + School */}
                 <div className="flex flex-col items-center mb-8">
-                  {logoUrl ? (
-                    <img src={logoUrl} alt="logo" className="h-16 object-contain mb-3" />
-                  ) : (
-                    <div className="w-16 h-16 rounded-xl flex items-center justify-center mb-3" style={{ background: `${color.hex}18` }}>
-                      <University className="w-8 h-8" style={{ color: color.hex }} />
-                    </div>
-                  )}
-                  <p className="text-sm font-bold text-center text-gray-800 uppercase tracking-widest">
-                    {school || "École / Université"}
-                  </p>
-                  {filiere && (
-                    <p className="text-xs text-gray-500 text-center mt-1">{filiere}</p>
-                  )}
+                  {logoUrl
+                    ? <img src={logoUrl} alt="logo" className="h-16 object-contain mb-3" />
+                    : <div className="w-16 h-16 rounded-xl flex items-center justify-center mb-3" style={{ background: `${color.hex}18` }}><University className="w-8 h-8" style={{ color: color.hex }} /></div>
+                  }
+                  <p className="text-sm font-bold text-center text-gray-800 uppercase tracking-widest">{school || "École / Université"}</p>
+                  {filiere && <p className="text-xs text-gray-500 text-center mt-1">{filiere}</p>}
                 </div>
-
-                {/* Divider */}
                 <div className="h-px my-2" style={{ background: color.hex, opacity: 0.4 }} />
-
-                {/* Type badge */}
                 <div className="flex justify-center my-4">
-                  <span className="text-xs font-bold uppercase tracking-[0.2em] px-4 py-1.5 rounded-full"
-                    style={{ background: `${color.hex}18`, color: color.hex }}>
-                    {reportType}
-                  </span>
+                  <span className="text-xs font-bold uppercase tracking-[0.2em] px-4 py-1.5 rounded-full" style={{ background: `${color.hex}18`, color: color.hex }}>{reportType}</span>
                 </div>
-
-                {/* Theme title */}
                 <div className="flex-1 flex flex-col items-center justify-center text-center py-6">
                   <h1 className="text-[15px] font-bold leading-snug text-gray-900" style={{ fontFamily: "Times New Roman, serif" }}>
                     {theme || <span className="text-gray-300 italic">Titre de votre rapport...</span>}
                   </h1>
                 </div>
-
-                {/* Divider */}
                 <div className="h-px my-2" style={{ background: color.hex, opacity: 0.4 }} />
-
-                {/* Footer info */}
-                <div className="mt-6 space-y-2 text-xs text-gray-600" style={{ fontFamily: "Times New Roman, serif" }}>
-                  <div className="flex justify-between">
-                    <span className="text-gray-400">Réalisé par</span>
-                    <span className="font-medium text-right">{student || "Prénom NOM"}</span>
-                  </div>
-                  {encPeda && (
-                    <div className="flex justify-between">
-                      <span className="text-gray-400">Encadrant péda.</span>
-                      <span className="font-medium text-right">{encPeda}</span>
-                    </div>
-                  )}
-                  {encPro && (
-                    <div className="flex justify-between">
-                      <span className="text-gray-400">Encadrant pro.</span>
-                      <span className="font-medium text-right">{encPro}</span>
-                    </div>
-                  )}
-                  {entreprise && (
-                    <div className="flex justify-between">
-                      <span className="text-gray-400">Entreprise</span>
-                      <span className="font-medium text-right">{entreprise}</span>
-                    </div>
-                  )}
+                <div className="mt-6 space-y-2 text-xs text-gray-600">
+                  <div className="flex justify-between"><span className="text-gray-400">Réalisé par</span><span className="font-medium">{student || "Prénom NOM"}</span></div>
+                  {encPeda && <div className="flex justify-between"><span className="text-gray-400">Encadrant péda.</span><span className="font-medium">{encPeda}</span></div>}
+                  {encPro && <div className="flex justify-between"><span className="text-gray-400">Encadrant pro.</span><span className="font-medium">{encPro}</span></div>}
+                  {entreprise && <div className="flex justify-between"><span className="text-gray-400">Entreprise</span><span className="font-medium">{entreprise}</span></div>}
                   {(dateDebut || dateFin) && (
                     <div className="flex justify-between">
-                      <span className="text-gray-400">Période de stage</span>
+                      <span className="text-gray-400">Période stage</span>
                       <span className="font-medium text-right">
                         {dateDebut && new Date(dateDebut).toLocaleDateString("fr-MA", { day: "numeric", month: "short", year: "numeric" })}
                         {dateDebut && dateFin && " — "}
@@ -607,67 +579,20 @@ export default function Step2Page() {
                     </div>
                   )}
                 </div>
-
-                {/* Bottom: city + year */}
                 <div className="mt-6 flex justify-between items-center text-xs text-gray-400">
                   <span>{ville || "Ville"}</span>
                   <div className="h-px flex-1 mx-3" style={{ background: "#e5e7eb" }} />
                   <span>{annee}</span>
                 </div>
               </div>
-
-              {/* Accent bar bottom */}
               <div className="h-1 w-full" style={{ background: color.hex, opacity: 0.5 }} />
             </motion.div>
 
-            )} {/* end templateArrayBuf conditional */}
-
-            {/* Info overlay when template is loaded — shows what agent will fill */}
-            {templateArrayBuf && (
-              <motion.div
-                initial={{ opacity: 0, y: 6 }}
-                animate={{ opacity: 1, y: 0 }}
-                className="w-full max-w-[620px] bg-white rounded-2xl border border-purple-100 p-4"
-                style={{ boxShadow: "0 2px 12px rgba(124,58,237,0.08)" }}
-              >
-                <div className="flex items-center gap-2 mb-3">
-                  <Sparkles className="w-3.5 h-3.5 text-purple-500" />
-                  <p className="text-xs font-semibold text-purple-700">Informations que l'IA va insérer dans le template</p>
-                </div>
-                <div className="grid grid-cols-2 gap-x-6 gap-y-1.5 text-xs">
-                  <InfoRow label="Étudiant" value={student} />
-                  <InfoRow label="École" value={school} />
-                  <InfoRow label="Filière" value={filiere} />
-                  <InfoRow label="Thème" value={theme} />
-                  <InfoRow label="Année" value={annee} />
-                  <InfoRow label="Type" value={reportType} />
-                  {encPeda && <InfoRow label="Enc. péda." value={encPeda} />}
-                  {encPro && <InfoRow label="Enc. pro." value={encPro} />}
-                  {entreprise && <InfoRow label="Entreprise" value={entreprise} />}
-                  {ville && <InfoRow label="Ville" value={ville} />}
-                  {dateDebut && <InfoRow label="Début stage" value={new Date(dateDebut).toLocaleDateString("fr-MA", { day: "numeric", month: "long", year: "numeric" })} />}
-                  {dateFin && <InfoRow label="Fin stage" value={new Date(dateFin).toLocaleDateString("fr-MA", { day: "numeric", month: "long", year: "numeric" })} />}
-                  {jury1 && <InfoRow label="Jury 1" value={jury1} />}
-                  {jury2 && <InfoRow label="Jury 2" value={jury2} />}
-                  {jury3 && <InfoRow label="Jury 3" value={jury3} />}
-                </div>
-              </motion.div>
             )}
-
           </div>
         </div>
 
       </div>
     </StepLayout>
-  );
-}
-
-function InfoRow({ label, value }: { label: string; value: string }) {
-  if (!value) return null;
-  return (
-    <div className="flex gap-2">
-      <span className="text-gray-400 flex-shrink-0 w-24">{label}</span>
-      <span className="text-gray-700 font-medium truncate">{value}</span>
-    </div>
   );
 }
