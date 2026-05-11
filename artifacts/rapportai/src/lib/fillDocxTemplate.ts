@@ -152,27 +152,52 @@ function replaceParagraphValue(para: string, value: string): string {
  * docx-preview even though Word renders it. A freshly constructed paragraph
  * with explicit formatting is guaranteed to be visible everywhere.
  */
+const BODY_MARKER = /r[eé]alis[eé]\s*par|pr[eé]sent[eé]\s*par|soutenu\s*publiquement|encadrant|encadreur|tuteur|ma[iî]tre\s*de\s*stage/i;
+
+/**
+ * Find the correct insertion point for the theme paragraph.
+ *
+ * Critical: in many templates (EMSI, etc.) the student-info section lives inside
+ * a <w:tbl>.  Inserting a bare <w:p> at the position of a paragraph that is
+ * INSIDE a table corrupts the OOXML structure.
+ *
+ * Strategy:
+ *  1. Find the first paragraph that matches a body marker.
+ *  2. Walk BACKWARDS from that position in the raw XML string.
+ *     If we encounter a <w:tbl start before encountering a matching </w:tbl>,
+ *     the paragraph is inside a table → use that <w:tbl position as the
+ *     insertion point (we insert BEFORE the whole table).
+ *  3. Otherwise the paragraph is a top-level paragraph → insert before it.
+ */
 function insertThemeBeforeBody(xml: string, theme: string): string {
   if (!theme.trim()) return xml;
 
-  // Find the first "body" paragraph (student info section)
   const scan = /<w:p[ >][\s\S]*?<\/w:p>/g;
   let m: RegExpExecArray | null;
-  let firstBodyStart = -1;
+  let bodyParaPos = -1;
 
   while ((m = scan.exec(xml)) !== null) {
     const t = getParaText(m[0]).trim();
     if (!t) continue;
-    if (/r[eé]alis[eé]\s*par|pr[eé]sent[eé]\s*par|soutenu\s*publiquement|encadrant|encadreur|tuteur|ma[iî]tre\s*de\s*stage/i.test(t)) {
-      firstBodyStart = m.index;
+    if (BODY_MARKER.test(t)) {
+      bodyParaPos = m.index;
       break;
     }
   }
 
-  if (firstBodyStart === -1) return xml;
+  if (bodyParaPos === -1) return xml;
 
-  // Build a new paragraph with fully explicit formatting so it renders in any
-  // viewer (Word, docx-preview, LibreOffice…).
+  // ── Check whether bodyParaPos is inside a <w:tbl> ─────────────────────
+  const before = xml.slice(0, bodyParaPos);
+  const lastTblOpen  = before.lastIndexOf("<w:tbl");
+  const lastTblClose = before.lastIndexOf("</w:tbl>");
+
+  // If the most recent tbl tag is an OPEN (not a close), the paragraph is
+  // inside a table — insert before the table's opening tag instead.
+  const insertionPoint = (lastTblOpen > lastTblClose)
+    ? lastTblOpen
+    : bodyParaPos;
+
   const newPara =
     `<w:p>` +
       `<w:pPr>` +
@@ -190,7 +215,7 @@ function insertThemeBeforeBody(xml: string, theme: string): string {
       `</w:r>` +
     `</w:p>`;
 
-  return xml.slice(0, firstBodyStart) + newPara + xml.slice(firstBodyStart);
+  return xml.slice(0, insertionPoint) + newPara + xml.slice(insertionPoint);
 }
 
 // ─── Main export ──────────────────────────────────────────────────────────────

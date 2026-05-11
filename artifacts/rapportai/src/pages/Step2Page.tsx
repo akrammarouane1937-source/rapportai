@@ -110,7 +110,7 @@ export default function Step2Page() {
       renderAsync(filledBuf, container, undefined, {
         className: "docx-preview-inner",
         inWrapper: false,
-        ignoreWidth: false,
+        ignoreWidth: true,
         ignoreHeight: true,
         ignoreFonts: false,
         breakPages: false,
