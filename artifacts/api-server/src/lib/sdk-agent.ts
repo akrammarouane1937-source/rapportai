@@ -3,6 +3,7 @@ import { mkdirSync, writeFileSync, readFileSync, existsSync, rmSync } from "fs";
 import path from "path";
 import type { StreamEvent } from "./agent-session";
 import { findClaudeBinary } from "./find-claude-binary";
+import { schoolContext } from "./moroccan-schools";
 
 // Per-user working directory — each session gets isolated storage
 const SESSIONS_ROOT = "/tmp/rapportai-sessions";
@@ -285,7 +286,10 @@ Sauvegarde les changements dans ${sectionId}.md.`;
 function buildSystemPrompt(p: ReportProfile): string {
   const style = p.citationStyle ?? "APA 7th ed.";
 
+  const schoolFull = schoolContext(p.school);
+
   return `Tu es l'agent de rédaction académique de RapportAI — une instance Claude Code dédiée au rapport de ${p.studentName}.
+École : ${schoolFull}
 
 ## Ton environnement
 Tu travailles dans un dossier dédié à ce rapport. Tous les fichiers sont là :

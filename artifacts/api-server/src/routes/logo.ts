@@ -1,6 +1,7 @@
 import { Router, type Request, type Response } from "express";
 import { query } from "@anthropic-ai/claude-agent-sdk";
 import { findClaudeBinary } from "../lib/find-claude-binary";
+import { resolveSchool } from "../lib/moroccan-schools";
 
 const router = Router();
 
@@ -12,34 +13,42 @@ router.get("/logo", async (req: Request, res: Response) => {
   }
 
   const claudeBinary = findClaudeBinary();
+  const schoolInfo = resolveSchool(school);
+  const fullName = schoolInfo.fullName;
+  const abbr = school.toLowerCase().replace(/\s+/g, "");
+
+  // Build URL candidates — use known website first if available
+  const knownSite = schoolInfo.website ? [`https://${schoolInfo.website}`, `https://www.${schoolInfo.website}`] : [];
+  const guessed = [
+    `https://${abbr}.ac.ma`,
+    `https://www.${abbr}.ac.ma`,
+    `https://${abbr}.ma`,
+    `https://${abbr}-casablanca.ac.ma`,
+    `https://${abbr}-rabat.ac.ma`,
+    `https://${abbr}-fes.ac.ma`,
+  ];
+  const urls = [...new Set([...knownSite, ...guessed])].join(", ");
 
   try {
     let fullText = "";
 
-    const abbr = school.toLowerCase().replace(/\s+/g, "");
-    const urls = [
-      `https://${abbr}.ac.ma`,
-      `https://www.${abbr}.ac.ma`,
-      `https://${abbr}.ma`,
-      `https://www.${abbr}.ma`,
-      `https://${abbr}-casablanca.ac.ma`,
-      `https://${abbr}-rabat.ac.ma`,
-    ].join(", ");
-
     for await (const message of query({
-      prompt: `Find the official logo URL for this Moroccan school: "${school}".
+      prompt: `Find the official logo URL for this Moroccan school.
+Abbreviation: "${school}"
+Full name: "${fullName}"
 
-Try these URLs in order using WebFetch until one works: ${urls}
+Try these URLs in order using WebFetch until one responds: ${urls}
 
 For each URL that responds:
-- Look in the HTML for <img> tags where src, alt, or class contains "logo", "brand", or the school abbreviation
-- Also check <link rel="icon"> for favicon as fallback
-- Prefer PNG or SVG, must be an absolute URL (starting with https://)
+- Look for <img> tags where src, alt, or class contains "logo", "brand", or the school name/abbreviation
+- Also check <link rel="icon"> or <link rel="shortcut icon"> as fallback
+- Prefer PNG or SVG over JPG, must be an absolute URL (starting with https://)
+- If the URL is relative (starts with /), prepend the domain
 
 Reply with ONLY this JSON (no explanation, no markdown):
 {"logoUrl":"https://..."} or {"logoUrl":null}`,
       options: {
-        systemPrompt: "You are a logo finder. Use WebFetch to browse Moroccan school websites and find their logo image URL. Always reply with JSON only: {\"logoUrl\":\"...\"} or {\"logoUrl\":null}.",
+        systemPrompt: `You are a logo finder for Moroccan schools. Use WebFetch to browse school websites and extract logo URLs. Always reply with JSON only: {"logoUrl":"..."} or {"logoUrl":null}.`,
         maxTurns: 8,
         allowedTools: ["WebFetch"],
         ...(claudeBinary ? { pathToClaudeCodeExecutable: claudeBinary } : {}),
