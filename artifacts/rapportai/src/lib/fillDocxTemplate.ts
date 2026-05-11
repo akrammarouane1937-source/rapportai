@@ -189,7 +189,16 @@ export async function fillDocxTemplate(
 
   const juryValues = [d.jury1, d.jury2, d.jury3].filter(Boolean);
   const jury = { idx: 0 };
-  const themeState = { filled: false };
+  const themeState = { filled: false, nextIsTheme: false };
+
+  // Log all non-empty paragraph texts so we can see the template structure
+  const allParas: string[] = [];
+  xml.replace(/<w:p[ >][\s\S]*?<\/w:p>/g, (para) => {
+    const t = getParaText(para).trim();
+    if (t) allParas.push(t);
+    return para;
+  });
+  console.debug("[fillDocx] paragraphs:", allParas);
 
   const filled = xml.replace(/<w:p[ >][\s\S]*?<\/w:p>/g, (para) =>
     processPara(para, d, juryValues, jury, themeState)
@@ -212,7 +221,7 @@ function processPara(
   d: DocxFillData,
   juryValues: string[],
   jury: { idx: number },
-  themeState: { filled: boolean }
+  themeState: { filled: boolean; nextIsTheme: boolean }
 ): string {
   const text = getParaText(para);
   if (!text.trim()) return para;
@@ -266,11 +275,28 @@ function processPara(
     return replaceParagraphValue(para, d.annee);
   }
 
-  // ── Theme / title — labeled ───────────────────────────────────────────────
-  if (/th[eè]me\s*:|sujet\s*:|intitul[eé]\s*:|titre\s*(du\s*)?(rapport|stage|m[eé]moire|pfe)/i.test(t)) {
+  // ── Theme / title — labeled with colon on same line ─────────────────────
+  if (/th[eè]me\s*:|sujet\s*:|intitul[eé]\s*:|titre\s*(du\s*)?(rapport|stage|m[eé]moire|pfe)\s*:/i.test(t)) {
+    themeState.nextIsTheme = false;
     themeState.filled = true;
     return replaceParagraphValue(para, d.theme);
   }
+
+  // ── Theme label on its OWN line (no colon, value on next paragraph) ──────
+  if (/^(th[eè]me|sujet|intitul[eé])(\s*(du|de)\s*(pfe|stage|rapport|m[eé]moire))?\s*[:\s]*$/i.test(t.trim())) {
+    themeState.nextIsTheme = true;
+    console.debug("[fillDocx] theme label detected, next para will be theme:", t);
+    return para; // Keep the label paragraph unchanged
+  }
+
+  // ── Paragraph immediately after a theme label ────────────────────────────
+  if (themeState.nextIsTheme && !themeState.filled) {
+    themeState.nextIsTheme = false;
+    themeState.filled = true;
+    console.debug("[fillDocx] filling next-theme paragraph:", t);
+    return replaceParagraphValue(para, d.theme);
+  }
+  themeState.nextIsTheme = false; // Reset if we hit any non-blank paragraph
 
   // ── Jury members — only lines that contain dots ───────────────────────────
   if (/^(pr\.|dr\.|m\.|mme\.?)\s*/i.test(t.trim()) && /\.{3,}/.test(t)) {
@@ -279,12 +305,15 @@ function processPara(
     return val ? replaceParagraphValue(para, val) : para;
   }
 
-  // ── Theme fallback — unlabeled all-dots paragraph (e.g. "………………………") ──
-  // Only fires if no label was detected above, theme hasn't been filled yet,
-  // and the paragraph is made entirely of placeholder characters.
-  if (!themeState.filled && d.theme && isDotsOnly(t)) {
-    themeState.filled = true;
-    return replaceParagraphValue(para, d.theme);
+  // ── Theme fallback — dots-only or underscores-only paragraph ─────────────
+  // Fires only if no label matched above and theme not yet filled.
+  if (!themeState.filled && d.theme) {
+    const isUnderscores = /^[_\s]+$/.test(t) && t.replace(/\s/g, "").length >= 5;
+    if (isDotsOnly(t) || isUnderscores) {
+      themeState.filled = true;
+      console.debug("[fillDocx] theme fallback (dots/underscores):", t);
+      return replaceParagraphValue(para, d.theme);
+    }
   }
 
   return para;
