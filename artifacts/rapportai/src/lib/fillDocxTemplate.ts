@@ -52,12 +52,11 @@ function frDate(iso: string): string {
 
 interface TextMatch {
   index: number;
-  full: string;   // the entire <w:t ...>...</w:t> string
-  attrs: string;  // attributes inside <w:t ...>
-  text: string;   // inner text (raw, not decoded)
+  full: string;
+  attrs: string;
+  text: string;
 }
 
-/** Extract all <w:t> elements with their byte positions in the paragraph string. */
 function extractTextRuns(para: string): TextMatch[] {
   const pattern = /<w:t([^>]*)>([^<]*)<\/w:t>/g;
   const out: TextMatch[] = [];
@@ -70,19 +69,8 @@ function extractTextRuns(para: string): TextMatch[] {
 
 /**
  * Replace a field value in a paragraph using exact character-index splicing.
- *
- * Why index-based?  String.replace(str, repl) replaces the FIRST occurrence of
- * `str` — when several <w:t> elements share the same text (e.g. "." repeated
- * across multiple runs), repeated calls to .replace() would silently modify the
- * wrong run.  Splicing by position is unambiguous.
- *
- * Algorithm:
- *  1. Find the run that contains the field's colon separator.
- *  2. Keep the label (text up to ":"), append " " + value.
- *  3. Clear ALL subsequent <w:t> runs (removes dots, date fragments, "Mme/M.", etc.).
- *
- * Fallback (no-colon paragraphs, e.g. "Pr. ……" or all-dots theme placeholder):
- *  Replace the trailing dots while keeping any prefix ("Pr. ").
+ * Finds the colon-bearing run, keeps its label, inserts the value, clears all
+ * subsequent runs (removes trailing dots, date fragments, etc.).
  */
 function replaceParagraphValue(para: string, value: string): string {
   if (!value.trim()) return para;
@@ -91,7 +79,7 @@ function replaceParagraphValue(para: string, value: string): string {
   const runs = extractTextRuns(para);
   if (runs.length === 0) return para;
 
-  // ── Find the run that contains the label colon ──────────────────────────
+  // Find the run containing the colon
   let colonRunIdx = -1;
   let colonPos = -1;
   for (let i = 0; i < runs.length; i++) {
@@ -101,21 +89,18 @@ function replaceParagraphValue(para: string, value: string): string {
 
   if (colonRunIdx !== -1) {
     const cr = runs[colonRunIdx];
-    const labelText = cr.text.substring(0, colonPos + 1); // "Label :" kept
+    const labelText = cr.text.substring(0, colonPos + 1);
     const newRunStr = `<w:t${cr.attrs}>${xmlEsc(labelText)} ${esc}</w:t>`;
 
-    // Build result with index-based splicing (offset tracks string length changes)
     let result = para;
     let offset = 0;
 
-    // Replace the colon run
     result =
       result.slice(0, cr.index + offset) +
       newRunStr +
       result.slice(cr.index + offset + cr.full.length);
     offset += newRunStr.length - cr.full.length;
 
-    // Clear every run that comes AFTER the colon run
     for (let i = colonRunIdx + 1; i < runs.length; i++) {
       const tr = runs[i];
       const emptyRun = `<w:t${tr.attrs}></w:t>`;
@@ -130,25 +115,7 @@ function replaceParagraphValue(para: string, value: string): string {
     return result;
   }
 
-  // ── Fallback: no colon — paragraph like "Pr. ………" or all-dots theme ──
-  // Keep whatever prefix precedes the dots, replace dots onward with value.
-  const noColonResult = para.replace(
-    /<w:t([^>]*)>([^<]*?)(\.{3,}|[…‥]+|[.…‥\s]{5,})([^<]*)<\/w:t>/,
-    `<w:t$1>$2${esc}</w:t>`
-  );
-  if (noColonResult !== para) return noColonResult;
-
-  // ── Replace ALL runs with the value in the first run, clear the rest ──
-  if (runs.length === 1) {
-    const r = runs[0];
-    return (
-      para.slice(0, r.index) +
-      `<w:t${r.attrs}>${esc}</w:t>` +
-      para.slice(r.index + r.full.length)
-    );
-  }
-
-  // Multiple runs, no colon — put value in first run, clear others
+  // Fallback: replace first run's text, clear the rest
   let result = para;
   let offset = 0;
   const first = runs[0];
@@ -173,6 +140,68 @@ function replaceParagraphValue(para: string, value: string): string {
   return result;
 }
 
+// ─── Theme injection (two-pass) ───────────────────────────────────────────────
+
+/**
+ * If no labeled theme field was found, inject the theme into the largest blank
+ * paragraph between the last "header field" (FILIERE/OPTION) and the first
+ * "body field" (Réalisé par / Soutenu publiquement le).
+ *
+ * This handles EMSI-style templates where the theme area is a blank space with
+ * no placeholder text — the student was expected to type directly.
+ */
+function injectThemeBetweenHeaderAndBody(xml: string, theme: string): string {
+  if (!theme.trim()) return xml;
+
+  // ── Locate boundaries ──────────────────────────────────────────────────────
+  let lastHeaderEnd = -1;  // end position of the last FILIERE/OPTION paragraph
+  let firstBodyStart = -1; // start position of the first Réalisé par paragraph
+
+  const scan = /<w:p[ >][\s\S]*?<\/w:p>/g;
+  let m: RegExpExecArray | null;
+
+  while ((m = scan.exec(xml)) !== null) {
+    const t = getParaText(m[0]).trim();
+    if (!t) continue;
+
+    // Header fields (FILIERE / OPTION / SPÉCIALITÉ are the last "labeled" items before the blank area)
+    if (/^(fili[eè]re|option|sp[eé]cialit[eé]|formation)\s*:/i.test(t)) {
+      lastHeaderEnd = m.index + m[0].length;
+    }
+
+    // Body starts at Réalisé par OR Soutenu publiquement le (whichever comes first)
+    if (firstBodyStart === -1 &&
+      /r[eé]alis[eé]\s*par|pr[eé]sent[eé]\s*par|soutenu\s*publiquement|par\s*:/i.test(t)) {
+      firstBodyStart = m.index;
+    }
+  }
+
+  if (lastHeaderEnd === -1 || firstBodyStart === -1 || lastHeaderEnd >= firstBodyStart) {
+    return xml; // can't identify the blank area
+  }
+
+  // ── Find blank paragraphs in the gap ──────────────────────────────────────
+  const gap = xml.slice(lastHeaderEnd, firstBodyStart);
+  const blankRe = /<w:p[ >][\s\S]*?<\/w:p>/g;
+  let lastBlank: { match: string; offsetInGap: number } | null = null;
+
+  while ((m = blankRe.exec(gap)) !== null) {
+    if (!getParaText(m[0]).trim()) {
+      lastBlank = { match: m[0], offsetInGap: m.index };
+    }
+  }
+
+  if (!lastBlank) return xml; // no blank paragraphs to inject into
+
+  // ── Inject theme into the last blank paragraph ────────────────────────────
+  // Keep the paragraph's <w:pPr> (formatting), add a bold run with the theme.
+  const themeRunXml = `<w:r><w:rPr><w:b/><w:color w:val="auto"/></w:rPr><w:t xml:space="preserve">${xmlEsc(theme)}</w:t></w:r>`;
+  const filled = lastBlank.match.replace(/<\/w:p>$/, `${themeRunXml}</w:p>`);
+
+  const absPos = lastHeaderEnd + lastBlank.offsetInGap;
+  return xml.slice(0, absPos) + filled + xml.slice(absPos + lastBlank.match.length);
+}
+
 // ─── Main export ──────────────────────────────────────────────────────────────
 
 export async function fillDocxTemplate(
@@ -189,20 +218,18 @@ export async function fillDocxTemplate(
 
   const juryValues = [d.jury1, d.jury2, d.jury3].filter(Boolean);
   const jury = { idx: 0 };
-  const themeState = { filled: false, nextIsTheme: false };
+  const themeState = { filled: false };
 
-  // Log all non-empty paragraph texts so we can see the template structure
-  const allParas: string[] = [];
-  xml.replace(/<w:p[ >][\s\S]*?<\/w:p>/g, (para) => {
-    const t = getParaText(para).trim();
-    if (t) allParas.push(t);
-    return para;
-  });
-  console.debug("[fillDocx] paragraphs:", allParas);
-
-  const filled = xml.replace(/<w:p[ >][\s\S]*?<\/w:p>/g, (para) =>
+  // ── Pass 1: label-based replacement ───────────────────────────────────────
+  let filled = xml.replace(/<w:p[ >][\s\S]*?<\/w:p>/g, (para) =>
     processPara(para, d, juryValues, jury, themeState)
   );
+
+  // ── Pass 2: inject theme into blank area if not yet placed ────────────────
+  if (!themeState.filled && d.theme) {
+    console.debug("[fillDocx] theme not found in pass 1 — injecting between header and body");
+    filled = injectThemeBetweenHeaderAndBody(filled, d.theme);
+  }
 
   zip.file("word/document.xml", filled);
   return zip.generateAsync({ type: "arraybuffer" });
@@ -210,23 +237,17 @@ export async function fillDocxTemplate(
 
 // ─── Per-paragraph label detection ───────────────────────────────────────────
 
-function isDotsOnly(text: string): boolean {
-  // Paragraph made entirely of dots, ellipsis chars, underscores, dashes, spaces
-  const stripped = text.replace(/[.…‥․_\s\-–—\/]/g, "");
-  return stripped.length === 0 && text.replace(/\s/g, "").length >= 5;
-}
-
 function processPara(
   para: string,
   d: DocxFillData,
   juryValues: string[],
   jury: { idx: number },
-  themeState: { filled: boolean; nextIsTheme: boolean }
+  themeState: { filled: boolean }
 ): string {
   const text = getParaText(para);
   if (!text.trim()) return para;
 
-  const t = text; // alias for readability
+  const t = text;
 
   // ── Stage dates ──────────────────────────────────────────────────────────
   if (/date\s*(du\s*)?d[eé]but|d[eé]but\s*(du\s*)?stage|date\s*d.entr[eé]e|^du\s*:/i.test(t))
@@ -234,6 +255,10 @@ function processPara(
 
   if (/date\s*(de\s*(la\s*)?)?fin|fin\s*(du\s*)?stage|date\s*de\s*sortie|^au\s*:/i.test(t))
     return replaceParagraphValue(para, frDate(d.dateFin));
+
+  // ── Soutenance date — skip (leave as-is, student fills manually) ─────────
+  if (/soutenu\s*publiquement|date\s*(de\s*)?soutenance/i.test(t))
+    return para;
 
   // ── Location ─────────────────────────────────────────────────────────────
   if (/lieu\s*(du|de)\s*stage|lieu\s*:|adresse\s*:/i.test(t))
@@ -243,7 +268,7 @@ function processPara(
   if (/entreprise|soci[eé]t[eé]|organisme\s*d.accueil|structure\s*d.accueil/i.test(t))
     return replaceParagraphValue(para, d.entreprise);
 
-  // ── Supervisors — pédagogique must come before generic ───────────────────
+  // ── Supervisors ──────────────────────────────────────────────────────────
   if (/encadrant\s*(p[eé]dagogique|p[eé]da|acad[eé]mique)|tuteur\s*acad[eé]mique/i.test(t))
     return replaceParagraphValue(para, d.encPeda);
 
@@ -260,7 +285,6 @@ function processPara(
 
   // ── Academic year ─────────────────────────────────────────────────────────
   if (/ann[eé]e\s*(universitaire|acad[eé]mique)/i.test(t)) {
-    // First try replacing an already-present year like "2023-2024"
     const runs = extractTextRuns(para);
     for (const run of runs) {
       if (/\d{4}\s*[-–]\s*\d{4}/.test(run.text)) {
@@ -275,49 +299,20 @@ function processPara(
     return replaceParagraphValue(para, d.annee);
   }
 
-  // ── Theme / title — labeled with colon on same line ─────────────────────
+  // ── Theme — labeled (e.g. "Thème : ………") ─────────────────────────────────
   if (/th[eè]me\s*:|sujet\s*:|intitul[eé]\s*:|titre\s*(du\s*)?(rapport|stage|m[eé]moire|pfe)\s*:/i.test(t)) {
-    themeState.nextIsTheme = false;
     themeState.filled = true;
     return replaceParagraphValue(para, d.theme);
   }
 
-  // ── Theme label on its OWN line (no colon, value on next paragraph) ──────
-  if (/^(th[eè]me|sujet|intitul[eé])(\s*(du|de)\s*(pfe|stage|rapport|m[eé]moire))?\s*[:\s]*$/i.test(t.trim())) {
-    themeState.nextIsTheme = true;
-    console.debug("[fillDocx] theme label detected, next para will be theme:", t);
-    return para; // Keep the label paragraph unchanged
-  }
-
-  // ── Paragraph immediately after a theme label ────────────────────────────
-  if (themeState.nextIsTheme && !themeState.filled) {
-    themeState.nextIsTheme = false;
-    themeState.filled = true;
-    console.debug("[fillDocx] filling next-theme paragraph:", t);
-    return replaceParagraphValue(para, d.theme);
-  }
-  themeState.nextIsTheme = false; // Reset if we hit any non-blank paragraph
-
-  // ── Jury members — only lines that contain dots ───────────────────────────
+  // ── Jury members — lines starting with a title and containing dots ────────
   if (/^(pr\.|dr\.|m\.|mme\.?)\s*/i.test(t.trim()) && /\.{3,}/.test(t)) {
     const val = juryValues[jury.idx] ?? "";
     jury.idx++;
     return val ? replaceParagraphValue(para, val) : para;
   }
 
-  // ── Theme fallback — dots-only or underscores-only paragraph ─────────────
-  // Fires only if no label matched above and theme not yet filled.
-  if (!themeState.filled && d.theme) {
-    const isUnderscores = /^[_\s]+$/.test(t) && t.replace(/\s/g, "").length >= 5;
-    if (isDotsOnly(t) || isUnderscores) {
-      themeState.filled = true;
-      console.debug("[fillDocx] theme fallback (dots/underscores):", t);
-      return replaceParagraphValue(para, d.theme);
-    }
-  }
-
   return para;
 }
 
-// Re-export extractTextRuns so replaceParagraphValue can use it in processPara
 export { extractTextRuns };
