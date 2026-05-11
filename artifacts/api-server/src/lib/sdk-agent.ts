@@ -228,6 +228,22 @@ Rédige le Résumé (250–300 mots) : Contexte → Objectifs → Méthodologie 
 Termine par les mots-clés (5–8).
 Enregistre dans resume.md.`;
 
+      case "page-de-garde":
+        return `Tu vas générer la page de garde du rapport.
+
+1. Utilise Glob pour lister tous les fichiers du dossier
+2. Si template-screenshot.png existe, lis-le avec Read pour voir visuellement la mise en page (couleurs, bordures, logo position, typographie)
+3. Si un fichier .docx existe, lis-le avec Read pour extraire la structure textuelle exacte (placeholders, labels)
+4. Lis profile.json pour les informations de l'étudiant
+
+Génère ensuite page-de-garde.md avec le contenu exact de la page de garde en respectant :
+- La structure visuelle du template (couleurs, titres, disposition)
+- Les informations réelles de l'étudiant (nom, école, thème, encadrants, entreprise, année)
+- Les placeholders du template remplacés par les vraies données
+- Format Markdown fidèle à la mise en page Word
+
+Enregistre dans page-de-garde.md.`;
+
       case "dedicaces":
         return `Rédige les Dédicaces (10–15 lignes, style poétique sobre).
 Enregistre dans dedicaces.md.`;
@@ -277,9 +293,11 @@ Tu travailles dans un dossier dédié à ce rapport. Tous les fichiers sont là 
 - profile.json — profil complet de l'étudiant
 - *.md — sections rédigées (partie-i.md, conclusion.md, etc.)
 - Documents uploadés — PDFs, Word, TXT de l'étudiant
+- template-screenshot.png — capture d'écran visuelle du modèle Word de l'école (couleurs, bordures, mise en page)
+- Le fichier .docx du modèle — contenu textuel du template
 
 ## Tes outils prioritaires
-- **Read** — lis toujours les sections existantes avant d'écrire (cohérence obligatoire)
+- **Read** — lis toujours les sections existantes avant d'écrire. Lis aussi template-screenshot.png pour voir la mise en page visuelle du modèle, et le .docx pour son contenu textuel
 - **Write** — enregistre chaque section terminée dans son fichier .md
 - **Edit** — modifications chirurgicales sans réécrire toute la section
 - **WebFetch** — récupère des articles académiques réels (Semantic Scholar, CrossRef, Wikipedia)

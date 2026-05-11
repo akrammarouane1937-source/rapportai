@@ -72,11 +72,12 @@ export default function Step2Page() {
     }
   };
 
-  // Render docx-preview whenever a new template is loaded
+  // Render docx-preview, then screenshot it and upload to session
   useEffect(() => {
     if (!templateArrayBuf || !previewContainerRef.current) return;
     const container = previewContainerRef.current;
     container.innerHTML = "";
+
     import("docx-preview").then(({ renderAsync }) => {
       renderAsync(templateArrayBuf, container, undefined, {
         className: "docx-preview-inner",
@@ -88,6 +89,29 @@ export default function Step2Page() {
         renderHeaders: true,
         renderFooters: true,
         renderFootnotes: true,
+      }).then(async () => {
+        // Give DOM time to paint fully
+        await new Promise(r => setTimeout(r, 400));
+        try {
+          const html2canvas = (await import("html2canvas")).default;
+          const canvas = await html2canvas(container, {
+            scale: 1.5,
+            useCORS: true,
+            backgroundColor: "#ffffff",
+            logging: false,
+          });
+          canvas.toBlob(async (blob) => {
+            if (!blob) return;
+            try {
+              const sessionId = await ensureSession();
+              const fd = new FormData();
+              fd.append("file", blob, "template-screenshot.png");
+              await fetch(`${API_BASE}/api/session/${sessionId}/upload-document`, {
+                method: "POST", body: fd,
+              });
+            } catch { /* non-blocking */ }
+          }, "image/png");
+        } catch { /* non-blocking */ }
       }).catch(console.error);
     });
   }, [templateArrayBuf]);

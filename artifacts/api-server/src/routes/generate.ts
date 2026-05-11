@@ -221,6 +221,7 @@ ${ctx.extraContext ?? ""}`;
   }
 }
 
+// page-de-garde uses session route (needs template files on disk) — not stateless
 const SECTIONS_WITH_WEB = new Set(["partie-i", "partie-ii"]);
 
 router.post("/generate", async (req: Request, res: Response) => {

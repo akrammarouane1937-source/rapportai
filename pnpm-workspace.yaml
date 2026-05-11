@@ -40,6 +40,8 @@ minimumReleaseAgeExclude:
   - '@vercel/sandbox'
   # docx-preview — Word document renderer for browser
   - 'docx-preview'
+  # html2canvas — browser screenshot for template layout capture
+  - 'html2canvas'
 
 packages:
   - artifacts/*
