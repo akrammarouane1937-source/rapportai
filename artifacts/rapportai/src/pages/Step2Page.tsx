@@ -76,13 +76,29 @@ export default function Step2Page() {
     if (!file) return;
     setTemplateStatus("uploading");
     try {
-      // Convert docx → HTML client-side for instant preview
       const arrayBuffer = await file.arrayBuffer();
       const mammoth = await import("mammoth");
-      const result = await mammoth.convertToHtml({ arrayBuffer });
-      if (result.value) setTemplateHtml(result.value);
 
-      // Upload to session so the agent can read its content during generation
+      // Extract images inline so logos appear in the preview
+      let extractedLogoUrl: string | null = null;
+      const result = await mammoth.convertToHtml(
+        { arrayBuffer },
+        {
+          convertImage: mammoth.images.imgElement(async (image) => {
+            const b64 = await image.read("base64");
+            const src = `data:${image.contentType};base64,${b64}`;
+            // First image found = likely the school logo
+            if (!extractedLogoUrl) extractedLogoUrl = src;
+            return { src };
+          }),
+        }
+      );
+
+      if (result.value) setTemplateHtml(result.value);
+      // Auto-set logo from template if none already uploaded
+      if (extractedLogoUrl && !logoUrl) setLogoUrl(extractedLogoUrl);
+
+      // Upload to session so the agent reads it during generation
       saveReport({ reportType, theme, school, filiere, annee, studentName: student, encadrantPeda: encPeda, encadrantPro: encPro, entreprise, ville });
       const sessionId = await ensureSession();
       const formData = new FormData();
@@ -311,39 +327,33 @@ export default function Step2Page() {
         <div className="flex-1 overflow-y-auto flex items-center justify-center" style={{ background: "#e5e7eb" }}>
           <div className="py-10 px-6 flex justify-center w-full">
 
-            {/* Template active — shown when a Word template was uploaded */}
-            {(templateStatus === "ready" || templateName) ? (
+            {/* Template preview — Word document rendered with student info */}
+            {templateHtml ? (
               <motion.div
-                initial={{ opacity: 0, scale: 0.97 }}
-                animate={{ opacity: 1, scale: 1 }}
-                className="relative bg-white w-full max-w-[500px] flex flex-col items-center justify-center text-center"
-                style={{ minHeight: 500, boxShadow: "0 8px 40px rgba(0,0,0,0.15)", borderRadius: 16, padding: "56px 48px" }}
+                initial={{ opacity: 0, y: 8 }}
+                animate={{ opacity: 1, y: 0 }}
+                className="relative bg-white w-full max-w-[600px]"
+                style={{ boxShadow: "0 8px 40px rgba(0,0,0,0.15)" }}
               >
-                <div className="w-16 h-16 rounded-2xl bg-green-50 flex items-center justify-center mb-6">
-                  <FileText className="w-8 h-8 text-green-600" />
+                {/* Banner */}
+                <div className="flex items-center gap-2 px-6 py-3 border-b border-green-100 bg-green-50">
+                  <FileText className="w-4 h-4 text-green-600 flex-shrink-0" />
+                  <p className="text-xs font-semibold text-green-700 truncate flex-1">{templateName}</p>
+                  <span className="text-[10px] text-green-500 flex-shrink-0">Aperçu du modèle</span>
                 </div>
-                <h2 className="text-lg font-bold text-gray-900 mb-2">Modèle Word actif</h2>
-                <p className="text-sm text-gray-500 mb-4 max-w-xs">
-                  L'IA respectera exactement la mise en page de votre école lors de l'export final.
-                </p>
-                <div className="bg-green-50 border border-green-100 rounded-xl px-4 py-3 mb-6 w-full">
-                  <p className="text-xs font-semibold text-green-700 truncate">{templateName}</p>
-                </div>
-                <div className="space-y-2 w-full text-left">
-                  {[
-                    "Structure de pages respectée",
-                    "En-têtes et pieds de page conservés",
-                    "Polices et marges identiques",
-                    "Mise en page de l'école préservée",
-                  ].map(item => (
-                    <div key={item} className="flex items-center gap-2">
-                      <div className="w-4 h-4 rounded-full bg-green-100 flex items-center justify-center flex-shrink-0">
-                        <div className="w-1.5 h-1.5 rounded-full bg-green-500" />
-                      </div>
-                      <p className="text-xs text-gray-600">{item}</p>
-                    </div>
-                  ))}
-                </div>
+                {/* Word-style page */}
+                <div
+                  className="word-preview"
+                  style={{
+                    padding: "72px 80px",
+                    fontFamily: "Times New Roman, serif",
+                    fontSize: "12pt",
+                    lineHeight: 1.8,
+                    color: "#1a1a1a",
+                    minHeight: 600,
+                  }}
+                  dangerouslySetInnerHTML={{ __html: templateHtml }}
+                />
               </motion.div>
             ) : (
 
