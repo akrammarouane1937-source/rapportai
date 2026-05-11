@@ -202,14 +202,10 @@
   animation: fadeInWord 0.15s ease forwards;
 }
 
-/* Word template preview */
-.word-preview img { max-width: 160px; max-height: 100px; object-fit: contain; display: block; margin: 0 auto 12px; }
-.word-preview p { margin: 0 0 6px; }
-.word-preview h1, .word-preview h2, .word-preview h3 { font-weight: bold; margin: 12px 0 6px; }
-.word-preview table { width: 100%; border-collapse: collapse; margin: 8px 0; }
-.word-preview td, .word-preview th { padding: 4px 8px; vertical-align: top; }
-.word-preview strong { font-weight: bold; }
-.word-preview em { font-style: italic; }
+/* docx-preview container */
+.docx-preview-container { background: white; }
+.docx-preview-inner { padding: 0 !important; }
+.docx-preview-container section.docx { box-shadow: none !important; margin: 0 !important; padding: 48px 56px !important; min-height: 600px; }
 
 /* Typing cursor */
 @keyframes blink {

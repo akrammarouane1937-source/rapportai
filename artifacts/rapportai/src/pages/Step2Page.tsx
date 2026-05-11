@@ -1,4 +1,4 @@
-import { useState, useRef } from "react";
+import { useState, useRef, useEffect } from "react";
 import { motion } from "framer-motion";
 import { useLocation } from "wouter";
 import { Upload, X, ArrowRight, Sparkles, University, FileText, Loader2 } from "lucide-react";
@@ -41,9 +41,10 @@ export default function Step2Page() {
   const [logoUrl,        setLogoUrl]        = useState<string | null>(stored.logoUrl ?? null);
   const [logoFetching,   setLogoFetching]   = useState(false);
   const [logoNotFound,   setLogoNotFound]   = useState(false);
-  const [templateName,   setTemplateName]   = useState<string | null>(stored.coverTemplate ?? null);
-  const [templateStatus, setTemplateStatus] = useState<"idle"|"uploading"|"ready"|"error">("idle");
-  const [templateHtml,   setTemplateHtml]   = useState<string | null>(null);
+  const [templateName,     setTemplateName]     = useState<string | null>(stored.coverTemplate ?? null);
+  const [templateStatus,   setTemplateStatus]   = useState<"idle"|"uploading"|"ready"|"error">("idle");
+  const [templateArrayBuf, setTemplateArrayBuf] = useState<ArrayBuffer | null>(null);
+  const previewContainerRef = useRef<HTMLDivElement>(null);
   const fileRef     = useRef<HTMLInputElement>(null);
   const templateRef = useRef<HTMLInputElement>(null);
 
@@ -71,46 +72,66 @@ export default function Step2Page() {
     }
   };
 
+  // Render docx-preview whenever a new template is loaded
+  useEffect(() => {
+    if (!templateArrayBuf || !previewContainerRef.current) return;
+    const container = previewContainerRef.current;
+    container.innerHTML = "";
+    import("docx-preview").then(({ renderAsync }) => {
+      renderAsync(templateArrayBuf, container, undefined, {
+        className: "docx-preview-inner",
+        inWrapper: false,
+        ignoreWidth: true,
+        ignoreHeight: false,
+        ignoreFonts: false,
+        breakPages: false,
+        renderHeaders: true,
+        renderFooters: true,
+        renderFootnotes: true,
+      }).catch(console.error);
+    });
+  }, [templateArrayBuf]);
+
   const handleTemplateUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
     setTemplateStatus("uploading");
     try {
       const arrayBuffer = await file.arrayBuffer();
-      const mammoth = await import("mammoth");
 
-      // Extract images inline so logos appear in the preview
+      // Use mammoth only to extract the logo image
+      const mammoth = await import("mammoth");
       let extractedLogoUrl: string | null = null;
-      const result = await mammoth.convertToHtml(
-        { arrayBuffer },
+      await mammoth.convertToHtml(
+        { arrayBuffer: arrayBuffer.slice(0) },
         {
           convertImage: mammoth.images.imgElement(async (image) => {
-            const b64 = await image.read("base64");
-            const src = `data:${image.contentType};base64,${b64}`;
-            // First image found = likely the school logo
-            if (!extractedLogoUrl) extractedLogoUrl = src;
-            return { src };
+            if (!extractedLogoUrl) {
+              const b64 = await image.read("base64");
+              extractedLogoUrl = `data:${image.contentType};base64,${b64}`;
+            }
+            return { src: "" };
           }),
         }
       );
-
-      if (result.value) setTemplateHtml(result.value);
-      // Auto-set logo from template if none already uploaded
       if (extractedLogoUrl && !logoUrl) setLogoUrl(extractedLogoUrl);
 
-      // Upload to session so the agent reads it during generation
-      saveReport({ reportType, theme, school, filiere, annee, studentName: student, encadrantPeda: encPeda, encadrantPro: encPro, entreprise, ville });
-      const sessionId = await ensureSession();
-      const formData = new FormData();
-      formData.append("file", file);
-      const res = await fetch(`${API_BASE}/api/session/${sessionId}/upload-document`, {
-        method: "POST",
-        body: formData,
-      });
-      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      // Store buffer for docx-preview rendering
+      setTemplateArrayBuf(arrayBuffer);
       setTemplateName(file.name);
-      saveReport({ coverTemplate: file.name });
       setTemplateStatus("ready");
+      saveReport({ coverTemplate: file.name });
+
+      // Upload to session in background (non-blocking)
+      try {
+        saveReport({ reportType, theme, school, filiere, annee, studentName: student, encadrantPeda: encPeda, encadrantPro: encPro, entreprise, ville });
+        const sessionId = await ensureSession();
+        const formData = new FormData();
+        formData.append("file", file);
+        await fetch(`${API_BASE}/api/session/${sessionId}/upload-document`, { method: "POST", body: formData });
+      } catch {
+        // Session upload failure doesn't block preview
+      }
     } catch (err) {
       console.error("Template upload error:", err);
       setTemplateStatus("error");
@@ -246,7 +267,7 @@ export default function Step2Page() {
                     <p className="text-sm font-medium text-green-700 truncate">{templateName}</p>
                     <p className="text-xs text-green-500">L'IA utilisera ce modèle</p>
                   </div>
-                  <button onClick={() => { setTemplateName(null); setTemplateStatus("idle"); setTemplateHtml(null); saveReport({ coverTemplate: undefined }); }}
+                  <button onClick={() => { setTemplateName(null); setTemplateStatus("idle"); setTemplateArrayBuf(null); saveReport({ coverTemplate: undefined }); }}
                     className="text-xs text-red-400 hover:text-red-600">
                     <X className="w-3.5 h-3.5" />
                   </button>
@@ -327,33 +348,20 @@ export default function Step2Page() {
         <div className="flex-1 overflow-y-auto flex items-center justify-center" style={{ background: "#e5e7eb" }}>
           <div className="py-10 px-6 flex justify-center w-full">
 
-            {/* Template preview — Word document rendered with student info */}
-            {templateHtml ? (
+            {/* Template preview — rendered by docx-preview (faithful Word rendering) */}
+            {templateArrayBuf ? (
               <motion.div
                 initial={{ opacity: 0, y: 8 }}
                 animate={{ opacity: 1, y: 0 }}
-                className="relative bg-white w-full max-w-[600px]"
+                className="relative bg-white w-full max-w-[620px]"
                 style={{ boxShadow: "0 8px 40px rgba(0,0,0,0.15)" }}
               >
-                {/* Banner */}
                 <div className="flex items-center gap-2 px-6 py-3 border-b border-green-100 bg-green-50">
                   <FileText className="w-4 h-4 text-green-600 flex-shrink-0" />
                   <p className="text-xs font-semibold text-green-700 truncate flex-1">{templateName}</p>
-                  <span className="text-[10px] text-green-500 flex-shrink-0">Aperçu du modèle</span>
+                  <span className="text-[10px] text-green-500 flex-shrink-0">Aperçu fidèle</span>
                 </div>
-                {/* Word-style page */}
-                <div
-                  className="word-preview"
-                  style={{
-                    padding: "72px 80px",
-                    fontFamily: "Times New Roman, serif",
-                    fontSize: "12pt",
-                    lineHeight: 1.8,
-                    color: "#1a1a1a",
-                    minHeight: 600,
-                  }}
-                  dangerouslySetInnerHTML={{ __html: templateHtml }}
-                />
+                <div ref={previewContainerRef} className="docx-preview-container" style={{ minHeight: 600, overflow: "hidden" }} />
               </motion.div>
             ) : (
 

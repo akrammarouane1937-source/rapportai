@@ -38,6 +38,8 @@ minimumReleaseAgeExclude:
   - '@anthropic-ai/claude-code'
   # Vercel Sandbox — same vendor as our deployment
   - '@vercel/sandbox'
+  # docx-preview — Word document renderer for browser
+  - 'docx-preview'
 
 packages:
   - artifacts/*
