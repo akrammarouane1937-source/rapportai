@@ -279,9 +279,9 @@ function processPara(
   if (/r[eé]alis[eé]\s*par|pr[eé]sent[eé]\s*par|par\s*:|nom\s*(et\s*)?pr[eé]nom|l.[eé]tudiant|[eé]tudiant\s*:|mme\s*\/\s*m\./i.test(t))
     return replaceParagraphValue(para, d.studentName);
 
-  // ── Filière ──────────────────────────────────────────────────────────────
-  if (/^fili[eè]re\s*:|^sp[eé]cialit[eé]\s*:|^option\s*:|^formation\s*:/i.test(t.trim()))
-    return replaceParagraphValue(para, d.filiere);
+  // ── Filière / Option — leave as-is (already printed in template) ─────────
+  if (/^(fili[eè]re|option|sp[eé]cialit[eé]|formation)\s*:/i.test(t.trim()))
+    return para;
 
   // ── Academic year ─────────────────────────────────────────────────────────
   if (/ann[eé]e\s*(universitaire|acad[eé]mique)/i.test(t)) {
@@ -299,8 +299,18 @@ function processPara(
     return replaceParagraphValue(para, d.annee);
   }
 
-  // ── Theme — labeled (e.g. "Thème : ………") ─────────────────────────────────
+  // ── Theme — labeled with colon (e.g. "Thème : ………") ────────────────────
   if (/th[eè]me\s*:|sujet\s*:|intitul[eé]\s*:|titre\s*(du\s*)?(rapport|stage|m[eé]moire|pfe)\s*:/i.test(t)) {
+    themeState.filled = true;
+    return replaceParagraphValue(para, d.theme);
+  }
+
+  // ── Theme — placeholder label without colon (e.g. "INTITULÉ DU PFE") ────
+  // These are standalone labels inside a box/table cell that get fully replaced.
+  if (/^intitul[eé](\s+(du|de))?\s*(pfe|rapport|m[eé]moire|stage)?\s*$/i.test(t.trim()) ||
+      /^th[eè]me(\s+(du|de))?\s*(pfe|rapport|m[eé]moire|stage)?\s*$/i.test(t.trim()) ||
+      /^titre(\s+(du|de))?\s*(pfe|rapport|m[eé]moire|stage)?\s*$/i.test(t.trim()) ||
+      /^(sujet|objet)\s+(du|de)\s*(pfe|rapport|m[eé]moire|stage)\s*$/i.test(t.trim())) {
     themeState.filled = true;
     return replaceParagraphValue(para, d.theme);
   }
