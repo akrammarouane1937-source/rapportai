@@ -223,9 +223,23 @@ export default function Step3Page() {
         <div className="flex-1 overflow-hidden">
           <WordPreview
             content={previewHtml}
-            rawContent={(dedicaces || DEFAULT_DEDICACES) + "\n\n" + (remerciements || DEFAULT_REMERCIEMENTS)}
+            rawContent={(dedicaces || DEFAULT_DEDICACES) + "\n\nRemerciements\n\n" + (remerciements || DEFAULT_REMERCIEMENTS)}
             sectionTitle="Dédicaces et Remerciements"
             wordCount={wordCount}
+            onContentChange={(revised) => {
+              // Try to split revised text at the "Remerciements" section marker
+              const remIdx = revised.search(/\n\s*(?:##\s*)?remerciements?\s*\n/i);
+              if (remIdx !== -1) {
+                const ded = revised.slice(0, remIdx).replace(/^(?:##\s*)?d[eé]dicaces?\s*\n*/i, "").trim();
+                const rem = revised.slice(remIdx).replace(/^\s*(?:##\s*)?remerciements?\s*\n*/i, "").trim();
+                setDedicaces(ded);
+                setRemerciements(rem);
+              } else {
+                // No split found — put everything in dédicaces, user can redistribute manually
+                setDedicaces(revised.trim());
+              }
+              saveReport({ dedicaces: dedicaces || undefined, remerciements: remerciements || undefined });
+            }}
           />
         </div>
       </div>

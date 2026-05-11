@@ -1,6 +1,6 @@
-import { useState, useCallback } from "react";
+import { useState, useCallback, useEffect, useRef } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { Copy, Download, PenLine, X, Check, Loader2 } from "lucide-react";
+import { Copy, Download, PenLine, X, Check, Loader2, Send, CheckCheck } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { generateDocx, downloadBlob } from "@/lib/generateDocx";
 import { UpsellModal } from "@/components/report/UpsellModal";
@@ -16,9 +16,30 @@ interface WordPreviewProps {
   wordCount?: number;
   blurred?: boolean;
   onContentChange?: (newContent: string) => void;
-  // Pass the section ID (e.g. "partie-i") to enable session-based targeted revision
   sectionId?: string;
 }
+
+// Fun Claude Code-style status messages
+const FUN_STATUSES = [
+  "Je lis ton texte avec attention…",
+  "Hmm, je vois exactement ce que tu veux…",
+  "Je retouche ça chirurgicalement…",
+  "Poids des mots, choc des formulations…",
+  "Un instant, je pèse chaque expression…",
+  "Style académique en cours d'ajustement…",
+  "Je consulte mon manuel de français formel…",
+  "Presque là, dernier coup de polish…",
+  "Je vérifie la cohérence avant de te montrer ça…",
+  "Ah, bonne idée en fait…",
+];
+
+type ChatMsg = {
+  id: string;
+  role: "user" | "assistant";
+  text: string;
+  isRevision?: boolean;
+  applied?: boolean;
+};
 
 const MOCK_CONTENT = `
 <h2>Chapitre I — Cadre théorique et revue de littérature</h2>
@@ -59,303 +80,256 @@ function splitIntoPages(html: string, wordsPerPage = 450): string[] {
   return pages.length > 0 ? pages : [html];
 }
 
-// ── Revision panel ────────────────────────────────────────────────────────────
-type PendingRevisionQuestion = {
-  question: string;
-  choices?: string[];
-  toolUseId: string;
-  sessionId: string;
-};
+// ── Revision panel (chat-style) ───────────────────────────────────────────────
 
 function RevisionPanel({
-  open, onClose, onRevisionLimitHit, content, onContentChange, sectionId,
+  open, onClose, onRevisionLimitHit, content, rawContent, onContentChange,
 }: {
   open: boolean;
   onClose: () => void;
   onRevisionLimitHit: () => void;
   content: string;
+  rawContent?: string;
   onContentChange?: (newContent: string) => void;
-  sectionId?: string;
 }) {
-  const [text, setText]             = useState("");
+  const [messages, setMessages]     = useState<ChatMsg[]>([]);
+  const [input, setInput]           = useState("");
   const [isRevising, setIsRevising] = useState(false);
-  const [statusMsg, setStatusMsg]   = useState("");
-  const [done, setDone]             = useState(false);
+  const [statusIdx, setStatusIdx]   = useState(0);
   const [error, setError]           = useState<string | null>(null);
-  const [pendingQ, setPendingQ]     = useState<PendingRevisionQuestion | null>(null);
-  const [qaText, setQaText]         = useState("");
+  // workingContent tracks what the next revision operates on (updates on apply)
+  const workingContentRef           = useRef(rawContent || content);
+  const scrollRef                   = useRef<HTMLDivElement>(null);
+  const statusTimerRef              = useRef<ReturnType<typeof setInterval> | null>(null);
 
-  // Shared SSE reader used by both the initial revise call and the /answer resume
-  const readRevisionSSE = async (
-    respBody: ReadableStream<Uint8Array>,
-    sessionId: string
-  ): Promise<void> => {
-    const reader  = respBody.getReader();
-    const decoder = new TextDecoder();
-    let buf = "";
+  // Reset when panel opens/content changes
+  useEffect(() => {
+    workingContentRef.current = rawContent || content;
+  }, [content, rawContent]);
 
-    while (true) {
-      const { done: streamDone, value } = await reader.read();
-      if (streamDone) break;
-
-      buf += decoder.decode(value, { stream: true });
-      const lines = buf.split("\n\n");
-      buf = lines.pop() ?? "";
-
-      for (const line of lines) {
-        if (!line.startsWith("data: ")) continue;
-        try {
-          const msg = JSON.parse(line.slice(6)) as {
-            content?: string;
-            tool_call?: string;
-            done?: boolean;
-            updatedContent?: string;
-            error?: string;
-            paused?: boolean;
-            question?: string;
-            choices?: string[];
-            toolUseId?: string;
-          };
-
-          if (msg.error) throw new Error(msg.error);
-
-          if (msg.tool_call === "read_section")   setStatusMsg("Lecture de la section…");
-          if (msg.tool_call === "edit_section")   setStatusMsg("Application des modifications…");
-          if (msg.tool_call === "search_content") setStatusMsg("Vérification de la cohérence…");
-          if (msg.tool_call === "ask_user")       setStatusMsg("L'IA a besoin d'une précision…");
-
-          // Agent paused — needs clarification from the student
-          if (msg.paused && msg.question && msg.toolUseId) {
-            setPendingQ({ question: msg.question, choices: msg.choices, toolUseId: msg.toolUseId, sessionId });
-            setIsRevising(false);
-            return;
-          }
-
-          if (msg.done && msg.updatedContent) onContentChange?.(msg.updatedContent);
-          if (msg.done) {
-            setDone(true);
-            setTimeout(() => { setDone(false); setText(""); setStatusMsg(""); onClose(); }, 1500);
-            return;
-          }
-        } catch (e) {
-          if (e instanceof Error && e.message !== "JSON") throw e;
-        }
-      }
+  useEffect(() => {
+    if (open) {
+      setMessages([]);
+      setInput("");
+      setError(null);
+      workingContentRef.current = rawContent || content;
     }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [open]);
+
+  useEffect(() => {
+    scrollRef.current?.scrollTo({ top: scrollRef.current.scrollHeight, behavior: "smooth" });
+  }, [messages, isRevising]);
+
+  const startStatusCycle = () => {
+    setStatusIdx(0);
+    statusTimerRef.current = setInterval(() => {
+      setStatusIdx(i => (i + 1) % FUN_STATUSES.length);
+    }, 2000);
+  };
+  const stopStatusCycle = () => {
+    if (statusTimerRef.current) { clearInterval(statusTimerRef.current); statusTimerRef.current = null; }
   };
 
-  const handleApply = async () => {
-    if (!text.trim() || isRevising) return;
+  const handleSend = async () => {
+    const instruction = input.trim();
+    if (!instruction || isRevising) return;
 
     const next  = incrementRevision();
     const limit = PLAN_LIMITS[next.planId].revisions;
     if (next.revisionCount > limit) { onRevisionLimitHit(); return; }
 
+    const userMsg: ChatMsg = { id: crypto.randomUUID(), role: "user", text: instruction };
+    setMessages(prev => [...prev, userMsg]);
+    setInput("");
     setIsRevising(true);
-    setStatusMsg("");
     setError(null);
-    setPendingQ(null);
+    startStatusCycle();
 
     const report = getReport();
-    const sessionId = report.sessionId;
+    let result = "";
 
     try {
-      if (sessionId && sectionId) {
-        const resp = await fetch(
-          `${BASE_PATH}/api/session/${sessionId}/revise`,
-          {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ sectionId, instruction: text }),
-          }
-        );
-        if (!resp.ok || !resp.body) throw new Error(`HTTP ${resp.status}`);
-        await readRevisionSSE(resp.body, sessionId);
-      } else {
-        // Fallback: stateless full-rewrite
-        const resp = await fetch(`${BASE_PATH}/api/revise`, {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            content,
-            instruction: text,
-            theme:      report.theme,
-            reportType: report.reportType,
-            school:     report.school,
-            filiere:    report.filiere,
-          }),
-        });
-        if (!resp.ok || !resp.body) throw new Error(`HTTP ${resp.status}`);
+      const resp = await fetch(`${BASE_PATH}/api/revise`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          content:    workingContentRef.current,
+          instruction,
+          theme:      report.theme,
+          reportType: report.reportType,
+          school:     report.school,
+          filiere:    report.filiere,
+        }),
+      });
+      if (!resp.ok || !resp.body) throw new Error(`HTTP ${resp.status}`);
 
-        const reader  = resp.body.getReader();
-        const decoder = new TextDecoder();
-        let buf = "";
-        let result = "";
+      const reader  = resp.body.getReader();
+      const decoder = new TextDecoder();
+      let buf = "";
 
-        while (true) {
-          const { done: streamDone, value } = await reader.read();
-          if (streamDone) break;
-          buf += decoder.decode(value, { stream: true });
-          const lines = buf.split("\n\n");
-          buf = lines.pop() ?? "";
-          for (const line of lines) {
-            if (!line.startsWith("data: ")) continue;
-            try {
-              const msg = JSON.parse(line.slice(6)) as { content?: string; done?: boolean; error?: string };
-              if (msg.error) throw new Error(msg.error);
-              if (msg.done) break;
-              if (msg.content) { result += msg.content; setStatusMsg(result.slice(0, 80) + "…"); }
-            } catch { /* skip malformed */ }
-          }
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+        buf += decoder.decode(value, { stream: true });
+        const lines = buf.split("\n\n");
+        buf = lines.pop() ?? "";
+        for (const line of lines) {
+          if (!line.startsWith("data: ")) continue;
+          try {
+            const msg = JSON.parse(line.slice(6)) as { content?: string; done?: boolean; error?: string };
+            if (msg.error) throw new Error(msg.error);
+            if (msg.done) break;
+            if (msg.content) result += msg.content;
+          } catch { /* skip malformed */ }
         }
+      }
 
-        if (result.trim()) onContentChange?.(result);
-        setDone(true);
-        setTimeout(() => { setDone(false); setText(""); setStatusMsg(""); onClose(); }, 1500);
+      if (result.trim()) {
+        setMessages(prev => [...prev, {
+          id: crypto.randomUUID(),
+          role: "assistant",
+          text: result.trim(),
+          isRevision: true,
+        }]);
+      } else {
+        throw new Error("Aucune révision retournée. Réessaie.");
       }
     } catch (err) {
       setError(err instanceof Error ? err.message : "Erreur inconnue");
     } finally {
+      stopStatusCycle();
       setIsRevising(false);
     }
   };
 
-  const handleAnswerQuestion = async () => {
-    if (!pendingQ || !qaText.trim() || isRevising) return;
-    setIsRevising(true);
-    setStatusMsg("Reprise de la révision…");
-    setError(null);
+  const handleApply = (msgId: string, text: string) => {
+    workingContentRef.current = text;
+    onContentChange?.(text);
+    setMessages(prev => prev.map(m => m.id === msgId ? { ...m, applied: true } : m));
+  };
 
-    try {
-      const resp = await fetch(
-        `${BASE_PATH}/api/session/${pendingQ.sessionId}/answer`,
-        {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ toolUseId: pendingQ.toolUseId, answer: qaText }),
-        }
-      );
-      if (!resp.ok || !resp.body) throw new Error(`HTTP ${resp.status}`);
-      setPendingQ(null);
-      setQaText("");
-      await readRevisionSSE(resp.body, pendingQ.sessionId);
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "Erreur inconnue");
-    } finally {
-      setIsRevising(false);
-    }
+  const handleKeyDown = (e: React.KeyboardEvent) => {
+    if (e.key === "Enter" && (e.metaKey || e.ctrlKey)) handleSend();
   };
 
   return (
     <AnimatePresence>
       {open && (
         <motion.div
-          initial={{ x: 320, opacity: 0 }}
+          initial={{ x: 340, opacity: 0 }}
           animate={{ x: 0, opacity: 1 }}
-          exit={{ x: 320, opacity: 0 }}
+          exit={{ x: 340, opacity: 0 }}
           transition={{ type: "spring", damping: 28, stiffness: 280 }}
-          className="absolute top-0 right-0 h-full w-80 bg-white border-l border-gray-200 flex flex-col z-20"
-          style={{ boxShadow: "-4px 0 24px rgba(0,0,0,0.08)" }}
+          className="absolute top-0 right-0 h-full w-[340px] bg-white border-l border-gray-200 flex flex-col z-20"
+          style={{ boxShadow: "-4px 0 28px rgba(0,0,0,0.10)" }}
         >
-          <div className="flex items-center justify-between px-5 py-4 border-b border-gray-100">
-            <h3 className="font-semibold text-gray-900 text-sm" style={{ fontFamily: "'Plus Jakarta Sans', sans-serif" }}>
-              Révision IA du document
-            </h3>
+          {/* Header */}
+          <div className="flex items-center justify-between px-4 py-3 border-b border-gray-100 flex-shrink-0">
+            <div className="flex items-center gap-2">
+              <div className="w-6 h-6 rounded-md bg-purple-600 flex items-center justify-center">
+                <PenLine className="w-3.5 h-3.5 text-white" />
+              </div>
+              <div>
+                <p className="text-sm font-semibold text-gray-900" style={{ fontFamily: "'Plus Jakarta Sans', sans-serif" }}>Révision IA</p>
+                <p className="text-[10px] text-gray-400 leading-none">Dis-moi ce que tu veux changer</p>
+              </div>
+            </div>
             <button onClick={onClose} className="w-7 h-7 rounded-lg flex items-center justify-center hover:bg-gray-100 text-gray-400 hover:text-gray-600 transition-colors">
               <X className="w-4 h-4" />
             </button>
           </div>
 
-          <div className="flex-1 p-5 flex flex-col gap-4 overflow-y-auto">
-            {/* Question from agent — shown when ask_user fires during revision */}
-            {pendingQ ? (
-              <div className="flex flex-col gap-3">
-                <div className="bg-amber-50 border border-amber-200 rounded-xl p-3">
-                  <p className="text-xs font-semibold text-amber-700 mb-1">L'IA a besoin d'une précision :</p>
-                  <p className="text-sm text-amber-900">{pendingQ.question}</p>
-                </div>
-                {pendingQ.choices && pendingQ.choices.length > 0 && (
-                  <div className="flex flex-col gap-1">
-                    {pendingQ.choices.map((c) => (
-                      <button key={c} onClick={() => setQaText(c)}
-                        className={`text-left text-xs px-3 py-2 rounded-lg border transition-colors ${qaText === c ? "border-purple-400 bg-purple-50 text-purple-800 font-semibold" : "border-gray-200 text-gray-700 hover:border-purple-300"}`}>
-                        {c}
-                      </button>
-                    ))}
-                  </div>
-                )}
-                <textarea
-                  value={qaText}
-                  onChange={(e) => setQaText(e.target.value)}
-                  placeholder="Votre réponse…"
-                  rows={3}
-                  className="w-full text-sm text-gray-700 border border-gray-200 rounded-xl p-3 resize-none focus:outline-none focus:ring-2 focus:ring-purple-300"
-                />
-                <Button onClick={handleAnswerQuestion} disabled={!qaText.trim() || isRevising}
-                  className="w-full bg-purple-600 hover:bg-purple-700 text-white font-semibold h-10 rounded-xl text-sm">
-                  {isRevising
-                    ? <span className="flex items-center gap-2"><Loader2 className="w-4 h-4 animate-spin" /> Reprise…</span>
-                    : "Envoyer la réponse"}
-                </Button>
+          {/* Chat messages */}
+          <div ref={scrollRef} className="flex-1 overflow-y-auto px-4 py-4 flex flex-col gap-3">
+            {messages.length === 0 && !isRevising && (
+              <div className="flex flex-col gap-2 mt-2">
+                <p className="text-xs text-gray-400 text-center mb-1">Exemples d'instructions :</p>
+                {[
+                  "Remplace les expressions trop familières",
+                  "Ajoute une ligne pour mon directeur de thèse",
+                  "Reformule en style plus sobre et formel",
+                  "Raccourcis ce texte de moitié",
+                  "Ajoute une dédicace à mes collègues",
+                ].map(s => (
+                  <button key={s} onClick={() => setInput(s)}
+                    className="text-left text-xs px-3 py-2 rounded-xl border border-gray-100 text-gray-500 hover:border-purple-200 hover:text-purple-700 hover:bg-purple-50 transition-all">
+                    {s}
+                  </button>
+                ))}
               </div>
-            ) : (
-              <>
-                <div>
-                  <label className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2 block">
-                    Que souhaitez-vous modifier ?
-                  </label>
-                  <textarea
-                    value={text}
-                    onChange={(e) => setText(e.target.value)}
-                    disabled={isRevising}
-                    placeholder="Ex: Rends la section 1.2 plus concise et ajoute une transition vers la section suivante..."
-                    rows={5}
-                    className="w-full text-sm text-gray-700 border border-gray-200 rounded-xl p-3 resize-none focus:outline-none focus:ring-2 focus:ring-purple-300 focus:border-purple-400 placeholder:text-gray-300 disabled:opacity-50"
-                  />
-                </div>
-
-                <div className="bg-purple-50 rounded-xl p-3">
-                  <p className="text-xs text-purple-600 font-medium mb-1">Exemples :</p>
-                  {["Raccourcir ce paragraphe", "Ajouter une citation académique", "Reformuler en style académique", "Rendre plus analytique"].map((s) => (
-                    <button key={s} onClick={() => setText(s)} disabled={isRevising}
-                      className="block text-xs text-purple-500 hover:text-purple-700 mt-1 disabled:opacity-50 text-left">
-                      {s}
-                    </button>
-                  ))}
-                </div>
-              </>
             )}
 
+            {messages.map(msg => (
+              <div key={msg.id} className={`flex ${msg.role === "user" ? "justify-end" : "justify-start"}`}>
+                {msg.role === "user" ? (
+                  <div className="max-w-[85%] bg-gray-100 rounded-2xl rounded-tr-sm px-3 py-2">
+                    <p className="text-xs text-gray-700">{msg.text}</p>
+                  </div>
+                ) : (
+                  <div className="max-w-[95%] flex flex-col gap-1.5">
+                    <div className={`rounded-2xl rounded-tl-sm px-3 py-2.5 border ${msg.applied ? "bg-green-50 border-green-200" : "bg-purple-50 border-purple-100"}`}>
+                      <p className="text-xs text-gray-700 whitespace-pre-wrap leading-relaxed">{msg.text}</p>
+                    </div>
+                    {msg.isRevision && (
+                      <button
+                        onClick={() => !msg.applied && handleApply(msg.id, msg.text)}
+                        className={`self-start flex items-center gap-1.5 text-xs px-3 py-1.5 rounded-lg font-semibold transition-all ${
+                          msg.applied
+                            ? "bg-green-100 text-green-700 cursor-default"
+                            : "bg-purple-600 hover:bg-purple-700 text-white"
+                        }`}
+                      >
+                        {msg.applied
+                          ? <><CheckCheck className="w-3 h-3" /> Appliqué</>
+                          : <><Check className="w-3 h-3" /> Appliquer cette révision</>
+                        }
+                      </button>
+                    )}
+                  </div>
+                )}
+              </div>
+            ))}
+
             {isRevising && (
-              <div className="bg-purple-50 rounded-xl p-3 flex items-center gap-2">
-                <Loader2 className="w-3.5 h-3.5 text-purple-500 animate-spin flex-shrink-0" />
-                <p className="text-xs text-purple-600">{statusMsg || "Je travaille dessus…"}</p>
+              <div className="flex justify-start">
+                <div className="bg-purple-50 border border-purple-100 rounded-2xl rounded-tl-sm px-3 py-2.5 flex items-center gap-2 max-w-[85%]">
+                  <Loader2 className="w-3 h-3 text-purple-500 animate-spin flex-shrink-0" />
+                  <p className="text-xs text-purple-600 italic">{FUN_STATUSES[statusIdx]}</p>
+                </div>
               </div>
             )}
 
             {error && (
-              <div className="bg-red-50 border border-red-100 rounded-xl p-3 flex items-start gap-2">
-                <X className="w-3.5 h-3.5 text-red-400 flex-shrink-0 mt-0.5" />
+              <div className="bg-red-50 border border-red-100 rounded-xl px-3 py-2 flex items-start gap-2">
+                <X className="w-3 h-3 text-red-400 flex-shrink-0 mt-0.5" />
                 <p className="text-xs text-red-600">{error}</p>
               </div>
             )}
           </div>
 
-          {!pendingQ && (
-            <div className="p-5 border-t border-gray-100 flex flex-col gap-2">
-              <Button
-                onClick={handleApply}
-                disabled={!text.trim() || isRevising || done}
-                className="w-full bg-purple-600 hover:bg-purple-700 text-white font-semibold h-10 rounded-xl text-sm"
+          {/* Input */}
+          <div className="flex-shrink-0 border-t border-gray-100 p-3">
+            <div className="flex items-end gap-2 bg-gray-50 rounded-xl border border-gray-200 focus-within:border-purple-300 focus-within:ring-2 focus-within:ring-purple-100 transition-all px-3 py-2">
+              <textarea
+                value={input}
+                onChange={e => setInput(e.target.value)}
+                onKeyDown={handleKeyDown}
+                disabled={isRevising}
+                placeholder="Ex: remplace 'inconditionnel' par quelque chose de plus sobre…"
+                rows={2}
+                className="flex-1 text-xs text-gray-700 bg-transparent resize-none focus:outline-none placeholder:text-gray-300 disabled:opacity-50"
+              />
+              <button
+                onClick={handleSend}
+                disabled={!input.trim() || isRevising}
+                className="w-7 h-7 rounded-lg bg-purple-600 hover:bg-purple-700 disabled:bg-gray-200 flex items-center justify-center transition-colors flex-shrink-0 mb-0.5"
               >
-                {done ? (
-                  <span className="flex items-center gap-2"><Check className="w-4 h-4" /> Révision appliquée</span>
-                ) : isRevising ? (
-                  <span className="flex items-center gap-2"><Loader2 className="w-4 h-4 animate-spin" /> Révision en cours…</span>
-                ) : "Appliquer la révision"}
-              </Button>
+                <Send className="w-3.5 h-3.5 text-white" />
+              </button>
             </div>
-          )}
+            <p className="text-[10px] text-gray-300 mt-1 text-right">⌘↵ pour envoyer</p>
+          </div>
         </motion.div>
       )}
     </AnimatePresence>
@@ -365,11 +339,11 @@ function RevisionPanel({
 // ── Main component ────────────────────────────────────────────────────────────
 export function WordPreview({
   content,
+  rawContent,
   sectionTitle = "Section",
   wordCount = 0,
   blurred = false,
   onContentChange,
-  sectionId,
 }: WordPreviewProps) {
   const [revisionOpen, setRevisionOpen]   = useState(false);
   const [revisionUpsell, setRevisionUpsell] = useState(false);
@@ -486,11 +460,8 @@ export function WordPreview({
         onClose={() => setRevisionOpen(false)}
         onRevisionLimitHit={() => setRevisionUpsell(true)}
         content={html}
-        sectionId={sectionId}
-        onContentChange={(newContent) => {
-          onContentChange?.(newContent);
-          setRevisionOpen(false);
-        }}
+        rawContent={rawContent}
+        onContentChange={onContentChange}
       />
       <UpsellModal
         open={revisionUpsell}

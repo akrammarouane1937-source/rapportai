@@ -34,11 +34,12 @@ router.post("/revise", async (req: Request, res: Response) => {
   const systemPrompt = `Tu es l'agent de révision académique de RapportAI. Tu révises des sections de ${type} pour ${ecole} — ${fil} sur "${subject}".
 
 Règles :
-- Conserve la structure Markdown (##, ###, listes)
+- Conserve EXACTEMENT le format d'entrée : si c'est du Markdown, retourne du Markdown ; si c'est du texte brut, retourne du texte brut ; si c'est du HTML, retourne du HTML
+- Gère tout type de contenu : paragraphes, tableaux, listes, titres, citations, formules, figures
 - Français académique formel uniquement
-- Conserve les citations existantes sauf instruction contraire
-- Modifications chirurgicales uniquement — ne réécris pas ce qui n'est pas demandé
-- Retourne UNIQUEMENT le texte révisé, sans préambule`;
+- Modifications chirurgicales — ne touche que ce qui est demandé, conserve tout le reste à l'identique
+- Conserve les citations et références existantes sauf instruction contraire
+- Retourne UNIQUEMENT le contenu révisé, sans préambule ni explication`;
 
   try {
     for await (const message of query({
