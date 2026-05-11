@@ -153,25 +153,33 @@ function replaceParagraphValue(para: string, value: string): string {
 function injectThemeBetweenHeaderAndBody(xml: string, theme: string): string {
   if (!theme.trim()) return xml;
 
-  // ── Locate boundaries ──────────────────────────────────────────────────────
-  let lastHeaderEnd = -1;  // end position of the last FILIERE/OPTION paragraph
-  let firstBodyStart = -1; // start position of the first Réalisé par paragraph
+  // ── Locate boundaries ─────────────────────────────────────────────────────
+  // "Header" = last labeled field that comes before the blank theme area.
+  // We try several tiers in order of reliability.
+  // "Body" = first field that comes after the blank theme area.
+  let lastHeaderEnd = -1;
+  let firstBodyStart = -1;
 
   const scan = /<w:p[ >][\s\S]*?<\/w:p>/g;
   let m: RegExpExecArray | null;
 
+  // Tier-1 header: labeled fields (FILIERE, OPTION, SPÉCIALITÉ, DÉPARTEMENT…)
+  // Tier-2 header: degree/report type heading (MÉMOIRE, PFE, RAPPORT…) — uppercase
+  // We keep the LAST match so lastHeaderEnd is as close as possible to the blank area.
   while ((m = scan.exec(xml)) !== null) {
     const t = getParaText(m[0]).trim();
     if (!t) continue;
 
-    // Header fields (FILIERE / OPTION / SPÉCIALITÉ are the last "labeled" items before the blank area)
-    if (/^(fili[eè]re|option|sp[eé]cialit[eé]|formation)\s*:/i.test(t)) {
+    const isLabeledHeader = /^(fili[eè]re|option|sp[eé]cialit[eé]|formation|cycle|d[eé]partement|branche|niv[eé]au)\s*:/i.test(t);
+    const isDegreeHeader  = /^(m[eé]moire|rapport|pfe|pfm|licence|master|doctorat|th[eè]se)\b/i.test(t);
+
+    if (isLabeledHeader || isDegreeHeader) {
       lastHeaderEnd = m.index + m[0].length;
     }
 
-    // Body starts at Réalisé par OR Soutenu publiquement le (whichever comes first)
+    // Body starts at any student-info field
     if (firstBodyStart === -1 &&
-      /r[eé]alis[eé]\s*par|pr[eé]sent[eé]\s*par|soutenu\s*publiquement|par\s*:/i.test(t)) {
+      /r[eé]alis[eé]\s*par|pr[eé]sent[eé]\s*par|soutenu\s*publiquement|encadrant|encadreur|tuteur|ma[iî]tre\s*de\s*stage|par\s*:/i.test(t)) {
       firstBodyStart = m.index;
     }
   }
@@ -299,18 +307,23 @@ function processPara(
     return replaceParagraphValue(para, d.annee);
   }
 
-  // ── Theme — labeled with colon (e.g. "Thème : ………") ────────────────────
-  if (/th[eè]me\s*:|sujet\s*:|intitul[eé]\s*:|titre\s*(du\s*)?(rapport|stage|m[eé]moire|pfe)\s*:/i.test(t)) {
+  // ── Theme — any keyword followed by colon ────────────────────────────────
+  // Matches: "Thème :", "Sujet :", "Intitulé :", "Titre :", "Titre du PFE :", etc.
+  if (/(th[eè]me|sujet|intitul[eé]|titre|objet)\s*:/i.test(t)) {
     themeState.filled = true;
     return replaceParagraphValue(para, d.theme);
   }
 
-  // ── Theme — placeholder label without colon (e.g. "INTITULÉ DU PFE") ────
-  // These are standalone labels inside a box/table cell that get fully replaced.
-  if (/^intitul[eé](\s+(du|de))?\s*(pfe|rapport|m[eé]moire|stage)?\s*$/i.test(t.trim()) ||
-      /^th[eè]me(\s+(du|de))?\s*(pfe|rapport|m[eé]moire|stage)?\s*$/i.test(t.trim()) ||
-      /^titre(\s+(du|de))?\s*(pfe|rapport|m[eé]moire|stage)?\s*$/i.test(t.trim()) ||
-      /^(sujet|objet)\s+(du|de)\s*(pfe|rapport|m[eé]moire|stage)\s*$/i.test(t.trim())) {
+  // ── Theme — standalone label (no colon), paragraph IS the placeholder ────
+  // Covers: "INTITULÉ DU PFE", "THÈME", "TITRE DU MÉMOIRE", "SUJET DU STAGE",
+  //         "OBJET DU RAPPORT", etc.
+  // Rule: paragraph starts with a theme keyword AND is short (≤ 8 words) AND
+  //       has no colon (colon case is already handled above).
+  if (
+    /^(intitul[eé]|th[eè]me|titre|sujet|objet)\b/i.test(t.trim()) &&
+    !t.includes(":") &&
+    t.trim().split(/\s+/).length <= 8
+  ) {
     themeState.filled = true;
     return replaceParagraphValue(para, d.theme);
   }
