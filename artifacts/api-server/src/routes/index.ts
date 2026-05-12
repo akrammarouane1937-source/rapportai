@@ -11,6 +11,7 @@ import chatRouter from "./chat";
 import humanizeRouter from "./humanize";
 import logoRouter from "./logo";
 import sdkTestRouter from "./sdk-test";
+import plagiatRouter from "./plagiat";
 
 const router: IRouter = Router();
 
@@ -26,5 +27,6 @@ router.use(chatRouter);
 router.use(humanizeRouter);
 router.use(logoRouter);
 router.use(sdkTestRouter);
+router.use(plagiatRouter);
 
 export default router;

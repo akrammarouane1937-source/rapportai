@@ -1,6 +1,6 @@
 import { useState, useCallback, useEffect, useRef } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { Copy, Download, PenLine, X, Check, Loader2, Send, CheckCheck, Paperclip, ImageIcon, FileText, Link2 } from "lucide-react";
+import { Copy, Download, PenLine, X, Check, Loader2, Send, CheckCheck, Paperclip, ImageIcon, FileText, Link2, Sparkles, ShieldCheck } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { generateDocx, downloadBlob } from "@/lib/generateDocx";
 import { UpsellModal } from "@/components/report/UpsellModal";
@@ -474,6 +474,210 @@ function RevisionPanel({
   );
 }
 
+// ── Transform panel (Humanize / Anti-Plagiat) ─────────────────────────────────
+
+const TRANSFORM_CONFIG = {
+  humanize: {
+    title:    "Humaniseur IA",
+    subtitle: "Rend indétectable par GPTZero · Turnitin · Copyleaks",
+    endpoint: "/api/humanize",
+    btnLabel: "Humaniser ce texte",
+    accent:   "#d97706",   // amber-600
+    bg:       "#fffbeb",   // amber-50
+    border:   "#fcd34d",   // amber-300
+    textCls:  "text-amber-700",
+    btnCls:   "bg-amber-500 hover:bg-amber-600 text-white",
+    chipCls:  "bg-amber-50 border-amber-200 text-amber-700",
+    icon:     Sparkles,
+  },
+  plagiat: {
+    title:    "Anti-Plagiat",
+    subtitle: "Réduit la similarité sous 15% sur Turnitin · iThenticate",
+    endpoint: "/api/plagiat",
+    btnLabel: "Reformuler pour l'anti-plagiat",
+    accent:   "#2563eb",   // blue-600
+    bg:       "#eff6ff",   // blue-50
+    border:   "#93c5fd",   // blue-300
+    textCls:  "text-blue-700",
+    btnCls:   "bg-blue-600 hover:bg-blue-700 text-white",
+    chipCls:  "bg-blue-50 border-blue-200 text-blue-700",
+    icon:     ShieldCheck,
+  },
+} as const;
+
+function TransformPanel({
+  open, onClose, mode, rawContent, onContentChange,
+}: {
+  open: boolean;
+  onClose: () => void;
+  mode: "humanize" | "plagiat";
+  rawContent?: string;
+  onContentChange?: (newContent: string) => void;
+}) {
+  const cfg = TRANSFORM_CONFIG[mode];
+  const Icon = cfg.icon;
+
+  const [result, setResult]     = useState("");
+  const [streaming, setStreaming] = useState(false);
+  const [applied, setApplied]   = useState(false);
+  const [error, setError]       = useState<string | null>(null);
+  const resultRef               = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (open) { setResult(""); setApplied(false); setError(null); }
+  }, [open]);
+
+  useEffect(() => {
+    resultRef.current?.scrollTo({ top: resultRef.current.scrollHeight, behavior: "smooth" });
+  }, [result]);
+
+  const handleRun = async () => {
+    if (!rawContent?.trim() || streaming) return;
+    setStreaming(true); setResult(""); setError(null); setApplied(false);
+    const report = getReport();
+    let output = "";
+    try {
+      const resp = await fetch(`${BASE_PATH}${cfg.endpoint}`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          content:    rawContent,
+          sessionId:  report.sessionId,
+          theme:      report.theme,
+          reportType: report.reportType,
+          school:     report.school,
+          filiere:    report.filiere,
+        }),
+      });
+      if (!resp.ok || !resp.body) throw new Error(`HTTP ${resp.status}`);
+      const reader  = resp.body.getReader();
+      const decoder = new TextDecoder();
+      let buf = "";
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+        buf += decoder.decode(value, { stream: true });
+        const lines = buf.split("\n\n");
+        buf = lines.pop() ?? "";
+        for (const line of lines) {
+          if (!line.startsWith("data: ")) continue;
+          try {
+            const msg = JSON.parse(line.slice(6)) as { content?: string; done?: boolean; error?: string };
+            if (msg.error) throw new Error(msg.error);
+            if (msg.done) break;
+            if (msg.content) { output += msg.content; setResult(output); }
+          } catch { /* skip malformed */ }
+        }
+      }
+      if (!output.trim()) throw new Error("Aucun résultat retourné. Réessaie.");
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Erreur inconnue");
+    } finally {
+      setStreaming(false);
+    }
+  };
+
+  const handleApply = () => {
+    if (!result || applied) return;
+    onContentChange?.(result);
+    setApplied(true);
+  };
+
+  return (
+    <AnimatePresence>
+      {open && (
+        <motion.div
+          initial={{ x: 360, opacity: 0 }}
+          animate={{ x: 0, opacity: 1 }}
+          exit={{ x: 360, opacity: 0 }}
+          transition={{ type: "spring", damping: 28, stiffness: 280 }}
+          className="absolute top-0 right-0 h-full w-[360px] bg-white border-l border-gray-200 flex flex-col z-20"
+          style={{ boxShadow: "-4px 0 28px rgba(0,0,0,0.10)" }}
+        >
+          {/* Header */}
+          <div className="flex items-center justify-between px-4 py-3 border-b border-gray-100 flex-shrink-0">
+            <div className="flex items-center gap-2">
+              <div className="w-6 h-6 rounded-md flex items-center justify-center" style={{ background: cfg.accent }}>
+                <Icon className="w-3.5 h-3.5 text-white" />
+              </div>
+              <div>
+                <p className="text-sm font-semibold text-gray-900" style={{ fontFamily: "'Plus Jakarta Sans', sans-serif" }}>{cfg.title}</p>
+                <p className="text-[10px] text-gray-400 leading-none">{cfg.subtitle}</p>
+              </div>
+            </div>
+            <button onClick={onClose} className="w-7 h-7 rounded-lg flex items-center justify-center hover:bg-gray-100 text-gray-400 hover:text-gray-600 transition-colors">
+              <X className="w-4 h-4" />
+            </button>
+          </div>
+
+          {/* Content area */}
+          <div className="flex-1 overflow-hidden flex flex-col px-4 py-4 gap-3">
+
+            {/* Info card */}
+            {!result && !streaming && (
+              <div className="rounded-xl p-3 border text-xs leading-relaxed" style={{ background: cfg.bg, borderColor: cfg.border }}>
+                {mode === "humanize" ? (
+                  <p className={cfg.textCls}>
+                    Réécrit ton texte pour <strong>tromper les détecteurs IA</strong> : variation des longueurs de phrases, connecteurs variés, nuances stylistiques humaines. Le sens académique est préservé à 100%.
+                  </p>
+                ) : (
+                  <p className={cfg.textCls}>
+                    Reformule ton texte pour <strong>réduire la similarité</strong> avec les sources connues : paraphrase profonde, restructuration des paragraphes, synonymes précis. Citations et chiffres sont préservés intacts.
+                  </p>
+                )}
+              </div>
+            )}
+
+            {/* Streaming result */}
+            {(result || streaming) && (
+              <div ref={resultRef} className="flex-1 overflow-y-auto rounded-xl border p-3 text-xs text-gray-700 leading-relaxed whitespace-pre-wrap" style={{ background: cfg.bg, borderColor: cfg.border }}>
+                {result || <span className="text-gray-400 italic">Génération en cours…</span>}
+                {streaming && <span className="inline-block w-1.5 h-3.5 bg-gray-400 animate-pulse ml-0.5 align-middle" />}
+              </div>
+            )}
+
+            {error && (
+              <div className="bg-red-50 border border-red-100 rounded-xl px-3 py-2 flex items-start gap-2">
+                <X className="w-3 h-3 text-red-400 flex-shrink-0 mt-0.5" />
+                <p className="text-xs text-red-600">{error}</p>
+              </div>
+            )}
+          </div>
+
+          {/* Actions */}
+          <div className="flex-shrink-0 border-t border-gray-100 p-4 flex flex-col gap-2">
+            {result && !streaming && (
+              <button
+                onClick={handleApply}
+                disabled={applied}
+                className={`w-full h-9 rounded-xl text-sm font-semibold flex items-center justify-center gap-2 transition-all ${
+                  applied ? "bg-green-100 text-green-700 cursor-default" : cfg.btnCls
+                }`}
+              >
+                {applied
+                  ? <><CheckCheck className="w-4 h-4" /> Appliqué au document</>
+                  : <><Check className="w-4 h-4" /> Appliquer cette version</>
+                }
+              </button>
+            )}
+            <button
+              onClick={handleRun}
+              disabled={streaming || !rawContent?.trim()}
+              className="w-full h-9 rounded-xl text-sm font-semibold flex items-center justify-center gap-2 border border-gray-200 text-gray-600 hover:bg-gray-50 disabled:opacity-50 transition-all"
+            >
+              {streaming
+                ? <><Loader2 className="w-4 h-4 animate-spin" /> Traitement en cours…</>
+                : result ? <><Icon className="w-4 h-4" /> Relancer</>
+                : <><Icon className="w-4 h-4" /> {cfg.btnLabel}</>
+              }
+            </button>
+          </div>
+        </motion.div>
+      )}
+    </AnimatePresence>
+  );
+}
+
 // ── Main component ────────────────────────────────────────────────────────────
 export function WordPreview({
   content,
@@ -485,9 +689,15 @@ export function WordPreview({
   sectionId,
 }: WordPreviewProps) {
   const [revisionOpen, setRevisionOpen]   = useState(false);
+  const [humanizeOpen, setHumanizeOpen]   = useState(false);
+  const [plagiatOpen, setPlagiatOpen]     = useState(false);
   const [revisionUpsell, setRevisionUpsell] = useState(false);
   const [copied, setCopied]               = useState(false);
   const [downloading, setDownloading]     = useState(false);
+
+  const openRevision  = () => { setRevisionOpen(true);  setHumanizeOpen(false); setPlagiatOpen(false); };
+  const openHumanize  = () => { setHumanizeOpen(true);  setRevisionOpen(false); setPlagiatOpen(false); };
+  const openPlagiat   = () => { setPlagiatOpen(true);   setRevisionOpen(false); setHumanizeOpen(false); };
 
   const html  = content || MOCK_CONTENT;
   const pages = splitIntoPages(html);
@@ -533,9 +743,17 @@ export function WordPreview({
               : <><Download className="w-3.5 h-3.5" /> .docx</>
             }
           </Button>
-          <Button onClick={() => setRevisionOpen(true)} size="sm" variant="ghost"
+          <Button onClick={openRevision} size="sm" variant="ghost"
             className="h-8 px-3 text-xs bg-purple-50 hover:bg-purple-100 text-purple-700 font-semibold gap-1.5 rounded-lg">
             <PenLine className="w-3.5 h-3.5" /> Révision IA
+          </Button>
+          <Button onClick={openHumanize} size="sm" variant="ghost"
+            className="h-8 px-3 text-xs bg-amber-50 hover:bg-amber-100 text-amber-700 font-semibold gap-1.5 rounded-lg">
+            <Sparkles className="w-3.5 h-3.5" /> Humaniser
+          </Button>
+          <Button onClick={openPlagiat} size="sm" variant="ghost"
+            className="h-8 px-3 text-xs bg-blue-50 hover:bg-blue-100 text-blue-700 font-semibold gap-1.5 rounded-lg">
+            <ShieldCheck className="w-3.5 h-3.5" /> Anti-Plagiat
           </Button>
         </div>
       </div>
@@ -602,6 +820,22 @@ export function WordPreview({
         rawContent={rawContent}
         onContentChange={onContentChange}
         sectionId={sectionId}
+      />
+      {/* Humanize panel */}
+      <TransformPanel
+        open={humanizeOpen}
+        onClose={() => setHumanizeOpen(false)}
+        mode="humanize"
+        rawContent={rawContent}
+        onContentChange={onContentChange}
+      />
+      {/* Anti-Plagiat panel */}
+      <TransformPanel
+        open={plagiatOpen}
+        onClose={() => setPlagiatOpen(false)}
+        mode="plagiat"
+        rawContent={rawContent}
+        onContentChange={onContentChange}
       />
       <UpsellModal
         open={revisionUpsell}

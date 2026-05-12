@@ -1,8 +1,11 @@
 import { Router, type Request, type Response } from "express";
 import { query } from "@anthropic-ai/claude-agent-sdk";
+import { existsSync } from "fs";
+import path from "path";
 import { findClaudeBinary } from "../lib/find-claude-binary";
 
 const router = Router();
+const SESSIONS_ROOT = "/tmp/rapportai-sessions";
 
 interface JuryMessage {
   role: "user" | "jury";
@@ -11,67 +14,51 @@ interface JuryMessage {
 
 interface JuryBody {
   messages: JuryMessage[];
-  reportContext: {
-    theme?: string;
-    school?: string;
-    filiere?: string;
-    reportType?: string;
-    studentName?: string;
-    resume?: string;
-    introduction?: string;
-    partieI?: string;
-    partieII?: string;
-    conclusion?: string;
-    encadrantPeda?: string;
-  };
-}
-
-function snippet(text: string | undefined, maxChars = 600): string {
-  if (!text) return "";
-  return text.length > maxChars ? text.slice(0, maxChars) + "…" : text;
+  sessionId?: string;
+  theme?: string;
+  school?: string;
+  filiere?: string;
+  reportType?: string;
+  studentName?: string;
+  encadrantPeda?: string;
 }
 
 router.post("/jury", async (req: Request, res: Response) => {
-  const body = req.body as JuryBody;
-
-  if (!body.reportContext) {
-    res.status(400).json({ error: "reportContext is required" });
-    return;
-  }
+  const { messages, sessionId, theme, school, filiere, reportType, studentName, encadrantPeda } = req.body as JuryBody;
 
   res.setHeader("Content-Type", "text/event-stream");
   res.setHeader("Cache-Control", "no-cache");
   res.setHeader("Connection", "keep-alive");
 
   const claudeBinary = findClaudeBinary();
-  const ctx = body.reportContext;
-  const name    = ctx.studentName ?? "l'étudiant(e)";
-  const school  = ctx.school      ?? "l'école";
-  const filiere = ctx.filiere     ?? "la filière";
-  const type    = ctx.reportType  ?? "rapport de fin d'études";
-  const theme   = ctx.theme       ?? "le thème fourni";
+  const name    = studentName ?? "l'étudiant(e)";
+  const ecole   = school      ?? "l'école";
+  const fil     = filiere     ?? "la filière";
+  const type    = reportType  ?? "rapport de fin d'études";
+  const subject = theme       ?? "le thème fourni";
 
-  const sectionSnippets = [
-    ctx.resume       ? `RÉSUMÉ:\n${snippet(ctx.resume)}`            : "",
-    ctx.introduction ? `INTRODUCTION:\n${snippet(ctx.introduction)}` : "",
-    ctx.partieI      ? `PARTIE I:\n${snippet(ctx.partieI)}`         : "",
-    ctx.partieII     ? `PARTIE II:\n${snippet(ctx.partieII)}`       : "",
-    ctx.conclusion   ? `CONCLUSION:\n${snippet(ctx.conclusion)}`    : "",
-  ].filter(Boolean).join("\n\n");
+  const sessionDir = sessionId ? path.join(SESSIONS_ROOT, sessionId) : null;
+  const workDir    = sessionDir && existsSync(sessionDir) ? sessionDir : undefined;
 
-  const systemPrompt = `Tu simules un jury de soutenance académique marocain évaluant le ${type} de ${name} intitulé "${theme}" à ${school} (filière : ${filiere}).
+  const fileContext = workDir
+    ? `\n\nTu as accès aux fichiers complets du rapport dans le répertoire de session. Utilise Glob pour voir les sections disponibles, puis Read pour lire le contenu pertinent avant de poser tes questions — base-toi sur le contenu réel du rapport, pas sur des suppositions.`
+    : "";
+
+  const systemPrompt = `Tu simules un jury de soutenance académique marocain évaluant le ${type} de ${name} intitulé "${subject}" à ${ecole} (filière : ${fil}).${encadrantPeda ? ` Encadrant pédagogique : ${encadrantPeda}.` : ""}
 
 Membres du jury :
-- **Pr. Hassan Benali** — Président, spécialiste en ${filiere}. Formel et exigeant. Questions théoriques.
-- **Dr. Fatima Zahra Alaoui** — Membre, experte méthodologie. Analytique. Questions sur données et cohérence.
-- **M. Youssef El Mansouri** — Expert professionnel. Pragmatique. Questions sur applications pratiques.
+- **Pr. Hassan Benali** — Président, spécialiste en ${fil}. Formel et exigeant. Questions théoriques et conceptuelles.
+- **Dr. Fatima Zahra Alaoui** — Membre, experte méthodologie. Analytique. Questions sur la rigueur des données et la cohérence.
+- **M. Youssef El Mansouri** — Expert professionnel. Pragmatique. Questions sur les applications pratiques et la valeur ajoutée.
 
-${sectionSnippets ? `=== CONTENU DU RAPPORT ===\n${sectionSnippets}` : ""}
+Règles :
+- UNE seule question par intervention (2-4 phrases max)
+- Commence toujours par **Nom du membre :**
+- Alterne entre les membres au fil des échanges
+- Adapte tes questions au contenu réel du rapport — lis les fichiers disponibles
+- Après 8 échanges complets, fournis une évaluation synthétique avec points forts, points à améliorer, et mention proposée${fileContext}`;
 
-Règles : UNE seule question par intervention (2-4 phrases). Commence toujours par **Nom du membre :**. Alterne entre les membres. Après 8 échanges, évaluation synthétique.`;
-
-  // Build conversation history + latest prompt
-  const msgs = body.messages ?? [];
+  const msgs = messages ?? [];
   const history = msgs.slice(0, -1)
     .map(m => `${m.role === "user" ? "Étudiant" : "Jury"}: ${m.content}`)
     .join("\n\n");
@@ -87,8 +74,8 @@ Règles : UNE seule question par intervention (2-4 phrases). Commence toujours p
       prompt,
       options: {
         systemPrompt,
-        maxTurns: 1,
-        allowedTools: [],
+        maxTurns: 3,
+        ...(workDir ? { cwd: workDir, allowedTools: ["Read", "Glob"] } : { allowedTools: [] }),
         ...(claudeBinary ? { pathToClaudeCodeExecutable: claudeBinary } : {}),
       },
     })) {

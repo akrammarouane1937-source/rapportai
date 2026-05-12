@@ -1,11 +1,15 @@
 import { Router, type Request, type Response } from "express";
 import { query } from "@anthropic-ai/claude-agent-sdk";
+import { existsSync } from "fs";
+import path from "path";
 import { findClaudeBinary } from "../lib/find-claude-binary";
 
 const router = Router();
+const SESSIONS_ROOT = "/tmp/rapportai-sessions";
 
 interface HumanizeBody {
   content: string;
+  sessionId?: string;
   theme?: string;
   reportType?: string;
   school?: string;
@@ -13,7 +17,7 @@ interface HumanizeBody {
 }
 
 router.post("/humanize", async (req: Request, res: Response) => {
-  const { content, theme, reportType, school, filiere } = req.body as HumanizeBody;
+  const { content, sessionId, theme, reportType, school, filiere } = req.body as HumanizeBody;
 
   if (!content || !content.trim()) {
     res.status(400).json({ error: "content is required" });
@@ -29,6 +33,9 @@ router.post("/humanize", async (req: Request, res: Response) => {
   const subject = theme     ?? "le sujet du rapport";
   const ecole   = school    ?? "l'école";
   const fil     = filiere   ?? "la filière";
+
+  const sessionDir = sessionId ? path.join(SESSIONS_ROOT, sessionId) : null;
+  const workDir    = sessionDir && existsSync(sessionDir) ? sessionDir : undefined;
 
   const systemPrompt = `Tu es un expert en rédaction académique marocaine. Ta mission : réécrire un texte généré par IA pour le rendre INDÉTECTABLE par GPTZero, Turnitin AI Detection, Copyleaks.
 
@@ -50,7 +57,7 @@ Retourne UNIQUEMENT le texte humanisé en Markdown.`;
       options: {
         systemPrompt,
         maxTurns: 1,
-        allowedTools: [],
+        ...(workDir ? { cwd: workDir, allowedTools: ["Read"] } : { allowedTools: [] }),
         ...(claudeBinary ? { pathToClaudeCodeExecutable: claudeBinary } : {}),
       },
     })) {

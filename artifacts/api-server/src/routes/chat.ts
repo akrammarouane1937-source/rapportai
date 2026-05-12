@@ -1,8 +1,11 @@
 import { Router, type Request, type Response } from "express";
 import { query } from "@anthropic-ai/claude-agent-sdk";
+import { existsSync } from "fs";
+import path from "path";
 import { findClaudeBinary } from "../lib/find-claude-binary";
 
 const router = Router();
+const SESSIONS_ROOT = "/tmp/rapportai-sessions";
 
 interface ChatMessage {
   role: "user" | "assistant";
@@ -11,6 +14,7 @@ interface ChatMessage {
 
 interface ChatBody {
   messages: ChatMessage[];
+  sessionId?: string;
   mode?: "jury" | "assistant";
   theme?: string;
   reportType?: string;
@@ -21,7 +25,7 @@ interface ChatBody {
 }
 
 router.post("/chat", async (req: Request, res: Response) => {
-  const { messages, mode, theme, reportType, school, filiere, problematique, studentName } = req.body as ChatBody;
+  const { messages, sessionId, mode, theme, reportType, school, filiere, problematique, studentName } = req.body as ChatBody;
 
   if (!messages || !Array.isArray(messages) || messages.length === 0) {
     res.status(400).json({ error: "messages array is required" });
@@ -33,21 +37,27 @@ router.post("/chat", async (req: Request, res: Response) => {
   res.setHeader("Connection", "keep-alive");
 
   const claudeBinary = findClaudeBinary();
-  const type    = reportType   ?? "rapport de fin d'études";
-  const subject = theme        ?? "le sujet du rapport";
-  const ecole   = school       ?? "l'école";
-  const fil     = filiere      ?? "la filière";
+  const type    = reportType    ?? "rapport de fin d'études";
+  const subject = theme         ?? "le sujet du rapport";
+  const ecole   = school        ?? "l'école";
+  const fil     = filiere       ?? "la filière";
   const prob    = problematique ?? `Comment ${subject} peut-il être approfondi ?`;
-  const student = studentName  ?? "l'étudiant(e)";
+  const student = studentName   ?? "l'étudiant(e)";
+
+  const sessionDir = sessionId ? path.join(SESSIONS_ROOT, sessionId) : null;
+  const workDir    = sessionDir && existsSync(sessionDir) ? sessionDir : undefined;
+
+  const fileContext = workDir
+    ? `\nTu as accès aux fichiers du rapport dans le répertoire de session. Utilise Glob pour voir quelles sections existent, puis Read pour lire le contenu pertinent avant de répondre.`
+    : "";
 
   const systemPrompt = mode === "jury"
     ? `Tu es un jury de soutenance académique marocain — rigoureux mais bienveillant. Tu simules une soutenance du ${type} intitulé "${subject}", réalisé par ${student} à ${ecole} — ${fil}.
 Problématique : "${prob}"
-Règles : UNE seule question par tour, 2-3 phrases max, français formel, alterner théorique/méthodologique/pratique.`
+Règles : UNE seule question par tour, 2-3 phrases max, français formel, alterner théorique/méthodologique/pratique.${fileContext}`
     : `Tu es un assistant IA expert en rédaction académique marocaine. Tu aides ${student} (${ecole} — ${fil}) à rédiger son ${type} intitulé "${subject}".
-Règles : Réponses courtes et directes (3-5 phrases), conseils actionnables adaptés au contexte marocain, toujours encourager.`;
+Règles : Réponses courtes et directes (3-5 phrases), conseils actionnables adaptés au contexte marocain, toujours encourager.${fileContext}`;
 
-  // Inject conversation history into the prompt
   const history = messages.slice(0, -1)
     .map(m => `${m.role === "user" ? "Étudiant" : "Assistant"}: ${m.content}`)
     .join("\n\n");
@@ -59,8 +69,8 @@ Règles : Réponses courtes et directes (3-5 phrases), conseils actionnables ada
       prompt,
       options: {
         systemPrompt,
-        maxTurns: 1,
-        allowedTools: [],
+        maxTurns: 3,
+        ...(workDir ? { cwd: workDir, allowedTools: ["Read", "Glob"] } : { allowedTools: [] }),
         ...(claudeBinary ? { pathToClaudeCodeExecutable: claudeBinary } : {}),
       },
     })) {
