@@ -1,6 +1,6 @@
 import { useState, useCallback, useEffect, useRef } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { Copy, Download, PenLine, X, Check, Loader2, Send, CheckCheck } from "lucide-react";
+import { Copy, Download, PenLine, X, Check, Loader2, Send, CheckCheck, Paperclip, ImageIcon, FileText, Link2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { generateDocx, downloadBlob } from "@/lib/generateDocx";
 import { UpsellModal } from "@/components/report/UpsellModal";
@@ -41,6 +41,10 @@ type ChatMsg = {
   isRevision?: boolean;
   applied?: boolean;
 };
+
+type AttachmentFile = { kind: "file";  file: File; name: string };
+type AttachmentUrl  = { kind: "url";   url: string };
+type Attachment     = AttachmentFile | AttachmentUrl;
 
 function parseRevisionResponse(raw: string): { summary: string; revised: string } | null {
   const summaryMatch = raw.match(/<summary>([\s\S]*?)<\/summary>/);
@@ -103,15 +107,21 @@ function RevisionPanel({
   onContentChange?: (newContent: string) => void;
   sectionId?: string;
 }) {
-  const [messages, setMessages]     = useState<ChatMsg[]>([]);
-  const [input, setInput]           = useState("");
-  const [isRevising, setIsRevising] = useState(false);
-  const [statusIdx, setStatusIdx]   = useState(0);
-  const [error, setError]           = useState<string | null>(null);
+  const [messages, setMessages]       = useState<ChatMsg[]>([]);
+  const [input, setInput]             = useState("");
+  const [isRevising, setIsRevising]   = useState(false);
+  const [statusIdx, setStatusIdx]     = useState(0);
+  const [error, setError]             = useState<string | null>(null);
+  const [attachment, setAttachment]   = useState<Attachment | null>(null);
+  const [attachMenuOpen, setAttachMenuOpen] = useState(false);
+  const [urlMode, setUrlMode]         = useState(false);
+  const [urlInput, setUrlInput]       = useState("");
   // workingContent tracks what the next revision operates on (updates on apply)
-  const workingContentRef           = useRef(rawContent || content);
-  const scrollRef                   = useRef<HTMLDivElement>(null);
-  const statusTimerRef              = useRef<ReturnType<typeof setInterval> | null>(null);
+  const workingContentRef             = useRef(rawContent || content);
+  const scrollRef                     = useRef<HTMLDivElement>(null);
+  const statusTimerRef                = useRef<ReturnType<typeof setInterval> | null>(null);
+  const imgInputRef                   = useRef<HTMLInputElement>(null);
+  const fileInputRef                  = useRef<HTMLInputElement>(null);
 
   // Reset when panel opens/content changes
   useEffect(() => {
@@ -132,6 +142,13 @@ function RevisionPanel({
     scrollRef.current?.scrollTo({ top: scrollRef.current.scrollHeight, behavior: "smooth" });
   }, [messages, isRevising]);
 
+  useEffect(() => {
+    if (!attachMenuOpen) return;
+    const close = () => setAttachMenuOpen(false);
+    document.addEventListener("click", close, { capture: true, once: true });
+    return () => document.removeEventListener("click", close, { capture: true });
+  }, [attachMenuOpen]);
+
   const startStatusCycle = () => {
     setStatusIdx(0);
     statusTimerRef.current = setInterval(() => {
@@ -142,6 +159,21 @@ function RevisionPanel({
     if (statusTimerRef.current) { clearInterval(statusTimerRef.current); statusTimerRef.current = null; }
   };
 
+  const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const f = e.target.files?.[0];
+    if (f) setAttachment({ kind: "file", file: f, name: f.name });
+    setAttachMenuOpen(false);
+    e.target.value = "";
+  };
+
+  const handleUrlConfirm = () => {
+    const u = urlInput.trim();
+    if (u) setAttachment({ kind: "url", url: u });
+    setUrlMode(false);
+    setUrlInput("");
+    setAttachMenuOpen(false);
+  };
+
   const handleSend = async () => {
     const instruction = input.trim();
     if (!instruction || isRevising) return;
@@ -150,9 +182,14 @@ function RevisionPanel({
     const limit = PLAN_LIMITS[next.planId].revisions;
     if (next.revisionCount > limit) { onRevisionLimitHit(); return; }
 
-    const userMsg: ChatMsg = { id: crypto.randomUUID(), role: "user", text: instruction };
+    const attachLabel = attachment
+      ? attachment.kind === "file" ? ` [📎 ${attachment.name}]` : ` [🔗 ${attachment.url}]`
+      : "";
+    const userMsg: ChatMsg = { id: crypto.randomUUID(), role: "user", text: instruction + attachLabel };
     setMessages(prev => [...prev, userMsg]);
     setInput("");
+    const pendingAttachment = attachment;
+    setAttachment(null);
     setIsRevising(true);
     setError(null);
     startStatusCycle();
@@ -161,18 +198,38 @@ function RevisionPanel({
     let result = "";
 
     try {
+      // Upload file to session dir if needed
+      let attachmentFilename: string | undefined;
+      let attachmentUrl: string | undefined;
+
+      if (pendingAttachment) {
+        if (pendingAttachment.kind === "file") {
+          if (!report.sessionId) throw new Error("Démarrez d'abord une génération pour joindre des fichiers.");
+          const fd = new FormData();
+          fd.append("file", pendingAttachment.file);
+          const up = await fetch(`${BASE_PATH}/api/session/${report.sessionId}/upload-document`, { method: "POST", body: fd });
+          if (!up.ok) throw new Error("Échec de l'envoi du fichier.");
+          const { filename } = await up.json() as { filename: string };
+          attachmentFilename = filename;
+        } else {
+          attachmentUrl = pendingAttachment.url;
+        }
+      }
+
       const resp = await fetch(`${BASE_PATH}/api/revise`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          content:    workingContentRef.current,
+          content:            workingContentRef.current,
           instruction,
-          sessionId:  report.sessionId,
+          sessionId:          report.sessionId,
           sectionId,
-          theme:      report.theme,
-          reportType: report.reportType,
-          school:     report.school,
-          filiere:    report.filiere,
+          attachmentFilename,
+          attachmentUrl,
+          theme:              report.theme,
+          reportType:         report.reportType,
+          school:             report.school,
+          filiere:            report.filiere,
         }),
       });
       if (!resp.ok || !resp.body) throw new Error(`HTTP ${resp.status}`);
@@ -326,7 +383,67 @@ function RevisionPanel({
 
           {/* Input */}
           <div className="flex-shrink-0 border-t border-gray-100 p-3">
-            <div className="flex items-end gap-2 bg-gray-50 rounded-xl border border-gray-200 focus-within:border-purple-300 focus-within:ring-2 focus-within:ring-purple-100 transition-all px-3 py-2">
+
+            {/* Attachment chip */}
+            {attachment && (
+              <div className="flex items-center gap-1.5 mb-2 px-1">
+                <div className="flex items-center gap-1.5 bg-purple-50 border border-purple-200 rounded-lg px-2 py-1 text-xs text-purple-700 max-w-full">
+                  {attachment.kind === "file"
+                    ? <><FileText className="w-3 h-3 flex-shrink-0" /><span className="truncate max-w-[180px]">{attachment.name}</span></>
+                    : <><Link2 className="w-3 h-3 flex-shrink-0" /><span className="truncate max-w-[180px]">{attachment.url}</span></>
+                  }
+                  <button onClick={() => setAttachment(null)} className="ml-1 text-purple-400 hover:text-purple-700 flex-shrink-0">
+                    <X className="w-3 h-3" />
+                  </button>
+                </div>
+              </div>
+            )}
+
+            {/* URL input mode */}
+            {urlMode && (
+              <div className="flex items-center gap-2 mb-2">
+                <input
+                  autoFocus
+                  value={urlInput}
+                  onChange={e => setUrlInput(e.target.value)}
+                  onKeyDown={e => { if (e.key === "Enter") handleUrlConfirm(); if (e.key === "Escape") { setUrlMode(false); setAttachMenuOpen(false); } }}
+                  placeholder="https://..."
+                  className="flex-1 text-xs border border-purple-200 rounded-lg px-3 py-1.5 focus:outline-none focus:ring-2 focus:ring-purple-100"
+                />
+                <button onClick={handleUrlConfirm} className="text-xs bg-purple-600 text-white px-3 py-1.5 rounded-lg hover:bg-purple-700">OK</button>
+                <button onClick={() => { setUrlMode(false); setAttachMenuOpen(false); }} className="text-gray-400 hover:text-gray-600"><X className="w-3.5 h-3.5" /></button>
+              </div>
+            )}
+
+            <div className="relative flex items-end gap-2 bg-gray-50 rounded-xl border border-gray-200 focus-within:border-purple-300 focus-within:ring-2 focus-within:ring-purple-100 transition-all px-3 py-2">
+
+              {/* Attach menu */}
+              {attachMenuOpen && (
+                <div className="absolute bottom-full left-0 mb-2 bg-white border border-gray-200 rounded-xl shadow-lg overflow-hidden z-30 w-44">
+                  <button onClick={() => imgInputRef.current?.click()}
+                    className="w-full flex items-center gap-2.5 px-3 py-2.5 text-xs text-gray-700 hover:bg-purple-50 hover:text-purple-700 transition-colors">
+                    <ImageIcon className="w-3.5 h-3.5" /> Image / Photo
+                  </button>
+                  <button onClick={() => fileInputRef.current?.click()}
+                    className="w-full flex items-center gap-2.5 px-3 py-2.5 text-xs text-gray-700 hover:bg-purple-50 hover:text-purple-700 transition-colors border-t border-gray-100">
+                    <FileText className="w-3.5 h-3.5" /> Fichier
+                  </button>
+                  <button onClick={() => { setUrlMode(true); setAttachMenuOpen(false); }}
+                    className="w-full flex items-center gap-2.5 px-3 py-2.5 text-xs text-gray-700 hover:bg-purple-50 hover:text-purple-700 transition-colors border-t border-gray-100">
+                    <Link2 className="w-3.5 h-3.5" /> Lien web
+                  </button>
+                </div>
+              )}
+
+              {/* + button */}
+              <button
+                onClick={() => { setAttachMenuOpen(o => !o); setUrlMode(false); }}
+                disabled={isRevising}
+                className="w-6 h-6 rounded-md flex items-center justify-center text-gray-400 hover:text-purple-600 hover:bg-purple-50 transition-colors flex-shrink-0 disabled:opacity-40"
+              >
+                <Paperclip className="w-3.5 h-3.5" />
+              </button>
+
               <textarea
                 value={input}
                 onChange={e => setInput(e.target.value)}
@@ -338,7 +455,7 @@ function RevisionPanel({
               />
               <button
                 onClick={handleSend}
-                disabled={!input.trim() || isRevising}
+                disabled={(!input.trim() && !attachment) || isRevising}
                 className="w-7 h-7 rounded-lg bg-purple-600 hover:bg-purple-700 disabled:bg-gray-200 flex items-center justify-center transition-colors flex-shrink-0 mb-0.5"
               >
                 <Send className="w-3.5 h-3.5 text-white" />
@@ -346,6 +463,10 @@ function RevisionPanel({
             </div>
             <p className="text-[10px] text-gray-300 mt-1 text-right">⌘↵ pour envoyer</p>
           </div>
+
+          {/* Hidden file inputs */}
+          <input ref={imgInputRef}  type="file" accept="image/*" className="hidden" onChange={handleFileSelect} />
+          <input ref={fileInputRef} type="file" accept="*/*"     className="hidden" onChange={handleFileSelect} />
         </motion.div>
       )}
     </AnimatePresence>

@@ -14,6 +14,8 @@ interface ReviseBody {
   instruction: string;
   sessionId?: string;
   sectionId?: string;
+  attachmentFilename?: string;
+  attachmentUrl?: string;
   theme?: string;
   reportType?: string;
   school?: string;
@@ -21,7 +23,7 @@ interface ReviseBody {
 }
 
 router.post("/revise", async (req: Request, res: Response) => {
-  const { content, instruction, sessionId, sectionId, theme, reportType, school, filiere } = req.body as ReviseBody;
+  const { content, instruction, sessionId, sectionId, attachmentFilename, attachmentUrl, theme, reportType, school, filiere } = req.body as ReviseBody;
 
   if (!content || !instruction) {
     res.status(400).json({ error: "content and instruction are required" });
@@ -135,9 +137,17 @@ OUTPUT FORMAT — respond with exactly two XML blocks and nothing else:
 
 If clarification is needed before proceeding, ask your question directly without the XML tags above.`;
 
+  // Build attachment context injected into the agent prompt
+  let attachmentContext = "";
+  if (attachmentFilename) {
+    attachmentContext = `\n\nThe student has attached a file: "${attachmentFilename}". Read it before processing the instruction.`;
+  } else if (attachmentUrl) {
+    attachmentContext = `\n\nThe student has provided a URL: ${attachmentUrl}. Use WebFetch to read its content before processing the instruction.`;
+  }
+
   try {
     for await (const message of query({
-      prompt: `Student instruction: ${instruction}\n\nRead ${activeFile}, apply the change, then respond with <summary> and <revised_section>.`,
+      prompt: `Student instruction: ${instruction}${attachmentContext}\n\nRead ${activeFile}, apply the change, then respond with <summary> and <revised_section>.`,
       options: {
         systemPrompt,
         maxTurns: 10,
