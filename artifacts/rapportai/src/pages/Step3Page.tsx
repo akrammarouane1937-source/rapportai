@@ -234,11 +234,12 @@ export default function Step3Page() {
                 const rem = revised.slice(remIdx).replace(/^\s*(?:##\s*)?remerciements?\s*\n*/i, "").trim();
                 setDedicaces(ded);
                 setRemerciements(rem);
+                saveReport({ dedicaces: ded || undefined, remerciements: rem || undefined });
               } else {
-                // No split found — put everything in dédicaces, user can redistribute manually
-                setDedicaces(revised.trim());
+                const ded = revised.trim();
+                setDedicaces(ded);
+                saveReport({ dedicaces: ded || undefined });
               }
-              saveReport({ dedicaces: dedicaces || undefined, remerciements: remerciements || undefined });
             }}
           />
         </div>

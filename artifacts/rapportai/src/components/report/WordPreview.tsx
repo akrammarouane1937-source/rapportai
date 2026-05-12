@@ -201,8 +201,8 @@ function RevisionPanel({
           id: crypto.randomUUID(),
           role: "assistant",
           text: parsed ? parsed.summary : result.trim(),
-          fullText: parsed ? parsed.revised : result.trim(),
-          isRevision: true,
+          fullText: parsed ? parsed.revised : undefined,
+          isRevision: parsed !== null,
         }]);
       } else {
         throw new Error("Aucune révision retournée. Réessaie.");

@@ -11,10 +11,14 @@ const REVISE_ROOT = "/tmp/rapportai-revisions";
 interface ReviseBody {
   content: string;
   instruction: string;
+  theme?: string;
+  reportType?: string;
+  school?: string;
+  filiere?: string;
 }
 
 router.post("/revise", async (req: Request, res: Response) => {
-  const { content, instruction } = req.body as ReviseBody;
+  const { content, instruction, theme, reportType, school, filiere } = req.body as ReviseBody;
 
   if (!content || !instruction) {
     res.status(400).json({ error: "content and instruction are required" });
@@ -30,6 +34,10 @@ router.post("/revise", async (req: Request, res: Response) => {
   mkdirSync(workDir, { recursive: true });
   writeFileSync(path.join(workDir, "section.md"), content);
 
+  // Write student profile so the agent can read it
+  const profile = { theme, reportType, school, filiere };
+  writeFileSync(path.join(workDir, "profile.json"), JSON.stringify(profile, null, 2));
+
   // Copy skills file so the agent can read it
   const skillsPath = path.join(process.cwd(), "src/lib/skills/revision-skills.md");
   try {
@@ -42,11 +50,8 @@ router.post("/revise", async (req: Request, res: Response) => {
 
 You work inside a session directory that contains:
 - \`revision-skills.md\` — domain knowledge file with academic writing guidelines — READ THIS FIRST
-- \`profile.json\` — student information (name, school, filière, theme, encadrants) — READ THIS SECOND
+- \`profile.json\` — student information (school, filière, theme, reportType) — READ THIS SECOND
 - \`section.md\` — the specific section currently being revised
-- Other completed sections (partie-i.md, partie-ii.md, introduction.md, conclusion.md, resume.md, etc.)
-- INSTRUCTIONS.md — session-specific rules and context
-- Uploaded files from the student — may include canevas PDFs, Word templates, reference documents, screenshots of professor feedback, photos of handwritten notes, or other materials
 
 MANDATORY FIRST STEPS — before processing any revision request, you MUST:
 1. Read \`revision-skills.md\` to understand academic writing standards and domain knowledge
@@ -111,7 +116,7 @@ If clarification is needed before proceeding, ask your question directly without
       prompt: `Student instruction: ${instruction}\n\nRead section.md, apply the change, then respond with <summary> and <revised_section>.`,
       options: {
         systemPrompt,
-        maxTurns: 6,
+        maxTurns: 10,
         cwd: workDir,
         permissionMode: "acceptEdits",
         ...(claudeBinary ? { pathToClaudeCodeExecutable: claudeBinary } : {}),
