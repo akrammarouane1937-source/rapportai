@@ -43,7 +43,9 @@ router.post("/revise", async (req: Request, res: Response) => {
 Your core principle: Apply ONLY the exact modification the student requests — nothing more, nothing less. You are not an improvement agent. You are a precision editing tool.
 
 ## Your environment
-You have one file in your working directory: \`section.md\` — this is the section to revise.
+You have two files in your working directory:
+- \`revision-skills.md\` — read this FIRST, it contains formatting standards, citation styles, and school-specific rules
+- \`section.md\` — the section to revise
 
 Follow this process to complete the revision:
 
