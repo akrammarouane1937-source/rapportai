@@ -176,7 +176,11 @@ function RevisionPanel({
 
   const handleSend = async () => {
     const instruction = input.trim();
-    if (!instruction || isRevising) return;
+    if ((!instruction && !attachment) || isRevising) return;
+    if (!instruction && attachment) {
+      setError("Décris ce que tu veux faire avec ce fichier.");
+      return;
+    }
 
     const next  = incrementRevision();
     const limit = PLAN_LIMITS[next.planId].revisions;
@@ -481,6 +485,7 @@ export function WordPreview({
   wordCount = 0,
   blurred = false,
   onContentChange,
+  sectionId,
 }: WordPreviewProps) {
   const [revisionOpen, setRevisionOpen]   = useState(false);
   const [revisionUpsell, setRevisionUpsell] = useState(false);
