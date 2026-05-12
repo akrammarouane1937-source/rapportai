@@ -1,16 +1,16 @@
 import { Router, type Request, type Response } from "express";
 import { query } from "@anthropic-ai/claude-agent-sdk";
+import { mkdirSync, writeFileSync, rmSync } from "fs";
+import { randomUUID } from "crypto";
+import path from "path";
 import { findClaudeBinary } from "../lib/find-claude-binary";
 
 const router = Router();
+const REVISE_ROOT = "/tmp/rapportai-revisions";
 
 interface ReviseBody {
   content: string;
   instruction: string;
-  theme?: string;
-  reportType?: string;
-  school?: string;
-  filiere?: string;
 }
 
 router.post("/revise", async (req: Request, res: Response) => {
@@ -25,15 +25,23 @@ router.post("/revise", async (req: Request, res: Response) => {
   res.setHeader("Cache-Control", "no-cache");
   res.setHeader("Connection", "keep-alive");
 
+  // Create isolated working directory for this revision
+  const workDir = path.join(REVISE_ROOT, randomUUID());
+  mkdirSync(workDir, { recursive: true });
+  writeFileSync(path.join(workDir, "section.md"), content);
+
   const claudeBinary = findClaudeBinary();
 
   const systemPrompt = `You are a revision agent for RapportAI, an academic report generation SaaS used by Moroccan and francophone students to write their PFE (end-of-study project), mémoire, or rapport de stage.
 
 Your core principle: Apply ONLY the exact modification the student requests — nothing more, nothing less. You are not an improvement agent. You are a precision editing tool.
 
+## Your environment
+You have one file in your working directory: \`section.md\` — this is the section to revise.
+
 Follow this process to complete the revision:
 
-1. **Read and understand the full context**: Review the entire section content to understand the structure and context.
+1. **Read section.md first** — always start by reading the file to understand the full content and structure.
 
 2. **Identify the exact target**: Locate the precise word, sentence, phrase, or passage that the instruction refers to. This may be:
    - A specific word or phrase mentioned in the instruction
@@ -47,7 +55,7 @@ Follow this process to complete the revision:
    - Change formatting (bold, italic, etc.)
    - Modify a number, date, or citation
 
-4. **Apply the change with character-level precision**: Make ONLY the requested change. Do not:
+4. **Use Edit to apply the change with character-level precision**: Make ONLY the requested change. Do not:
    - Rewrite surrounding sentences
    - Improve grammar or style elsewhere
    - Restructure paragraphs
@@ -75,23 +83,25 @@ Follow this process to complete the revision:
 
 Think through the target and the change before editing, but do not include your reasoning in the output.
 
-Format your response EXACTLY like this — two XML blocks, nothing else:
+After applying the Edit to section.md, respond EXACTLY like this — two XML blocks, nothing else:
 
 <summary>
 [One sentence in French describing only what changed. Example: "J'ai remplacé 'inconditionnel' par 'profond' à la première ligne."]
 </summary>
 
 <revised_section>
-[The complete section with ONLY the requested change applied. Every other word is identical to the original.]
+[The complete revised content of section.md after your edit.]
 </revised_section>`;
 
   try {
     for await (const message of query({
-      prompt: `Section content:\n\n${content}\n\n---\n\nStudent instruction: ${instruction}`,
+      prompt: `Student instruction: ${instruction}\n\nRead section.md, apply the change, then respond with <summary> and <revised_section>.`,
       options: {
         systemPrompt,
-        maxTurns: 2,
-...(claudeBinary ? { pathToClaudeCodeExecutable: claudeBinary } : {}),
+        maxTurns: 6,
+        cwd: workDir,
+        permissionMode: "acceptEdits",
+        ...(claudeBinary ? { pathToClaudeCodeExecutable: claudeBinary } : {}),
       },
     })) {
       if (message.type === "assistant") {
@@ -109,6 +119,9 @@ Format your response EXACTLY like this — two XML blocks, nothing else:
     const message = err instanceof Error ? err.message : "Unknown error";
     res.write(`data: ${JSON.stringify({ error: message })}\n\n`);
     res.end();
+  } finally {
+    // Clean up working directory
+    try { rmSync(workDir, { recursive: true, force: true }); } catch { /* ignore */ }
   }
 });
 
