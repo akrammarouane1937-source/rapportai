@@ -120,8 +120,6 @@ function RevisionPanel({
   const workingContentRef             = useRef(rawContent || content);
   const scrollRef                     = useRef<HTMLDivElement>(null);
   const statusTimerRef                = useRef<ReturnType<typeof setInterval> | null>(null);
-  const imgInputRef                   = useRef<HTMLInputElement>(null);
-  const fileInputRef                  = useRef<HTMLInputElement>(null);
 
   // Reset when panel opens/content changes
   useEffect(() => {
@@ -142,12 +140,6 @@ function RevisionPanel({
     scrollRef.current?.scrollTo({ top: scrollRef.current.scrollHeight, behavior: "smooth" });
   }, [messages, isRevising]);
 
-  useEffect(() => {
-    if (!attachMenuOpen) return;
-    const close = () => setAttachMenuOpen(false);
-    document.addEventListener("click", close, { capture: true, once: true });
-    return () => document.removeEventListener("click", close, { capture: true });
-  }, [attachMenuOpen]);
 
   const startStatusCycle = () => {
     setStatusIdx(0);
@@ -423,20 +415,27 @@ function RevisionPanel({
 
               {/* Attach menu */}
               {attachMenuOpen && (
-                <div className="absolute bottom-full left-0 mb-2 bg-white border border-gray-200 rounded-xl shadow-lg overflow-hidden z-30 w-44">
-                  <button onClick={() => imgInputRef.current?.click()}
-                    className="w-full flex items-center gap-2.5 px-3 py-2.5 text-xs text-gray-700 hover:bg-purple-50 hover:text-purple-700 transition-colors">
-                    <ImageIcon className="w-3.5 h-3.5" /> Image / Photo
-                  </button>
-                  <button onClick={() => fileInputRef.current?.click()}
-                    className="w-full flex items-center gap-2.5 px-3 py-2.5 text-xs text-gray-700 hover:bg-purple-50 hover:text-purple-700 transition-colors border-t border-gray-100">
-                    <FileText className="w-3.5 h-3.5" /> Fichier
-                  </button>
-                  <button onClick={() => { setUrlMode(true); setAttachMenuOpen(false); }}
-                    className="w-full flex items-center gap-2.5 px-3 py-2.5 text-xs text-gray-700 hover:bg-purple-50 hover:text-purple-700 transition-colors border-t border-gray-100">
-                    <Link2 className="w-3.5 h-3.5" /> Lien web
-                  </button>
-                </div>
+                <>
+                  {/* Backdrop — closes menu on outside click without interfering with menu items */}
+                  <div className="fixed inset-0 z-20" onClick={() => setAttachMenuOpen(false)} />
+                  <div className="absolute bottom-full left-0 mb-2 bg-white border border-gray-200 rounded-xl shadow-lg overflow-hidden z-30 w-44">
+                    <label htmlFor="rev-img-input"
+                      className="w-full flex items-center gap-2.5 px-3 py-2.5 text-xs text-gray-700 hover:bg-purple-50 hover:text-purple-700 transition-colors cursor-pointer"
+                      onClick={() => setAttachMenuOpen(false)}>
+                      <ImageIcon className="w-3.5 h-3.5" /> Image / Photo
+                    </label>
+                    <label htmlFor="rev-file-input"
+                      className="w-full flex items-center gap-2.5 px-3 py-2.5 text-xs text-gray-700 hover:bg-purple-50 hover:text-purple-700 transition-colors border-t border-gray-100 cursor-pointer"
+                      onClick={() => setAttachMenuOpen(false)}>
+                      <FileText className="w-3.5 h-3.5" /> Fichier
+                    </label>
+                    <button
+                      onClick={() => { setUrlMode(true); setAttachMenuOpen(false); }}
+                      className="w-full flex items-center gap-2.5 px-3 py-2.5 text-xs text-gray-700 hover:bg-purple-50 hover:text-purple-700 transition-colors border-t border-gray-100">
+                      <Link2 className="w-3.5 h-3.5" /> Lien web
+                    </button>
+                  </div>
+                </>
               )}
 
               {/* + button */}
@@ -468,9 +467,9 @@ function RevisionPanel({
             <p className="text-[10px] text-gray-300 mt-1 text-right">⌘↵ pour envoyer</p>
           </div>
 
-          {/* Hidden file inputs */}
-          <input ref={imgInputRef}  type="file" accept="image/*" className="hidden" onChange={handleFileSelect} />
-          <input ref={fileInputRef} type="file" accept="*/*"     className="hidden" onChange={handleFileSelect} />
+          {/* Hidden file inputs — triggered by label htmlFor */}
+          <input id="rev-img-input"  type="file" accept="image/*" className="hidden" onChange={handleFileSelect} />
+          <input id="rev-file-input" type="file" accept="*/*"     className="hidden" onChange={handleFileSelect} />
         </motion.div>
       )}
     </AnimatePresence>
