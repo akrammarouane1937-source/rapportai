@@ -93,7 +93,7 @@ function splitIntoPages(html: string, wordsPerPage = 450): string[] {
 // ── Revision panel (chat-style) ───────────────────────────────────────────────
 
 function RevisionPanel({
-  open, onClose, onRevisionLimitHit, content, rawContent, onContentChange,
+  open, onClose, onRevisionLimitHit, content, rawContent, onContentChange, sectionId,
 }: {
   open: boolean;
   onClose: () => void;
@@ -101,6 +101,7 @@ function RevisionPanel({
   content: string;
   rawContent?: string;
   onContentChange?: (newContent: string) => void;
+  sectionId?: string;
 }) {
   const [messages, setMessages]     = useState<ChatMsg[]>([]);
   const [input, setInput]           = useState("");
@@ -166,6 +167,8 @@ function RevisionPanel({
         body: JSON.stringify({
           content:    workingContentRef.current,
           instruction,
+          sessionId:  report.sessionId,
+          sectionId,
           theme:      report.theme,
           reportType: report.reportType,
           school:     report.school,
@@ -475,6 +478,7 @@ export function WordPreview({
         content={html}
         rawContent={rawContent}
         onContentChange={onContentChange}
+        sectionId={sectionId}
       />
       <UpsellModal
         open={revisionUpsell}

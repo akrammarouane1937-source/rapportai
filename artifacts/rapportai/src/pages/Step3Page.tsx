@@ -224,6 +224,7 @@ export default function Step3Page() {
           <WordPreview
             content={previewHtml}
             rawContent={(dedicaces || DEFAULT_DEDICACES) + "\n\nRemerciements\n\n" + (remerciements || DEFAULT_REMERCIEMENTS)}
+            sectionId="dedicaces"
             sectionTitle="Dédicaces et Remerciements"
             wordCount={wordCount}
             onContentChange={(revised) => {

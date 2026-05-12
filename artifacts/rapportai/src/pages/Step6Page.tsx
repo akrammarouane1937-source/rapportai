@@ -165,6 +165,7 @@ export default function Step6Page() {
             rawContent={rawTextRef.current || undefined}
             sectionTitle="Introduction Générale"
             wordCount={streamedWordCount}
+            sectionId="introduction"
           />
         </div>
       </div>

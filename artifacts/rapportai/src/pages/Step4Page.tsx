@@ -389,6 +389,7 @@ export default function Step4Page() {
             rawContent={resume || undefined}
             sectionTitle="Résumé"
             wordCount={previewWordCount}
+            sectionId="resume"
           />
         </div>
       </div>

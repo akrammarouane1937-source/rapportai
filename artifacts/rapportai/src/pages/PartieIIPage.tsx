@@ -474,6 +474,7 @@ export default function PartieIIPage() {
               rawContent={rawTextRef.current || undefined}
               sectionTitle="Partie II"
               wordCount={wordCount}
+              sectionId="partie-ii"
             />
           </div>
         </div>

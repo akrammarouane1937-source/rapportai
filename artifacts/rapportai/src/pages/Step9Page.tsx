@@ -627,6 +627,7 @@ export default function Step9Page() {
               rawContent={rawTextRef.current}
               sectionTitle="Conclusion Générale"
               wordCount={streamedWordCount}
+              sectionId="conclusion"
             />
           ) : (
             /* Empty state — show a summary of what's ready */
