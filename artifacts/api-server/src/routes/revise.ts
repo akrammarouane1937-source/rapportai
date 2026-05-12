@@ -91,8 +91,7 @@ Format your response EXACTLY like this — two XML blocks, nothing else:
       options: {
         systemPrompt,
         maxTurns: 2,
-        allowedTools: [],
-        ...(claudeBinary ? { pathToClaudeCodeExecutable: claudeBinary } : {}),
+...(claudeBinary ? { pathToClaudeCodeExecutable: claudeBinary } : {}),
       },
     })) {
       if (message.type === "assistant") {
