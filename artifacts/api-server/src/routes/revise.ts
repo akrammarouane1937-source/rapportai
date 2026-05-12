@@ -1,6 +1,6 @@
 import { Router, type Request, type Response } from "express";
 import { query } from "@anthropic-ai/claude-agent-sdk";
-import { mkdirSync, writeFileSync, rmSync } from "fs";
+import { mkdirSync, writeFileSync, rmSync, readFileSync } from "fs";
 import { randomUUID } from "crypto";
 import path from "path";
 import { findClaudeBinary } from "../lib/find-claude-binary";
@@ -29,6 +29,12 @@ router.post("/revise", async (req: Request, res: Response) => {
   const workDir = path.join(REVISE_ROOT, randomUUID());
   mkdirSync(workDir, { recursive: true });
   writeFileSync(path.join(workDir, "section.md"), content);
+
+  // Copy skills file so the agent can read it
+  const skillsPath = path.join(process.cwd(), "src/lib/skills/revision-skills.md");
+  try {
+    writeFileSync(path.join(workDir, "revision-skills.md"), readFileSync(skillsPath));
+  } catch { /* skills file missing — continue without it */ }
 
   const claudeBinary = findClaudeBinary();
 
