@@ -420,13 +420,11 @@ function RevisionPanel({
                   <div className="fixed inset-0 z-20" onClick={() => setAttachMenuOpen(false)} />
                   <div className="absolute bottom-full left-0 mb-2 bg-white border border-gray-200 rounded-xl shadow-lg overflow-hidden z-30 w-44">
                     <label htmlFor="rev-img-input"
-                      className="w-full flex items-center gap-2.5 px-3 py-2.5 text-xs text-gray-700 hover:bg-purple-50 hover:text-purple-700 transition-colors cursor-pointer"
-                      onClick={() => setAttachMenuOpen(false)}>
+                      className="w-full flex items-center gap-2.5 px-3 py-2.5 text-xs text-gray-700 hover:bg-purple-50 hover:text-purple-700 transition-colors cursor-pointer">
                       <ImageIcon className="w-3.5 h-3.5" /> Image / Photo
                     </label>
                     <label htmlFor="rev-file-input"
-                      className="w-full flex items-center gap-2.5 px-3 py-2.5 text-xs text-gray-700 hover:bg-purple-50 hover:text-purple-700 transition-colors border-t border-gray-100 cursor-pointer"
-                      onClick={() => setAttachMenuOpen(false)}>
+                      className="w-full flex items-center gap-2.5 px-3 py-2.5 text-xs text-gray-700 hover:bg-purple-50 hover:text-purple-700 transition-colors border-t border-gray-100 cursor-pointer">
                       <FileText className="w-3.5 h-3.5" /> Fichier
                     </label>
                     <button
