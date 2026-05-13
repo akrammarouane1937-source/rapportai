@@ -4,6 +4,8 @@ import { existsSync } from "fs";
 import path from "path";
 import { findClaudeBinary } from "../lib/find-claude-binary";
 import { markSectionComplete, sessionDir, readMemory } from "../lib/memory";
+import { getSectionConfig, buildMemoryContext } from "../lib/agents/sectionConfigs";
+import type { StudentMemory } from "../lib/memory-types";
 
 const router = Router();
 
@@ -79,13 +81,26 @@ function buildCitationBlock(sources: BibEntry[] | undefined, style: string): str
   return `\n## Sources bibliographiques disponibles\n${numbered}`;
 }
 
-function buildSystemPrompt(ctx: GenerateBody): string {
+function buildSystemPrompt(ctx: GenerateBody, memory?: StudentMemory): string {
   const name    = ctx.studentName  ?? "l'étudiant(e)";
   const school  = ctx.school       ?? "l'école";
   const filiere = ctx.filiere      ?? "la filière";
   const type    = ctx.reportType   ?? "rapport de fin d'études";
   const theme   = ctx.theme        ?? "le thème fourni";
   const style   = ctx.citationStyle ?? "APA 7th ed.";
+
+  // Load section-specific skills file if available
+  let skillsContent = "";
+  try {
+    const config = getSectionConfig(ctx.section);
+    const skillsPath = require("path").join(process.cwd(), "src/lib/skills", config.skillsFile);
+    if (require("fs").existsSync(skillsPath)) {
+      skillsContent = `\n\n---\n## KNOWLEDGE BASE — LIS ENTIÈREMENT AVANT D'ÉCRIRE\n${require("fs").readFileSync(skillsPath, "utf-8")}`;
+    }
+  } catch { /* section unknown or skills file missing — continue without */ }
+
+  // Inject student memory context so agent never contradicts established decisions
+  const memoryContext = memory ? buildMemoryContext(memory) : "";
 
   return `Tu es l'agent de rédaction académique de RapportAI. Tu aides ${name} (${school} — ${filiere}) à rédiger son ${type} intitulé "${theme}".
 
@@ -95,12 +110,13 @@ function buildSystemPrompt(ctx: GenerateBody): string {
 - Citations au format ${style} avec auteurs et années
 - Commence directement par le contenu — aucun préambule méta
 - Toujours utiliser les sections déjà rédigées pour les références croisées
+- Ne jamais contredire la problématique, les hypothèses ou le cadre théorique établis
 
 ## Originalité
 - Reformule chaque idée avec des mots entièrement différents de la source
 - Varie la structure syntaxique : phrases courtes ET longues, actif ET passif
 - Contexte marocain obligatoire — données HCP, Bank Al-Maghrib, secteur local
-- Taux de similarité cible : inférieur à 10 %${buildDocumentContext(ctx)}`;
+- Taux de similarité cible : inférieur à 10 %${memoryContext}${buildDocumentContext(ctx)}${skillsContent}`;
 }
 
 function buildPrompt(ctx: GenerateBody): string {
@@ -246,9 +262,10 @@ router.post("/generate", async (req: Request, res: Response) => {
   const sDir = body.sessionId ? sessionDir(body.sessionId) : null;
   const workDir = sDir && existsSync(sDir) ? sDir : undefined;
 
-  // If session memory exists, merge it into the body context so prompts stay accurate
+  // Load memory — merge into body + pass to system prompt builder
+  let memory: StudentMemory | null = null;
   if (body.sessionId && workDir) {
-    const memory = readMemory(body.sessionId);
+    memory = readMemory(body.sessionId);
     if (memory) {
       body.theme         = body.theme         ?? memory.report.title;
       body.school        = body.school        ?? memory.identity.school;
@@ -273,7 +290,7 @@ router.post("/generate", async (req: Request, res: Response) => {
     for await (const message of query({
       prompt: buildPrompt(body),
       options: {
-        systemPrompt: buildSystemPrompt(body),
+        systemPrompt: buildSystemPrompt(body, memory ?? undefined),
         maxTurns: SECTIONS_WITH_WEB.has(body.section) ? 8 : 2,
         allowedTools: tools,
         ...(workDir ? { cwd: workDir } : {}),
