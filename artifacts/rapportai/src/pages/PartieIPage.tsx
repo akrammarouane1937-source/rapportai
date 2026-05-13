@@ -76,7 +76,7 @@ export default function PartieIPage() {
     saveReport({ partieI: rawTextRef.current });
   }, []);
 
-  const { generate, isStreaming: generating } = useGenerate({
+  const { generate, isStreaming: generating, streamingStatus } = useGenerate({
     onChunk,
     onDone,
   });
@@ -104,7 +104,7 @@ export default function PartieIPage() {
       const resp = await fetch(`${BASE_PATH}/api/humanize`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ content: original, theme: r.theme, reportType: r.reportType, school: r.school, filiere: r.filiere }),
+        body: JSON.stringify({ content: original, sessionId: r.sessionId, theme: r.theme, reportType: r.reportType, school: r.school, filiere: r.filiere }),
       });
       const reader = resp.body?.getReader();
       if (!reader) return;
@@ -144,7 +144,7 @@ export default function PartieIPage() {
       const resp = await fetch(`${BASE_PATH}/api/generate`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ section: "keywords", theme: r.theme, reportType: r.reportType, school: r.school, filiere: r.filiere }),
+        body: JSON.stringify({ section: "keywords", sessionId: r.sessionId, theme: r.theme, reportType: r.reportType, school: r.school, filiere: r.filiere }),
       });
       if (!resp.ok || !resp.body) return;
       const reader = resp.body.getReader();
@@ -173,7 +173,7 @@ export default function PartieIPage() {
       const resp = await fetch(`${BASE_PATH}/api/generate`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ section, theme: r.theme, reportType: r.reportType, school: r.school, filiere: r.filiere, annee: r.annee }),
+        body: JSON.stringify({ section, sessionId: r.sessionId, theme: r.theme, reportType: r.reportType, school: r.school, filiere: r.filiere, annee: r.annee }),
       });
       if (!resp.ok || !resp.body) return;
       const reader = resp.body.getReader();
@@ -437,7 +437,7 @@ export default function PartieIPage() {
                 style={{ boxShadow: "0 4px 20px rgba(124,58,237,0.35)" }}
               >
                 {generating ? (
-                  <><Loader2 className="w-4 h-4 animate-spin" /> Génération en cours...</>
+                  <><Loader2 className="w-4 h-4 animate-spin" /> {streamingStatus}</>
                 ) : (
                   <><Sparkles className="w-4 h-4" /> Générer la Partie I</>
                 )}

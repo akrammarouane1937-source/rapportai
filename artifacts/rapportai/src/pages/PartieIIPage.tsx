@@ -76,7 +76,7 @@ export default function PartieIIPage() {
     saveReport({ partieII: rawTextRef.current });
   }, []);
 
-  const { generate, isStreaming: generating } = useGenerate({
+  const { generate, isStreaming: generating, streamingStatus } = useGenerate({
     onChunk,
     onDone,
   });
@@ -437,7 +437,7 @@ export default function PartieIIPage() {
                 style={{ boxShadow: "0 4px 20px rgba(124,58,237,0.35)" }}
               >
                 {generating ? (
-                  <><Loader2 className="w-4 h-4 animate-spin" /> Génération en cours...</>
+                  <><Loader2 className="w-4 h-4 animate-spin" /> {streamingStatus}</>
                 ) : (
                   <><Sparkles className="w-4 h-4" /> Générer la Partie II</>
                 )}

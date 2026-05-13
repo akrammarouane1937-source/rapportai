@@ -139,8 +139,19 @@ router.post(
       const finished = await streamToSSE(res, agent.stream(task));
 
       if (finished) {
+        const sections = agent.getSections();
+
+        // Update student memory — mark section complete
+        const sectionContent = sections[section] ?? "";
+        if (sectionContent) {
+          markSectionComplete(sessionId, section, {
+            word_count: sectionContent.split(/\s+/).filter(Boolean).length,
+            key_points: sectionContent.slice(0, 300).replace(/#+\s*/g, "").trim(),
+          });
+        }
+
         res.write(
-          `data: ${JSON.stringify({ done: true, sections: agent.getSections() })}\n\n`
+          `data: ${JSON.stringify({ done: true, sections })}\n\n`
         );
       }
     } catch (err: unknown) {

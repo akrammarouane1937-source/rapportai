@@ -116,7 +116,7 @@ export default function Step9Page() {
     });
   }, [apports, perspectives, annexes, tableaux]);
 
-  const { generate, isStreaming: generating } = useGenerate({ onChunk, onDone });
+  const { generate, isStreaming: generating, streamingStatus } = useGenerate({ onChunk, onDone });
 
   const handleGenerate = () => {
     rawTextRef.current = "";
@@ -503,7 +503,7 @@ export default function Step9Page() {
               style={{ boxShadow: "0 4px 20px rgba(124,58,237,0.35)" }}
             >
               {generating
-                ? <><Loader2 className="w-4 h-4 animate-spin" /> Génération en cours…</>
+                ? <><Loader2 className="w-4 h-4 animate-spin" /> {streamingStatus}</>
                 : <><Sparkles className="w-4 h-4" /> Générer la Conclusion</>}
             </Button>
 

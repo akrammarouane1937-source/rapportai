@@ -48,6 +48,8 @@ const SESSION_SECTIONS = new Set<GenerateSection>([
   "introduction",
   "conclusion",
   "resume",
+  "dedicaces",
+  "remerciements",
 ]);
 
 const DEMO: Record<string, unknown> = {
@@ -150,12 +152,22 @@ type SSEMessage = {
   sections?: Record<string, string>;
 };
 
+const TOOL_STATUS: Record<string, string> = {
+  WebFetch:  "Recherche de sources académiques…",
+  Read:      "Lecture des sections existantes…",
+  Write:     "Rédaction en cours…",
+  Edit:      "Révision en cours…",
+  Glob:      "Exploration du rapport…",
+  Bash:      "Traitement en cours…",
+};
+
 async function readSSE(
   resp: Response,
   handlers: {
     onChunk: (text: string) => void;
     onDone: () => void;
     onQuestion: (q: AgentQuestion, sessionId: string) => void;
+    onToolCall?: (status: string) => void;
     onPaywall?: () => void;
     paywallWords?: number;
     ctrl: AbortController;
@@ -167,7 +179,7 @@ async function readSSE(
   if (!resp.body) throw new Error("No response body");
 
   const {
-    onChunk, onDone, onQuestion, onPaywall, paywallWords,
+    onChunk, onDone, onQuestion, onToolCall, onPaywall, paywallWords,
     ctrl, wordCountRef, paywallTriggeredRef, sessionId,
   } = handlers;
 
@@ -216,8 +228,12 @@ async function readSSE(
           return;
         }
 
-        // Tool call notification (informational)
-        if (msg.tool_call) continue;
+        // Tool call — surface as French status to the UI
+        if (msg.tool_call) {
+          const status = TOOL_STATUS[msg.tool_call] ?? `${msg.tool_call}…`;
+          onToolCall?.(status);
+          continue;
+        }
 
         // Text chunk
         if (msg.content) {
@@ -251,6 +267,7 @@ export function useGenerate(opts: {
 }) {
   const { onChunk, onDone, onPaywall, onQuestion, paywallWords } = opts;
   const [isStreaming, setIsStreaming] = useState(false);
+  const [streamingStatus, setStreamingStatus] = useState<string>("Génération en cours…");
   const [error, setError] = useState<string | null>(null);
   const [pendingQuestion, setPendingQuestion] = useState<AgentQuestion | null>(null);
   const abortRef = useRef<AbortController | null>(null);
@@ -268,6 +285,7 @@ export function useGenerate(opts: {
 
       const ctrl = new AbortController();
       abortRef.current = ctrl;
+      setStreamingStatus("Génération en cours…");
 
       try {
         const stored = getReport();
@@ -324,6 +342,7 @@ export function useGenerate(opts: {
           onChunk,
           onDone,
           onPaywall,
+          onToolCall: setStreamingStatus,
           onQuestion: (q) => {
             setPendingQuestion(q);
             onQuestion?.(q);
@@ -374,6 +393,7 @@ export function useGenerate(opts: {
           onChunk,
           onDone,
           onPaywall,
+          onToolCall: setStreamingStatus,
           onQuestion: (q) => {
             setPendingQuestion(q);
             onQuestion?.(q);
@@ -399,5 +419,5 @@ export function useGenerate(opts: {
     setIsStreaming(false);
   }, []);
 
-  return { generate, abort, answerQuestion, isStreaming, error, pendingQuestion };
+  return { generate, abort, answerQuestion, isStreaming, streamingStatus, error, pendingQuestion };
 }

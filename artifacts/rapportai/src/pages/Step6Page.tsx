@@ -29,7 +29,7 @@ export default function Step6Page() {
   }, []);
 
   const onDone = useCallback(() => { saveReport({ introduction: rawTextRef.current }); }, []);
-  const { generate, isStreaming: generating } = useGenerate({ onChunk, onDone });
+  const { generate, isStreaming: generating, streamingStatus } = useGenerate({ onChunk, onDone });
 
   const handleGenerate = () => {
     const r = getReport();
@@ -149,7 +149,7 @@ export default function Step6Page() {
             <Button onClick={handleGenerate} disabled={generating}
               className="w-full h-12 bg-purple-600 hover:bg-purple-700 text-white font-bold text-sm rounded-xl flex items-center justify-center gap-2"
               style={{ boxShadow: "0 4px 20px rgba(124,58,237,0.35)" }}>
-              {generating ? <><Loader2 className="w-4 h-4 animate-spin" /> Génération...</> : <><Sparkles className="w-4 h-4" /> Générer l'Introduction Générale</>}
+              {generating ? <><Loader2 className="w-4 h-4 animate-spin" /> {streamingStatus}</> : <><Sparkles className="w-4 h-4" /> Générer l'Introduction Générale</>}
             </Button>
             <Button onClick={() => setLocation("/rapport/partie-i")} variant="ghost"
               className="w-full h-9 text-sm text-gray-500 hover:text-gray-700 flex items-center justify-center gap-1">
