@@ -4,6 +4,14 @@ import multer from "multer";
 import { SDKReportAgent, type ReportProfile } from "../lib/sdk-agent";
 import { sessionStore } from "../lib/session-store";
 import type { StreamEvent } from "../lib/agent-session";
+import {
+  createMemory,
+  readMemory,
+  patchMemory,
+  markCanevasUploaded,
+  incrementSessionCount,
+  updateReportFields,
+} from "../lib/memory";
 
 const upload = multer({ storage: multer.memoryStorage(), limits: { fileSize: 20 * 1024 * 1024 } });
 
@@ -82,6 +90,23 @@ router.post("/session/start", (req: Request, res: Response) => {
   }
 
   sessionStore.set(agent);
+
+  // Write student_memory.json — all agents read this before acting
+  createMemory(sessionId, {
+    studentName:   profile.studentName,
+    school:        profile.school,
+    filiere:       profile.filiere,
+    annee:         profile.annee,
+    reportType:    profile.reportType,
+    theme:         profile.theme,
+    problematique: profile.problematique,
+    motsCles:      profile.motsCles,
+    encadrantPeda: profile.encadrantPeda,
+    encadrantPro:  profile.encadrantPro,
+    entreprise:    profile.entreprise,
+    citationStyle: profile.citationStyle,
+  });
+
   res.json({ sessionId });
 });
 
@@ -231,6 +256,13 @@ router.post(
       } else {
         const text = await extractText(file.buffer, file.originalname);
         agent.uploadDocument(file.originalname, text);
+
+        // If this looks like a canevas, mark it in memory so all agents enforce it
+        const lowerName = file.originalname.toLowerCase();
+        if (lowerName.includes("canevas") || lowerName.includes("cahier")) {
+          markCanevasUploaded(sessionId, file.originalname);
+        }
+
         res.json({ success: true, filename: file.originalname, chars: text.length });
       }
     } catch (err: unknown) {
@@ -239,6 +271,55 @@ router.post(
     }
   }
 );
+
+// ─── PATCH /api/session/:sessionId/memory ────────────────────────────────────
+// Called from frontend whenever the student fills/updates a form field.
+// Accepts any partial fields: problematique, hypotheses, objectifs, mots_cles,
+// theoretical_framework, citationStyle, etc.
+
+router.patch("/session/:sessionId/memory", (req: Request, res: Response) => {
+  const { sessionId } = req.params;
+  const fields = req.body as Record<string, unknown>;
+
+  const memory = readMemory(sessionId);
+  if (!memory) {
+    res.status(404).json({ error: "Memory not found. Start a session first." });
+    return;
+  }
+
+  patchMemory(sessionId, (m) => {
+    // Top-level report fields
+    const reportFields = [
+      "problematique", "hypotheses", "objectifs", "mots_cles",
+      "theoretical_framework", "title", "structure",
+    ];
+    for (const key of reportFields) {
+      if (fields[key] !== undefined) {
+        (m.report as Record<string, unknown>)[key] = fields[key];
+      }
+    }
+
+    // Identity fields
+    const identityFields = ["full_name", "email", "academic_level", "preferred_language"];
+    for (const key of identityFields) {
+      if (fields[key] !== undefined) {
+        (m.identity as Record<string, unknown>)[key] = fields[key];
+      }
+    }
+
+    // Citation style lives in writing_profile
+    if (fields["citationStyle"]) {
+      m.writing_profile.citation_style = fields["citationStyle"] as string;
+    }
+
+    // Agent preferences override
+    if (fields["agent_preferences"]) {
+      Object.assign(m.agent_preferences, fields["agent_preferences"]);
+    }
+  });
+
+  res.json({ ok: true });
+});
 
 // ─── DELETE /api/session/:sessionId ──────────────────────────────────────────
 

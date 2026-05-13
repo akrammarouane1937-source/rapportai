@@ -4,6 +4,7 @@ import { mkdirSync, writeFileSync, rmSync, readFileSync, existsSync } from "fs";
 import { randomUUID } from "crypto";
 import path from "path";
 import { findClaudeBinary } from "../lib/find-claude-binary";
+import { logRevision } from "../lib/memory";
 
 const router = Router();
 const SESSIONS_ROOT = "/tmp/rapportai-sessions";
@@ -163,6 +164,15 @@ If clarification is needed before proceeding, ask your question directly without
           }
         }
       }
+    }
+
+    // Log revision to student memory
+    if (sessionId) {
+      logRevision(sessionId, {
+        section: sectionId ?? "unknown",
+        request: instruction,
+        resolved: true,
+      });
     }
 
     res.write(`data: ${JSON.stringify({ done: true })}\n\n`);

@@ -3,6 +3,7 @@ import { query } from "@anthropic-ai/claude-agent-sdk";
 import { existsSync } from "fs";
 import path from "path";
 import { findClaudeBinary } from "../lib/find-claude-binary";
+import { logJurySimulation, readMemory } from "../lib/memory";
 
 const router = Router();
 const SESSIONS_ROOT = "/tmp/rapportai-sessions";
@@ -86,6 +87,15 @@ Règles :
           }
         }
       }
+    }
+
+    // Log jury simulation to student memory
+    if (sessionId) {
+      const memory = readMemory(sessionId);
+      logJurySimulation(sessionId, {
+        sections_covered: memory?.progress.sections_completed ?? [],
+        weak_points_identified: [],
+      });
     }
 
     res.write(`data: ${JSON.stringify({ done: true })}\n\n`);

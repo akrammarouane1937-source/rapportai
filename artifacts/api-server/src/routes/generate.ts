@@ -1,6 +1,9 @@
 import { Router, type Request, type Response } from "express";
 import { query } from "@anthropic-ai/claude-agent-sdk";
+import { existsSync } from "fs";
+import path from "path";
 import { findClaudeBinary } from "../lib/find-claude-binary";
+import { markSectionComplete, sessionDir, readMemory } from "../lib/memory";
 
 const router = Router();
 
@@ -14,6 +17,7 @@ interface BibEntry {
 
 interface GenerateBody {
   section: string;
+  sessionId?: string;
   reportType?: string;
   studentName?: string;
   school?: string;
@@ -221,7 +225,7 @@ ${ctx.extraContext ?? ""}`;
   }
 }
 
-// page-de-garde uses session route (needs template files on disk) — not stateless
+// Sections that use WebFetch for real academic sources
 const SECTIONS_WITH_WEB = new Set(["partie-i", "partie-ii"]);
 
 router.post("/generate", async (req: Request, res: Response) => {
@@ -238,19 +242,48 @@ router.post("/generate", async (req: Request, res: Response) => {
 
   const claudeBinary = findClaudeBinary();
 
+  // Session dir gives the agent access to student_memory.json + all generated sections
+  const sDir = body.sessionId ? sessionDir(body.sessionId) : null;
+  const workDir = sDir && existsSync(sDir) ? sDir : undefined;
+
+  // If session memory exists, merge it into the body context so prompts stay accurate
+  if (body.sessionId && workDir) {
+    const memory = readMemory(body.sessionId);
+    if (memory) {
+      body.theme         = body.theme         ?? memory.report.title;
+      body.school        = body.school        ?? memory.identity.school;
+      body.filiere       = body.filiere       ?? memory.identity.filiere;
+      body.reportType    = body.reportType    ?? memory.report.type;
+      body.studentName   = body.studentName   ?? memory.identity.full_name;
+      body.problematique = body.problematique ?? memory.report.problematique;
+      body.motsCles      = body.motsCles      ?? memory.report.mots_cles;
+      body.citationStyle = body.citationStyle ?? memory.writing_profile.citation_style;
+      body.encadrantPeda = body.encadrantPeda ?? memory.identity.supervisor?.name;
+      body.entreprise    = body.entreprise    ?? memory.report.company?.name;
+    }
+  }
+
+  const tools: string[] = SECTIONS_WITH_WEB.has(body.section)
+    ? ["WebFetch", "Read"]
+    : workDir ? ["Read"] : [];
+
+  let fullOutput = "";
+
   try {
     for await (const message of query({
       prompt: buildPrompt(body),
       options: {
         systemPrompt: buildSystemPrompt(body),
         maxTurns: SECTIONS_WITH_WEB.has(body.section) ? 8 : 2,
-        allowedTools: SECTIONS_WITH_WEB.has(body.section) ? ["WebFetch"] : [],
+        allowedTools: tools,
+        ...(workDir ? { cwd: workDir } : {}),
         ...(claudeBinary ? { pathToClaudeCodeExecutable: claudeBinary } : {}),
       },
     })) {
       if (message.type === "assistant") {
         for (const block of message.message.content) {
           if (block.type === "text" && block.text) {
+            fullOutput += block.text;
             res.write(`data: ${JSON.stringify({ content: block.text })}\n\n`);
           }
           if (block.type === "tool_use") {
@@ -258,6 +291,15 @@ router.post("/generate", async (req: Request, res: Response) => {
           }
         }
       }
+    }
+
+    // Update memory: mark section complete with word count + key_points summary
+    if (body.sessionId && fullOutput.trim()) {
+      const wordCount = fullOutput.split(/\s+/).filter(Boolean).length;
+      markSectionComplete(body.sessionId, body.section, {
+        word_count: wordCount,
+        key_points: fullOutput.slice(0, 300).replace(/<[^>]+>/g, "").trim(),
+      });
     }
 
     res.write(`data: ${JSON.stringify({ done: true })}\n\n`);
