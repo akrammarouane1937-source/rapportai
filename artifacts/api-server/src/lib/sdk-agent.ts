@@ -6,8 +6,9 @@ import { findClaudeBinary } from "./find-claude-binary";
 import { schoolContext } from "./moroccan-schools";
 import { getSectionConfig } from "./agents/sectionConfigs";
 
-// Per-user working directory — each session gets isolated storage
-const SESSIONS_ROOT = "/tmp/rapportai-sessions";
+// Per-user working directory — each session gets isolated storage.
+// Override with SESSIONS_DIR env var so Railway can mount a persistent volume.
+const SESSIONS_ROOT = process.env.SESSIONS_DIR ?? "/tmp/rapportai-sessions";
 
 export interface ReportProfile {
   studentName: string;
@@ -70,6 +71,30 @@ export class SDKReportAgent {
       path.join(this.workDir, "INSTRUCTIONS.md"),
       buildInstructions(profile)
     );
+  }
+
+  // Reconstruct an agent from an existing session directory (no disk writes).
+  // Returns null if the session directory or profile.json doesn't exist.
+  static reviveFromDisk(sessionId: string): SDKReportAgent | null {
+    const workDir = path.join(SESSIONS_ROOT, sessionId);
+    try {
+      if (!existsSync(workDir)) return null;
+      const profilePath = path.join(workDir, "profile.json");
+      if (!existsSync(profilePath)) return null;
+      const profile = JSON.parse(readFileSync(profilePath, "utf-8")) as ReportProfile;
+      const agent = Object.create(SDKReportAgent.prototype) as SDKReportAgent;
+      Object.assign(agent, {
+        id: sessionId,
+        profile,
+        createdAt: new Date(),
+        lastActiveAt: new Date(),
+        workDir,
+        abortController: new AbortController(),
+      });
+      return agent;
+    } catch {
+      return null;
+    }
   }
 
   // Load existing sections from previous sessions into working directory

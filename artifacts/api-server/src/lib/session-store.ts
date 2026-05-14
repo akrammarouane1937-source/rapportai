@@ -1,4 +1,5 @@
 import { AgentSession } from "./agent-session";
+import { SDKReportAgent } from "./sdk-agent";
 
 // Sessions expire after 4 hours of inactivity
 const SESSION_TTL_MS = 4 * 60 * 60 * 1000;
@@ -11,7 +12,15 @@ class SessionStore {
   }
 
   get(id: string): AgentSession | undefined {
-    return this.store.get(id);
+    const cached = this.store.get(id);
+    if (cached) return cached;
+    // Try to revive from disk after a server restart
+    const revived = SDKReportAgent.reviveFromDisk(id);
+    if (revived) {
+      this.store.set(id, revived as unknown as AgentSession);
+      return revived as unknown as AgentSession;
+    }
+    return undefined;
   }
 
   delete(id: string): void {
