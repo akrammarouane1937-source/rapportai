@@ -131,8 +131,14 @@ export default function Step4Page() {
   }, []);
 
   const onDoneResume = useCallback(() => {
+    // Session-mode: agent writes to resume.md via Write tool, no text chunks stream.
+    // The SSE handler already called saveReport({ resume: generated }) before onDone fires.
+    // Read back from store so we don't overwrite with empty resumeRef.
+    const saved = getReport();
+    const finalResume = resumeRef.current || saved.resume || "";
+    setResumeSync(finalResume);
     saveReport({
-      resume:        resumeRef.current,
+      resume:        finalResume,
       abstract:      abstractRef.current,
       motsCles:      motsClesRef.current,
       keywords:      keywordsRef.current,
@@ -154,7 +160,7 @@ export default function Step4Page() {
       theme:         report.theme         ?? "",
       school:        report.school        ?? "",
       filiere:       report.filiere       ?? "",
-      problematique: report.theme         ?? "",
+      problematique: report.problematique  ?? report.theme ?? "",
       motsCles:      motsClesRef.current.length > 0 ? motsClesRef.current : [],
       citationStyle: report.citationStyle ?? "APA 7th ed.",
     });
@@ -169,7 +175,10 @@ export default function Step4Page() {
   }, []);
 
   const onDoneAbstract = useCallback(() => {
-    saveReport({ abstract: abstractRef.current });
+    const saved = getReport();
+    const finalAbstract = abstractRef.current || saved.abstract || "";
+    setAbstractSync(finalAbstract);
+    saveReport({ abstract: finalAbstract });
   }, []);
 
   const { generate: generateAbstract, isStreaming: generatingAbstract } = useGenerate({

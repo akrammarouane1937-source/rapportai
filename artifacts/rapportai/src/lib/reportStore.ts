@@ -19,6 +19,7 @@ export interface ReportData {
   ville?: string;
   citationStyle?: string;
   problematique?: string;
+  sommaireText?: string;
 
   logoUrl?: string;
   coverTemplate?: string;

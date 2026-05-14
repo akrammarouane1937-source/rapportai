@@ -148,7 +148,8 @@ export class SDKReportAgent {
   }
 
   // streamSection — section-aware stream: loads correct system prompt + tools from sectionConfigs
-  async *streamSection(section: string, task: string): AsyncGenerator<StreamEvent> {
+  // toolOverride: pass a custom tool list to skip web research (e.g. for page-by-page mode)
+  async *streamSection(section: string, task: string, toolOverride?: string[]): AsyncGenerator<StreamEvent> {
     this.lastActiveAt = new Date();
     this.abortController = new AbortController();
     const claudeBinary = findClaudeBinary();
@@ -163,9 +164,12 @@ export class SDKReportAgent {
       const config = getSectionConfig(section);
       sectionSystem = this.loadSkillFile(config.skillsFile.replace("-skills.md", "-system.md"));
       sectionSkills = this.loadSkillFile(config.skillsFile);
-      allowedTools = config.allowedTools;
-      maxTurns = config.maxTurns;
+      allowedTools = toolOverride ?? config.allowedTools;
+      maxTurns = toolOverride ? 8 : config.maxTurns; // page mode needs fewer turns
     } catch { /* unknown section — fall back to generic */ }
+
+    // Apply explicit override even if getSectionConfig threw
+    if (toolOverride) allowedTools = toolOverride;
 
     // Combine: section system prompt + student context + knowledge base
     const baseSystem = buildSystemPrompt(this.profile, this.workDir);

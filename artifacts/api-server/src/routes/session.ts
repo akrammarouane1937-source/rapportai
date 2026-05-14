@@ -459,7 +459,9 @@ Contexte supplémentaire : ${JSON.stringify({ page: pageNum, mode: "page" })}`;
     try {
       res.write(`data: ${JSON.stringify({ phase: "writing", page: pageNum })}\n\n`);
 
-      const finished = await streamToSSE(res, agent.streamSection(sectionId, task));
+      // Page mode: skip WebSearch/WebFetch — agent only needs to read sommaire and write
+      const PAGE_TOOLS = ["Read", "Write", "Edit", "Glob"];
+      const finished = await streamToSSE(res, agent.streamSection(sectionId, task, PAGE_TOOLS));
 
       if (finished) {
         const sectionContent = agent.getSection(sectionId) ?? "";

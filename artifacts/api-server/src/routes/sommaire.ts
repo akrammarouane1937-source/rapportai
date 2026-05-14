@@ -272,7 +272,7 @@ Enregistre dans sommaire.md.${extraContext ? `\n\nContexte supplémentaire : ${e
       key_points: rawContent.slice(0, 300).trim(),
     });
 
-    res.write(`data: ${JSON.stringify({ done: true, sections: agent.getSections() })}\n\n`);
+    res.write(`data: ${JSON.stringify({ done: true, sommaire: rawContent, sections: agent.getSections() })}\n\n`);
   } catch (err: unknown) {
     const message = err instanceof Error ? err.message : "Unknown error";
     res.write(`data: ${JSON.stringify({ error: message })}\n\n`);
