@@ -1,24 +1,15 @@
-import React, { useEffect, useState, useRef } from "react";
+import { useEffect, useState, useRef } from "react";
 import { Link } from "wouter";
 import { motion, useInView } from "framer-motion";
-import {
-  CheckCircle2,
-  XCircle,
-  FileText,
-  Upload,
+import { 
+  ChevronRight, 
+  CheckCircle2, 
+  XCircle, 
+  FileText, 
+  Upload, 
   MessageSquare,
   Sparkles,
-  ArrowRight,
-  Star,
-  GraduationCap,
-  Briefcase,
-  BookOpen,
-  Shield,
-  Globe,
-  Zap,
-  Users,
-  Quote,
-  Heart
+  ArrowRight
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { 
@@ -125,76 +116,6 @@ export default function LandingPage() {
           </div>
         </section>
 
-        {/* 2.5. PAIN → SOLUTION */}
-        <section className="py-16 bg-white">
-          <div className="container mx-auto px-4 max-w-5xl">
-            <div className="grid md:grid-cols-2 gap-6">
-              {/* Pain */}
-              <motion.div
-                initial={{ opacity: 0, x: -30 }}
-                whileInView={{ opacity: 1, x: 0 }}
-                viewport={{ once: true }}
-                transition={{ duration: 0.5 }}
-                className="relative rounded-3xl overflow-hidden bg-gradient-to-br from-gray-900 to-gray-800 p-8 md:p-10"
-              >
-                <div className="absolute top-4 right-4 bg-red-500/20 text-red-400 text-xs font-bold px-3 py-1 rounded-full border border-red-500/30">
-                  Avant RapportAI
-                </div>
-                <div className="text-5xl mb-6">😰</div>
-                <div className="font-mono text-xs text-gray-500 mb-3">rapport_finale_v23_FINAL.docx — 3:47 AM</div>
-                <h3 className="text-2xl font-bold text-white mb-5 leading-tight">
-                  Soutenance dans 6h.<br />Page 12 sur 60.
-                </h3>
-                <div className="space-y-2.5 text-sm">
-                  {["Cadre théorique incomplet", "Citations à vérifier", "Canevas pas respecté", "Encadrant qui attend"].map((t) => (
-                    <div key={t} className="flex items-center gap-2 text-gray-400">
-                      <XCircle className="w-4 h-4 text-red-500 shrink-0" />{t}
-                    </div>
-                  ))}
-                </div>
-                <div className="mt-6 h-1.5 bg-gray-700 rounded-full overflow-hidden">
-                  <div className="h-full bg-red-500 rounded-full" style={{ width: "20%" }}></div>
-                </div>
-                <div className="text-xs text-gray-600 mt-2">Progression : 20%</div>
-              </motion.div>
-
-              {/* Solution */}
-              <motion.div
-                initial={{ opacity: 0, x: 30 }}
-                whileInView={{ opacity: 1, x: 0 }}
-                viewport={{ once: true }}
-                transition={{ duration: 0.5, delay: 0.1 }}
-                className="relative rounded-3xl overflow-hidden bg-gradient-to-br from-purple-600 to-purple-900 p-8 md:p-10"
-              >
-                <div className="absolute top-4 right-4 bg-green-400/20 text-green-300 text-xs font-bold px-3 py-1 rounded-full border border-green-400/30">
-                  Avec RapportAI
-                </div>
-                <div className="text-5xl mb-6">🎓</div>
-                <div className="font-mono text-xs text-purple-300/60 mb-3">rapport_final.docx — généré en 28 min</div>
-                <h3 className="text-2xl font-bold text-white mb-5 leading-tight">
-                  Soutenance dans 6h.<br />Rapport complet. Prêt.
-                </h3>
-                <div className="space-y-2.5 text-sm">
-                  {[
-                    "Cadre théorique — 2 847 mots",
-                    "14 citations académiques réelles",
-                    "Canevas école respecté automatiquement",
-                    "JuryAI — 45 min de simulation",
-                  ].map((t) => (
-                    <div key={t} className="flex items-center gap-2 text-purple-200">
-                      <CheckCircle2 className="w-4 h-4 text-green-400 shrink-0" />{t}
-                    </div>
-                  ))}
-                </div>
-                <div className="mt-6 h-1.5 bg-purple-800 rounded-full overflow-hidden">
-                  <div className="h-full bg-green-400 rounded-full w-full"></div>
-                </div>
-                <div className="text-xs text-purple-300 mt-2">Progression : 100% ✓</div>
-              </motion.div>
-            </div>
-          </div>
-        </section>
-
         {/* 3. PRODUCT DEMO ANIMATION */}
         <section className="py-12 bg-transparent relative z-20 -mt-10">
           <div className="container mx-auto px-4">
@@ -255,44 +176,6 @@ export default function LandingPage() {
                   <p className="text-secondary-foreground leading-relaxed">{step.text}</p>
                 </div>
               ))}
-            </div>
-          </div>
-        </section>
-
-        {/* 5.5. POUR QUI */}
-        <section className="py-24 bg-white border-t border-border">
-          <div className="container mx-auto px-4 max-w-5xl">
-            <div className="text-center mb-14">
-              <h2 className="text-3xl md:text-4xl font-bold font-heading text-foreground mb-3">Pour qui ?</h2>
-              <p className="text-secondary-foreground text-lg max-w-xl mx-auto">
-                Peu importe ton type de rapport — RapportAI s'adapte à ton école, ton niveau, ton sujet.
-              </p>
-            </div>
-            <div className="grid md:grid-cols-3 gap-6">
-              <PourQuiCard
-                Icon={GraduationCap}
-                tag="PFE"
-                tagColor="purple"
-                title="Projet de Fin d'Études"
-                desc="5ème année. Le rapport le plus exigeant de ta scolarité. Cadre théorique, étude empirique, jury."
-                items={["Partie I — revue de littérature complète", "Partie II — méthodologie + résultats", "JuryAI pour préparer la soutenance"]}
-              />
-              <PourQuiCard
-                Icon={Briefcase}
-                tag="STAGE"
-                tagColor="blue"
-                title="Rapport de Stage"
-                desc="2 à 6 mois en entreprise. Présentation de l'organisme, missions réalisées, bilan critique."
-                items={["Présentation de l'entreprise d'accueil", "Analyse des missions réalisées", "Bilan personnel et compétences"]}
-              />
-              <PourQuiCard
-                Icon={BookOpen}
-                tag="MÉMOIRE"
-                tagColor="emerald"
-                title="Mémoire de Master"
-                desc="Recherche approfondie. Revue de littérature rigoureuse. Contribution originale attendue."
-                items={["Revue de littérature en 3-4 chapitres", "Cadre conceptuel et hypothèses", "Analyse empirique et discussion"]}
-              />
             </div>
           </div>
         </section>
@@ -410,31 +293,6 @@ export default function LandingPage() {
           </div>
         </section>
 
-        {/* 7.5. TESTIMONIALS */}
-        <section className="py-24 bg-white">
-          <div className="container mx-auto px-4 max-w-6xl">
-            <div className="text-center mb-12">
-              <div className="inline-flex items-center gap-2 bg-yellow-50 border border-yellow-100 text-yellow-700 text-sm font-semibold px-4 py-2 rounded-full mb-5">
-                <Star className="w-4 h-4 fill-yellow-400 text-yellow-400" /> 4.9 / 5 · Plus de 200 rapports générés
-              </div>
-              <h2 className="text-3xl md:text-4xl font-bold font-heading text-foreground">
-                Ils ont soumis. Ils ont validé.
-              </h2>
-              <p className="text-secondary-foreground mt-3 text-lg">Des étudiants de partout au Maroc.</p>
-            </div>
-            <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-5">
-              {[
-                { name: "Yasmine B.", school: "EMSI Casablanca", filiere: "Finance", avatar: "Y", color: "purple", stars: 5, quote: "J'ai rendu mon PFE en 2 jours au lieu de 2 mois. Mon encadrant n'a vu aucune différence — au contraire, il était impressionné." },
-                { name: "Mehdi A.", school: "ENCG Agadir", filiere: "Marketing", avatar: "M", color: "blue", stars: 5, quote: "Le canevas ENCG était respecté à 100%. J'ai eu 17/20 à ma soutenance. Je recommande à toute ma promo." },
-                { name: "Sara K.", school: "ENSA Rabat", filiere: "Génie Civil", avatar: "S", color: "emerald", stars: 5, quote: "L'IA a analysé mes données Excel et rédigé toute ma Partie II. J'ai juste vérifié les chiffres. Bluffant." },
-                { name: "Amine T.", school: "FST Fès", filiere: "Informatique", avatar: "A", color: "orange", stars: 5, quote: "JuryAI m'a posé exactement les mêmes questions que mon vrai jury le lendemain. Je n'ai pas été pris de court une seule fois." },
-              ].map((t, i) => (
-                <TestimonialCard key={i} {...t} delay={i * 0.1} />
-              ))}
-            </div>
-          </div>
-        </section>
-
         {/* 8. JURIAI SPOTLIGHT */}
         <section className="py-24 bg-[#2e1065] text-white overflow-hidden relative">
           <div className="absolute top-0 right-0 w-[600px] h-[600px] bg-primary rounded-full blur-[120px] opacity-40 translate-x-1/3 -translate-y-1/4 pointer-events-none"></div>
@@ -460,103 +318,6 @@ export default function LandingPage() {
                 Essayer JuryAI <ArrowRight className="w-5 h-5 ml-2" />
               </Button>
             </Link>
-          </div>
-        </section>
-
-        {/* 8.5. POURQUOI NOUS */}
-        <section className="py-24 bg-background border-t border-border">
-          <div className="container mx-auto px-4 max-w-5xl">
-            <div className="text-center mb-14">
-              <h2 className="text-3xl md:text-4xl font-bold font-heading text-foreground mb-3">Pourquoi RapportAI ?</h2>
-              <p className="text-secondary-foreground text-lg max-w-2xl mx-auto">
-                Ce n'est pas un ChatGPT avec un joli emballage. C'est un outil conçu spécifiquement pour toi.
-              </p>
-            </div>
-            <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-6">
-              {[
-                { Icon: Globe, title: "100% marocain", desc: "Connaît les canevas EMSI, ENCG, ENSA, UIR, HEM et 80+ autres écoles. Écrit en français académique marocain — pas du contenu générique." },
-                { Icon: Shield, title: "0% plagiat, garanti", desc: "Chaque rapport est généré uniquement pour toi. Aucun contenu partagé entre étudiants. Turnitin ne verra rien — parce qu'il n'y a rien à voir." },
-                { Icon: FileText, title: "Depuis tes vraies données", desc: "Importe ton Excel, ton CSV, ton PDF. L'IA analyse tes résultats et rédige ton analyse empirique — pas des généralités inventées." },
-                { Icon: Zap, title: "30 minutes, pas 3 mois", desc: "De ton thème à ton .docx formaté. Pas une aide à la rédaction — le rapport complet, prêt à imprimer et à soumettre." },
-                { Icon: Users, title: "Préparation soutenance", desc: "JuryAI lit ton rapport et simule le jury. Les vraies questions, le vrai stress, en avance. Arrive le jour J en sachant exactement quoi répondre." },
-                { Icon: Heart, title: "Fait par un étudiant", desc: "RapportAI a été construit par quelqu'un qui a vécu exactement ta situation. Ce n'est pas un produit tech — c'est une solution à un vrai problème." },
-              ].map(({ Icon, title, desc }, i) => (
-                <motion.div
-                  key={i}
-                  initial={{ opacity: 0, y: 16 }}
-                  whileInView={{ opacity: 1, y: 0 }}
-                  viewport={{ once: true }}
-                  transition={{ duration: 0.4, delay: i * 0.07 }}
-                  className="bg-white border border-border rounded-2xl p-6 hover:shadow-md transition-shadow"
-                >
-                  <div className="w-10 h-10 rounded-xl bg-primary/10 flex items-center justify-center mb-4">
-                    <Icon className="w-5 h-5 text-primary" />
-                  </div>
-                  <h3 className="font-bold text-foreground mb-2">{title}</h3>
-                  <p className="text-sm text-secondary-foreground leading-relaxed">{desc}</p>
-                </motion.div>
-              ))}
-            </div>
-          </div>
-        </section>
-
-        {/* 8.7. NOTRE HISTOIRE */}
-        <section className="py-24 bg-white border-t border-border">
-          <div className="container mx-auto px-4 max-w-4xl">
-            <div className="grid md:grid-cols-2 gap-16 items-center">
-              <motion.div
-                initial={{ opacity: 0, x: -30 }}
-                whileInView={{ opacity: 1, x: 0 }}
-                viewport={{ once: true }}
-                transition={{ duration: 0.5 }}
-              >
-                <div className="inline-flex items-center gap-2 bg-purple-50 border border-purple-100 text-purple-700 text-xs font-bold px-3 py-1.5 rounded-full mb-6">
-                  NOTRE HISTOIRE
-                </div>
-                <h2 className="text-3xl md:text-4xl font-bold font-heading text-foreground mb-6 leading-tight">
-                  Né d'une nuit blanche avant une soutenance.
-                </h2>
-                <div className="space-y-4 text-secondary-foreground leading-relaxed">
-                  <p>
-                    J'étais en 5ème année. Soutenance dans une semaine. Mon rapport était à moitié fait. J'avais passé deux mois à lire des articles, à reformuler, à corriger la mise en page du canevas de mon école.
-                  </p>
-                  <p>
-                    J'ai essayé ChatGPT. Le contenu était générique, en anglais, sans aucune connaissance de ma filière ni de mon école. Jenni.ai ? Pareil — conçu pour les universités américaines, inutilisable pour un PFE marocain.
-                  </p>
-                  <p>
-                    Alors j'ai construit l'outil qui aurait changé ma vie à ce moment-là. Un outil qui connaît le système éducatif marocain, qui respecte le canevas de ton école, qui écrit comme un vrai étudiant — parce qu'il a été construit par un.
-                  </p>
-                  <p className="font-semibold text-foreground">
-                    C'est RapportAI. Fait au Maroc, pour les étudiants marocains. 🇲🇦
-                  </p>
-                </div>
-              </motion.div>
-
-              <motion.div
-                initial={{ opacity: 0, x: 30 }}
-                whileInView={{ opacity: 1, x: 0 }}
-                viewport={{ once: true }}
-                transition={{ duration: 0.5, delay: 0.1 }}
-                className="relative"
-              >
-                <div className="bg-gradient-to-br from-purple-50 to-purple-100 rounded-3xl p-8 border border-purple-100">
-                  <div className="text-6xl mb-6">🌙</div>
-                  <blockquote className="text-lg font-medium text-gray-700 italic leading-relaxed mb-6">
-                    "Il n'existait aucun outil qui comprenait vraiment ce que c'est d'écrire un PFE au Maroc. Alors je l'ai construit."
-                  </blockquote>
-                  <div className="flex items-center gap-3">
-                    <div className="w-10 h-10 rounded-full bg-primary flex items-center justify-center text-white font-bold text-sm">A</div>
-                    <div>
-                      <div className="font-bold text-foreground text-sm">L'étudiant derrière RapportAI</div>
-                      <div className="text-xs text-secondary-foreground">Casablanca, Maroc 🇲🇦</div>
-                    </div>
-                  </div>
-                </div>
-                <div className="absolute -bottom-4 -right-4 bg-primary text-white text-xs font-bold px-4 py-2 rounded-full shadow-lg">
-                  Fait au Maroc 🇲🇦
-                </div>
-              </motion.div>
-            </div>
           </div>
         </section>
 
@@ -834,85 +595,6 @@ function DemoAnimation() {
         </div>
       </div>
     </div>
-  );
-}
-
-function PourQuiCard({ Icon, tag, tagColor, title, desc, items }: {
-  Icon: React.ElementType;
-  tag: string;
-  tagColor: "purple" | "blue" | "emerald";
-  title: string;
-  desc: string;
-  items: string[];
-}) {
-  const colors = {
-    purple: { bg: "bg-purple-50", text: "text-purple-700", border: "border-purple-100", icon: "bg-purple-100 text-purple-600" },
-    blue:   { bg: "bg-blue-50",   text: "text-blue-700",   border: "border-blue-100",   icon: "bg-blue-100 text-blue-600"   },
-    emerald:{ bg: "bg-emerald-50",text: "text-emerald-700",border: "border-emerald-100",icon: "bg-emerald-100 text-emerald-600"},
-  };
-  const c = colors[tagColor];
-  const ref = useRef(null);
-  const isInView = useInView(ref, { once: true });
-  return (
-    <motion.div
-      ref={ref}
-      initial={{ opacity: 0, y: 20 }}
-      animate={isInView ? { opacity: 1, y: 0 } : {}}
-      transition={{ duration: 0.4 }}
-      className={`rounded-2xl border ${c.border} ${c.bg} p-7 flex flex-col`}
-    >
-      <div className={`w-11 h-11 rounded-xl ${c.icon} flex items-center justify-center mb-4`}>
-        <Icon className="w-6 h-6" />
-      </div>
-      <div className={`text-xs font-black tracking-widest ${c.text} mb-2`}>{tag}</div>
-      <h3 className="text-lg font-bold text-foreground mb-3">{title}</h3>
-      <p className="text-sm text-secondary-foreground mb-5 leading-relaxed">{desc}</p>
-      <ul className="space-y-2 mt-auto">
-        {items.map((item) => (
-          <li key={item} className="flex items-start gap-2 text-sm text-secondary-foreground">
-            <CheckCircle2 className="w-4 h-4 text-[#10b981] shrink-0 mt-0.5" />
-            {item}
-          </li>
-        ))}
-      </ul>
-    </motion.div>
-  );
-}
-
-function TestimonialCard({ name, school, filiere, avatar, color, stars, quote, delay }: {
-  name: string; school: string; filiere: string; avatar: string;
-  color: string; stars: number; quote: string; delay: number;
-}) {
-  const avatarColors: Record<string, string> = {
-    purple: "bg-purple-500", blue: "bg-blue-500", emerald: "bg-emerald-500", orange: "bg-orange-500"
-  };
-  const ref = useRef(null);
-  const isInView = useInView(ref, { once: true });
-  return (
-    <motion.div
-      ref={ref}
-      initial={{ opacity: 0, y: 20 }}
-      animate={isInView ? { opacity: 1, y: 0 } : {}}
-      transition={{ duration: 0.4, delay }}
-      className="bg-white border border-border rounded-2xl p-6 flex flex-col gap-4 shadow-sm hover:shadow-md transition-shadow"
-    >
-      <Quote className="w-6 h-6 text-primary/20" />
-      <p className="text-sm text-secondary-foreground leading-relaxed flex-1 italic">"{quote}"</p>
-      <div className="flex gap-0.5">
-        {Array.from({ length: stars }).map((_, i) => (
-          <Star key={i} className="w-3.5 h-3.5 fill-yellow-400 text-yellow-400" />
-        ))}
-      </div>
-      <div className="flex items-center gap-3 pt-2 border-t border-border">
-        <div className={`w-8 h-8 rounded-full ${avatarColors[color]} flex items-center justify-center text-white text-xs font-bold shrink-0`}>
-          {avatar}
-        </div>
-        <div>
-          <div className="text-sm font-bold text-foreground">{name}</div>
-          <div className="text-xs text-muted-foreground">{school} · {filiere}</div>
-        </div>
-      </div>
-    </motion.div>
   );
 }
 
