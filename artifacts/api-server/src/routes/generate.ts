@@ -6,6 +6,7 @@ import { findClaudeBinary } from "../lib/find-claude-binary";
 import { markSectionComplete, sessionDir, readMemory } from "../lib/memory";
 import { getSectionConfig, buildMemoryContext } from "../lib/agents/sectionConfigs";
 import type { StudentMemory } from "../lib/memory-types";
+import { runInternalHumanize } from "../lib/humanize-util";
 
 const router = Router();
 
@@ -81,6 +82,14 @@ function buildCitationBlock(sources: BibEntry[] | undefined, style: string): str
   return `\n## Sources bibliographiques disponibles\n${numbered}`;
 }
 
+function loadSkillsFile(filename: string): string {
+  try {
+    const p = require("path").join(process.cwd(), "src/lib/skills", filename);
+    if (require("fs").existsSync(p)) return require("fs").readFileSync(p, "utf-8");
+  } catch { /* missing — silent */ }
+  return "";
+}
+
 function buildSystemPrompt(ctx: GenerateBody, memory?: StudentMemory): string {
   const name    = ctx.studentName  ?? "l'étudiant(e)";
   const school  = ctx.school       ?? "l'école";
@@ -89,20 +98,17 @@ function buildSystemPrompt(ctx: GenerateBody, memory?: StudentMemory): string {
   const theme   = ctx.theme        ?? "le thème fourni";
   const style   = ctx.citationStyle ?? "APA 7th ed.";
 
-  // Load section-specific skills file if available
-  let skillsContent = "";
+  // Load agent-specific system prompt file if available ([section]-system.md)
+  // Falls back to the generic base prompt when not yet written
+  let basePrompt = "";
   try {
     const config = getSectionConfig(ctx.section);
-    const skillsPath = require("path").join(process.cwd(), "src/lib/skills", config.skillsFile);
-    if (require("fs").existsSync(skillsPath)) {
-      skillsContent = `\n\n---\n## KNOWLEDGE BASE — LIS ENTIÈREMENT AVANT D'ÉCRIRE\n${require("fs").readFileSync(skillsPath, "utf-8")}`;
-    }
-  } catch { /* section unknown or skills file missing — continue without */ }
+    const systemFile = config.skillsFile.replace("-skills.md", "-system.md");
+    basePrompt = loadSkillsFile(systemFile);
+  } catch { /* unknown section */ }
 
-  // Inject student memory context so agent never contradicts established decisions
-  const memoryContext = memory ? buildMemoryContext(memory) : "";
-
-  return `Tu es l'agent de rédaction académique de RapportAI. Tu aides ${name} (${school} — ${filiere}) à rédiger son ${type} intitulé "${theme}".
+  if (!basePrompt) {
+    basePrompt = `Tu es l'agent de rédaction académique de RapportAI. Tu aides ${name} (${school} — ${filiere}) à rédiger son ${type} intitulé "${theme}".
 
 ## Règles absolues
 - Français académique formel et soutenu uniquement
@@ -116,7 +122,21 @@ function buildSystemPrompt(ctx: GenerateBody, memory?: StudentMemory): string {
 - Reformule chaque idée avec des mots entièrement différents de la source
 - Varie la structure syntaxique : phrases courtes ET longues, actif ET passif
 - Contexte marocain obligatoire — données HCP, Bank Al-Maghrib, secteur local
-- Taux de similarité cible : inférieur à 10 %${memoryContext}${buildDocumentContext(ctx)}${skillsContent}`;
+- Taux de similarité cible : inférieur à 10 %`;
+  }
+
+  // Load section-specific skills file
+  let skillsContent = "";
+  try {
+    const config = getSectionConfig(ctx.section);
+    const raw = loadSkillsFile(config.skillsFile);
+    if (raw) skillsContent = `\n\n---\n## KNOWLEDGE BASE — LIS ENTIÈREMENT AVANT D'ÉCRIRE\n${raw}`;
+  } catch { /* unknown section */ }
+
+  // Inject student memory context so agent never contradicts established decisions
+  const memoryContext = memory ? buildMemoryContext(memory) : "";
+
+  return `${basePrompt}${memoryContext}${buildDocumentContext(ctx)}${skillsContent}`;
 }
 
 function buildPrompt(ctx: GenerateBody): string {
@@ -135,44 +155,19 @@ function buildPrompt(ctx: GenerateBody): string {
 
   switch (ctx.section) {
     case "partie-i":
-      return `Utilise WebFetch sur https://api.semanticscholar.org/graph/v1/paper/search?query=${encodeURIComponent(theme)}&limit=8&fields=title,authors,year,externalIds,abstract pour trouver des sources réelles, puis rédige la Partie I du ${type} intitulé "${theme}", réalisé par ${student} à ${school} en ${filiere} (${annee}).
-
-## Chapitre 1 — Cadre théorique et revue de littérature
-### 1.1 Fondements théoriques
-### 1.2 Revue de la littérature internationale et nationale
-### 1.3 Contexte marocain et spécificités locales
-### 1.4 Positionnement théorique de l'étude
-
-## Chapitre 2 — Méthodologie de recherche
-### 2.1 Approche et design de recherche
-### 2.2 Collecte et traitement des données
-### 2.3 Modèles et outils d'analyse
-### 2.4 Validité et fiabilité de la démarche
-
-Problématique : ${prob} | Mots-clés : ${kw} | Style : ${style}
-${buildCitationBlock(ctx.sources, style)}
-
-Minimum 2500 mots. Chaque sous-section : 3 paragraphes minimum. Placeholders figures : [INSÉRER FIGURE N — Titre].`;
+      return `Lis d'abord \`sommaire.md\` pour extraire la structure exacte de la Partie I (chapitres et sections).
+Génère ensuite la Partie I complète en suivant cette structure exactement — ne modifie aucun titre, n'ajoute aucun chapitre.
+Si aucun fichier source n'est disponible dans le répertoire, utilise WebSearch puis WebFetch pour trouver des sources académiques sur : "${theme}" (${filiere}).
+Problématique : ${prob} | Mots-clés : ${kw} | Style de citation : ${style}
+${buildCitationBlock(ctx.sources, style)}`;
 
     case "partie-ii":
-      return `Utilise WebFetch sur https://api.semanticscholar.org/graph/v1/paper/search?query=${encodeURIComponent(theme)}&limit=8&fields=title,authors,year,externalIds,abstract pour des sources complémentaires, puis rédige la Partie II du ${type} intitulé "${theme}" (${school} — ${filiere}).
-
-## Chapitre 3 — Présentation et analyse des résultats
-### 3.1 Statistiques descriptives et présentation de l'échantillon
-### 3.2 Résultats de l'analyse principale
-### 3.3 Interprétation des résultats et validation des hypothèses
-### 3.4 Synthèse des findings empiriques
-
-## Chapitre 4 — Discussion, limites et recommandations
-### 4.1 Discussion des résultats au regard de la littérature
-### 4.2 Implications théoriques et contributions académiques
-### 4.3 Implications pratiques et managériales
-### 4.4 Limites de l'étude et voies de recherche futures
-
-Problématique : ${prob} | Style : ${style}
-${buildCitationBlock(ctx.sources, style)}
-
-Minimum 2500 mots. Références croisées vers Partie I obligatoires. Placeholders figures : [INSÉRER FIGURE N — Titre].`;
+      return `Lis d'abord \`sommaire.md\` pour extraire la structure exacte de la Partie II (chapitres et sections).
+Génère ensuite la Partie II complète en suivant cette structure exactement.
+La Partie II est le cadre pratique — utilise les données uploadées et les résultats empiriques. Référence croisée obligatoire vers partie-i.md.
+Si aucun fichier source n'est disponible, utilise WebSearch puis WebFetch pour trouver des données et études de cas sur : "${theme}" (${filiere}).
+Problématique : ${prob} | Style de citation : ${style}
+${buildCitationBlock(ctx.sources, style)}`;
 
     case "introduction":
       return `Rédige l'Introduction Générale du ${type} intitulé "${theme}" (${school} — ${filiere}, ${annee}).
@@ -280,18 +275,28 @@ router.post("/generate", async (req: Request, res: Response) => {
     }
   }
 
-  const tools: string[] = SECTIONS_WITH_WEB.has(body.section)
-    ? ["WebFetch", "Read"]
-    : workDir ? ["Read"] : [];
+  let tools: string[] = [];
+  let maxTurnsOverride: number | undefined;
+  try {
+    const config = getSectionConfig(body.section);
+    tools = config.allowedTools;
+    maxTurnsOverride = config.maxTurns;
+  } catch {
+    // Unknown section — minimal fallback
+    tools = workDir ? ["Read"] : [];
+  }
 
   let fullOutput = "";
 
   try {
+    // Phase 1 — generation: buffer output, only stream tool_call events for live feedback
+    res.write(`data: ${JSON.stringify({ phase: "writing" })}\n\n`);
+
     for await (const message of query({
       prompt: buildPrompt(body),
       options: {
         systemPrompt: buildSystemPrompt(body, memory ?? undefined),
-        maxTurns: SECTIONS_WITH_WEB.has(body.section) ? 8 : 2,
+        maxTurns: maxTurnsOverride ?? (SECTIONS_WITH_WEB.has(body.section) ? 8 : 2),
         allowedTools: tools,
         ...(workDir ? { cwd: workDir } : {}),
         ...(claudeBinary ? { pathToClaudeCodeExecutable: claudeBinary } : {}),
@@ -301,7 +306,6 @@ router.post("/generate", async (req: Request, res: Response) => {
         for (const block of message.message.content) {
           if (block.type === "text" && block.text) {
             fullOutput += block.text;
-            res.write(`data: ${JSON.stringify({ content: block.text })}\n\n`);
           }
           if (block.type === "tool_use") {
             res.write(`data: ${JSON.stringify({ tool_call: block.name })}\n\n`);
@@ -310,12 +314,19 @@ router.post("/generate", async (req: Request, res: Response) => {
       }
     }
 
+    // Phase 2 — humanize: run silently, student sees "Optimisation du texte…"
+    res.write(`data: ${JSON.stringify({ phase: "humanizing" })}\n\n`);
+    const finalOutput = await runInternalHumanize(fullOutput, body.section);
+
+    // Phase 3 — stream the humanized result
+    res.write(`data: ${JSON.stringify({ content: finalOutput })}\n\n`);
+
     // Update memory: mark section complete with word count + key_points summary
-    if (body.sessionId && fullOutput.trim()) {
-      const wordCount = fullOutput.split(/\s+/).filter(Boolean).length;
+    if (body.sessionId && finalOutput.trim()) {
+      const wordCount = finalOutput.split(/\s+/).filter(Boolean).length;
       markSectionComplete(body.sessionId, body.section, {
         word_count: wordCount,
-        key_points: fullOutput.slice(0, 300).replace(/<[^>]+>/g, "").trim(),
+        key_points: finalOutput.slice(0, 300).replace(/<[^>]+>/g, "").trim(),
       });
     }
 

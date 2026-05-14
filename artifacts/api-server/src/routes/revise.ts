@@ -71,7 +71,11 @@ router.post("/revise", async (req: Request, res: Response) => {
   // Tell the agent which file is the active section
   const activeFile = sectionFile;
 
-  const systemPrompt = `You are Revision AI, an AI revision agent working inside RapportAI — a SaaS platform that generates complete academic reports for Moroccan and francophone students (PFE, mémoire, rapport de stage). Your role is to perform precise, surgical revisions to academic report sections based on explicit student requests.
+  // Load custom system prompt file if provided, otherwise use built-in
+  const customSystemPath = path.join(process.cwd(), "src/lib/skills/revision-system.md");
+  const customSystem = existsSync(customSystemPath) ? readFileSync(customSystemPath, "utf-8") : null;
+
+  const systemPrompt = customSystem ?? `You are Revision AI, an AI revision agent working inside RapportAI — a SaaS platform that generates complete academic reports for Moroccan and francophone students (PFE, mémoire, rapport de stage). Your role is to perform precise, surgical revisions to academic report sections based on explicit student requests.
 
 You work inside a session directory that contains:
 - \`revision-skills.md\` — domain knowledge file with academic writing guidelines — READ THIS FIRST
@@ -119,6 +123,13 @@ SPECIAL CASES:
 - Tables/figures: Make precise edits to the requested cells or elements only
 - Multi-turn: Each revision builds on the current state of ${activeFile} — previous edits are already in the file
 
+FIGURES AND MEDIA:
+- If the student asks to regenerate or update a figure, use Bash to run Python (matplotlib/pandas/pdf2image)
+- Save figures to figures/ in the working directory: \`mkdir -p figures && python3 -c "..."\`
+- Reference figures inline as: \`![Title](figures/filename.png)\`
+- If Python fails (missing library, bad data), fall back to a \`[DONNÉES REQUISES — figure à compléter]\` placeholder — never retry in a loop
+- If the student attaches an Excel/CSV and asks for a chart, read it with pandas and generate the figure
+
 PROHIBITIONS:
 - Never invent citations, references, or bibliographic information
 - Never modify content outside the targeted passage
@@ -153,7 +164,7 @@ If clarification is needed before proceeding, ask your question directly without
         systemPrompt,
         maxTurns: 10,
         cwd: workDir,
-        permissionMode: "acceptEdits",
+        allowedTools: ["Read", "Write", "Edit", "Bash", "Glob", "Grep", "WebFetch"],
         ...(claudeBinary ? { pathToClaudeCodeExecutable: claudeBinary } : {}),
       },
     })) {

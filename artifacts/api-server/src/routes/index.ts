@@ -12,6 +12,16 @@ import humanizeRouter from "./humanize";
 import logoRouter from "./logo";
 import sdkTestRouter from "./sdk-test";
 import plagiatRouter from "./plagiat";
+// ─── Section agents (each has explicit system prompt + tools) ─────────────────
+import introductionRouter from "./introduction";
+import dedicacesRouter from "./dedicaces";
+import remerciementsRouter from "./remerciements";
+import resumeRouter from "./resume";
+import sommaireRouter from "./sommaire";
+import partieIRouter from "./partie-i";
+import partieIIRouter from "./partie-ii";
+import conclusionRouter from "./conclusion";
+import bibliographieRouter from "./bibliographie";
 
 const router: IRouter = Router();
 
@@ -28,5 +38,15 @@ router.use(humanizeRouter);
 router.use(logoRouter);
 router.use(sdkTestRouter);
 router.use(plagiatRouter);
+// Section agents
+router.use(introductionRouter);
+router.use(dedicacesRouter);
+router.use(remerciementsRouter);
+router.use(resumeRouter);
+router.use(sommaireRouter);
+router.use(partieIRouter);
+router.use(partieIIRouter);
+router.use(conclusionRouter);
+router.use(bibliographieRouter);
 
 export default router;

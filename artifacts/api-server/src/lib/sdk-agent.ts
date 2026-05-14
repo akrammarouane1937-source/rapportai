@@ -4,6 +4,7 @@ import path from "path";
 import type { StreamEvent } from "./agent-session";
 import { findClaudeBinary } from "./find-claude-binary";
 import { schoolContext } from "./moroccan-schools";
+import { getSectionConfig } from "./agents/sectionConfigs";
 
 // Per-user working directory — each session gets isolated storage
 const SESSIONS_ROOT = "/tmp/rapportai-sessions";
@@ -45,7 +46,7 @@ export class SDKReportAgent {
   readonly profile: ReportProfile;
   readonly createdAt: Date;
   lastActiveAt: Date;
-  private workDir: string;
+  readonly workDir: string;
   private abortController: AbortController;
 
   constructor(sessionId: string, profile: ReportProfile) {
@@ -113,11 +114,63 @@ export class SDKReportAgent {
     return existsSync(filePath) ? readFileSync(filePath, "utf-8") : undefined;
   }
 
-  // Stream a task — yields StreamEvents compatible with existing SSE routes
+  // Load a skills file from src/lib/skills/
+  private loadSkillFile(filename: string): string {
+    try {
+      const p = path.join(process.cwd(), "src/lib/skills", filename);
+      if (existsSync(p)) return readFileSync(p, "utf-8");
+    } catch { /* missing — silent */ }
+    return "";
+  }
+
+  // streamSection — section-aware stream: loads correct system prompt + tools from sectionConfigs
+  async *streamSection(section: string, task: string): AsyncGenerator<StreamEvent> {
+    this.lastActiveAt = new Date();
+    this.abortController = new AbortController();
+    const claudeBinary = findClaudeBinary();
+
+    // Load section-specific system prompt + skills
+    let sectionSystem = "";
+    let sectionSkills = "";
+    let allowedTools: string[] | undefined;
+    let maxTurns = 25;
+
+    try {
+      const config = getSectionConfig(section);
+      sectionSystem = this.loadSkillFile(config.skillsFile.replace("-skills.md", "-system.md"));
+      sectionSkills = this.loadSkillFile(config.skillsFile);
+      allowedTools = config.allowedTools;
+      maxTurns = config.maxTurns;
+    } catch { /* unknown section — fall back to generic */ }
+
+    // Combine: section system prompt + student context + knowledge base
+    const baseSystem = buildSystemPrompt(this.profile, this.workDir);
+    const knowledgeBase = sectionSkills
+      ? `\n\n---\n## KNOWLEDGE BASE — LIS ENTIÈREMENT AVANT D'ÉCRIRE\n${sectionSkills}`
+      : "";
+    const systemPrompt = sectionSystem
+      ? `${sectionSystem}\n\n---\n## CONTEXTE ÉTUDIANT\n${baseSystem}${knowledgeBase}`
+      : `${baseSystem}${knowledgeBase}`;
+
+    for await (const message of query({
+      prompt: task,
+      options: {
+        abortController: this.abortController,
+        maxTurns,
+        cwd: this.workDir,
+        systemPrompt,
+        ...(allowedTools ? { allowedTools } : { permissionMode: "acceptEdits" }),
+        ...(claudeBinary ? { pathToClaudeCodeExecutable: claudeBinary } : {}),
+      },
+    })) {
+      yield* this._processMessage(message);
+    }
+  }
+
+  // stream — generic stream (used by revision + fallback), no section config
   async *stream(prompt: string): AsyncGenerator<StreamEvent> {
     this.lastActiveAt = new Date();
     this.abortController = new AbortController();
-
     const claudeBinary = findClaudeBinary();
 
     for await (const message of query({
@@ -126,7 +179,7 @@ export class SDKReportAgent {
         abortController: this.abortController,
         maxTurns: 25,
         cwd: this.workDir,
-        systemPrompt: buildSystemPrompt(this.profile),
+        systemPrompt: buildSystemPrompt(this.profile, this.workDir),
         permissionMode: "acceptEdits",
         ...(claudeBinary ? { pathToClaudeCodeExecutable: claudeBinary } : {}),
       },
@@ -153,8 +206,18 @@ export class SDKReportAgent {
     this.abortController.abort();
   }
 
+  // Patch in-memory profile with latest fields from the frontend
+  patchProfile(fields: Partial<ReportProfile>): void {
+    Object.assign(this.profile, fields);
+    // Rewrite profile.json so the agent reads the updated version
+    writeFileSync(
+      path.join(this.workDir, "profile.json"),
+      JSON.stringify(this.profile, null, 2)
+    );
+  }
+
   // Build the task prompt for a report section
-  buildSectionTask(section: string): string {
+  buildSectionTask(section: string, opts?: { extraContext?: string }): string {
     const p = this.profile;
     const style = p.citationStyle ?? "APA 7th ed.";
     const prob =
@@ -169,67 +232,34 @@ export class SDKReportAgent {
 
     switch (section) {
       case "partie-i":
-        return `${docNote}
-Lis d'abord INSTRUCTIONS.md et profile.json.
-Lis les sections déjà rédigées (introduction.md, resume.md si présents).
-Utilise WebFetch sur https://api.semanticscholar.org/graph/v1/paper/search?query=${encodeURIComponent(p.theme)}&limit=8&fields=title,authors,year,externalIds,abstract pour trouver des sources réelles.
-
-Rédige la Partie I du ${p.reportType} "${p.theme}" (${p.school} — ${p.filiere}, ${p.annee ?? "2024–2025"}).
-
-## Chapitre 1 — Cadre théorique et revue de littérature
-### 1.1 Fondements théoriques
-### 1.2 Revue de la littérature internationale et nationale
-### 1.3 Contexte marocain et spécificités locales
-### 1.4 Positionnement théorique de l'étude
-
-## Chapitre 2 — Méthodologie de recherche
-### 2.1 Approche et design de recherche
-### 2.2 Collecte et traitement des données
-### 2.3 Modèles et outils d'analyse
-### 2.4 Validité et fiabilité de la démarche
-
-Problématique : ${prob}
-Style : ${style}. Minimum 2500 mots. Citations réelles uniquement.
-Enregistre avec Write dans partie-i.md une fois terminé.`;
+        return `${docNote}Lis sommaire.md pour extraire la structure exacte de la Partie I (chapitres et sections).
+Génère ensuite la Partie I complète en suivant cette structure — ne modifie aucun titre, n'ajoute aucun chapitre.
+Problématique : ${prob} | Style de citation : ${style}
+Enregistre dans partie-i.md une fois terminé.`;
 
       case "partie-ii":
-        return `${docNote}
-Lis INSTRUCTIONS.md, profile.json, et partie-i.md (obligatoire — références croisées requises).
-
-Rédige la Partie II du ${p.reportType} "${p.theme}" (${p.school} — ${p.filiere}).
-
-## Chapitre 3 — Présentation et analyse des résultats
-### 3.1 Statistiques descriptives et présentation de l'échantillon
-### 3.2 Résultats de l'analyse principale
-### 3.3 Interprétation et validation des hypothèses
-### 3.4 Synthèse des findings empiriques
-
-## Chapitre 4 — Discussion, limites et recommandations
-### 4.1 Discussion au regard de la littérature
-### 4.2 Implications théoriques et académiques
-### 4.3 Implications pratiques et managériales
-### 4.4 Limites et voies de recherche futures
-
-Problématique : ${prob}
-Style : ${style}. Minimum 2500 mots. Références croisées vers Partie I obligatoires.
-Enregistre avec Write dans partie-ii.md.`;
+        return `${docNote}Lis sommaire.md pour extraire la structure exacte de la Partie II (chapitres et sections).
+Lis aussi partie-i.md — les références croisées vers Partie I sont obligatoires.
+Génère ensuite la Partie II complète en suivant la structure du sommaire.
+Problématique : ${prob} | Style de citation : ${style}
+Enregistre dans partie-ii.md une fois terminé.`;
 
       case "introduction":
-        return `Lis INSTRUCTIONS.md, profile.json, et toutes les sections .md existantes.
+        return `${docNote}Lis INSTRUCTIONS.md, profile.json, et toutes les sections .md existantes.
 Rédige l'Introduction Générale (400–600 mots) du ${p.reportType} "${p.theme}".
 Structure : Contexte → Problématique → Objectifs → Structure du rapport.
 Problématique : ${prob}
 Enregistre dans introduction.md.`;
 
       case "conclusion":
-        return `Lis introduction.md, partie-i.md, partie-ii.md (obligatoire).
+        return `${docNote}Lis introduction.md, partie-i.md, partie-ii.md (obligatoire).
 Rédige la Conclusion Générale (400–600 mots).
 Structure : Synthèse → Apports → Limites → Perspectives.
 Références directes vers les deux parties.
 Enregistre dans conclusion.md.`;
 
       case "resume":
-        return `Lis introduction.md si présent.
+        return `${docNote}Lis introduction.md si présent.
 Rédige le Résumé (250–300 mots) : Contexte → Objectifs → Méthodologie → Résultats → Conclusion.
 Termine par les mots-clés (5–8).
 Enregistre dans resume.md.`;
@@ -268,18 +298,36 @@ Génère page-de-garde.md avec le contenu exact en respectant :
 
 Enregistre dans page-de-garde.md.`;
 
-      case "dedicaces":
-        return `Rédige les Dédicaces (10–15 lignes, style poétique sobre).
+      case "dedicaces": {
+        let dedicacesNote = "";
+        try {
+          const mem = JSON.parse(readFileSync(path.join(this.workDir, "student_memory.json"), "utf-8"));
+          if (mem?.interaction_history?.dedicaces_text) {
+            dedicacesNote = `\n\nTexte personnel fourni par l'étudiant(e) — utilise-le comme base, préserve chaque nom et sentiment mentionné :\n"""\n${mem.interaction_history.dedicaces_text}\n"""`;
+          }
+        } catch { /* no memory — generate universal */ }
+        return `${docNote}Lis profile.json.${dedicacesNote}
+Rédige les Dédicaces (8–20 lignes, style lyrique et sobre).
 Enregistre dans dedicaces.md.`;
+      }
 
-      case "remerciements":
-        return `Lis profile.json pour les noms des encadrants.
-Rédige les Remerciements (150–200 mots, ton formel et sincère).
-Mentionne : encadrant pédagogique, encadrant professionnel, école, famille.
+      case "remerciements": {
+        let remerciementsNote = "";
+        try {
+          const mem = JSON.parse(readFileSync(path.join(this.workDir, "student_memory.json"), "utf-8"));
+          if (mem?.interaction_history?.remerciements_text) {
+            remerciementsNote = `\n\nTexte personnel fourni par l'étudiant(e) :\n"""\n${mem.interaction_history.remerciements_text}\n"""`;
+          }
+        } catch { /* no memory */ }
+        return `${docNote}Lis profile.json pour les noms et titres des encadrants.${remerciementsNote}
+Rédige les Remerciements (200–350 mots, ton formel et sincère).
+Respecte l'ordre : encadrant pédagogique → encadrant professionnel → école → famille.
+Varie les formules d'ouverture de chaque paragraphe.
 Enregistre dans remerciements.md.`;
+      }
 
       default:
-        return `Rédige la section "${section}" du rapport. Enregistre dans ${section}.md.`;
+        return `${docNote}Rédige la section "${section}" du rapport.${opts?.extraContext ? `\n\nContexte supplémentaire : ${opts.extraContext}` : ""}\nEnregistre dans ${section}.md.`;
     }
   }
 
@@ -306,9 +354,23 @@ Sauvegarde les changements dans ${sectionId}.md.`;
 
 // ─── System prompt ────────────────────────────────────────────────────────────
 
-function buildSystemPrompt(p: ReportProfile): string {
+function buildSystemPrompt(p: ReportProfile, workDir?: string): string {
   const style = p.citationStyle ?? "APA 7th ed.";
   const schoolFull = schoolContext(p.school);
+
+  // Read student_memory.json from disk to pick up canevas flag and other enrichments
+  let canevasNote = "";
+  if (workDir) {
+    try {
+      const memPath = path.join(workDir, "student_memory.json");
+      if (existsSync(memPath)) {
+        const mem = JSON.parse(readFileSync(memPath, "utf-8")) as { report?: { canevas_uploaded?: boolean; canevas_filename?: string } };
+        if (mem.report?.canevas_uploaded && mem.report?.canevas_filename) {
+          canevasNote = `\n\n## ⚠️ CANEVAS OBLIGATOIRE\nL'école a fourni un canevas : **${mem.report.canevas_filename}**. Lis ce fichier EN PREMIER avec Read avant toute rédaction et respecte sa structure exactement.`;
+        }
+      }
+    } catch { /* memory missing — continue without */ }
+  }
 
   return `Tu es l'agent de rédaction académique de RapportAI — une instance Claude Code dédiée au rapport de ${p.studentName} à ${schoolFull}.
 
@@ -361,7 +423,7 @@ ${p.juryMember3 ? `- Membre du jury 3 : ${p.juryMember3}` : ""}
 - Ne jamais inventer des citations, auteurs, titres, DOI, ou dates de publication
 - Ne jamais rédiger une section sans avoir lu les sections existantes
 - Ne jamais ignorer le template ou le canevas de l'école si fourni
-- Ne jamais dépasser le scope de la section demandée`;
+- Ne jamais dépasser le scope de la section demandée${canevasNote}`;
 }
 
 // ─── Instructions file written to disk ───────────────────────────────────────

@@ -4,11 +4,14 @@ import { useLocation } from "wouter";
 import {
   Sparkles, RefreshCw, Upload, Plus, X,
   Loader2, ChevronRight, GripVertical, Wand2, ArrowRight,
+  Layers, FileText,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Sidebar } from "@/components/layout/Sidebar";
 import { WordPreview } from "@/components/report/WordPreview";
+import { PageCard } from "@/components/report/PageCard";
 import { useGenerate } from "@/lib/useGenerate";
+import { usePageMode } from "@/lib/usePageMode";
 import { markdownToHtml } from "@/lib/markdownToHtml";
 import { saveReport, getReport } from "@/lib/reportStore";
 import { ScholarChips } from "@/components/figures/ScholarChips";
@@ -37,9 +40,12 @@ function SourceChip({ label, onRemove }: { label: string; onRemove: () => void }
   );
 }
 
+type GenerationMode = "full" | "page";
+
 export default function PartieIPage() {
   const [, setLocation] = useLocation();
   const report = getReport();
+  const [generationMode, setGenerationMode] = useState<GenerationMode>("full");
   const [keywords, setKeywords] = useState<string[]>(report.motsCles ?? []);
   const [problematique, setProblematique] = useState("");
   const [contexte, setContexte] = useState("");
@@ -63,6 +69,20 @@ export default function PartieIPage() {
   const [humanizing, setHumanizing] = useState(false);
   const fileRef = useRef<HTMLInputElement>(null);
   const rawTextRef = useRef(report.partieI ?? "");
+
+  // Page-by-page mode state
+  const {
+    pages,
+    isGenerating: isPageGenerating,
+    isRevising: isPageRevising,
+    generateNextPage,
+    confirmPage,
+    revisePage,
+    getAssembledContent,
+    resetPages,
+    canGenerateNext,
+    totalPageCount,
+  } = usePageMode("partie-i");
 
   const onChunk = useCallback((chunk: string) => {
     rawTextRef.current += chunk;
@@ -229,9 +249,25 @@ export default function PartieIPage() {
       {/* Step progress header */}
       <div className="flex-1 flex flex-col overflow-hidden">
         <div className="bg-white border-b border-gray-100 px-6 py-4 flex-shrink-0 z-30">
-          <div className="flex items-center gap-3 mb-2">
-            <span className="text-xs font-bold text-purple-600 bg-purple-50 px-2.5 py-1 rounded-full">Étape 7 sur 9</span>
-            <span className="text-xs text-gray-400">Partie I — Contenu principal</span>
+          <div className="flex items-center justify-between mb-2">
+            <div className="flex items-center gap-3">
+              <span className="text-xs font-bold text-purple-600 bg-purple-50 px-2.5 py-1 rounded-full">Étape 7 sur 9</span>
+              <span className="text-xs text-gray-400">Partie I — Contenu principal</span>
+            </div>
+            <div className="flex items-center gap-1 bg-gray-100 rounded-lg p-1">
+              <button
+                onClick={() => { setGenerationMode("full"); resetPages(); }}
+                className={`flex items-center gap-1.5 text-xs font-semibold px-3 py-1.5 rounded-md transition-all ${generationMode === "full" ? "bg-white text-purple-700 shadow-sm" : "text-gray-500 hover:text-gray-700"}`}
+              >
+                <FileText className="w-3 h-3" /> Tout générer
+              </button>
+              <button
+                onClick={() => setGenerationMode("page")}
+                className={`flex items-center gap-1.5 text-xs font-semibold px-3 py-1.5 rounded-md transition-all ${generationMode === "page" ? "bg-white text-purple-700 shadow-sm" : "text-gray-500 hover:text-gray-700"}`}
+              >
+                <Layers className="w-3 h-3" /> Page par page
+              </button>
+            </div>
           </div>
           <div className="h-1.5 bg-gray-100 rounded-full overflow-hidden">
             <div className="h-full bg-purple-500 rounded-full" style={{ width: "77.8%" }} />
@@ -430,52 +466,143 @@ export default function PartieIPage() {
 
             {/* Sticky bottom button */}
             <div className="sticky bottom-0 bg-white border-t border-gray-100 p-4 flex-shrink-0 space-y-2">
-              <Button
-                onClick={handleGenerate}
-                disabled={generating || humanizing}
-                className="w-full h-12 bg-purple-600 hover:bg-purple-700 text-white font-bold text-sm rounded-xl flex items-center justify-center gap-2"
-                style={{ boxShadow: "0 4px 20px rgba(124,58,237,0.35)" }}
-              >
-                {generating ? (
-                  <><Loader2 className="w-4 h-4 animate-spin" /> {streamingStatus}</>
-                ) : (
-                  <><Sparkles className="w-4 h-4" /> Générer la Partie I</>
-                )}
-              </Button>
-              {previewContent && (
-                <button
-                  onClick={handleHumanize}
-                  disabled={humanizing || generating}
-                  className="w-full h-10 rounded-xl font-semibold text-sm flex items-center justify-center gap-2 transition-all border"
-                  style={{ borderColor: "#10b981", color: humanizing ? "#6b7280" : "#059669", background: humanizing ? "#f3f4f6" : "#f0fdf4" }}
-                >
-                  {humanizing ? (
-                    <><Loader2 className="w-3.5 h-3.5 animate-spin" /> Humanisation en cours...</>
-                  ) : (
-                    <><Wand2 className="w-3.5 h-3.5" /> Humaniser (Anti-plagiat IA)</>
+              {generationMode === "full" ? (
+                <>
+                  <Button
+                    onClick={handleGenerate}
+                    disabled={generating || humanizing}
+                    className="w-full h-12 bg-purple-600 hover:bg-purple-700 text-white font-bold text-sm rounded-xl flex items-center justify-center gap-2"
+                    style={{ boxShadow: "0 4px 20px rgba(124,58,237,0.35)" }}
+                  >
+                    {generating ? (
+                      <><Loader2 className="w-4 h-4 animate-spin" /> {streamingStatus}</>
+                    ) : (
+                      <><Sparkles className="w-4 h-4" /> Générer la Partie I</>
+                    )}
+                  </Button>
+                  {previewContent && (
+                    <button
+                      onClick={handleHumanize}
+                      disabled={humanizing || generating}
+                      className="w-full h-10 rounded-xl font-semibold text-sm flex items-center justify-center gap-2 transition-all border"
+                      style={{ borderColor: "#10b981", color: humanizing ? "#6b7280" : "#059669", background: humanizing ? "#f3f4f6" : "#f0fdf4" }}
+                    >
+                      {humanizing ? (
+                        <><Loader2 className="w-3.5 h-3.5 animate-spin" /> Humanisation en cours...</>
+                      ) : (
+                        <><Wand2 className="w-3.5 h-3.5" /> Humaniser (Anti-plagiat IA)</>
+                      )}
+                    </button>
                   )}
-                </button>
-              )}
-              {previewContent && !generating && !humanizing && (
-                <button
-                  onClick={() => setLocation("/rapport/partie-ii")}
-                  className="w-full h-10 rounded-xl font-semibold text-sm flex items-center justify-center gap-2 bg-gray-900 hover:bg-gray-800 text-white transition-all"
-                >
-                  Continuer — Partie II <ArrowRight className="w-3.5 h-3.5" />
-                </button>
+                  {previewContent && !generating && !humanizing && (
+                    <button
+                      onClick={() => setLocation("/rapport/partie-ii")}
+                      className="w-full h-10 rounded-xl font-semibold text-sm flex items-center justify-center gap-2 bg-gray-900 hover:bg-gray-800 text-white transition-all"
+                    >
+                      Continuer — Partie II <ArrowRight className="w-3.5 h-3.5" />
+                    </button>
+                  )}
+                </>
+              ) : (
+                <>
+                  <Button
+                    onClick={generateNextPage}
+                    disabled={!canGenerateNext}
+                    className="w-full h-12 bg-purple-600 hover:bg-purple-700 text-white font-bold text-sm rounded-xl flex items-center justify-center gap-2 disabled:opacity-50"
+                    style={{ boxShadow: canGenerateNext ? "0 4px 20px rgba(124,58,237,0.35)" : "none" }}
+                  >
+                    {isPageGenerating ? (
+                      <><Loader2 className="w-4 h-4 animate-spin" /> Génération de la page {pages.length + 1}…</>
+                    ) : (
+                      <><Layers className="w-4 h-4" /> Générer la page suivante</>
+                    )}
+                  </Button>
+                  {pages.length > 0 && pages.every(p => p.status === "confirmed") && (
+                    <button
+                      onClick={() => {
+                        saveReport({ partieI: getAssembledContent() });
+                        setLocation("/rapport/partie-ii");
+                      }}
+                      className="w-full h-10 rounded-xl font-semibold text-sm flex items-center justify-center gap-2 bg-gray-900 hover:bg-gray-800 text-white transition-all"
+                    >
+                      Finaliser et continuer — Partie II <ArrowRight className="w-3.5 h-3.5" />
+                    </button>
+                  )}
+                </>
               )}
             </div>
           </div>
 
-          {/* RIGHT — Word preview 62% */}
+          {/* RIGHT — Word preview (full mode) or Page cards (page mode) */}
           <div className="flex-1 relative overflow-hidden">
-            <WordPreview
-              content={previewContent || undefined}
-              rawContent={rawTextRef.current || undefined}
-              sectionTitle="Partie I"
-              wordCount={wordCount}
-              sectionId="partie-i"
-            />
+            {generationMode === "full" ? (
+              <WordPreview
+                content={previewContent || undefined}
+                rawContent={rawTextRef.current || undefined}
+                sectionTitle="Partie I"
+                wordCount={wordCount}
+                sectionId="partie-i"
+              />
+            ) : (
+              <div className="h-full overflow-y-auto bg-[#f9f8ff] p-6">
+                {/* Page cards header */}
+                <div className="flex items-center justify-between mb-4">
+                  <div>
+                    <h3 className="text-sm font-bold text-gray-800">Pages générées</h3>
+                    <p className="text-xs text-gray-400 mt-0.5">
+                      {totalPageCount === 0
+                        ? "Clique sur « Générer la page suivante » pour commencer"
+                        : `${totalPageCount} page${totalPageCount > 1 ? "s" : ""} · ${pages.filter(p => p.status === "confirmed").length} confirmée${pages.filter(p => p.status === "confirmed").length > 1 ? "s" : ""}`
+                      }
+                    </p>
+                  </div>
+                  {totalPageCount > 0 && (
+                    <button
+                      onClick={resetPages}
+                      className="text-xs text-gray-400 hover:text-red-400 transition-colors"
+                    >
+                      Recommencer
+                    </button>
+                  )}
+                </div>
+
+                {/* Page cards */}
+                <div className="space-y-0">
+                  {pages.map((page) => (
+                    <PageCard
+                      key={page.pageNum}
+                      page={page}
+                      onConfirm={() => confirmPage(page.pageNum)}
+                      onRevise={(instruction) => revisePage(page.pageNum, instruction)}
+                      isRevising={isPageRevising}
+                    />
+                  ))}
+                </div>
+
+                {/* Empty state */}
+                {pages.length === 0 && (
+                  <div className="flex flex-col items-center justify-center py-24 text-gray-400">
+                    <Layers className="w-10 h-10 mb-3 text-gray-300" />
+                    <p className="text-sm font-medium">Mode page par page</p>
+                    <p className="text-xs mt-1 text-center max-w-xs">
+                      L'IA génère ~350 mots à la fois. Confirme chaque page avant de passer à la suivante.
+                    </p>
+                  </div>
+                )}
+
+                {/* Assembled content preview when all pages confirmed */}
+                {pages.length > 0 && pages.every(p => p.status === "confirmed") && (
+                  <div className="mt-4 p-4 bg-green-50 border border-green-200 rounded-2xl">
+                    <p className="text-xs font-semibold text-green-700 mb-1">
+                      Section assemblée — {getAssembledContent().split(/\s+/).filter(Boolean).length} mots
+                    </p>
+                    <p className="text-xs text-green-600">
+                      Toutes les pages sont confirmées. Clique sur "Continuer" pour passer à la Partie II.
+                    </p>
+                  </div>
+                )}
+              </div>
+            )}
           </div>
         </div>
       </div>

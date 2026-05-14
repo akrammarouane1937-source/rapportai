@@ -301,12 +301,34 @@ export function useGenerate(opts: {
 
         if (useSession) {
           sessionId = await ensureSession(ctrl.signal);
+
+          // Sync latest form data to session memory before every generation.
+          // The session may have been created earlier (e.g. at template upload in Step 2)
+          // so fields filled later — motsCles, problematique, objectifs, resume — must be pushed now.
+          const memoryPatch: Record<string, unknown> = {};
+          if (stored.motsCles?.length)     memoryPatch.mots_cles      = stored.motsCles;
+          if (stored.problematique)        memoryPatch.problematique  = stored.problematique;
+          if (options.problematique)       memoryPatch.problematique  = options.problematique;
+          if (stored.citationStyle)        memoryPatch.citationStyle  = stored.citationStyle;
+          if (stored.resume)               memoryPatch.resume         = stored.resume;
+          if (Object.keys(memoryPatch).length > 0) {
+            fetch(`${BASE_PATH}/api/session/${sessionId}/memory`, {
+              method: "PATCH",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify(memoryPatch),
+              signal: ctrl.signal,
+            }).catch(() => {/* non-blocking — generation continues even if patch fails */});
+          }
+
           resp = await fetch(`${BASE_PATH}/api/session/${sessionId}/generate`, {
             method: "POST",
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify({
-              section: options.section,
-              sources: bibSources.length > 0 ? bibSources : undefined,
+              section:       options.section,
+              sources:       bibSources.length > 0 ? bibSources : undefined,
+              // Pass section-specific context so the agent task can use it
+              problematique: options.problematique || stored.problematique || undefined,
+              extraContext:  options.extraContext  || undefined,
             }),
             signal: ctrl.signal,
           });

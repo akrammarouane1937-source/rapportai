@@ -9,9 +9,31 @@ import {
   readMemory,
   patchMemory,
   markCanevasUploaded,
+  markSectionComplete,
   incrementSessionCount,
   updateReportFields,
 } from "../lib/memory";
+
+// ─── Page-by-page state tracker ──────────────────────────────────────────────
+// Tracks which page we're currently on per (session, section).
+// Survives the session lifetime; reset explicitly via ?reset=true.
+const pageStateMap = new Map<string, Map<string, number>>();
+
+function getPageNum(sessionId: string, sectionId: string): number {
+  return pageStateMap.get(sessionId)?.get(sectionId) ?? 0;
+}
+function advancePage(sessionId: string, sectionId: string): number {
+  if (!pageStateMap.has(sessionId)) pageStateMap.set(sessionId, new Map());
+  const next = getPageNum(sessionId, sectionId) + 1;
+  pageStateMap.get(sessionId)!.set(sectionId, next);
+  return next;
+}
+function resetPage(sessionId: string, sectionId: string): void {
+  pageStateMap.get(sessionId)?.set(sectionId, 0);
+}
+import { runInternalHumanize } from "../lib/humanize-util";
+import { writeFileSync } from "fs";
+import path from "path";
 
 const upload = multer({ storage: multer.memoryStorage(), limits: { fileSize: 20 * 1024 * 1024 } });
 
@@ -117,7 +139,11 @@ router.post(
   "/session/:sessionId/generate",
   async (req: Request, res: Response) => {
     const { sessionId } = req.params;
-    const { section } = req.body as { section: string };
+    const { section, problematique, extraContext } = req.body as {
+      section: string;
+      problematique?: string;
+      extraContext?: string;
+    };
 
     if (!section) {
       res.status(400).json({ error: "section is required" });
@@ -130,29 +156,46 @@ router.post(
       return;
     }
 
+    // If the frontend sent an updated problématique (e.g. from Step 6 form),
+    // patch it into memory so the agent reads the latest version
+    if (problematique) {
+      patchMemory(sessionId, (m) => { m.report.problematique = problematique; });
+      agent.patchProfile({ problematique });
+    }
+
     res.setHeader("Content-Type", "text/event-stream");
     res.setHeader("Cache-Control", "no-cache");
     res.setHeader("Connection", "keep-alive");
 
     try {
-      const task = agent.buildSectionTask(section);
-      const finished = await streamToSSE(res, agent.stream(task));
+      const task = agent.buildSectionTask(section, { extraContext });
+
+      // Phase 1 — generation streams live so the student sees progress
+      res.write(`data: ${JSON.stringify({ phase: "writing" })}\n\n`);
+      const finished = await streamToSSE(res, agent.streamSection(section, task));
 
       if (finished) {
+        // Phase 2 — humanize silently, overwrite the section file on disk
+        res.write(`data: ${JSON.stringify({ phase: "humanizing" })}\n\n`);
         const sections = agent.getSections();
+        const rawContent = sections[section] ?? "";
 
-        // Update student memory — mark section complete
-        const sectionContent = sections[section] ?? "";
-        if (sectionContent) {
+        if (rawContent) {
+          const humanized = await runInternalHumanize(rawContent, section);
+          if (humanized !== rawContent) {
+            // Overwrite the file the agent wrote so future agents read humanized content
+            const sectionFile = path.join(agent.workDir, `${section}.md`);
+            writeFileSync(sectionFile, humanized, "utf-8");
+            sections[section] = humanized;
+          }
+
           markSectionComplete(sessionId, section, {
-            word_count: sectionContent.split(/\s+/).filter(Boolean).length,
-            key_points: sectionContent.slice(0, 300).replace(/#+\s*/g, "").trim(),
+            word_count: (sections[section] ?? "").split(/\s+/).filter(Boolean).length,
+            key_points: (sections[section] ?? "").slice(0, 300).replace(/#+\s*/g, "").trim(),
           });
         }
 
-        res.write(
-          `data: ${JSON.stringify({ done: true, sections })}\n\n`
-        );
+        res.write(`data: ${JSON.stringify({ done: true, sections })}\n\n`);
       }
     } catch (err: unknown) {
       const message = err instanceof Error ? err.message : "Unknown error";
@@ -265,8 +308,10 @@ router.post(
         agent.uploadDocument(file.originalname, file.buffer);
         res.json({ success: true, filename: file.originalname, chars: file.buffer.length });
       } else {
+        // Save original binary so agents can screenshot/extract figures from PDFs/Excel
+        agent.uploadDocument(file.originalname, file.buffer);
         const text = await extractText(file.buffer, file.originalname);
-        agent.uploadDocument(file.originalname, text);
+        agent.uploadDocument(`${file.originalname}.txt`, text);
 
         // If this looks like a canevas, mark it in memory so all agents enforce it
         const lowerName = file.originalname.toLowerCase();
@@ -323,6 +368,14 @@ router.patch("/session/:sessionId/memory", (req: Request, res: Response) => {
       m.writing_profile.citation_style = fields["citationStyle"] as string;
     }
 
+    // Student personalization text for dedicaces / remerciements / resume
+    const interactionFields = ["dedicaces_text", "remerciements_text", "resume_fr", "abstract_en", "abreviations"];
+    for (const key of interactionFields) {
+      if (fields[key] !== undefined) {
+        (m.interaction_history as Record<string, unknown>)[key] = fields[key];
+      }
+    }
+
     // Agent preferences override
     if (fields["agent_preferences"]) {
       Object.assign(m.agent_preferences, fields["agent_preferences"]);
@@ -332,10 +385,113 @@ router.patch("/session/:sessionId/memory", (req: Request, res: Response) => {
   res.json({ ok: true });
 });
 
+// ─── POST /api/session/:sessionId/next-page ──────────────────────────────────
+// Generate one page (~350 words) of partie-i or partie-ii in page-by-page mode.
+// The agent appends the page to the section file using Edit (not Write).
+//
+// Body: { sectionId: "partie-i" | "partie-ii", page?: number, reset?: boolean }
+// - page: if provided, generate that specific page (defaults to auto-increment)
+// - reset: if true, restart from page 1
+
+const PAGE_MODE_SECTIONS = new Set(["partie-i", "partie-ii"]);
+
+router.post(
+  "/session/:sessionId/next-page",
+  async (req: Request, res: Response) => {
+    const { sessionId } = req.params;
+    const { sectionId, page, reset } = req.body as {
+      sectionId: string;
+      page?: number;
+      reset?: boolean;
+    };
+
+    if (!sectionId || !PAGE_MODE_SECTIONS.has(sectionId)) {
+      res.status(400).json({ error: "sectionId must be 'partie-i' or 'partie-ii'" });
+      return;
+    }
+
+    const agent = sessionStore.get(sessionId) as SDKReportAgent | undefined;
+    if (!agent) {
+      res.status(404).json({ error: "Session introuvable ou expirée." });
+      return;
+    }
+
+    if (reset) resetPage(sessionId, sectionId);
+
+    // Determine page number: explicit override or auto-advance
+    const pageNum = typeof page === "number" ? page : advancePage(sessionId, sectionId);
+    if (typeof page === "number") {
+      // Keep tracker in sync when caller provides an explicit page
+      if (!pageStateMap.has(sessionId)) pageStateMap.set(sessionId, new Map());
+      pageStateMap.get(sessionId)!.set(sectionId, page);
+    }
+
+    res.setHeader("Content-Type", "text/event-stream");
+    res.setHeader("Cache-Control", "no-cache");
+    res.setHeader("Connection", "keep-alive");
+
+    const docs = agent.getDocumentNames();
+    const docNote = docs.length > 0 ? `Documents disponibles : ${docs.join(", ")}.\n` : "";
+
+    const sectionLabel = sectionId === "partie-i" ? "Partie I" : "Partie II";
+    const crossRef = sectionId === "partie-ii"
+      ? "Lis aussi partie-i.md — les références croisées vers Partie I sont obligatoires.\n"
+      : "";
+
+    const task = `${docNote}MODE PAGE — génère uniquement la page ${pageNum} (~350 mots) de la ${sectionLabel}.
+${crossRef}Lis sommaire.md pour extraire la structure de la ${sectionLabel} et déterminer quelle section et position correspondent à la page ${pageNum}.
+
+Règles du mode page :
+- Contenu pur : pas d'en-têtes Markdown, pas de méta-données, pas de commentaires
+- Terminer sur une coupure naturelle de paragraphe
+- Si c'est la première page (page 1) et que ${sectionId}.md n'existe pas, crée-le avec Write
+- Si le fichier existe déjà, utilise Edit pour APPENDER cette page — ne pas écraser le contenu précédent
+- Longueur cible : ~350 mots (300–400 acceptable)
+
+Contexte supplémentaire : ${JSON.stringify({ page: pageNum, mode: "page" })}`;
+
+    try {
+      res.write(`data: ${JSON.stringify({ phase: "writing", page: pageNum })}\n\n`);
+
+      const finished = await streamToSSE(res, agent.streamSection(sectionId, task));
+
+      if (finished) {
+        const sectionContent = agent.getSection(sectionId) ?? "";
+        const wordCount = sectionContent.split(/\s+/).filter(Boolean).length;
+        res.write(
+          `data: ${JSON.stringify({
+            done: true,
+            page: pageNum,
+            totalWords: wordCount,
+          })}\n\n`
+        );
+      }
+    } catch (err: unknown) {
+      const message = err instanceof Error ? err.message : "Unknown error";
+      res.write(`data: ${JSON.stringify({ error: message })}\n\n`);
+    } finally {
+      res.end();
+    }
+  }
+);
+
+// ─── GET /api/session/:sessionId/page-state ───────────────────────────────────
+// Returns the current page counters for this session (for UI state restore).
+
+router.get("/session/:sessionId/page-state", (req: Request, res: Response) => {
+  const { sessionId } = req.params;
+  const state = pageStateMap.get(sessionId);
+  res.json({
+    "partie-i":  state?.get("partie-i")  ?? 0,
+    "partie-ii": state?.get("partie-ii") ?? 0,
+  });
+});
+
 // ─── DELETE /api/session/:sessionId ──────────────────────────────────────────
 
 router.delete("/session/:sessionId", (req: Request, res: Response) => {
   sessionStore.delete(req.params.sessionId);
+  pageStateMap.delete(req.params.sessionId);
   res.json({ deleted: true });
 });
 
