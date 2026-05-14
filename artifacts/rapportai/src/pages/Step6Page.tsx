@@ -15,7 +15,7 @@ export default function Step6Page() {
   const [, setLocation] = useLocation();
   const report = getReport();
   const [contexte, setContexte] = useState("");
-  const [problematique, setProblematique] = useState(report.motsCles?.join(", ") ? "" : "");
+  const [problematique, setProblematique] = useState(report.problematique ?? "");
   const [editingProb, setEditingProb] = useState(false);
   const [objectifs, setObjectifs] = useState("");
   const [streamedContent, setStreamedContent] = useState("");
@@ -28,7 +28,9 @@ export default function Step6Page() {
     setStreamedWordCount(rawTextRef.current.split(/\s+/).filter(Boolean).length);
   }, []);
 
-  const onDone = useCallback(() => { saveReport({ introduction: rawTextRef.current }); }, []);
+  const onDone = useCallback(() => {
+    saveReport({ introduction: rawTextRef.current, problematique: problematique || undefined });
+  }, [problematique]);
   const { generate, isStreaming: generating, streamingStatus } = useGenerate({ onChunk, onDone });
 
   const handleGenerate = () => {

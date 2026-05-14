@@ -12,7 +12,7 @@ import type {
   RevisionRequest,
 } from "./memory-types";
 
-export const SESSIONS_ROOT = "/tmp/rapportai-sessions";
+export const SESSIONS_ROOT = process.env.SESSIONS_DIR ?? "/tmp/rapportai-sessions";
 
 export function memoryPath(sessionId: string): string {
   return path.join(SESSIONS_ROOT, sessionId, "student_memory.json");

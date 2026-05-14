@@ -18,6 +18,7 @@ export interface ReportData {
   entreprise?: string;
   ville?: string;
   citationStyle?: string;
+  problematique?: string;
 
   logoUrl?: string;
   coverTemplate?: string;

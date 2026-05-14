@@ -4,11 +4,10 @@ import { mkdirSync, writeFileSync, rmSync, readFileSync, existsSync } from "fs";
 import { randomUUID } from "crypto";
 import path from "path";
 import { findClaudeBinary } from "../lib/find-claude-binary";
-import { logRevision } from "../lib/memory";
+import { logRevision, SESSIONS_ROOT } from "../lib/memory";
 
 const router = Router();
-const SESSIONS_ROOT = "/tmp/rapportai-sessions";
-const REVISE_ROOT   = "/tmp/rapportai-revisions";
+const REVISE_ROOT = SESSIONS_ROOT.replace("rapportai-sessions", "rapportai-revisions");
 
 interface ReviseBody {
   content: string;

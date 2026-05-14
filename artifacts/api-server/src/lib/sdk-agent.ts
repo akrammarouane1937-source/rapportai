@@ -1,5 +1,5 @@
 import { query, type SDKMessage } from "@anthropic-ai/claude-agent-sdk";
-import { mkdirSync, writeFileSync, readFileSync, existsSync, rmSync } from "fs";
+import { mkdirSync, writeFileSync, readFileSync, existsSync, rmSync, readdirSync } from "fs";
 import path from "path";
 import type { StreamEvent } from "./agent-session";
 import { findClaudeBinary } from "./find-claude-binary";
@@ -112,7 +112,6 @@ export class SDKReportAgent {
   }
 
   getDocumentNames(): string[] {
-    const { readdirSync } = require("fs") as typeof import("fs");
     try {
       return readdirSync(this.workDir).filter(
         (f) => !f.endsWith(".md") && f !== "profile.json" && f !== "INSTRUCTIONS.md"

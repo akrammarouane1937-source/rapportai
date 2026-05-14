@@ -10,15 +10,13 @@ import { Button } from "@/components/ui/button";
 import { Sidebar } from "@/components/layout/Sidebar";
 import { WordPreview } from "@/components/report/WordPreview";
 import { PageCard } from "@/components/report/PageCard";
-import { useGenerate } from "@/lib/useGenerate";
+import { useGenerate, ensureSession } from "@/lib/useGenerate";
 import { usePageMode } from "@/lib/usePageMode";
 import { markdownToHtml } from "@/lib/markdownToHtml";
 import { saveReport, getReport } from "@/lib/reportStore";
 import { ScholarChips } from "@/components/figures/ScholarChips";
 import { FigurePanel } from "@/components/figures/FigurePanel";
-
 import { API_BASE as BASE_PATH } from "@/lib/apiBase";
-import { ensureSession } from "@/lib/useGenerate";
 
 
 function KeywordChip({ label, onRemove }: { label: string; onRemove: () => void }) {
@@ -47,7 +45,7 @@ export default function PartieIPage() {
   const report = getReport();
   const [generationMode, setGenerationMode] = useState<GenerationMode>("full");
   const [keywords, setKeywords] = useState<string[]>(report.motsCles ?? []);
-  const [problematique, setProblematique] = useState("");
+  const [problematique, setProblematique] = useState(report.problematique ?? "");
   const [contexte, setContexte] = useState("");
   const [chapitres, setChapitres] = useState([
     "Cadre théorique et revue de littérature",

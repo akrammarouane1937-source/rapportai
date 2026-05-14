@@ -3,9 +3,9 @@ import { query } from "@anthropic-ai/claude-agent-sdk";
 import { existsSync } from "fs";
 import path from "path";
 import { findClaudeBinary } from "../lib/find-claude-binary";
+import { SESSIONS_ROOT } from "../lib/memory";
 
 const router = Router();
-const SESSIONS_ROOT = "/tmp/rapportai-sessions";
 
 interface HumanizeBody {
   content: string;

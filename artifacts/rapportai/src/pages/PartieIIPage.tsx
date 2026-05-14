@@ -10,15 +10,13 @@ import { Button } from "@/components/ui/button";
 import { Sidebar } from "@/components/layout/Sidebar";
 import { WordPreview } from "@/components/report/WordPreview";
 import { PageCard } from "@/components/report/PageCard";
-import { useGenerate } from "@/lib/useGenerate";
+import { useGenerate, ensureSession } from "@/lib/useGenerate";
 import { usePageMode } from "@/lib/usePageMode";
 import { markdownToHtml } from "@/lib/markdownToHtml";
 import { saveReport, getReport } from "@/lib/reportStore";
 import { ScholarChips } from "@/components/figures/ScholarChips";
 import { FigurePanel } from "@/components/figures/FigurePanel";
-
 import { API_BASE as BASE_PATH } from "@/lib/apiBase";
-import { ensureSession } from "@/lib/useGenerate";
 
 function KeywordChip({ label, onRemove }: { label: string; onRemove: () => void }) {
   const scholarUrl = `https://scholar.google.com/scholar?q=${encodeURIComponent(label)}`;

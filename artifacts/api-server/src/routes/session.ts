@@ -99,8 +99,14 @@ router.post("/session/start", (req: Request, res: Response) => {
     existingSections?: Record<string, string>;
   };
 
-  if (!profile.studentName || !profile.school || !profile.theme) {
-    res.status(400).json({ error: "studentName, school, and theme are required" });
+  if (
+    !profile.studentName?.trim() ||
+    !profile.school?.trim() ||
+    !profile.theme?.trim() ||
+    !profile.filiere?.trim() ||
+    !profile.reportType?.trim()
+  ) {
+    res.status(400).json({ error: "studentName, school, theme, filiere, and reportType are required" });
     return;
   }
 

@@ -1,6 +1,6 @@
 import { Router, type Request, type Response } from "express";
 import { query } from "@anthropic-ai/claude-agent-sdk";
-import { existsSync } from "fs";
+import { existsSync, readFileSync } from "fs";
 import path from "path";
 import { findClaudeBinary } from "../lib/find-claude-binary";
 import { markSectionComplete, sessionDir, readMemory } from "../lib/memory";
@@ -84,8 +84,8 @@ function buildCitationBlock(sources: BibEntry[] | undefined, style: string): str
 
 function loadSkillsFile(filename: string): string {
   try {
-    const p = require("path").join(process.cwd(), "src/lib/skills", filename);
-    if (require("fs").existsSync(p)) return require("fs").readFileSync(p, "utf-8");
+    const p = path.join(process.cwd(), "src/lib/skills", filename);
+    if (existsSync(p)) return readFileSync(p, "utf-8");
   } catch { /* missing — silent */ }
   return "";
 }

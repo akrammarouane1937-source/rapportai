@@ -250,7 +250,7 @@ async function readSSE(
           onChunk(msg.content);
         }
       } catch (e) {
-        if (e instanceof Error && e.message !== "No response body") throw e;
+        throw e;
       }
     }
   }
