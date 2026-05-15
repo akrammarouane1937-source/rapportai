@@ -1,6 +1,5 @@
 import { motion } from "framer-motion";
-import { BookOpen, User, CheckCircle2, ArrowRight } from "lucide-react";
-import { Button } from "@/components/ui/button";
+import { Sparkles, ChevronRight, CheckCircle2 } from "lucide-react";
 
 export function ChatMessage({
   role,
@@ -11,61 +10,88 @@ export function ChatMessage({
   content: React.ReactNode;
   isTyping?: boolean;
 }) {
+  if (role === "user") {
+    return (
+      <motion.div
+        initial={{ opacity: 0, y: 6 }}
+        animate={{ opacity: 1, y: 0 }}
+        className="flex justify-end mb-4 px-4"
+      >
+        <div
+          className="max-w-[80%] rounded-2xl rounded-tr-sm px-4 py-2.5 text-sm"
+          style={{ background: "#1e293b", color: "#e2e8f0", lineHeight: "1.55" }}
+        >
+          {content}
+        </div>
+      </motion.div>
+    );
+  }
+
   return (
     <motion.div
-      initial={{ opacity: 0, y: 10 }}
+      initial={{ opacity: 0, y: 6 }}
       animate={{ opacity: 1, y: 0 }}
-      className={`flex gap-3 mb-6 ${role === "user" ? "flex-row-reverse" : ""}`}
+      className="flex gap-3 mb-4 px-4"
     >
+      {/* Agent avatar */}
       <div
-        className={`flex-shrink-0 w-8 h-8 rounded-full flex items-center justify-center ${
-          role === "agent" ? "bg-primary text-white" : "bg-muted text-muted-foreground"
-        }`}
+        className="shrink-0 w-7 h-7 rounded-full flex items-center justify-center mt-0.5"
+        style={{ background: "linear-gradient(135deg,#7c3aed,#a855f7)" }}
       >
-        {role === "agent" ? <BookOpen className="w-4 h-4" /> : <User className="w-4 h-4" />}
+        <Sparkles className="w-3.5 h-3.5 text-white" />
       </div>
+
+      {/* Message bubble */}
       <div
-        className={`max-w-[85%] rounded-2xl px-4 py-3 ${
-          role === "agent"
-            ? "bg-card text-card-foreground shadow-sm border border-border/50"
-            : "bg-primary text-white"
-        }`}
+        className="flex-1 min-w-0 rounded-2xl rounded-tl-sm px-4 py-2.5 text-sm"
+        style={{ background: "#1e293b", color: "#cbd5e1", lineHeight: "1.6" }}
       >
-        <div className="prose prose-sm dark:prose-invert max-w-none">
-          {content}
-          {isTyping && (
-            <span className="inline-block w-1.5 h-4 ml-1 bg-current animate-pulse align-middle" />
-          )}
-        </div>
+        {content}
+        {isTyping && (
+          <span className="inline-flex gap-1 ml-2 align-middle">
+            <span className="w-1.5 h-1.5 rounded-full bg-violet-400 animate-bounce" style={{ animationDelay: "0ms" }} />
+            <span className="w-1.5 h-1.5 rounded-full bg-violet-400 animate-bounce" style={{ animationDelay: "150ms" }} />
+            <span className="w-1.5 h-1.5 rounded-full bg-violet-400 animate-bounce" style={{ animationDelay: "300ms" }} />
+          </span>
+        )}
       </div>
     </motion.div>
   );
 }
 
-// Tool label mapping
 const TOOL_LABELS: Record<string, string> = {
   Read: "📖 Lecture du rapport",
   WebSearch: "🔍 Recherche académique",
+  WebFetch: "🔍 Recherche de sources",
   Write: "✍️ Rédaction en cours",
+  Edit: "✏️ Révision",
   Glob: "📂 Analyse des fichiers",
 };
 
 export function ToolCallCard({ name, status }: { name: string; status: "running" | "done" }) {
-  // name may already be a label (with emoji) from the hook, or a raw tool name
   const label = TOOL_LABELS[name] || name;
 
   return (
     <motion.div
-      initial={{ opacity: 0, height: 0 }}
-      animate={{ opacity: 1, height: "auto" }}
-      className="ml-11 mb-4 flex items-center gap-3 p-3 rounded-lg bg-card border border-border/50 shadow-sm"
+      initial={{ opacity: 0, x: -8 }}
+      animate={{ opacity: 1, x: 0 }}
+      className="flex items-center gap-2 ml-10 mb-2 px-4"
     >
-      {status === "running" ? (
-        <div className="w-4 h-4 rounded-full border-2 border-primary border-t-transparent animate-spin flex-shrink-0" />
-      ) : (
-        <CheckCircle2 className="w-4 h-4 text-primary flex-shrink-0" />
-      )}
-      <span className="text-sm font-medium text-card-foreground">{label}</span>
+      <div
+        className="flex items-center gap-2 px-3 py-1.5 rounded-full text-xs font-medium"
+        style={{
+          background: status === "done" ? "#14532d22" : "#7c3aed15",
+          border: `1px solid ${status === "done" ? "#16a34a33" : "#7c3aed33"}`,
+          color: status === "done" ? "#4ade80" : "#a78bfa",
+        }}
+      >
+        {status === "running" ? (
+          <div className="w-3 h-3 rounded-full border border-violet-400 border-t-transparent animate-spin" />
+        ) : (
+          <CheckCircle2 className="w-3 h-3" />
+        )}
+        {label}
+      </div>
     </motion.div>
   );
 }
@@ -83,19 +109,24 @@ export function StepTransitionCard({
 }) {
   return (
     <motion.div
-      initial={{ opacity: 0, y: 10 }}
+      initial={{ opacity: 0, y: 8 }}
       animate={{ opacity: 1, y: 0 }}
-      className="ml-11 mb-6 p-4 rounded-xl bg-background border border-primary/20 shadow-sm"
+      className="mx-4 mb-4 rounded-xl p-4"
+      style={{ background: "#1e293b", border: "1px solid #334155" }}
     >
-      <div className="flex items-start justify-between gap-4">
+      <div className="flex items-center justify-between gap-3">
         <div>
-          <h4 className="font-semibold text-foreground">{title}</h4>
-          {subtitle && <p className="text-sm text-muted-foreground mt-1">{subtitle}</p>}
+          <p className="text-sm font-semibold" style={{ color: "#e2e8f0" }}>{title}</p>
+          {subtitle && <p className="text-xs mt-0.5" style={{ color: "#64748b" }}>{subtitle}</p>}
         </div>
-        <Button onClick={onNext} size="sm" className="shrink-0 gap-2">
+        <button
+          onClick={onNext}
+          className="shrink-0 flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold transition-all"
+          style={{ background: "linear-gradient(135deg,#7c3aed,#a855f7)", color: "#fff" }}
+        >
           {nextLabel}
-          <ArrowRight className="w-4 h-4" />
-        </Button>
+          <ChevronRight className="w-3.5 h-3.5" />
+        </button>
       </div>
     </motion.div>
   );

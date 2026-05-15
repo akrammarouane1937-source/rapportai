@@ -59,7 +59,7 @@ export default function Step5() {
       stepNumber={5}
       previewPanel={<PreviewPanel activeSection="sommaire" content={report.sommaire || streamedContent} />}
     >
-      <div className="flex-1 overflow-y-auto p-4 md:p-6">
+      <div className="flex-1 overflow-y-auto py-4 px-2 md:py-5 md:px-3">
         {msgs.map((m, i) => <ChatMessage key={i} role={m.role} content={m.content} />)}
         {toolCalls.map((tc, i) => <ToolCallCard key={i} name={tc.name} status={tc.status} />)}
         {isGenerating && <ChatMessage role="agent" content="Génération du sommaire..." isTyping />}
@@ -73,7 +73,7 @@ export default function Step5() {
         )}
         <div ref={bottomRef} />
       </div>
-      <div className="p-4 border-t bg-background">
+      <div className="shrink-0 border-t" style={{ borderColor: "#1e293b" }}>
         <ChatInput
           onSend={handleSend}
           disabled={isGenerating || !generated}

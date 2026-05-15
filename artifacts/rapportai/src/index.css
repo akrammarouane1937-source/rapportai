@@ -207,6 +207,11 @@
 .docx-preview-inner { padding: 0 !important; }
 .docx-preview-container section.docx { box-shadow: none !important; margin: 0 !important; padding: 48px 56px !important; min-height: 600px; }
 
+/* Dark chat panel textarea placeholder */
+.dark-chat-input::placeholder {
+  color: #475569;
+}
+
 /* Typing cursor */
 @keyframes blink {
   0%, 100% { opacity: 1; }
