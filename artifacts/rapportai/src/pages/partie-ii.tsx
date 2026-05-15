@@ -7,6 +7,7 @@ import { ChatInput } from "@/components/chat-input";
 import { UploadCard } from "@/components/upload-card";
 import { useReportStore } from "@/lib/store";
 import { useGenerate } from "@/hooks/use-generate";
+import { useFileStore } from "@/lib/fileStore";
 import { motion } from "framer-motion";
 import { AlertTriangle } from "lucide-react";
 
@@ -16,7 +17,8 @@ type Msg = { role: "agent" | "user"; content: React.ReactNode };
 export default function PartieII() {
   const [, setLocation] = useLocation();
   const { report, updateReport } = useReportStore();
-  const { generate, isGenerating, toolCalls, streamedContent } = useGenerate();
+  const { generate, isGenerating, toolCalls, streamedContent, error } = useGenerate();
+  const addFiles = useFileStore((s) => s.addFiles);
   const [phase, setPhase] = useState<Phase>("confirm");
   const [sourceFiles, setSourceFiles] = useState<File[]>([]);
   const [figureFiles, setFigureFiles] = useState<File[]>([]);
@@ -88,6 +90,7 @@ export default function PartieII() {
     } else if (phase === "sources") {
       if (files && files.length > 0) {
         setSourceFiles(files);
+        addFiles(files);
         push({ role: "user", content: `${files.length} fichier(s) uploadé(s)` });
         files.forEach((f) => push({ role: "agent", content: <UploadCard file={f} status="ready" /> }));
         push({
@@ -104,6 +107,7 @@ export default function PartieII() {
     } else if (phase === "figures") {
       if (files && files.length > 0) {
         setFigureFiles(files);
+        addFiles(files);
         push({ role: "user", content: `${files.length} figure(s) uploadée(s)` });
         files.forEach((f) => push({ role: "agent", content: <UploadCard file={f} status="ready" /> }));
       } else {
@@ -148,6 +152,7 @@ export default function PartieII() {
         {msgs.map((m, i) => <ChatMessage key={i} role={m.role} content={m.content} />)}
         {toolCalls.map((tc, i) => <ToolCallCard key={i} name={tc.name} status={tc.status} />)}
         {isGenerating && <ChatMessage role="agent" content="Recherche et rédaction en cours..." isTyping />}
+        {error && <ChatMessage role="agent" content={`❌ Erreur : ${error}. Réessaie.`} />}
         {phase === "done" && !isGenerating && (
           <StepTransitionCard
             title="Partie II complétée"

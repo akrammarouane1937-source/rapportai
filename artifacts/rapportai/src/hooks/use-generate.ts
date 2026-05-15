@@ -1,34 +1,79 @@
 import { useState, useCallback } from "react";
-import { Report } from "@/lib/store";
+import { API_BASE } from "@/lib/apiBase";
+import { useReportStore } from "@/lib/store";
+import { useFileStore } from "@/lib/fileStore";
 
-const BASE_URL = "https://rapportai-production.up.railway.app";
 const SESSION_KEY = "rapportai_session";
+const SESSION_TS_KEY = "rapportai_session_ts";
+const SESSION_TTL = 45 * 60 * 1000;
 
 interface ToolCall {
   name: string;
   status: "running" | "done";
 }
 
-// Tool label mapping
 const TOOL_LABELS: Record<string, string> = {
   Read: "📖 Lecture du rapport",
   WebSearch: "🔍 Recherche académique",
+  WebFetch: "🔍 Recherche de sources",
   Write: "✍️ Rédaction en cours",
+  Edit: "✏️ Révision en cours",
   Glob: "📂 Analyse des fichiers",
+  Bash: "⚙️ Traitement",
 };
 
 function getToolLabel(name: string): string {
+  if (name?.startsWith("pdf:")) return `📄 Lecture de ${name.slice(4)}`;
+  if (name?.startsWith("image:")) return `🖼️ Analyse figure`;
   return TOOL_LABELS[name] || name;
 }
 
 async function getOrCreateSession(): Promise<string> {
   const stored = localStorage.getItem(SESSION_KEY);
-  if (stored) return stored;
+  const ts = localStorage.getItem(SESSION_TS_KEY);
 
-  const res = await fetch(`${BASE_URL}/api/session/new`, { method: "POST" });
-  if (!res.ok) throw new Error("Failed to create session");
+  if (stored && ts && Date.now() - Number(ts) < SESSION_TTL) {
+    return stored;
+  }
+
+  // Clear stale session
+  localStorage.removeItem(SESSION_KEY);
+  localStorage.removeItem(SESSION_TS_KEY);
+
+  // Build profile from store
+  const report = useReportStore.getState().report;
+  const profile = {
+    studentName: report.studentName,
+    school: report.school,
+    filiere: report.filiere,
+    reportType: report.reportType,
+    theme: report.theme,
+    annee: report.academicYear,
+    encadrantPeda: report.encadrantPeda,
+    encadrantPro: report.encadrantPro,
+    entreprise: report.entreprise,
+    motsCles: report.motsCles,
+    existingSections: {
+      ...(report.dedicaces     ? { dedicaces:     report.dedicaces }     : {}),
+      ...(report.remerciements ? { remerciements: report.remerciements } : {}),
+      ...(report.resumeFr      ? { resume:        report.resumeFr }      : {}),
+      ...(report.introduction  ? { introduction:  report.introduction }  : {}),
+      ...(report.partieI       ? { "partie-i":    report.partieI }       : {}),
+      ...(report.partieII      ? { "partie-ii":   report.partieII }      : {}),
+      ...(report.conclusion    ? { conclusion:    report.conclusion }    : {}),
+    },
+  };
+
+  const res = await fetch(`${API_BASE}/api/session/start`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(profile),
+  });
+
+  if (!res.ok) throw new Error(`Session start failed: HTTP ${res.status}`);
   const { sessionId } = await res.json();
   localStorage.setItem(SESSION_KEY, sessionId);
+  localStorage.setItem(SESSION_TS_KEY, String(Date.now()));
   return sessionId;
 }
 
@@ -36,59 +81,62 @@ export function useGenerate() {
   const [streamedContent, setStreamedContent] = useState("");
   const [isGenerating, setIsGenerating] = useState(false);
   const [toolCalls, setToolCalls] = useState<ToolCall[]>([]);
+  const [error, setError] = useState<string | null>(null);
 
-  const setContent = useCallback((val: string) => {
-    setStreamedContent(val);
-  }, []);
+  const setContent = useCallback((val: string) => setStreamedContent(val), []);
 
   const generate = useCallback(
     async (
       section: string,
-      reportData: Report,
+      reportData: Parameters<typeof useReportStore.getState>["length"] extends never ? never : ReturnType<typeof useReportStore.getState>["report"],
       extraPrompt?: string,
       files?: File[]
     ) => {
       setIsGenerating(true);
       setStreamedContent("");
       setToolCalls([]);
+      setError(null);
+
+      // Merge globally accumulated files with locally passed files
+      const globalFiles = useFileStore.getState().files;
+      const allFiles = [
+        ...globalFiles,
+        ...(files || []).filter(
+          (f) => !globalFiles.some((gf) => gf.name === f.name && gf.size === f.size)
+        ),
+      ];
 
       try {
         const sessionId = await getOrCreateSession();
 
         let response: Response;
 
-        if (files && files.length > 0) {
-          // Multipart/form-data when files are present
+        if (allFiles.length > 0) {
           const form = new FormData();
           form.append("section", section);
           form.append("reportData", JSON.stringify(reportData));
           if (extraPrompt) form.append("prompt", extraPrompt);
-          for (const file of files) {
+          for (const file of allFiles) {
             form.append("files", file, file.name);
           }
-          response = await fetch(
-            `${BASE_URL}/api/session/${sessionId}/generate`,
-            {
-              method: "POST",
-              body: form,
-            }
-          );
+          response = await fetch(`${API_BASE}/api/session/${sessionId}/generate`, {
+            method: "POST",
+            body: form,
+          });
         } else {
-          response = await fetch(
-            `${BASE_URL}/api/session/${sessionId}/generate`,
-            {
-              method: "POST",
-              headers: { "Content-Type": "application/json" },
-              body: JSON.stringify({
-                section,
-                ...reportData,
-                prompt: extraPrompt,
-              }),
-            }
-          );
+          response = await fetch(`${API_BASE}/api/session/${sessionId}/generate`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              section,
+              ...reportData,
+              prompt: extraPrompt,
+            }),
+          });
         }
 
-        if (!response.body) throw new Error("No response body");
+        if (!response.ok) throw new Error(`HTTP ${response.status}`);
+        if (!response.body) throw new Error("Pas de réponse du serveur");
 
         const reader = response.body.getReader();
         const decoder = new TextDecoder();
@@ -104,51 +152,39 @@ export function useGenerate() {
             buffer = parts.pop() ?? "";
 
             for (const part of parts) {
-              if (part.startsWith("data: ")) {
-                try {
-                  const data = JSON.parse(part.slice(6));
-                  if (data.content) {
-                    setStreamedContent((prev) => prev + data.content);
-                  }
-                  if (data.updatedContent) {
-                    setStreamedContent(data.updatedContent);
-                  }
-                  if (data.tool_call) {
-                    const label =
-                      data.tool_call.name?.startsWith("pdf:")
-                        ? `📄 Lecture de ${data.tool_call.name.slice(4)}`
-                        : data.tool_call.name?.startsWith("image:")
-                        ? `🖼️ Analyse de la figure`
-                        : getToolLabel(data.tool_call.name);
-
-                    setToolCalls((prev) => {
-                      const existing = prev.findIndex(
-                        (tc) => tc.name === label
-                      );
-                      const entry = {
-                        name: label,
-                        status: data.tool_call.status as "running" | "done",
-                      };
-                      if (existing !== -1) {
-                        const updated = [...prev];
-                        updated[existing] = entry;
-                        return updated;
-                      }
-                      return [...prev, entry];
-                    });
-                  }
-                  if (data.done) {
-                    done = true;
-                  }
-                } catch {
-                  // Ignore parse errors on incomplete chunks
+              if (!part.startsWith("data: ")) continue;
+              try {
+                const data = JSON.parse(part.slice(6));
+                if (data.error) throw new Error(data.error);
+                if (data.content) setStreamedContent((prev) => prev + data.content);
+                if (data.updatedContent) setStreamedContent(data.updatedContent);
+                if (data.tool_call) {
+                  const label = getToolLabel(data.tool_call.name ?? data.tool_call);
+                  const status: "running" | "done" = data.tool_call.status ?? "running";
+                  setToolCalls((prev) => {
+                    const idx = prev.findIndex((tc) => tc.name === label);
+                    const entry = { name: label, status };
+                    if (idx !== -1) {
+                      const updated = [...prev];
+                      updated[idx] = entry;
+                      return updated;
+                    }
+                    return [...prev, entry];
+                  });
+                }
+                if (data.done) done = true;
+              } catch (parseErr) {
+                if (parseErr instanceof Error && parseErr.message !== "JSON parse") {
+                  throw parseErr;
                 }
               }
             }
           }
         }
-      } catch (error) {
-        console.error("Generation failed:", error);
+      } catch (err) {
+        const msg = err instanceof Error ? err.message : "Erreur inconnue";
+        setError(msg);
+        console.error("Generation failed:", err);
       } finally {
         setIsGenerating(false);
       }
@@ -156,5 +192,5 @@ export function useGenerate() {
     []
   );
 
-  return { generate, isGenerating, toolCalls, streamedContent, setContent };
+  return { generate, isGenerating, toolCalls, streamedContent, setContent, error };
 }
