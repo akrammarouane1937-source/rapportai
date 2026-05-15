@@ -1,4 +1,5 @@
 import { useRef, useState, useCallback } from "react";
+import { type ActivityItem, getActivityMeta } from "@/components/report/AgentActivityFeed";
 import { getReport, saveReport } from "@/lib/reportStore";
 import { getBibSources } from "@/lib/bibliothequeStore";
 import { API_BASE as BASE_PATH } from "@/lib/apiBase";
@@ -161,6 +162,7 @@ const TOOL_STATUS: Record<string, string> = {
   Bash:      "Traitement en cours…",
 };
 
+
 async function readSSE(
   resp: Response,
   handlers: {
@@ -168,6 +170,7 @@ async function readSSE(
     onDone: () => void;
     onQuestion: (q: AgentQuestion, sessionId: string) => void;
     onToolCall?: (status: string) => void;
+    onActivity?: (item: ActivityItem) => void;
     onPaywall?: () => void;
     paywallWords?: number;
     ctrl: AbortController;
@@ -179,7 +182,7 @@ async function readSSE(
   if (!resp.body) throw new Error("No response body");
 
   const {
-    onChunk, onDone, onQuestion, onToolCall, onPaywall, paywallWords,
+    onChunk, onDone, onQuestion, onToolCall, onActivity, onPaywall, paywallWords,
     ctrl, wordCountRef, paywallTriggeredRef, sessionId,
   } = handlers;
 
@@ -228,10 +231,18 @@ async function readSSE(
           return;
         }
 
-        // Tool call — surface as French status to the UI
+        // Tool call — surface as French status + activity item
         if (msg.tool_call) {
           const status = TOOL_STATUS[msg.tool_call] ?? `${msg.tool_call}…`;
           onToolCall?.(status);
+          const meta = getActivityMeta(msg.tool_call);
+          onActivity?.({
+            id: `${msg.tool_call}-${Date.now()}-${Math.random()}`,
+            tool: msg.tool_call,
+            label: meta.label,
+            icon: meta.icon,
+            ts: Date.now(),
+          });
           continue;
         }
 
@@ -270,9 +281,12 @@ export function useGenerate(opts: {
   const [streamingStatus, setStreamingStatus] = useState<string>("Génération en cours…");
   const [error, setError] = useState<string | null>(null);
   const [pendingQuestion, setPendingQuestion] = useState<AgentQuestion | null>(null);
+  const [activityLog, setActivityLog] = useState<ActivityItem[]>([]);
   const abortRef = useRef<AbortController | null>(null);
   const wordCountRef = useRef(0);
   const paywallTriggeredRef = useRef(false);
+
+  const clearActivity = useCallback(() => setActivityLog([]), []);
 
   const generate = useCallback(
     async (options: GenerateOptions) => {
@@ -288,6 +302,7 @@ export function useGenerate(opts: {
       setStreamingStatus("Génération en cours…");
 
       try {
+        clearActivity();
         const stored = getReport();
         const bibSources = getBibSources().map((s) => ({
           title: s.title, authors: s.authors, year: s.year,
@@ -365,6 +380,7 @@ export function useGenerate(opts: {
           onDone,
           onPaywall,
           onToolCall: setStreamingStatus,
+          onActivity: (item) => setActivityLog((prev) => [...prev, item]),
           onQuestion: (q) => {
             setPendingQuestion(q);
             onQuestion?.(q);
@@ -441,5 +457,5 @@ export function useGenerate(opts: {
     setIsStreaming(false);
   }, []);
 
-  return { generate, abort, answerQuestion, isStreaming, streamingStatus, error, pendingQuestion };
+  return { generate, abort, answerQuestion, isStreaming, streamingStatus, error, pendingQuestion, activityLog, clearActivity };
 }

@@ -3,9 +3,12 @@ import { motion, AnimatePresence } from "framer-motion";
 import { useLocation } from "wouter";
 import {
   Sparkles, RefreshCw, Upload, Plus, X,
-  Loader2, ChevronRight, GripVertical, Wand2, ArrowRight,
-  Layers, FileText,
+  Loader2, GripVertical, Wand2, ArrowRight,
+  Layers, FileText, MessageSquare, RotateCcw,
 } from "lucide-react";
+import { AgentActivityFeed } from "@/components/report/AgentActivityFeed";
+import { ChatRevision } from "@/components/report/ChatRevision";
+import { useCheckpoint } from "@/lib/useCheckpoint";
 import { Button } from "@/components/ui/button";
 import { Sidebar } from "@/components/layout/Sidebar";
 import { WordPreview } from "@/components/report/WordPreview";
@@ -94,15 +97,27 @@ export default function PartieIPage() {
     saveReport({ partieI: rawTextRef.current });
   }, []);
 
-  const { generate, isStreaming: generating, streamingStatus } = useGenerate({
+  const { generate, isStreaming: generating, streamingStatus, activityLog, clearActivity } = useGenerate({
     onChunk,
     onDone,
   });
 
+  // Feature 10 — chat panel
+  const [showChat, setShowChat] = useState(false);
+  // Feature 11 — checkpoints
+  const checkpoint = useCheckpoint("partie-i");
+  // Feature 9 — dismiss feed to reveal content after done
+  const [feedDismissed, setFeedDismissed] = useState(false);
+
   const handleGenerate = () => {
+    // Feature 11 — save checkpoint before overwriting
+    if (rawTextRef.current.trim()) checkpoint.save(rawTextRef.current);
     rawTextRef.current = "";
     setPreviewContent("");
     setWordCount(0);
+    setFeedDismissed(false);
+    clearActivity();
+    setShowChat(false);
     generate({
       section: "partie-i",
       problematique: problematique || undefined,
@@ -252,19 +267,52 @@ export default function PartieIPage() {
               <span className="text-xs font-bold text-purple-600 bg-purple-50 px-2.5 py-1 rounded-full">Étape 7 sur 9</span>
               <span className="text-xs text-gray-400">Partie I — Contenu principal</span>
             </div>
-            <div className="flex items-center gap-1 bg-gray-100 rounded-lg p-1">
-              <button
-                onClick={() => { setGenerationMode("full"); resetPages(); }}
-                className={`flex items-center gap-1.5 text-xs font-semibold px-3 py-1.5 rounded-md transition-all ${generationMode === "full" ? "bg-white text-purple-700 shadow-sm" : "text-gray-500 hover:text-gray-700"}`}
-              >
-                <FileText className="w-3 h-3" /> Tout générer
-              </button>
-              <button
-                onClick={() => setGenerationMode("page")}
-                className={`flex items-center gap-1.5 text-xs font-semibold px-3 py-1.5 rounded-md transition-all ${generationMode === "page" ? "bg-white text-purple-700 shadow-sm" : "text-gray-500 hover:text-gray-700"}`}
-              >
-                <Layers className="w-3 h-3" /> Page par page
-              </button>
+            <div className="flex items-center gap-2">
+              {/* Feature 10 — chat toggle */}
+              {previewContent && !generating && (
+                <button
+                  onClick={() => setShowChat((v) => !v)}
+                  className={`flex items-center gap-1.5 text-xs font-semibold px-3 py-1.5 rounded-lg border transition-all ${
+                    showChat
+                      ? "bg-purple-600 text-white border-purple-600"
+                      : "border-gray-200 text-gray-600 hover:border-purple-300 hover:text-purple-600"
+                  }`}
+                >
+                  <MessageSquare className="w-3 h-3" /> Réviser
+                </button>
+              )}
+              {/* Feature 11 — restore checkpoint */}
+              {checkpoint.hasCheckpoints() && !generating && (
+                <button
+                  onClick={() => {
+                    const cp = checkpoint.restore();
+                    if (cp) {
+                      rawTextRef.current = cp.content;
+                      setPreviewContent(markdownToHtml(cp.content));
+                      setWordCount(cp.wordCount);
+                      saveReport({ partieI: cp.content });
+                    }
+                  }}
+                  title={`Restaurer la version précédente (${checkpoint.latest()?.wordCount.toLocaleString()} mots)`}
+                  className="flex items-center gap-1.5 text-xs font-semibold px-3 py-1.5 rounded-lg border border-gray-200 text-gray-500 hover:border-orange-300 hover:text-orange-600 transition-all"
+                >
+                  <RotateCcw className="w-3 h-3" /> Restaurer
+                </button>
+              )}
+              <div className="flex items-center gap-1 bg-gray-100 rounded-lg p-1">
+                <button
+                  onClick={() => { setGenerationMode("full"); resetPages(); }}
+                  className={`flex items-center gap-1.5 text-xs font-semibold px-3 py-1.5 rounded-md transition-all ${generationMode === "full" ? "bg-white text-purple-700 shadow-sm" : "text-gray-500 hover:text-gray-700"}`}
+                >
+                  <FileText className="w-3 h-3" /> Tout générer
+                </button>
+                <button
+                  onClick={() => setGenerationMode("page")}
+                  className={`flex items-center gap-1.5 text-xs font-semibold px-3 py-1.5 rounded-md transition-all ${generationMode === "page" ? "bg-white text-purple-700 shadow-sm" : "text-gray-500 hover:text-gray-700"}`}
+                >
+                  <Layers className="w-3 h-3" /> Page par page
+                </button>
+              </div>
             </div>
           </div>
           <div className="h-1.5 bg-gray-100 rounded-full overflow-hidden">
@@ -533,6 +581,30 @@ export default function PartieIPage() {
 
           {/* RIGHT — Word preview (full mode) or Page cards (page mode) */}
           <div className="flex-1 relative overflow-hidden">
+            {/* Feature 9 — Live activity feed overlay */}
+            {generationMode === "full" && (generating || (activityLog.length > 0 && !feedDismissed)) && (
+              <AgentActivityFeed
+                items={activityLog}
+                isActive={generating}
+                wordCount={wordCount}
+                sectionLabel="la Partie I"
+                onDismiss={() => setFeedDismissed(true)}
+              />
+            )}
+            {/* Feature 10 — Chat revision overlay */}
+            {showChat && !generating && (
+              <ChatRevision
+                sectionId="partie-i"
+                sectionLabel="Partie I"
+                onContentUpdated={(content) => {
+                  rawTextRef.current = content;
+                  setPreviewContent(markdownToHtml(content));
+                  setWordCount(content.split(/\s+/).filter(Boolean).length);
+                  saveReport({ partieI: content });
+                }}
+                onClose={() => setShowChat(false)}
+              />
+            )}
             {generationMode === "full" ? (
               <WordPreview
                 content={previewContent || undefined}
