@@ -106,6 +106,8 @@ export function useGenerate() {
         ),
       ];
 
+      let finalContent = "";
+
       try {
         const sessionId = await getOrCreateSession();
 
@@ -156,8 +158,14 @@ export function useGenerate() {
               try {
                 const data = JSON.parse(part.slice(6));
                 if (data.error) throw new Error(data.error);
-                if (data.content) setStreamedContent((prev) => prev + data.content);
-                if (data.updatedContent) setStreamedContent(data.updatedContent);
+                if (data.content) {
+                  finalContent += data.content;
+                  setStreamedContent((prev) => prev + data.content);
+                }
+                if (data.updatedContent) {
+                  finalContent = data.updatedContent;
+                  setStreamedContent(data.updatedContent);
+                }
                 if (data.tool_call) {
                   const label = getToolLabel(data.tool_call.name ?? data.tool_call);
                   const status: "running" | "done" = data.tool_call.status ?? "running";
@@ -188,6 +196,8 @@ export function useGenerate() {
       } finally {
         setIsGenerating(false);
       }
+
+      return finalContent;
     },
     []
   );

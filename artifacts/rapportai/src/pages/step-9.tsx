@@ -53,12 +53,6 @@ export default function Step9() {
     bottomRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [msgs, toolCalls, isGenerating]);
 
-  useEffect(() => {
-    if (streamedContent && !isGenerating && phase === "generating_conclusion") {
-      updateReport({ conclusion: streamedContent });
-    }
-  }, [streamedContent, isGenerating, phase]);
-
   const push = (...m: Msg[]) => setMsgs((p) => [...p, ...m]);
 
   const handleSend = async (text: string) => {
@@ -83,8 +77,7 @@ export default function Step9() {
         report.checkpoints?.apports ? `Apports: ${report.checkpoints.apports}` : "",
         perspectives ? `Perspectives: ${perspectives}` : "",
       ].filter(Boolean).join(" | ") || undefined;
-      await generate("conclusion", report, prompt);
-      const finalConclusion = streamedContent;
+      const finalConclusion = await generate("conclusion", report, prompt);
       updateReport({ conclusion: finalConclusion });
       push({
         role: "agent",
@@ -107,10 +100,9 @@ export default function Step9() {
         ),
       });
       setPhase("generating_abbrevs");
-      await generate("abbreviations", { ...report, conclusion: finalConclusion });
-      // Parse abbreviations from streamedContent
+      const abbrevRaw = await generate("abbreviations", { ...report, conclusion: finalConclusion });
       try {
-        const parsed = JSON.parse(streamedContent);
+        const parsed = JSON.parse(abbrevRaw);
         if (Array.isArray(parsed)) {
           updateReport({ abreviations: parsed, abbreviationsGenerated: true });
           push({

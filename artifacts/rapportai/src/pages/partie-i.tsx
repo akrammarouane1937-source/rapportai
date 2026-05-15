@@ -44,12 +44,6 @@ export default function PartieI() {
     bottomRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [msgs, toolCalls, isGenerating]);
 
-  useEffect(() => {
-    if (streamedContent && !isGenerating) {
-      updateReport({ partieI: streamedContent });
-    }
-  }, [streamedContent, isGenerating]);
-
   const push = (...m: Msg[]) => setMsgs((p) => [...p, ...m]);
 
   const handleSend = async (text: string, files?: File[]) => {
@@ -123,8 +117,9 @@ export default function PartieI() {
       push({ role: "agent", content: "Parfait, je génère la Partie I..." });
       setPhase("generating");
       const allFiles = [...sourceFiles, ...figureFiles, ...(files || [])];
-      await generate("partie-i", report, undefined, allFiles.length > 0 ? allFiles : undefined);
-      const wc = streamedContent.split(/\s+/).filter(Boolean).length;
+      const partieI = await generate("partie-i", report, undefined, allFiles.length > 0 ? allFiles : undefined);
+      updateReport({ partieI });
+      const wc = partieI.split(/\s+/).filter(Boolean).length;
       push({
         role: "agent",
         content: (
@@ -144,8 +139,8 @@ export default function PartieI() {
     } else if (phase === "done") {
       push({ role: "user", content: t });
       push({ role: "agent", content: "Je révise la Partie I..." });
-      await generate("partie-i", report, t);
-      updateReport({ partieI: streamedContent });
+      const partieI = await generate("partie-i", report, t);
+      updateReport({ partieI });
       push({ role: "agent", content: "Partie I mise à jour ✅" });
     }
   };

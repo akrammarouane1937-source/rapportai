@@ -41,12 +41,6 @@ export default function Step6() {
     bottomRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [msgs, toolCalls, isGenerating]);
 
-  useEffect(() => {
-    if (streamedContent && !isGenerating) {
-      updateReport({ introduction: streamedContent });
-    }
-  }, [streamedContent, isGenerating]);
-
   const push = (...m: Msg[]) => setMsgs((p) => [...p, ...m]);
 
   const handleSend = async (text: string, files?: File[]) => {
@@ -73,14 +67,15 @@ export default function Step6() {
       push({ role: "agent", content: "Parfait, je génère l'introduction générale..." });
       setPhase("generating");
       const contextPrompt = report.checkpoints?.introContext || undefined;
-      await generate("introduction", report, contextPrompt, hasFiles ? files : undefined);
-      push({ role: "agent", content: `Introduction générée ✅ — ${streamedContent.split(/\s+/).filter(Boolean).length} mots` });
+      const introduction = await generate("introduction", report, contextPrompt, hasFiles ? files : undefined);
+      updateReport({ introduction });
+      push({ role: "agent", content: `Introduction générée ✅ — ${introduction.split(/\s+/).filter(Boolean).length} mots` });
       setPhase("done");
     } else if (phase === "done") {
       push({ role: "user", content: t });
       push({ role: "agent", content: "Je révise l'introduction..." });
-      await generate("introduction", report, t);
-      updateReport({ introduction: streamedContent });
+      const introduction = await generate("introduction", report, t);
+      updateReport({ introduction });
       push({ role: "agent", content: "Introduction mise à jour ✅" });
     }
   };

@@ -27,8 +27,8 @@ export default function Step5() {
   useEffect(() => {
     if (!didGenerate.current && !report.sommaire) {
       didGenerate.current = true;
-      generate("sommaire", report).then(() => {
-        updateReport({ sommaire: streamedContent });
+      generate("sommaire", report).then((sommaire) => {
+        updateReport({ sommaire });
         setGenerated(true);
         setMsgs((p) => [...p, { role: "agent", content: "Sommaire prêt ✅ Tu peux me demander des modifications." }]);
       });
@@ -38,18 +38,12 @@ export default function Step5() {
     }
   }, []);
 
-  useEffect(() => {
-    if (streamedContent && !isGenerating) {
-      updateReport({ sommaire: streamedContent });
-    }
-  }, [streamedContent, isGenerating]);
-
   const handleSend = async (text: string) => {
     const t = text.trim();
     setMsgs((p) => [...p, { role: "user", content: t }]);
     setMsgs((p) => [...p, { role: "agent", content: "Je mets à jour le sommaire..." }]);
-    await generate("sommaire", report, t);
-    updateReport({ sommaire: streamedContent });
+    const sommaire = await generate("sommaire", report, t);
+    updateReport({ sommaire });
     setMsgs((p) => [...p, { role: "agent", content: "Sommaire mis à jour ✅" }]);
   };
 

@@ -53,18 +53,17 @@ export default function Step4() {
         )}
       );
       setPhase("generating");
-      await generate("resume", report);
-      const resume = streamedContent;
-      updateReport({ resumeFr: resume });
-      await generate("abstract", { ...report, resumeFr: resume });
-      updateReport({ abstractEn: streamedContent });
+      const resumeFr = await generate("resume", report);
+      updateReport({ resumeFr });
+      const abstractEn = await generate("abstract", { ...report, resumeFr });
+      updateReport({ abstractEn });
       push({ role: "agent", content: "Résumé (FR) + Abstract (EN) générés ✅" });
       setPhase("done");
     } else if (phase === "done") {
       push({ role: "user", content: t });
       push({ role: "agent", content: "Je révise..." });
-      await generate("resume", report, t);
-      updateReport({ resumeFr: streamedContent });
+      const resumeFr = await generate("resume", report, t);
+      updateReport({ resumeFr });
       push({ role: "agent", content: "Résumé mis à jour ✅" });
     }
   };

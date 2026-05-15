@@ -29,12 +29,6 @@ export default function Step3() {
     bottomRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [msgs, toolCalls, isGenerating]);
 
-  useEffect(() => {
-    if (streamedContent && !isGenerating) {
-      updateReport({ dedicaces: streamedContent });
-    }
-  }, [streamedContent, isGenerating]);
-
   const push = (...m: Msg[]) => setMsgs((p) => [...p, ...m]);
 
   const handleSend = async (text: string, files?: File[]) => {
@@ -53,23 +47,22 @@ export default function Step3() {
       push({ role: "user", content: t || "Laisser l'IA décider" });
       push({ role: "agent", content: "Je génère tes dédicaces et remerciements..." });
       setPhase("generating");
-      await generate(
+      const dedicaces = await generate(
         "dedicaces",
         report,
         [dedicacesPrompt, remPrompt].filter(Boolean).join(" | Remerciements: ")
       );
-      updateReport({ dedicaces: streamedContent });
-      // Generate remerciements
-      await generate("remerciements", report, remPrompt || undefined);
-      updateReport({ remerciements: streamedContent });
+      updateReport({ dedicaces });
+      const remerciements = await generate("remerciements", { ...report, dedicaces }, remPrompt || undefined);
+      updateReport({ remerciements });
       push({ role: "agent", content: "Dédicaces et remerciements rédigés ✅" });
       setPhase("done");
     } else if (phase === "done") {
       // Revision mode
       push({ role: "user", content: t });
       push({ role: "agent", content: "Je révise..." });
-      await generate("dedicaces", report, t);
-      updateReport({ dedicaces: streamedContent });
+      const revised = await generate("dedicaces", report, t);
+      updateReport({ dedicaces: revised });
       push({ role: "agent", content: "Section mise à jour ✅" });
     }
   };
