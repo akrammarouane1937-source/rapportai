@@ -1,7 +1,10 @@
 import { useState, useRef, useCallback } from "react";
 import { motion } from "framer-motion";
 import { useLocation } from "wouter";
-import { Sparkles, ArrowRight, Loader2, Heart, Star } from "lucide-react";
+import { Sparkles, ArrowRight, Loader2, Heart, Star, MessageSquare, RotateCcw } from "lucide-react";
+import { AgentActivityFeed } from "@/components/report/AgentActivityFeed";
+import { ChatRevision } from "@/components/report/ChatRevision";
+import { useCheckpoint } from "@/lib/useCheckpoint";
 import { Button } from "@/components/ui/button";
 import { StepLayout } from "@/components/report/StepLayout";
 import { WordPreview } from "@/components/report/WordPreview";
@@ -67,12 +70,19 @@ export default function Step3Page() {
     setGenDed(false);
     saveReport({ dedicaces: rawDedRef.current });
   }, []);
-  const { generate: genDedFn } = useGenerate({ onChunk: onChunkDed, onDone: onDoneDed });
+  const { generate: genDedFn, activityLog: activityLogDed, clearActivity: clearDed } = useGenerate({ onChunk: onChunkDed, onDone: onDoneDed });
+
+  const [showChat, setShowChat] = useState(false);
+  const [feedDismissed, setFeedDismissed] = useState(false);
+  const checkpointDed = useCheckpoint("dedicaces");
 
   const handleGenDedicaces = () => {
+    if (dedicaces.trim()) checkpointDed.save(dedicaces);
     rawDedRef.current = "";
     setDedicaces("");
     setGenDed(true);
+    setFeedDismissed(false);
+    clearDed();
     genDedFn({
       section: "dedicaces",
       theme: stored.theme || "Rapport académique",
@@ -90,12 +100,17 @@ export default function Step3Page() {
     setGenRem(false);
     saveReport({ remerciements: rawRemRef.current });
   }, []);
-  const { generate: genRemFn } = useGenerate({ onChunk: onChunkRem, onDone: onDoneRem });
+  const { generate: genRemFn, activityLog: activityLogRem, clearActivity: clearRem } = useGenerate({ onChunk: onChunkRem, onDone: onDoneRem });
+
+  const activeLog = activityLogDed.length > 0 ? activityLogDed : activityLogRem;
+  const isGenerating = genDed || genRem;
 
   const handleGenRemerciements = () => {
     rawRemRef.current = "";
     setRemerciements("");
     setGenRem(true);
+    setFeedDismissed(false);
+    clearRem();
     genRemFn({
       section: "remerciements",
       theme: stored.theme || "Rapport académique",
@@ -121,9 +136,25 @@ export default function Step3Page() {
         <div className="overflow-y-auto flex-shrink-0 flex flex-col" style={{ width: "38%", borderRight: "1px solid #e5e7eb" }}>
           <div className="flex-1 p-6 space-y-6 pb-32">
             <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }}>
-              <h1 className="text-xl font-bold text-gray-900 mb-1" style={{ fontFamily: "'Plus Jakarta Sans', sans-serif" }}>
-                Dédicaces & Remerciements
-              </h1>
+              <div className="flex items-start justify-between mb-1">
+                <h1 className="text-xl font-bold text-gray-900" style={{ fontFamily: "'Plus Jakarta Sans', sans-serif" }}>
+                  Dédicaces & Remerciements
+                </h1>
+                <div className="flex items-center gap-2 ml-2 flex-shrink-0">
+                  {checkpointDed.hasCheckpoints() && (
+                    <button onClick={() => { const prev = checkpointDed.latest(); if (prev) setDedicaces(prev.content); }}
+                      className="flex items-center gap-1 text-xs text-gray-400 hover:text-gray-600 px-2 py-1 rounded-lg hover:bg-gray-100 transition-colors">
+                      <RotateCcw className="w-3 h-3" /> Restaurer
+                    </button>
+                  )}
+                  {(dedicaces || remerciements) && (
+                    <button onClick={() => setShowChat(!showChat)}
+                      className={`flex items-center gap-1 text-xs px-2 py-1 rounded-lg transition-colors ${showChat ? "bg-purple-100 text-purple-700" : "text-gray-500 hover:text-gray-700 hover:bg-gray-100"}`}>
+                      <MessageSquare className="w-3 h-3" /> Réviser
+                    </button>
+                  )}
+                </div>
+              </div>
               <p className="text-xs text-gray-400">Deux sections courtes et personnelles. L'IA peut les rédiger pour toi.</p>
             </motion.div>
 
@@ -220,7 +251,13 @@ export default function Step3Page() {
         </div>
 
         {/* RIGHT — Word preview 62% */}
-        <div className="flex-1 overflow-hidden">
+        <div className="flex-1 relative overflow-hidden">
+          {(isGenerating || (activeLog.length > 0 && !feedDismissed)) && (
+            <AgentActivityFeed items={activeLog} isActive={isGenerating} sectionLabel="les Dédicaces" onDismiss={() => setFeedDismissed(true)} />
+          )}
+          {showChat && !isGenerating && (
+            <ChatRevision sectionId="dedicaces" sectionLabel="Dédicaces & Remerciements" onContentUpdated={(c) => { const remIdx = c.search(/\n\s*(?:##\s*)?remerciements?\s*\n/i); if (remIdx !== -1) { const ded = c.slice(0, remIdx).replace(/^(?:##\s*)?d[eé]dicaces?\s*\n*/i, "").trim(); const rem = c.slice(remIdx).replace(/^\s*(?:##\s*)?remerciements?\s*\n*/i, "").trim(); setDedicaces(ded); setRemerciements(rem); saveReport({ dedicaces: ded || undefined, remerciements: rem || undefined }); } else { setDedicaces(c.trim()); saveReport({ dedicaces: c.trim() || undefined }); } }} onClose={() => setShowChat(false)} />
+          )}
           <WordPreview
             content={previewHtml}
             rawContent={(dedicaces || DEFAULT_DEDICACES) + "\n\nRemerciements\n\n" + (remerciements || DEFAULT_REMERCIEMENTS)}

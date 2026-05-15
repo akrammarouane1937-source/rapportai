@@ -5,7 +5,11 @@ import {
   Sparkles, Loader2, X, Upload, Download, Plus,
   CheckCircle2, Circle, FileText, BookOpen,
   BarChart2, Hash, ArrowRight, Share2, Link2, Check, Lock, Wand2, Table2,
+  MessageSquare, RotateCcw,
 } from "lucide-react";
+import { AgentActivityFeed } from "@/components/report/AgentActivityFeed";
+import { ChatRevision } from "@/components/report/ChatRevision";
+import { useCheckpoint } from "@/lib/useCheckpoint";
 import { Button } from "@/components/ui/button";
 import { StepLayout } from "@/components/report/StepLayout";
 import { WordPreview } from "@/components/report/WordPreview";
@@ -116,13 +120,20 @@ export default function Step9Page() {
     });
   }, [apports, perspectives, annexes, tableaux]);
 
-  const { generate, isStreaming: generating, streamingStatus } = useGenerate({ onChunk, onDone });
+  const { generate, isStreaming: generating, streamingStatus, activityLog, clearActivity } = useGenerate({ onChunk, onDone });
+  const [showChat, setShowChat] = useState(false);
+  const [feedDismissed, setFeedDismissed] = useState(false);
+  const checkpoint = useCheckpoint("conclusion");
 
   const handleGenerate = () => {
+    if (rawTextRef.current.trim()) checkpoint.save(rawTextRef.current);
     rawTextRef.current = "";
     setStreamedContent("");
     setStreamedWordCount(0);
-    generate({ section: "conclusion" });  // useGenerate reads store automatically
+    setFeedDismissed(false);
+    clearActivity();
+    setShowChat(false);
+    generate({ section: "conclusion" });
   };
 
   const handleHumanize = async () => {
@@ -267,9 +278,25 @@ export default function Step9Page() {
 
             {/* Header */}
             <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }}>
-              <h1 className="text-xl font-black text-gray-900 mb-1" style={{ fontFamily: "'Plus Jakarta Sans', sans-serif" }}>
-                Finalisation du rapport
-              </h1>
+              <div className="flex items-start justify-between mb-1">
+                <h1 className="text-xl font-black text-gray-900" style={{ fontFamily: "'Plus Jakarta Sans', sans-serif" }}>
+                  Finalisation du rapport
+                </h1>
+                <div className="flex items-center gap-2 ml-2 flex-shrink-0">
+                  {checkpoint.hasCheckpoints() && (
+                    <button onClick={() => { const prev = checkpoint.latest(); if (prev) { rawTextRef.current = prev.content; setStreamedContent(markdownToHtml(prev.content)); setStreamedWordCount(prev.wordCount); } }}
+                      className="flex items-center gap-1 text-xs text-gray-400 hover:text-gray-600 px-2 py-1 rounded-lg hover:bg-gray-100 transition-colors">
+                      <RotateCcw className="w-3 h-3" /> Restaurer
+                    </button>
+                  )}
+                  {streamedContent && (
+                    <button onClick={() => setShowChat(!showChat)}
+                      className={`flex items-center gap-1 text-xs px-2 py-1 rounded-lg transition-colors ${showChat ? "bg-purple-100 text-purple-700" : "text-gray-500 hover:text-gray-700 hover:bg-gray-100"}`}>
+                      <MessageSquare className="w-3 h-3" /> Réviser
+                    </button>
+                  )}
+                </div>
+              </div>
               <p className="text-xs text-gray-400">
                 {completedCount}/{sections.length} sections complètes · Génère la conclusion et télécharge ton .docx
               </p>
@@ -620,7 +647,13 @@ export default function Step9Page() {
         </div>
 
         {/* ── RIGHT PANEL ───────────────────────────────────────────────── */}
-        <div className="flex-1 overflow-hidden">
+        <div className="flex-1 relative overflow-hidden">
+          {(generating || (activityLog.length > 0 && !feedDismissed)) && (
+            <AgentActivityFeed items={activityLog} isActive={generating} wordCount={streamedWordCount} sectionLabel="la Conclusion" onDismiss={() => setFeedDismissed(true)} />
+          )}
+          {showChat && !generating && (
+            <ChatRevision sectionId="conclusion" sectionLabel="Conclusion" onContentUpdated={(c) => { rawTextRef.current = c; setStreamedContent(markdownToHtml(c)); setStreamedWordCount(c.split(/\s+/).filter(Boolean).length); saveReport({ conclusion: c }); }} onClose={() => setShowChat(false)} />
+          )}
           {streamedContent ? (
             <WordPreview
               content={streamedContent}

@@ -1,7 +1,10 @@
 import { useState, useRef, useCallback } from "react";
 import { motion } from "framer-motion";
 import { useLocation } from "wouter";
-import { Sparkles, X, Plus, ArrowRight } from "lucide-react";
+import { Sparkles, X, Plus, ArrowRight, MessageSquare, RotateCcw } from "lucide-react";
+import { AgentActivityFeed } from "@/components/report/AgentActivityFeed";
+import { ChatRevision } from "@/components/report/ChatRevision";
+import { useCheckpoint } from "@/lib/useCheckpoint";
 import { Button } from "@/components/ui/button";
 import { StepLayout } from "@/components/report/StepLayout";
 import { WordPreview } from "@/components/report/WordPreview";
@@ -146,15 +149,21 @@ export default function Step4Page() {
     });
   }, []);
 
-  const { generate: generateResume, isStreaming: generatingResume } = useGenerate({
+  const { generate: generateResume, isStreaming: generatingResume, activityLog: activityLogResume, clearActivity: clearResume } = useGenerate({
     onChunk: onChunkResume,
     onDone:  onDoneResume,
   });
+  const [showChat, setShowChat] = useState(false);
+  const [feedDismissed, setFeedDismissed] = useState(false);
+  const checkpointResume = useCheckpoint("resume");
 
   const handleLaisserIA = () => {
     const report = getReport();
+    if (resumeRef.current.trim()) checkpointResume.save(resumeRef.current);
     rawTextRef.current = "";
     setResumeSync("");
+    setFeedDismissed(false);
+    clearResume();
     generateResume({
       section:       "resume",
       theme:         report.theme         ?? "",
@@ -181,10 +190,13 @@ export default function Step4Page() {
     saveReport({ abstract: finalAbstract });
   }, []);
 
-  const { generate: generateAbstract, isStreaming: generatingAbstract } = useGenerate({
+  const { generate: generateAbstract, isStreaming: generatingAbstract, activityLog: activityLogAbstract } = useGenerate({
     onChunk: onChunkAbstract,
     onDone:  onDoneAbstract,
   });
+
+  const activeLog = activityLogResume.length > 0 ? activityLogResume : activityLogAbstract;
+  const isGenerating = generatingResume || generatingAbstract;
 
   const handleAbstractIA = () => {
     const report = getReport();
@@ -221,12 +233,28 @@ export default function Step4Page() {
         >
           <div className="p-6 space-y-6 pb-32">
             <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }}>
-              <h1
-                className="text-xl font-bold text-gray-900 mb-1"
-                style={{ fontFamily: "'Plus Jakarta Sans', sans-serif" }}
-              >
-                Résumé + Abstract + Abréviations
-              </h1>
+              <div className="flex items-start justify-between mb-1">
+                <h1
+                  className="text-xl font-bold text-gray-900"
+                  style={{ fontFamily: "'Plus Jakarta Sans', sans-serif" }}
+                >
+                  Résumé + Abstract + Abréviations
+                </h1>
+                <div className="flex items-center gap-2 ml-2 flex-shrink-0">
+                  {checkpointResume.hasCheckpoints() && (
+                    <button onClick={() => { const prev = checkpointResume.latest(); if (prev) setResumeSync(prev.content); }}
+                      className="flex items-center gap-1 text-xs text-gray-400 hover:text-gray-600 px-2 py-1 rounded-lg hover:bg-gray-100 transition-colors">
+                      <RotateCcw className="w-3 h-3" /> Restaurer
+                    </button>
+                  )}
+                  {resume && (
+                    <button onClick={() => setShowChat(!showChat)}
+                      className={`flex items-center gap-1 text-xs px-2 py-1 rounded-lg transition-colors ${showChat ? "bg-purple-100 text-purple-700" : "text-gray-500 hover:text-gray-700 hover:bg-gray-100"}`}>
+                      <MessageSquare className="w-3 h-3" /> Réviser
+                    </button>
+                  )}
+                </div>
+              </div>
               <p className="text-xs text-gray-400">
                 Ces pages précèdent le sommaire dans ton rapport final.
               </p>
@@ -392,7 +420,13 @@ export default function Step4Page() {
         </div>
 
         {/* RIGHT — Word preview 62% */}
-        <div className="flex-1 overflow-hidden">
+        <div className="flex-1 relative overflow-hidden">
+          {(isGenerating || (activeLog.length > 0 && !feedDismissed)) && (
+            <AgentActivityFeed items={activeLog} isActive={isGenerating} sectionLabel="le Résumé" onDismiss={() => setFeedDismissed(true)} />
+          )}
+          {showChat && !isGenerating && (
+            <ChatRevision sectionId="resume" sectionLabel="Résumé" onContentUpdated={(c) => { setResumeSync(c); saveReport({ resume: c }); }} onClose={() => setShowChat(false)} />
+          )}
           <WordPreview
             content={previewContent || undefined}
             rawContent={resume || undefined}

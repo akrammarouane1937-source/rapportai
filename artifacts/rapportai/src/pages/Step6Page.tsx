@@ -1,7 +1,10 @@
 import { useState, useRef, useCallback } from "react";
 import { motion } from "framer-motion";
 import { useLocation } from "wouter";
-import { Sparkles, Loader2, ArrowRight, Edit2 } from "lucide-react";
+import { Sparkles, Loader2, ArrowRight, Edit2, MessageSquare, RotateCcw } from "lucide-react";
+import { AgentActivityFeed } from "@/components/report/AgentActivityFeed";
+import { ChatRevision } from "@/components/report/ChatRevision";
+import { useCheckpoint } from "@/lib/useCheckpoint";
 import { Button } from "@/components/ui/button";
 import { StepLayout } from "@/components/report/StepLayout";
 import { WordPreview } from "@/components/report/WordPreview";
@@ -31,13 +34,20 @@ export default function Step6Page() {
   const onDone = useCallback(() => {
     saveReport({ introduction: rawTextRef.current, problematique: problematique || undefined });
   }, [problematique]);
-  const { generate, isStreaming: generating, streamingStatus } = useGenerate({ onChunk, onDone });
+  const { generate, isStreaming: generating, streamingStatus, activityLog, clearActivity } = useGenerate({ onChunk, onDone });
+  const [showChat, setShowChat] = useState(false);
+  const [feedDismissed, setFeedDismissed] = useState(false);
+  const checkpoint = useCheckpoint("introduction");
 
   const handleGenerate = () => {
+    if (rawTextRef.current.trim()) checkpoint.save(rawTextRef.current);
     const r = getReport();
     rawTextRef.current = "";
     setStreamedContent("");
     setStreamedWordCount(0);
+    setFeedDismissed(false);
+    clearActivity();
+    setShowChat(false);
     generate({
       section: "introduction",
       theme: r.theme,
@@ -67,7 +77,23 @@ export default function Step6Page() {
         <div className="overflow-y-auto flex-shrink-0 flex flex-col" style={{ width: "38%", borderRight: "1px solid #e5e7eb" }}>
           <div className="p-6 space-y-5 pb-32">
             <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }}>
-              <h1 className="text-xl font-bold text-gray-900 mb-1" style={{ fontFamily: "'Plus Jakarta Sans', sans-serif" }}>Introduction Générale</h1>
+              <div className="flex items-start justify-between mb-1">
+                <h1 className="text-xl font-bold text-gray-900" style={{ fontFamily: "'Plus Jakarta Sans', sans-serif" }}>Introduction Générale</h1>
+                <div className="flex items-center gap-2 ml-2 flex-shrink-0">
+                  {checkpoint.hasCheckpoints() && (
+                    <button onClick={() => { const prev = checkpoint.latest(); if (prev) { rawTextRef.current = prev.content; setStreamedContent(markdownToHtml(prev.content)); setStreamedWordCount(prev.wordCount); } }}
+                      className="flex items-center gap-1 text-xs text-gray-400 hover:text-gray-600 px-2 py-1 rounded-lg hover:bg-gray-100 transition-colors">
+                      <RotateCcw className="w-3 h-3" /> Restaurer
+                    </button>
+                  )}
+                  {streamedContent && (
+                    <button onClick={() => setShowChat(!showChat)}
+                      className={`flex items-center gap-1 text-xs px-2 py-1 rounded-lg transition-colors ${showChat ? "bg-purple-100 text-purple-700" : "text-gray-500 hover:text-gray-700 hover:bg-gray-100"}`}>
+                      <MessageSquare className="w-3 h-3" /> Réviser
+                    </button>
+                  )}
+                </div>
+              </div>
               <p className="text-xs text-gray-400">L'IA utilise ton thème, ta problématique et tes mots-clés pour générer cette section.</p>
             </motion.div>
 
@@ -161,7 +187,13 @@ export default function Step6Page() {
         </div>
 
         {/* RIGHT — Word preview */}
-        <div className="flex-1 overflow-hidden">
+        <div className="flex-1 relative overflow-hidden">
+          {(generating || (activityLog.length > 0 && !feedDismissed)) && (
+            <AgentActivityFeed items={activityLog} isActive={generating} wordCount={streamedWordCount} sectionLabel="l'Introduction" onDismiss={() => setFeedDismissed(true)} />
+          )}
+          {showChat && !generating && (
+            <ChatRevision sectionId="introduction" sectionLabel="Introduction" onContentUpdated={(c) => { rawTextRef.current = c; setStreamedContent(markdownToHtml(c)); setStreamedWordCount(c.split(/\s+/).filter(Boolean).length); saveReport({ introduction: c }); }} onClose={() => setShowChat(false)} />
+          )}
           <WordPreview
             content={streamedContent || undefined}
             rawContent={rawTextRef.current || undefined}
