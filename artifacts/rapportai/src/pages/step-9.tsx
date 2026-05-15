@@ -132,9 +132,13 @@ export default function Step9() {
     } else if (phase === "done") {
       push({ role: "user", content: t });
       push({ role: "agent", content: "Je révise..." });
-      await generate("conclusion", report, t);
-      updateReport({ conclusion: streamedContent });
-      push({ role: "agent", content: "Section mise à jour ✅" });
+      const conclusion = await generate("conclusion", report, t);
+      if (conclusion) {
+        updateReport({ conclusion });
+        push({ role: "agent", content: "Section mise à jour ✅" });
+      } else {
+        push({ role: "agent", content: "❌ Révision échouée. Réessaie." });
+      }
     }
   };
 

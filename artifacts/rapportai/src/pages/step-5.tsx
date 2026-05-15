@@ -28,9 +28,12 @@ export default function Step5() {
     if (!didGenerate.current && !report.sommaire) {
       didGenerate.current = true;
       generate("sommaire", report).then((sommaire) => {
-        updateReport({ sommaire });
+        if (sommaire) updateReport({ sommaire });
         setGenerated(true);
-        setMsgs((p) => [...p, { role: "agent", content: "Sommaire prêt ✅ Tu peux me demander des modifications." }]);
+        setMsgs((p) => [...p, {
+          role: "agent",
+          content: sommaire ? "Sommaire prêt ✅ Tu peux me demander des modifications." : "❌ Génération échouée. Réessaie.",
+        }]);
       });
     } else if (report.sommaire && !generated) {
       setGenerated(true);
@@ -43,8 +46,12 @@ export default function Step5() {
     setMsgs((p) => [...p, { role: "user", content: t }]);
     setMsgs((p) => [...p, { role: "agent", content: "Je mets à jour le sommaire..." }]);
     const sommaire = await generate("sommaire", report, t);
-    updateReport({ sommaire });
-    setMsgs((p) => [...p, { role: "agent", content: "Sommaire mis à jour ✅" }]);
+    if (sommaire) {
+      updateReport({ sommaire });
+      setMsgs((p) => [...p, { role: "agent", content: "Sommaire mis à jour ✅" }]);
+    } else {
+      setMsgs((p) => [...p, { role: "agent", content: "❌ Mise à jour échouée. Réessaie." }]);
+    }
   };
 
   return (

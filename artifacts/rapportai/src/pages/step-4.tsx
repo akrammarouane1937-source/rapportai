@@ -54,17 +54,26 @@ export default function Step4() {
       );
       setPhase("generating");
       const resumeFr = await generate("resume", report);
+      if (!resumeFr) {
+        push({ role: "agent", content: "❌ Génération échouée. Vérifie ta connexion et réessaie." });
+        setPhase("motsCles");
+        return;
+      }
       updateReport({ resumeFr });
       const abstractEn = await generate("abstract", { ...report, resumeFr });
-      updateReport({ abstractEn });
+      if (abstractEn) updateReport({ abstractEn });
       push({ role: "agent", content: "Résumé (FR) + Abstract (EN) générés ✅" });
       setPhase("done");
     } else if (phase === "done") {
       push({ role: "user", content: t });
       push({ role: "agent", content: "Je révise..." });
       const resumeFr = await generate("resume", report, t);
-      updateReport({ resumeFr });
-      push({ role: "agent", content: "Résumé mis à jour ✅" });
+      if (resumeFr) {
+        updateReport({ resumeFr });
+        push({ role: "agent", content: "Résumé mis à jour ✅" });
+      } else {
+        push({ role: "agent", content: "❌ Révision échouée. Réessaie." });
+      }
     }
   };
 

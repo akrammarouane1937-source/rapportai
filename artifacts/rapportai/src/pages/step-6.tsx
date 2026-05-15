@@ -68,6 +68,11 @@ export default function Step6() {
       setPhase("generating");
       const contextPrompt = report.checkpoints?.introContext || undefined;
       const introduction = await generate("introduction", report, contextPrompt, hasFiles ? files : undefined);
+      if (!introduction) {
+        push({ role: "agent", content: "❌ Génération échouée. Vérifie ta connexion et réessaie." });
+        setPhase("upload");
+        return;
+      }
       updateReport({ introduction });
       push({ role: "agent", content: `Introduction générée ✅ — ${introduction.split(/\s+/).filter(Boolean).length} mots` });
       setPhase("done");
@@ -75,8 +80,12 @@ export default function Step6() {
       push({ role: "user", content: t });
       push({ role: "agent", content: "Je révise l'introduction..." });
       const introduction = await generate("introduction", report, t);
-      updateReport({ introduction });
-      push({ role: "agent", content: "Introduction mise à jour ✅" });
+      if (introduction) {
+        updateReport({ introduction });
+        push({ role: "agent", content: "Introduction mise à jour ✅" });
+      } else {
+        push({ role: "agent", content: "❌ Révision échouée. Réessaie." });
+      }
     }
   };
 

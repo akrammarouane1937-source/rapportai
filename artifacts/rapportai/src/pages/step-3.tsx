@@ -52,18 +52,26 @@ export default function Step3() {
         report,
         [dedicacesPrompt, remPrompt].filter(Boolean).join(" | Remerciements: ")
       );
+      if (!dedicaces) {
+        push({ role: "agent", content: "❌ Génération échouée. Vérifie ta connexion et réessaie." });
+        setPhase("remerciements");
+        return;
+      }
       updateReport({ dedicaces });
       const remerciements = await generate("remerciements", { ...report, dedicaces }, remPrompt || undefined);
-      updateReport({ remerciements });
+      if (remerciements) updateReport({ remerciements });
       push({ role: "agent", content: "Dédicaces et remerciements rédigés ✅" });
       setPhase("done");
     } else if (phase === "done") {
-      // Revision mode
       push({ role: "user", content: t });
       push({ role: "agent", content: "Je révise..." });
       const revised = await generate("dedicaces", report, t);
-      updateReport({ dedicaces: revised });
-      push({ role: "agent", content: "Section mise à jour ✅" });
+      if (revised) {
+        updateReport({ dedicaces: revised });
+        push({ role: "agent", content: "Section mise à jour ✅" });
+      } else {
+        push({ role: "agent", content: "❌ Révision échouée. Réessaie." });
+      }
     }
   };
 

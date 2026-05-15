@@ -201,7 +201,7 @@ export function PreviewPanel({ activeSection, content }: PreviewPanelProps) {
           </div>
           <span style={{ color: "#e2e8f0" }}>·</span>
           <div className="text-xs" style={{ color: "#6b7280" }}>
-            <span style={{ fontWeight: 600, color: "#111827" }}>~{totalPages}</span> pages
+            <span style={{ fontWeight: 600, color: "#111827" }}>{totalPages}</span> pages
           </div>
         </div>
 

@@ -118,6 +118,11 @@ export default function PartieI() {
       setPhase("generating");
       const allFiles = [...sourceFiles, ...figureFiles, ...(files || [])];
       const partieI = await generate("partie-i", report, undefined, allFiles.length > 0 ? allFiles : undefined);
+      if (!partieI) {
+        push({ role: "agent", content: "❌ Génération échouée. Vérifie ta connexion et réessaie." });
+        setPhase("figures");
+        return;
+      }
       updateReport({ partieI });
       const wc = partieI.split(/\s+/).filter(Boolean).length;
       push({
@@ -140,8 +145,12 @@ export default function PartieI() {
       push({ role: "user", content: t });
       push({ role: "agent", content: "Je révise la Partie I..." });
       const partieI = await generate("partie-i", report, t);
-      updateReport({ partieI });
-      push({ role: "agent", content: "Partie I mise à jour ✅" });
+      if (partieI) {
+        updateReport({ partieI });
+        push({ role: "agent", content: "Partie I mise à jour ✅" });
+      } else {
+        push({ role: "agent", content: "❌ Révision échouée. Réessaie." });
+      }
     }
   };
 
