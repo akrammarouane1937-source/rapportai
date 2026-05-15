@@ -4,7 +4,6 @@ import {
   Footer,
   Header,
   HeadingLevel,
-  ImageRun,
   LineRuleType,
   NumberFormat,
   Packer,
@@ -14,9 +13,7 @@ import {
   TextRun,
   convertMillimetersToTwip,
 } from "docx";
-import type { ReportData } from "./reportStore";
-import { getApprovedFigures } from "./figureStore";
-import { getBibSources, type BibSource } from "./bibliothequeStore";
+import type { Report } from "./store";
 
 // ─── Constants ───────────────────────────────────────────────────────────────
 
@@ -27,7 +24,6 @@ const H2_PT      = 28;   // 14pt
 const H3_PT      = 24;   // 12pt bold
 const FOOTER_PT  = 20;   // 10pt
 
-// All margins 2.5 cm; header/footer gutter 1 cm
 const MARGIN = {
   top:    convertMillimetersToTwip(25),
   bottom: convertMillimetersToTwip(25),
@@ -37,13 +33,8 @@ const MARGIN = {
   footer: convertMillimetersToTwip(10),
 };
 
-// 1.5 line spacing (360 twips AUTO)
 const LINE_SPACING = { line: 360, lineRule: LineRuleType.AUTO };
-
-// 6 pt before / 6 pt after (1 pt = 20 twips → 6 pt = 120 twips)
 const PARA_SPACING = { ...LINE_SPACING, before: 120, after: 120 };
-
-// First-line indent: 1.25 cm (matches Moroccan academic standard)
 const FIRST_LINE = convertMillimetersToTwip(12.5);
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
@@ -52,7 +43,6 @@ function bodyRun(text: string, opts: { bold?: boolean; italic?: boolean } = {}):
   return new TextRun({ text, font: FONT, size: BODY_PT, bold: opts.bold, italics: opts.italic });
 }
 
-/** Parse **bold** and *italic* inline markers into TextRuns. Never produces underline. */
 function parseInlineRuns(text: string): TextRun[] {
   const runs: TextRun[] = [];
   const re = /\*\*(.+?)\*\*|\*(.+?)\*/g;
@@ -68,7 +58,6 @@ function parseInlineRuns(text: string): TextRun[] {
   return runs.length > 0 ? runs : [bodyRun(text)];
 }
 
-/** Body paragraph: Times New Roman 12pt, justified, 1.5 spacing, 1cm first-line indent, 6pt before/after, no hyphenation */
 function bodyPara(text: string, extra: Record<string, unknown> = {}): Paragraph {
   return new Paragraph({
     alignment: AlignmentType.JUSTIFIED,
@@ -79,7 +68,6 @@ function bodyPara(text: string, extra: Record<string, unknown> = {}): Paragraph 
   });
 }
 
-/** Heading 1 — 16pt bold, centered, always starts on new page */
 function heading1(text: string, pageBreak = true): Paragraph {
   return new Paragraph({
     text,
@@ -91,7 +79,6 @@ function heading1(text: string, pageBreak = true): Paragraph {
   });
 }
 
-/** Heading 2 — 14pt bold, kept with next paragraph */
 function heading2(text: string): Paragraph {
   return new Paragraph({
     text,
@@ -101,7 +88,6 @@ function heading2(text: string): Paragraph {
   });
 }
 
-/** Heading 3 — 12pt bold (no italic, no underline), kept with next paragraph */
 function heading3(text: string): Paragraph {
   return new Paragraph({
     text,
@@ -126,15 +112,6 @@ function centerPara(text: string, size = BODY_PT, bold = false): Paragraph {
   });
 }
 
-/** Convert raw markdown text (from Claude streaming) into docx Paragraphs.
- *  Rules:
- *  - ### line → Heading 3
- *  - ## line  → Heading 2
- *  - # line   → Heading 1
- *  - blank line → flush current buffer as a body paragraph
- *  - other line → accumulated into current paragraph buffer
- *  Each buffer flush produces exactly ONE Paragraph object — never a wall of text.
- */
 function markdownToParas(md: string): Paragraph[] {
   if (!md?.trim()) return [bodyPara("(Section non générée)")];
 
@@ -150,7 +127,6 @@ function markdownToParas(md: string): Paragraph[] {
 
   for (const raw of lines) {
     const line = raw.trimEnd();
-
     if (line.startsWith("### ")) {
       flushBuf();
       paras.push(heading3(line.slice(4).trim()));
@@ -163,7 +139,6 @@ function markdownToParas(md: string): Paragraph[] {
     } else if (line === "") {
       flushBuf();
     } else {
-      // Accumulate within the same paragraph (word-wrap)
       buf += (buf ? " " : "") + line;
     }
   }
@@ -171,39 +146,26 @@ function markdownToParas(md: string): Paragraph[] {
   return paras;
 }
 
-// ─── Header / Footer builders ─────────────────────────────────────────────────
+// ─── Header / Footer ─────────────────────────────────────────────────────────
 
-function buildHeader(data: ReportData): Header {
+function buildHeader(data: Report): Header {
   const rawTitle = data.theme || "";
-  const title    = rawTitle.length > 40 ? rawTitle.slice(0, 37) + "…" : rawTitle;
-  const author   = data.studentName || "";
-  const text     = title && author ? `${title}     ${author}` : title || author;
+  const title = rawTitle.length > 40 ? rawTitle.slice(0, 37) + "…" : rawTitle;
+  const author = data.studentName || "";
+  const text = title && author ? `${title}     ${author}` : title || author;
 
   return new Header({
     children: [
       new Paragraph({
         alignment: AlignmentType.RIGHT,
         spacing: { line: 240, lineRule: LineRuleType.AUTO },
-        children: [
-          new TextRun({ text, font: FONT, size: FOOTER_PT }),
-        ],
+        children: [new TextRun({ text, font: FONT, size: FOOTER_PT })],
       }),
     ],
   });
 }
 
-function buildFooterRoman(): Footer {
-  return new Footer({
-    children: [
-      new Paragraph({
-        alignment: AlignmentType.CENTER,
-        children: [new TextRun({ children: [PageNumber.CURRENT], font: FONT, size: FOOTER_PT })],
-      }),
-    ],
-  });
-}
-
-function buildFooterArabic(): Footer {
+function buildFooter(): Footer {
   return new Footer({
     children: [
       new Paragraph({
@@ -216,85 +178,53 @@ function buildFooterArabic(): Footer {
 
 // ─── Section builders ─────────────────────────────────────────────────────────
 
-function buildPageDeGarde(d: ReportData): Paragraph[] {
-  const school     = d.school       || "École";
-  const filiere    = d.filiere      || "Filière";
-  const annee      = d.annee        || "2024–2025";
-  const type       = d.reportType   || "Mémoire de Fin d'Études";
-  const theme      = d.theme        || "Titre du rapport";
-  const student    = d.studentName  || "Prénom Nom";
-  const encPeda    = d.encadrantPeda || "";
-  const encPro     = d.encadrantPro  || "";
-  const ville      = d.ville        || "Casablanca";
-  const entreprise = d.entreprise   || "";
-
-  // Diploma subtitle based on report type
-  const typeLC = type.toLowerCase();
-  let diplomaLine = "";
-  if (typeLC.includes("ingénieur") || typeLC.includes("ingenieur") || typeLC.includes("pfe") || typeLC.includes("projet de fin")) {
-    diplomaLine = "POUR OBTENIR LE DIPLÔME D'INGÉNIEUR D'ÉTAT";
-  } else if (typeLC.includes("master") || typeLC.includes("mémoire") || typeLC.includes("memoire")) {
-    diplomaLine = "POUR OBTENIR LE DIPLÔME DE MASTER";
-  } else if (typeLC.includes("licence")) {
-    diplomaLine = "POUR OBTENIR LA LICENCE PROFESSIONNELLE";
-  }
-
-  const para = (
-    text: string,
-    align: (typeof AlignmentType)[keyof typeof AlignmentType],
-    size: number,
-    bold = false,
-    italic = false,
-    opts: Record<string, unknown> = {}
-  ) =>
-    new Paragraph({
-      alignment: align,
-      spacing: { line: 320, lineRule: LineRuleType.AUTO, before: 0, after: 100 },
-      children: [new TextRun({ text, font: FONT, size, bold, italics: italic })],
-      ...opts,
-    });
+function buildPageDeGarde(d: Report): Paragraph[] {
+  const school = d.school || "École";
+  const filiere = d.filiere || "Filière";
+  const type = d.reportType || "PFE";
+  const theme = d.theme || "Titre du rapport";
+  const student = d.studentName || "Prénom Nom";
+  const encPeda = d.encadrantPeda || "";
+  const encPro = d.encadrantPro || "";
+  const entreprise = d.entreprise || "";
+  const annee = d.academicYear || "2024–2025";
 
   const C = AlignmentType.CENTER;
   const L = AlignmentType.LEFT;
   const R = AlignmentType.RIGHT;
 
+  const para = (text: string, align: typeof C | typeof L | typeof R, size: number, bold = false, italic = false) =>
+    new Paragraph({
+      alignment: align,
+      spacing: { line: 320, lineRule: LineRuleType.AUTO, before: 0, after: 100 },
+      children: [new TextRun({ text, font: FONT, size, bold, italics: italic })],
+    });
+
   const paras: Paragraph[] = [];
 
-  // ── School name ─────────────────────────────────────────────────────────────
   paras.push(new Paragraph({
     alignment: C,
     spacing: { line: 320, lineRule: LineRuleType.AUTO, before: 0, after: 180 },
     children: [new TextRun({ text: school.toUpperCase(), font: FONT, size: H1_PT, bold: true })],
   }));
 
-  // ── Report type ──────────────────────────────────────────────────────────────
   paras.push(new Paragraph({
     alignment: C,
     spacing: { line: 320, lineRule: LineRuleType.AUTO, before: 480, after: 120 },
     children: [new TextRun({ text: type.toUpperCase(), font: FONT, size: H2_PT, bold: true })],
   }));
 
-  // ── Diploma line (optional) ──────────────────────────────────────────────────
-  if (diplomaLine) {
-    paras.push(para(diplomaLine, C, BODY_PT, false, true, { spacing: { line: 280, lineRule: LineRuleType.AUTO, before: 0, after: 80 } }));
-  }
-
-  // ── Filière ──────────────────────────────────────────────────────────────────
-  paras.push(para(`FILIÈRE : ${filiere.toUpperCase()}`, C, BODY_PT, true, false, {
-    spacing: { line: 280, lineRule: LineRuleType.AUTO, before: 160, after: 80 },
-  }));
-
+  paras.push(para(`FILIÈRE : ${filiere.toUpperCase()}`, C, BODY_PT, true));
   paras.push(emptyLine());
   paras.push(emptyLine());
 
-  // ── Title in bordered box ────────────────────────────────────────────────────
   paras.push(new Paragraph({
     alignment: C,
     border: {
-      top:    { style: "single", size: 4, color: "000000", space: 12 },
+      top: { style: "single", size: 4, color: "000000", space: 12 },
       bottom: { style: "single", size: 4, color: "000000", space: 12 },
-      left:   { style: "single", size: 4, color: "000000", space: 12 },
-      right:  { style: "single", size: 4, color: "000000", space: 12 },
+      left: { style: "single", size: 4, color: "000000", space: 12 },
+      right: { style: "single", size: 4, color: "000000", space: 12 },
     },
     spacing: { line: 420, lineRule: LineRuleType.AUTO, before: 160, after: 160 },
     indent: { left: convertMillimetersToTwip(15), right: convertMillimetersToTwip(15) },
@@ -304,65 +234,15 @@ function buildPageDeGarde(d: ReportData): Paragraph[] {
   paras.push(emptyLine());
   paras.push(emptyLine());
 
-  // ── Right-aligned: student name & defense date ───────────────────────────────
-  paras.push(para(`Réalisé par : M. ${student}`, R, BODY_PT, false, false, {
-    spacing: { line: 280, lineRule: LineRuleType.AUTO, before: 80, after: 60 },
-  }));
-  paras.push(para("Soutenu publiquement le : ………………………", R, BODY_PT, false, false, {
-    spacing: { line: 280, lineRule: LineRuleType.AUTO, before: 0, after: 240 },
-  }));
-
-  // ── Left-aligned: supervisors ────────────────────────────────────────────────
-  if (encPeda) {
-    paras.push(para(`Encadrant pédagogique : ${encPeda}`, L, BODY_PT, false, false, {
-      spacing: { line: 280, lineRule: LineRuleType.AUTO, before: 80, after: 60 },
-    }));
-  }
+  paras.push(para(`Réalisé par : M. ${student}`, R, BODY_PT));
+  paras.push(para("Soutenu publiquement le : ………………………", R, BODY_PT));
+  if (encPeda) paras.push(para(`Encadrant pédagogique : ${encPeda}`, L, BODY_PT));
   if (encPro) {
     const encProFull = entreprise ? `${encPro}, ${entreprise}` : encPro;
-    paras.push(para(`Encadrant professionnel : ${encProFull}`, L, BODY_PT, false, false, {
-      spacing: { line: 280, lineRule: LineRuleType.AUTO, before: 0, after: 200 },
-    }));
-  }
-
-  // ── Jury section ─────────────────────────────────────────────────────────────
-  paras.push(emptyLine());
-  paras.push(para("Membres de jury :", C, BODY_PT, true, false, {
-    spacing: { line: 280, lineRule: LineRuleType.AUTO, before: 120, after: 80 },
-  }));
-
-  const juryList = encPeda
-    ? [encPeda, "Pr. …………………………………", "Pr. ……………………………………"]
-    : ["Pr. …………………………………", "Pr. …………………………………", "Pr. ……………………………………"];
-
-  for (const member of juryList) {
-    paras.push(para(`○   ${member}`, C, BODY_PT, false, false, {
-      spacing: { line: 280, lineRule: LineRuleType.AUTO, before: 40, after: 40 },
-    }));
+    paras.push(para(`Encadrant professionnel : ${encProFull}`, L, BODY_PT));
   }
 
   paras.push(emptyLine());
-  paras.push(emptyLine());
-
-  // ── Stage info (left-indented, only if entreprise provided) ─────────────────
-  if (entreprise) {
-    const stageLines = [
-      `Lieu de stage : ${entreprise}, ${ville}`,
-      "Date du début de stage : …… / …… / ………",
-      "Date de la fin de stage : …… / …… / ………",
-    ];
-    for (const line of stageLines) {
-      paras.push(new Paragraph({
-        alignment: L,
-        spacing: { line: 280, lineRule: LineRuleType.AUTO, before: 40, after: 40 },
-        indent: { left: convertMillimetersToTwip(10) },
-        children: [new TextRun({ text: line, font: FONT, size: BODY_PT })],
-      }));
-    }
-    paras.push(emptyLine());
-  }
-
-  // ── Year at bottom, centered ─────────────────────────────────────────────────
   paras.push(new Paragraph({
     alignment: C,
     spacing: { line: 280, lineRule: LineRuleType.AUTO, before: 240, after: 0 },
@@ -372,43 +252,42 @@ function buildPageDeGarde(d: ReportData): Paragraph[] {
   return paras;
 }
 
-function buildDedicaces(d: ReportData): Paragraph[] {
+function buildDedicaces(d: Report): Paragraph[] {
   return [
     heading1("Dédicaces"),
     emptyLine(),
-    ...markdownToParas(d.dedicaces || "À ma famille et à mes proches qui m'ont soutenu tout au long de ce parcours."),
+    ...markdownToParas(d.dedicaces || "À ma famille et à mes proches."),
   ];
 }
 
-function buildRemerciements(d: ReportData): Paragraph[] {
+function buildRemerciements(d: Report): Paragraph[] {
   return [
     heading1("Remerciements"),
     emptyLine(),
-    ...markdownToParas(d.remerciements || "Je tiens à remercier sincèrement mon encadrant pédagogique pour ses précieux conseils et sa disponibilité tout au long de ce travail."),
+    ...markdownToParas(d.remerciements || ""),
   ];
 }
 
-function buildResume(d: ReportData): Paragraph[] {
+function buildResume(d: Report): Paragraph[] {
   const mots = (d.motsCles || []).join(", ");
   return [
     heading1("Résumé"),
     emptyLine(),
-    ...markdownToParas(d.resume || ""),
+    ...markdownToParas(d.resumeFr || ""),
     ...(mots ? [emptyLine(), bodyPara(`Mots-clés : ${mots}`, { indent: { firstLine: 0 } })] : []),
     heading1("Abstract"),
     emptyLine(),
-    ...markdownToParas(d.abstract || ""),
-    ...(d.keywords?.length ? [emptyLine(), bodyPara(`Keywords: ${d.keywords.join(", ")}`, { indent: { firstLine: 0 } })] : []),
+    ...markdownToParas(d.abstractEn || ""),
   ];
 }
 
-function buildAbreviations(d: ReportData): Paragraph[] {
+function buildAbreviations(d: Report): Paragraph[] {
   const rows = d.abreviations || [];
   if (rows.length === 0) return [];
   return [
     heading1("Liste des abréviations"),
     emptyLine(),
-    ...rows.map(r =>
+    ...rows.map((r) =>
       new Paragraph({
         spacing: PARA_SPACING,
         children: [
@@ -431,7 +310,7 @@ function buildSommaire(): Paragraph[] {
   ];
 }
 
-function buildIntroduction(d: ReportData): Paragraph[] {
+function buildIntroduction(d: Report): Paragraph[] {
   return [
     heading1("Introduction Générale"),
     emptyLine(),
@@ -439,215 +318,38 @@ function buildIntroduction(d: ReportData): Paragraph[] {
   ];
 }
 
-// ─── Figure image helpers ─────────────────────────────────────────────────────
-
-function base64ToUint8Array(base64: string): Uint8Array {
-  const stripped = base64.replace(/^data:image\/\w+;base64,/, "");
-  const raw = atob(stripped);
-  const bytes = new Uint8Array(raw.length);
-  for (let i = 0; i < raw.length; i++) bytes[i] = raw.charCodeAt(i);
-  return bytes;
-}
-
-function buildFigureImages(placement: "Partie I" | "Partie II"): Paragraph[] {
-  const figures = getApprovedFigures().filter((f) => f.placement === placement);
-  if (figures.length === 0) return [];
-
-  const paras: Paragraph[] = [heading2("Figures et illustrations"), emptyLine()];
-  for (const fig of figures) {
-    try {
-      const data = base64ToUint8Array(fig.pngBase64);
-      paras.push(
-        new Paragraph({
-          alignment: AlignmentType.CENTER,
-          spacing: { before: 280, after: 120 },
-          children: [
-            new ImageRun({
-              type: "png",
-              data,
-              transformation: { width: fig.width ?? 500, height: fig.height ?? 280 },
-            }),
-          ],
-        }),
-        centerPara(fig.caption, BODY_PT, true),
-        bodyPara(fig.description),
-        emptyLine(),
-      );
-    } catch {
-      // skip malformed figure
-    }
-  }
-  return paras;
-}
-
-function buildPartieI(d: ReportData): Paragraph[] {
+function buildPartieI(d: Report): Paragraph[] {
   return [
     heading1("Partie I"),
     emptyLine(),
     ...markdownToParas(d.partieI || ""),
-    ...buildFigureImages("Partie I"),
   ];
 }
 
-function buildPartieII(d: ReportData): Paragraph[] {
+function buildPartieII(d: Report): Paragraph[] {
   return [
     heading1("Partie II"),
     emptyLine(),
     ...markdownToParas(d.partieII || ""),
-    ...buildFigureImages("Partie II"),
   ];
 }
 
-function buildConclusion(d: ReportData): Paragraph[] {
-  const paras: Paragraph[] = [heading1("Conclusion Générale"), emptyLine()];
-  if (d.conclusion) paras.push(...markdownToParas(d.conclusion));
-  if (d.apports) {
-    paras.push(heading2("Apports et limites"), ...markdownToParas(d.apports));
-  }
-  if (d.perspectives) {
-    paras.push(heading2("Perspectives futures"), ...markdownToParas(d.perspectives));
-  }
-  return paras;
-}
-
-// ─── Citation formatters ──────────────────────────────────────────────────────
-
-function formatBibEntry(s: BibSource, style: string): TextRun[] {
-  const author  = s.authors || "Auteur inconnu";
-  const year    = s.year    || "s.d.";
-  const title   = s.title   || "Titre inconnu";
-  const journal = s.journal || "";
-  const doi     = s.doi     ? ` https://doi.org/${s.doi}` : "";
-  const styleKey = style.toLowerCase();
-
-  if (styleKey.includes("apa")) {
-    return [
-      new TextRun({ text: `${author} (${year}). `, font: FONT, size: BODY_PT }),
-      new TextRun({ text: title, font: FONT, size: BODY_PT, italics: true }),
-      ...(journal ? [new TextRun({ text: `. ${journal}`, font: FONT, size: BODY_PT })] : []),
-      new TextRun({ text: doi, font: FONT, size: BODY_PT }),
-    ];
-  }
-  if (styleKey.includes("chicago")) {
-    return [
-      new TextRun({ text: `${author}. ${year}. "`, font: FONT, size: BODY_PT }),
-      new TextRun({ text: title, font: FONT, size: BODY_PT }),
-      new TextRun({ text: `."${journal ? ` ${journal}.` : ""}${doi}`, font: FONT, size: BODY_PT }),
-    ];
-  }
-  if (styleKey.includes("vancouver")) {
-    return [
-      new TextRun({ text: `${author}. ${title}. `, font: FONT, size: BODY_PT }),
-      ...(journal ? [new TextRun({ text: `${journal}. `, font: FONT, size: BODY_PT, italics: true })] : []),
-      new TextRun({ text: `${year}.${doi}`, font: FONT, size: BODY_PT }),
-    ];
-  }
-  if (styleKey.includes("ieee")) {
-    return [
-      new TextRun({ text: `${author}, "`, font: FONT, size: BODY_PT }),
-      new TextRun({ text: title, font: FONT, size: BODY_PT }),
-      new TextRun({ text: `,"${journal ? ` ${journal},` : ""} ${year}.${doi}`, font: FONT, size: BODY_PT }),
-    ];
-  }
-  // Fallback — APA
+function buildConclusion(d: Report): Paragraph[] {
   return [
-    new TextRun({ text: `${author} (${year}). `, font: FONT, size: BODY_PT }),
-    new TextRun({ text: title, font: FONT, size: BODY_PT, italics: true }),
-    ...(journal ? [new TextRun({ text: `. ${journal}`, font: FONT, size: BODY_PT })] : []),
-    new TextRun({ text: doi, font: FONT, size: BODY_PT }),
-  ];
-}
-
-function buildBibliographie(d: ReportData): Paragraph[] {
-  const liveSources = getBibSources();
-  const style       = d.citationStyle ?? "APA 7th ed.";
-
-  if (liveSources.length > 0) {
-    const sorted = [...liveSources].sort((a, b) =>
-      (a.authors.split(/[,& ]/)[0] ?? "").localeCompare(b.authors.split(/[,& ]/)[0] ?? "", "fr")
-    );
-    return [
-      heading1("Bibliographie"),
-      emptyLine(),
-      ...sorted.map((s, i) =>
-        new Paragraph({
-          alignment: AlignmentType.JUSTIFIED,
-          spacing: PARA_SPACING,
-          indent: { left: 720, hanging: 720 },
-          children: [
-            ...(style.toLowerCase().includes("ieee")
-              ? [new TextRun({ text: `[${i + 1}] `, font: FONT, size: BODY_PT, bold: true })]
-              : []),
-            ...formatBibEntry(s, style),
-          ],
-        })
-      ),
-    ];
-  }
-
-  const entries = d.bibliographie || [];
-  if (entries.length === 0) return [];
-  return [
-    heading1("Bibliographie"),
+    heading1("Conclusion Générale"),
     emptyLine(),
-    ...entries.map(e =>
-      new Paragraph({
-        alignment: AlignmentType.JUSTIFIED,
-        spacing: PARA_SPACING,
-        indent: { left: 720, hanging: 720 },
-        children: [
-          new TextRun({ text: `${e.author} (${e.year}). `, font: FONT, size: BODY_PT }),
-          new TextRun({ text: e.title, font: FONT, size: BODY_PT, italics: true }),
-          new TextRun({ text: `. ${e.journal}`, font: FONT, size: BODY_PT }),
-        ],
-      })
-    ),
+    ...markdownToParas(d.conclusion || ""),
   ];
 }
 
-function buildTableFigures(d: ReportData): Paragraph[] {
-  const approved = getApprovedFigures();
-  const liveFigs = approved.map((f) => ({ n: f.figureNumber, title: f.title, page: "—" }));
-  const figs = liveFigs.length > 0 ? liveFigs : (d.figures || []);
-  if (figs.length === 0) return [];
-  return [
-    heading1("Liste des figures"),
-    emptyLine(),
-    ...figs.map((f) => bodyPara(`Figure ${f.n} — ${f.title} .......... ${f.page}`)),
-  ];
-}
-
-function buildListeTableaux(d: ReportData): Paragraph[] {
-  const tabs = d.tableaux || [];
-  if (tabs.length === 0) return [];
-  return [
-    heading1("Liste des tableaux"),
-    emptyLine(),
-    ...tabs.map(t => bodyPara(`Tableau ${t.n} — ${t.title} .......... ${t.page}`)),
-  ];
-}
-
-function buildAnnexes(d: ReportData): Paragraph[] {
-  const anx = d.annexes || [];
-  if (anx.length === 0) return [];
-  return [
-    heading1("Annexes"),
-    emptyLine(),
-    ...anx.map((a, i) => bodyPara(`Annexe ${i + 1} — ${a}`)),
-  ];
-}
-
-// ─── Paragraph styles ─────────────────────────────────────────────────────────
+// ─── Styles ─────────────────────────────────────────────────────────────────
 
 const PARAGRAPH_STYLES = [
   {
     id: "Normal",
     name: "Normal",
     run: { font: FONT, size: BODY_PT },
-    paragraph: {
-      spacing: PARA_SPACING,
-      alignment: AlignmentType.JUSTIFIED,
-    },
+    paragraph: { spacing: PARA_SPACING, alignment: AlignmentType.JUSTIFIED },
   },
   {
     id: "Heading1",
@@ -655,11 +357,7 @@ const PARAGRAPH_STYLES = [
     basedOn: "Normal",
     next: "Normal",
     run: { font: FONT, size: H1_PT, bold: true },
-    paragraph: {
-      spacing: { before: 480, after: 240 },
-      alignment: AlignmentType.CENTER,
-      keepNext: true,
-    },
+    paragraph: { spacing: { before: 480, after: 240 }, alignment: AlignmentType.CENTER, keepNext: true },
   },
   {
     id: "Heading2",
@@ -667,10 +365,7 @@ const PARAGRAPH_STYLES = [
     basedOn: "Normal",
     next: "Normal",
     run: { font: FONT, size: H2_PT, bold: true },
-    paragraph: {
-      spacing: { before: 360, after: 180 },
-      keepNext: true,
-    },
+    paragraph: { spacing: { before: 360, after: 180 }, keepNext: true },
   },
   {
     id: "Heading3",
@@ -678,45 +373,32 @@ const PARAGRAPH_STYLES = [
     basedOn: "Normal",
     next: "Normal",
     run: { font: FONT, size: H3_PT, bold: true },
-    paragraph: {
-      spacing: { before: 240, after: 120 },
-      keepNext: true,
-    },
+    paragraph: { spacing: { before: 240, after: 120 }, keepNext: true },
   },
 ];
 
 // ─── Main export ─────────────────────────────────────────────────────────────
 
-export async function generateDocx(data: ReportData): Promise<Blob> {
+export async function generateDocx(data: Report): Promise<Blob> {
   const header = buildHeader(data);
-
-  const pageBase = {
-    page: { margin: MARGIN },
-  };
+  const pageBase = { page: { margin: MARGIN } };
 
   const doc = new Document({
     styles: { paragraphStyles: PARAGRAPH_STYLES },
-
     sections: [
-      // ── Section 1: Page de garde — no page numbers, no header/footer ──
       {
         properties: { ...pageBase },
         children: buildPageDeGarde(data),
       },
-
-      // ── Section 2: Preliminary pages — Arabic from page 2 (matches reference PDF) ──
       {
         properties: {
           page: {
             margin: MARGIN,
-            pageNumbers: {
-              start: 2,
-              formatType: NumberFormat.DECIMAL,
-            },
+            pageNumbers: { start: 2, formatType: NumberFormat.DECIMAL },
           },
         },
         headers: { default: header },
-        footers: { default: buildFooterArabic() },
+        footers: { default: buildFooter() },
         children: [
           ...buildDedicaces(data),
           ...buildRemerciements(data),
@@ -725,54 +407,25 @@ export async function generateDocx(data: ReportData): Promise<Blob> {
           ...buildSommaire(),
         ],
       },
-
-      // ── Section 3: Body — Arabic numerals, continues from section 2 ──
       {
         properties: {
           page: {
             margin: MARGIN,
-            pageNumbers: {
-              formatType: NumberFormat.DECIMAL,
-            },
+            pageNumbers: { formatType: NumberFormat.DECIMAL },
           },
         },
         headers: { default: header },
-        footers: { default: buildFooterArabic() },
+        footers: { default: buildFooter() },
         children: [
           ...buildIntroduction(data),
           ...buildPartieI(data),
           ...buildPartieII(data),
           ...buildConclusion(data),
-          ...buildBibliographie(data),
-          ...buildTableFigures(data),
-          ...buildListeTableaux(data),
-          ...buildAnnexes(data),
         ],
       },
     ],
   });
 
-  return Packer.toBlob(doc);
-}
-
-/** Quick export of a single section for the WordPreview header button */
-export async function generatePartialDocx(sectionTitle: string, rawMarkdown: string, data?: ReportData): Promise<Blob> {
-  const header = data ? buildHeader(data) : undefined;
-  const doc = new Document({
-    styles: { paragraphStyles: PARAGRAPH_STYLES },
-    sections: [
-      {
-        properties: { page: { margin: MARGIN } },
-        ...(header ? { headers: { default: header } } : {}),
-        footers: { default: buildFooterArabic() },
-        children: [
-          heading1(sectionTitle),
-          emptyLine(),
-          ...markdownToParas(rawMarkdown),
-        ],
-      },
-    ],
-  });
   return Packer.toBlob(doc);
 }
 
