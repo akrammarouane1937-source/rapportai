@@ -1,7 +1,7 @@
 import { useState, useRef, useEffect } from "react";
 import { useLocation } from "wouter";
 import { Layout } from "@/components/layout";
-import { ChatMessage, ToolCallCard, StepTransitionCard } from "@/components/chat-panel";
+import { ChatMessage, ToolCallCard, StepTransitionCard, ThinkingCard } from "@/components/chat-panel";
 import { PreviewPanel } from "@/components/preview-panel";
 import { ChatInput } from "@/components/chat-input";
 import { UploadCard } from "@/components/upload-card";
@@ -17,7 +17,7 @@ type Msg = { role: "agent" | "user"; content: React.ReactNode };
 export default function PartieI() {
   const [, setLocation] = useLocation();
   const { report, updateReport } = useReportStore();
-  const { generate, isGenerating, toolCalls, streamedContent, error } = useGenerate();
+  const { generate, abort, isGenerating, toolCalls, streamedContent, thinkingText, error } = useGenerate();
   const addFiles = useFileStore((s) => s.addFiles);
   const [phase, setPhase] = useState<Phase>("confirm");
   const [sourceFiles, setSourceFiles] = useState<File[]>([]);
@@ -162,7 +162,8 @@ export default function PartieI() {
     >
       <div className="flex-1 overflow-y-auto py-4 px-2 md:py-5 md:px-3">
         {msgs.map((m, i) => <ChatMessage key={i} role={m.role} content={m.content} />)}
-        {toolCalls.map((tc, i) => <ToolCallCard key={i} name={tc.name} status={tc.status} />)}
+        {thinkingText && <ThinkingCard text={thinkingText} streaming={isGenerating} />}
+        {toolCalls.map((tc, i) => <ToolCallCard key={tc.id} name={tc.name} detail={tc.detail} done={tc.done} />)}
         {isGenerating && <ChatMessage role="agent" content="Recherche et rédaction en cours..." isTyping />}
         {error && <ChatMessage role="agent" content={`❌ Erreur : ${error}. Réessaie.`} />}
         {phase === "done" && !isGenerating && (
@@ -176,7 +177,7 @@ export default function PartieI() {
         <div ref={bottomRef} />
       </div>
       <div className="shrink-0 border-t" style={{ borderColor: "#1e293b" }}>
-        <ChatInput
+        <ChatInput isGenerating={isGenerating} onAbort={abort}
           onSend={handleSend}
           disabled={isGenerating || phase === "generating"}
           placeholder={

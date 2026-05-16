@@ -72,10 +72,10 @@ async function streamToSSE(
   for await (const event of gen) {
     switch (event.type) {
       case "text":
-        res.write(`data: ${JSON.stringify({ content: event.content })}\n\n`);
+        res.write(`data: ${JSON.stringify({ thinking: event.content })}\n\n`);
         break;
       case "tool_call":
-        res.write(`data: ${JSON.stringify({ tool_call: event.name })}\n\n`);
+        res.write(`data: ${JSON.stringify({ tool_call: { name: event.name, detail: event.detail ?? null } })}\n\n`);
         break;
       case "question":
         res.write(
@@ -172,40 +172,58 @@ router.post(
     res.setHeader("Content-Type", "text/event-stream");
     res.setHeader("Cache-Control", "no-cache");
     res.setHeader("Connection", "keep-alive");
+    res.flushHeaders(); // Flush immediately so client sees headers before first event
+
+    // partialSections accumulates whatever the agent writes to disk — used for
+    // partial recovery if the agent hits its turn limit mid-generation
+    let partialSections: Record<string, string> = {};
 
     try {
       const task = agent.buildSectionTask(section, { extraContext });
 
-      // Phase 1 — generation streams live so the student sees progress
       res.write(`data: ${JSON.stringify({ phase: "writing" })}\n\n`);
       const finished = await streamToSSE(res, agent.streamSection(section, task));
 
+      // Read whatever was written to disk (even if stream ended early)
+      partialSections = agent.getSections();
+
       if (finished) {
-        // Phase 2 — humanize silently, overwrite the section file on disk
-        res.write(`data: ${JSON.stringify({ phase: "humanizing" })}\n\n`);
-        const sections = agent.getSections();
-        const rawContent = sections[section] ?? "";
+        const rawContent = partialSections[section] ?? "";
 
-        if (rawContent) {
-          const humanized = await runInternalHumanize(rawContent, section);
-          if (humanized !== rawContent) {
-            // Overwrite the file the agent wrote so future agents read humanized content
-            const sectionFile = path.join(agent.workDir, `${section}.md`);
-            writeFileSync(sectionFile, humanized, "utf-8");
-            sections[section] = humanized;
-          }
-
-          markSectionComplete(sessionId, section, {
-            word_count: (sections[section] ?? "").split(/\s+/).filter(Boolean).length,
-            key_points: (sections[section] ?? "").slice(0, 300).replace(/#+\s*/g, "").trim(),
-          });
+        if (!rawContent) {
+          const { findClaudeBinary } = await import("../lib/find-claude-binary");
+          const binary = findClaudeBinary();
+          const hint = binary
+            ? "Claude binary trouvé mais rien généré. Vérifiez ANTHROPIC_API_KEY sur Railway."
+            : "Claude Code CLI introuvable. Vérifiez l'installation de @anthropic-ai/claude-agent-sdk.";
+          res.write(`data: ${JSON.stringify({ error: hint })}\n\n`);
+          return;
         }
 
-        res.write(`data: ${JSON.stringify({ done: true, sections })}\n\n`);
+        res.write(`data: ${JSON.stringify({ phase: "humanizing" })}\n\n`);
+        const humanized = await runInternalHumanize(rawContent, section);
+        if (humanized !== rawContent) {
+          const sectionFile = path.join(agent.workDir, `${section}.md`);
+          writeFileSync(sectionFile, humanized, "utf-8");
+          partialSections[section] = humanized;
+        }
+
+        markSectionComplete(sessionId, section, {
+          word_count: (partialSections[section] ?? "").split(/\s+/).filter(Boolean).length,
+          key_points: (partialSections[section] ?? "").slice(0, 300).replace(/#+\s*/g, "").trim(),
+        });
+
+        res.write(`data: ${JSON.stringify({ done: true, sections: partialSections })}\n\n`);
       }
     } catch (err: unknown) {
       const message = err instanceof Error ? err.message : "Unknown error";
-      res.write(`data: ${JSON.stringify({ error: message })}\n\n`);
+      // Turn-limit hit — read disk and return whatever was generated (Replit pattern)
+      partialSections = agent.getSections();
+      if (message.includes("maximum number of turns") || message.includes("turn limit")) {
+        res.write(`data: ${JSON.stringify({ done: true, sections: partialSections, partial: true })}\n\n`);
+      } else {
+        res.write(`data: ${JSON.stringify({ error: message })}\n\n`);
+      }
     } finally {
       res.end();
     }
@@ -259,6 +277,7 @@ router.post(
     res.setHeader("Content-Type", "text/event-stream");
     res.setHeader("Cache-Control", "no-cache");
     res.setHeader("Connection", "keep-alive");
+    res.flushHeaders();
 
     try {
       const task = agent.buildRevisionTask(sectionId, instruction);

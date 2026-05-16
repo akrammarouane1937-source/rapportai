@@ -223,7 +223,8 @@ export class SDKReportAgent {
           yield { type: "text", content: block.text };
         }
         if (block.type === "tool_use") {
-          yield { type: "tool_call", name: block.name };
+          const detail = buildToolDetail(block.name, block.input as Record<string, unknown>);
+          yield { type: "tool_call", name: block.name, detail };
         }
       }
     }
@@ -377,6 +378,37 @@ Sauvegarde les changements dans ${sectionId}.md.`;
     } catch {
       // ignore
     }
+  }
+}
+
+// ─── Tool trace detail builder ───────────────────────────────────────────────
+
+function buildToolDetail(toolName: string, input: Record<string, unknown>): string {
+  switch (toolName) {
+    case "Read": {
+      const fp = String(input.file_path ?? "");
+      return `Lecture : ${fp.split(/[\\/]/).pop() ?? fp}`;
+    }
+    case "Write": {
+      const fp = String(input.file_path ?? "");
+      return `Écriture : ${fp.split(/[\\/]/).pop() ?? fp}`;
+    }
+    case "Edit": {
+      const fp = String(input.file_path ?? "");
+      return `Révision : ${fp.split(/[\\/]/).pop() ?? fp}`;
+    }
+    case "WebSearch":
+      return `Recherche : "${String(input.query ?? "").slice(0, 60)}"`;
+    case "WebFetch": {
+      const url = String(input.url ?? "");
+      try { return `Fetch : ${new URL(url).hostname}`; } catch { return `Fetch : ${url.slice(0, 60)}`; }
+    }
+    case "Glob":
+      return `Analyse : ${String(input.pattern ?? "*")}`;
+    case "Bash":
+      return `Exécution : ${String(input.command ?? "").slice(0, 60)}`;
+    default:
+      return String(input.description ?? input.task ?? toolName);
   }
 }
 

@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { Sparkles, ChevronRight, CheckCircle2, BrainCircuit } from "lucide-react";
+import { Sparkles, ChevronRight, CheckCircle2, BrainCircuit, Wrench, Loader2 } from "lucide-react";
 
 export function ChatMessage({
   role,
@@ -69,81 +69,75 @@ const TOOL_LABELS: Record<string, string> = {
   Glob: "📂 Analyse des fichiers",
 };
 
-export function ToolCallCard({ name, status }: { name: string; status: "running" | "done" }) {
+export function ToolCallCard({ name, detail, status, done }: { name: string; detail?: string; status?: "running" | "done"; done?: boolean }) {
+  const isDone = done ?? status === "done";
   return (
     <motion.div
-      initial={{ opacity: 0, x: -6 }}
+      initial={{ opacity: 0, x: -4 }}
       animate={{ opacity: 1, x: 0 }}
-      className="flex items-center gap-2.5 ml-10 mb-1.5 px-4"
+      className="flex items-center gap-2.5 rounded-lg px-3 py-2 text-sm mb-1.5 mx-4"
+      style={{ background: "#1e293b", border: "1px solid #334155" }}
     >
-      {/* Status icon */}
-      <div className="shrink-0 w-4 h-4 flex items-center justify-center">
-        {status === "running" ? (
-          <div className="w-3.5 h-3.5 rounded-full border-2 border-t-transparent animate-spin" style={{ borderColor: "#7c3aed55", borderTopColor: "transparent" }} />
-        ) : (
-          <CheckCircle2 className="w-3.5 h-3.5" style={{ color: "#22c55e" }} />
-        )}
-      </div>
-      {/* Step text */}
-      <span
-        className="text-xs"
-        style={{ color: status === "done" ? "#4b5563" : "#94a3b8" }}
-      >
+      <Wrench className="h-3.5 w-3.5 shrink-0" style={{ color: "#475569" }} />
+      <span className="font-medium text-xs shrink-0" style={{ color: "#cbd5e1" }}>
         {name}
       </span>
+      {detail && (
+        <span className="font-mono text-xs truncate flex-1" style={{ color: "#475569" }}>
+          {detail}
+        </span>
+      )}
+      {isDone ? (
+        <CheckCircle2 className="h-3.5 w-3.5 shrink-0" style={{ color: "#10b981" }} />
+      ) : (
+        <Loader2 className="h-3.5 w-3.5 shrink-0 animate-spin" style={{ color: "#475569" }} />
+      )}
     </motion.div>
   );
 }
 
-export function ThinkingCard({ title, detail }: { title: string; detail?: string }) {
-  const [expanded, setExpanded] = useState(false);
+export function ThinkingCard({ text, streaming, title, detail }: {
+  text?: string;
+  streaming?: boolean;
+  // legacy props from step-1 static thinking cards
+  title?: string;
+  detail?: string;
+}) {
+  const [open, setOpen] = useState(true);
+  const displayText = text ?? (detail ?? title ?? "");
 
   return (
-    <motion.div
-      initial={{ opacity: 0, y: 4 }}
-      animate={{ opacity: 1, y: 0 }}
-      exit={{ opacity: 0, height: 0, marginBottom: 0 }}
-      transition={{ duration: 0.2 }}
-      className="flex gap-2.5 mb-2 px-4"
-    >
-      <div
-        className="shrink-0 w-5 h-5 rounded-full flex items-center justify-center mt-0.5"
-        style={{ background: "#1e293b", border: "1px solid #334155" }}
+    <div className="rounded-lg border border-violet-800 bg-violet-950/30 text-sm overflow-hidden mb-2 mx-4">
+      <button
+        onClick={() => setOpen((o) => !o)}
+        className="flex w-full items-center gap-2 px-3 py-2 hover:bg-violet-900/30 transition-colors"
+        style={{ color: "#a78bfa" }}
       >
-        <BrainCircuit className="w-3 h-3" style={{ color: "#7c3aed" }} />
-      </div>
-      <div className="flex-1 min-w-0">
-        <button
-          onClick={() => setExpanded((v) => !v)}
-          className="flex items-center gap-1 text-xs transition-colors"
-          style={{ color: "#64748b" }}
-        >
-          <ChevronRight
-            className="w-3 h-3 transition-transform"
-            style={{ transform: expanded ? "rotate(90deg)" : "rotate(0deg)" }}
-          />
-          {title}
-        </button>
-        <AnimatePresence>
-          {expanded && detail && (
-            <motion.div
-              initial={{ opacity: 0, height: 0 }}
-              animate={{ opacity: 1, height: "auto" }}
-              exit={{ opacity: 0, height: 0 }}
-              className="mt-1.5 px-3 py-2 rounded-lg text-xs"
-              style={{
-                background: "#0f172a",
-                color: "#475569",
-                borderLeft: "2px solid #334155",
-                lineHeight: "1.6",
-              }}
-            >
-              {detail}
-            </motion.div>
+        <BrainCircuit className="h-3.5 w-3.5 shrink-0" />
+        <span className="font-medium text-xs flex-1 text-left">
+          Thinking
+          {streaming && (
+            <span className="ml-2 inline-flex gap-0.5 align-middle">
+              <span className="animate-bounce inline-block w-1 h-1 rounded-full bg-violet-500" style={{ animationDelay: "0ms" }} />
+              <span className="animate-bounce inline-block w-1 h-1 rounded-full bg-violet-500" style={{ animationDelay: "150ms" }} />
+              <span className="animate-bounce inline-block w-1 h-1 rounded-full bg-violet-500" style={{ animationDelay: "300ms" }} />
+            </span>
           )}
-        </AnimatePresence>
-      </div>
-    </motion.div>
+        </span>
+        {open ? (
+          <ChevronRight className="h-3.5 w-3.5 shrink-0 rotate-90 transition-transform" />
+        ) : (
+          <ChevronRight className="h-3.5 w-3.5 shrink-0 transition-transform" />
+        )}
+      </button>
+      {open && displayText && (
+        <div className="px-3 pb-3 pt-1">
+          <pre className="whitespace-pre-wrap font-mono text-xs leading-relaxed" style={{ color: "#8b5cf6" }}>
+            {displayText}
+          </pre>
+        </div>
+      )}
+    </div>
   );
 }
 

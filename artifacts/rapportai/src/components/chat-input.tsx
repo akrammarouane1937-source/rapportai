@@ -1,15 +1,19 @@
 import { useRef, useState, useCallback } from "react";
-import { Paperclip, Image, FileText, ArrowUp, X } from "lucide-react";
+import { Paperclip, Image, FileText, ArrowUp, Square, X } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 interface ChatInputProps {
   onSend: (text: string, files?: File[]) => void;
+  onAbort?: () => void;
+  isGenerating?: boolean;
   disabled?: boolean;
   placeholder?: string;
 }
 
 export function ChatInput({
   onSend,
+  onAbort,
+  isGenerating = false,
   disabled = false,
   placeholder = "Écrire un message...",
 }: ChatInputProps) {
@@ -135,17 +139,29 @@ export function ChatInput({
           ))}
         </div>
 
-        <button
-          onClick={handleSend}
-          disabled={!canSend}
-          className="w-8 h-8 rounded-lg flex items-center justify-center transition-all disabled:opacity-30"
-          style={{
-            background: canSend ? "linear-gradient(135deg,#7c3aed,#a855f7)" : "#1e293b",
-            border: canSend ? "none" : "1px solid #334155",
-          }}
-        >
-          <ArrowUp className="w-4 h-4 text-white" />
-        </button>
+        {isGenerating ? (
+          // Stop button (filled square) — shown while agent is running (Replit pattern)
+          <button
+            onClick={onAbort}
+            className="w-8 h-8 rounded-lg flex items-center justify-center transition-all"
+            style={{ background: "#7c3aed", border: "none" }}
+            title="Arrêter la génération"
+          >
+            <Square className="w-3.5 h-3.5 text-white fill-white" />
+          </button>
+        ) : (
+          <button
+            onClick={handleSend}
+            disabled={!canSend}
+            className="w-8 h-8 rounded-lg flex items-center justify-center transition-all disabled:opacity-30"
+            style={{
+              background: canSend ? "linear-gradient(135deg,#7c3aed,#a855f7)" : "#1e293b",
+              border: canSend ? "none" : "1px solid #334155",
+            }}
+          >
+            <ArrowUp className="w-4 h-4 text-white" />
+          </button>
+        )}
       </div>
     </div>
   );

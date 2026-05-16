@@ -1,4 +1,4 @@
-import { useState, useCallback } from "react";
+import { useState, useCallback, useRef } from "react";
 import { API_BASE } from "@/lib/apiBase";
 import { useReportStore } from "@/lib/store";
 import { useFileStore } from "@/lib/fileStore";
@@ -7,9 +7,11 @@ const SESSION_KEY = "rapportai_session";
 const SESSION_TS_KEY = "rapportai_session_ts";
 const SESSION_TTL = 45 * 60 * 1000;
 
-interface ToolCall {
+export interface ToolCall {
+  id: string;
   name: string;
-  status: "running" | "done";
+  detail?: string;
+  done: boolean;
 }
 
 const TOOL_LABELS: Record<string, string> = {
@@ -36,11 +38,9 @@ async function getOrCreateSession(): Promise<string> {
     return stored;
   }
 
-  // Clear stale session
   localStorage.removeItem(SESSION_KEY);
   localStorage.removeItem(SESSION_TS_KEY);
 
-  // Build profile from store
   const report = useReportStore.getState().report;
   const profile = {
     studentName: report.studentName,
@@ -81,9 +81,18 @@ export function useGenerate() {
   const [streamedContent, setStreamedContent] = useState("");
   const [isGenerating, setIsGenerating] = useState(false);
   const [toolCalls, setToolCalls] = useState<ToolCall[]>([]);
+  const [thinkingText, setThinkingText] = useState("");
   const [error, setError] = useState<string | null>(null);
 
+  // AbortController ref — enables stop button (Replit pattern)
+  const abortRef = useRef<AbortController | null>(null);
+
   const setContent = useCallback((val: string) => setStreamedContent(val), []);
+
+  const abort = useCallback(() => {
+    abortRef.current?.abort();
+    setIsGenerating(false);
+  }, []);
 
   const generate = useCallback(
     async (
@@ -92,12 +101,17 @@ export function useGenerate() {
       extraPrompt?: string,
       files?: File[]
     ) => {
+      // Cancel any in-flight request (Replit pattern)
+      abortRef.current?.abort();
+      const controller = new AbortController();
+      abortRef.current = controller;
+
       setIsGenerating(true);
       setStreamedContent("");
       setToolCalls([]);
+      setThinkingText("");
       setError(null);
 
-      // Merge globally accumulated files with locally passed files
       const globalFiles = useFileStore.getState().files;
       const allFiles = [
         ...globalFiles,
@@ -111,8 +125,6 @@ export function useGenerate() {
       try {
         const sessionId = await getOrCreateSession();
 
-        let response: Response;
-
         const makeRequest = (sid: string) => {
           if (allFiles.length > 0) {
             const form = new FormData();
@@ -120,18 +132,22 @@ export function useGenerate() {
             form.append("reportData", JSON.stringify(reportData));
             if (extraPrompt) form.append("prompt", extraPrompt);
             for (const file of allFiles) form.append("files", file, file.name);
-            return fetch(`${API_BASE}/api/session/${sid}/generate`, { method: "POST", body: form });
+            return fetch(`${API_BASE}/api/session/${sid}/generate`, {
+              method: "POST",
+              body: form,
+              signal: controller.signal,
+            });
           }
           return fetch(`${API_BASE}/api/session/${sid}/generate`, {
             method: "POST",
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify({ section, ...reportData, prompt: extraPrompt }),
+            signal: controller.signal,
           });
         };
 
-        response = await makeRequest(sessionId);
+        let response = await makeRequest(sessionId);
 
-        // Session expired on server — clear cache and retry once with a fresh session
         if (response.status === 404) {
           localStorage.removeItem(SESSION_KEY);
           localStorage.removeItem(SESSION_TS_KEY);
@@ -144,56 +160,84 @@ export function useGenerate() {
 
         const reader = response.body.getReader();
         const decoder = new TextDecoder();
-        let done = false;
         let buffer = "";
 
-        while (!done) {
-          const { value, done: readerDone } = await reader.read();
-          done = readerDone;
-          if (value) {
-            buffer += decoder.decode(value, { stream: !done });
-            const parts = buffer.split("\n\n");
-            buffer = parts.pop() ?? "";
+        while (true) {
+          const { value, done } = await reader.read();
+          if (done) break;
 
-            for (const part of parts) {
-              if (!part.startsWith("data: ")) continue;
-              try {
-                const data = JSON.parse(part.slice(6));
-                if (data.error) throw new Error(data.error);
-                if (data.content) {
-                  // First content chunk = all tool calls are done
-                  setToolCalls((prev) => prev.map((tc) => ({ ...tc, status: "done" as const })));
-                  finalContent += data.content;
-                  setStreamedContent((prev) => prev + data.content);
-                }
-                if (data.updatedContent) {
-                  setToolCalls((prev) => prev.map((tc) => ({ ...tc, status: "done" as const })));
-                  finalContent = data.updatedContent;
-                  setStreamedContent(data.updatedContent);
-                }
-                if (data.tool_call) {
-                  const label = getToolLabel(data.tool_call.name ?? data.tool_call);
-                  // Backend sends tool name as string — mark previous same-name call done, add new running one
-                  setToolCalls((prev) => {
-                    const marked = prev.map((tc) =>
-                      tc.status === "running" ? { ...tc, status: "done" as const } : tc
-                    );
-                    return [...marked, { name: label, status: "running" as const }];
-                  });
-                }
-                if (data.done) {
-                  setToolCalls((prev) => prev.map((tc) => ({ ...tc, status: "done" as const })));
-                  done = true;
-                }
-              } catch (parseErr) {
-                if (parseErr instanceof Error && parseErr.message !== "JSON parse") {
-                  throw parseErr;
-                }
+          // Replit pattern: split on \n, check each line for "data: " prefix
+          buffer += decoder.decode(value, { stream: true });
+          const lines = buffer.split("\n");
+          buffer = lines.pop() ?? "";
+
+          for (const line of lines) {
+            if (!line.startsWith("data: ")) continue;
+            const raw = line.slice(6).trim();
+            if (!raw) continue;
+
+            let data: Record<string, unknown>;
+            try {
+              data = JSON.parse(raw) as Record<string, unknown>;
+            } catch {
+              continue;
+            }
+
+            if (data.error) {
+              throw new Error(data.error as string);
+            }
+
+            if (data.thinking) {
+              // Append thinking text (Replit pattern: newline-separated)
+              setThinkingText((prev) =>
+                prev ? `${prev}\n${data.thinking as string}` : (data.thinking as string)
+              );
+            }
+
+            if (data.tool_call) {
+              const rawName = typeof data.tool_call === "string"
+                ? data.tool_call
+                : ((data.tool_call as Record<string, unknown>).name as string ?? "");
+              const label = getToolLabel(rawName);
+              const detail = typeof data.tool_call === "object"
+                ? ((data.tool_call as Record<string, unknown>).detail as string | undefined)
+                : undefined;
+              // Unique ID per tool call (Replit pattern — fixes React key issues)
+              const id = `${rawName}-${Date.now()}`;
+              setToolCalls((prev) => [
+                ...prev.map((t) => ({ ...t, done: true })),
+                { id, name: label, detail, done: false },
+              ]);
+            }
+
+            if (data.content) {
+              setToolCalls((prev) => prev.map((t) => ({ ...t, done: true })));
+              finalContent += data.content as string;
+              setStreamedContent((prev) => prev + (data.content as string));
+            }
+
+            if (data.updatedContent) {
+              setToolCalls((prev) => prev.map((t) => ({ ...t, done: true })));
+              finalContent = data.updatedContent as string;
+              setStreamedContent(data.updatedContent as string);
+            }
+
+            if (data.done) {
+              setToolCalls((prev) => prev.map((t) => ({ ...t, done: true })));
+              // Extract from disk-written sections (works for both complete and partial)
+              const sectionContent = (data.sections as Record<string, string> | undefined)?.[section];
+              if (sectionContent) {
+                finalContent = sectionContent;
+                setStreamedContent(sectionContent);
+              }
+              if (data.partial && !sectionContent) {
+                setError("Génération partielle — contenu tronqué. Demande une révision pour compléter.");
               }
             }
           }
         }
       } catch (err) {
+        if ((err as { name?: string }).name === "AbortError") return finalContent;
         const msg = err instanceof Error ? err.message : "Erreur inconnue";
         setError(msg);
         console.error("Generation failed:", err);
@@ -206,5 +250,5 @@ export function useGenerate() {
     []
   );
 
-  return { generate, isGenerating, toolCalls, streamedContent, setContent, error };
+  return { generate, abort, isGenerating, toolCalls, streamedContent, thinkingText, setContent, error };
 }

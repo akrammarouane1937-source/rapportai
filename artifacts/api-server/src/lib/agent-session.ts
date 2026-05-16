@@ -5,9 +5,11 @@ import { anthropic } from "@workspace/integrations-anthropic-ai";
 // The session yields typed events so routes can handle each case specifically.
 
 export type StreamEvent =
-  | { type: "text";      content: string }
-  | { type: "tool_call"; name: string }
-  | { type: "question";  question: string; choices?: string[]; toolUseId: string };
+  | { type: "text";        content: string }
+  | { type: "tool_call";   name: string; detail?: string }
+  | { type: "tool_result"; name: string; summary: string }
+  | { type: "phase";       text: string }
+  | { type: "question";    question: string; choices?: string[]; toolUseId: string };
 
 // ─── AgentSession ─────────────────────────────────────────────────────────────
 

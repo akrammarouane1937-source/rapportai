@@ -1,7 +1,7 @@
 import { useState, useRef, useEffect } from "react";
 import { useLocation } from "wouter";
 import { Layout } from "@/components/layout";
-import { ChatMessage, ToolCallCard } from "@/components/chat-panel";
+import { ChatMessage, ToolCallCard, ThinkingCard } from "@/components/chat-panel";
 import { PreviewPanel } from "@/components/preview-panel";
 import { ChatInput } from "@/components/chat-input";
 import { useReportStore } from "@/lib/store";
@@ -21,7 +21,7 @@ function totalWords(r: ReturnType<typeof useReportStore>["report"]) {
 
 export default function Step9() {
   const { report, updateReport } = useReportStore();
-  const { generate, isGenerating, toolCalls, streamedContent } = useGenerate();
+  const { generate, abort, isGenerating, toolCalls, streamedContent, thinkingText } = useGenerate();
   const [phase, setPhase] = useState<Phase>("apports");
   const [exporting, setExporting] = useState(false);
   const [sharing, setSharing] = useState(false);
@@ -185,7 +185,8 @@ export default function Step9() {
     >
       <div className="flex-1 overflow-y-auto py-4 px-2 md:py-5 md:px-3">
         {msgs.map((m, i) => <ChatMessage key={i} role={m.role} content={m.content} />)}
-        {toolCalls.map((tc, i) => <ToolCallCard key={i} name={tc.name} status={tc.status} />)}
+        {thinkingText && <ThinkingCard text={thinkingText} streaming={isGenerating} />}
+        {toolCalls.map((tc, i) => <ToolCallCard key={tc.id} name={tc.name} detail={tc.detail} done={tc.done} />)}
         {isGenerating && (
           <ChatMessage
             role="agent"
@@ -233,7 +234,7 @@ export default function Step9() {
         <div ref={bottomRef} />
       </div>
       <div className="shrink-0 border-t" style={{ borderColor: "#1e293b" }}>
-        <ChatInput
+        <ChatInput isGenerating={isGenerating} onAbort={abort}
           onSend={handleSend}
           disabled={isGenerating || phase === "generating_conclusion" || phase === "generating_abbrevs"}
           placeholder={
