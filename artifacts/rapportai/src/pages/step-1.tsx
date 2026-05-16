@@ -53,25 +53,7 @@ export default function Step1() {
       updateReport({ filiere: trimmed });
       push([
         { role: "user", content: trimmed },
-        {
-          role: "agent",
-          content: (
-            <div>
-              <p className="mb-3">Type de rapport :</p>
-              <div className="flex gap-2 flex-wrap">
-                {TYPE_OPTIONS.map((o) => (
-                  <button
-                    key={o.value}
-                    onClick={() => handleTypeSelect(o.value, o.label)}
-                    className="px-4 py-2 rounded-lg border border-primary/30 text-primary hover:bg-primary hover:text-white text-sm font-medium transition-colors"
-                  >
-                    {o.label}
-                  </button>
-                ))}
-              </div>
-            </div>
-          ),
-        },
+        { role: "agent", content: "Type de rapport :" },
       ]);
       setPhase("type");
     } else if (phase === "annee") {
@@ -100,6 +82,20 @@ export default function Step1() {
         {msgs.map((m, i) => (
           <ChatMessage key={i} role={m.role} content={m.content} />
         ))}
+        {phase === "type" && (
+          <div className="flex gap-2 flex-wrap ml-10 mb-4 px-4">
+            {TYPE_OPTIONS.map((o) => (
+              <button
+                key={o.value}
+                onClick={() => handleTypeSelect(o.value, o.label)}
+                className="px-4 py-2 rounded-lg text-sm font-medium transition-all"
+                style={{ border: "1px solid #7c3aed55", color: "#a78bfa", background: "#7c3aed11" }}
+              >
+                {o.label}
+              </button>
+            ))}
+          </div>
+        )}
         {phase === "done" && (
           <StepTransitionCard
             title="Informations générales enregistrées"
