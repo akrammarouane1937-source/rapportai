@@ -333,29 +333,21 @@ Génère page-de-garde.md avec le contenu exact en respectant :
 Enregistre dans page-de-garde.md.`;
 
       case "dedicaces": {
-        let dedicacesNote = "";
-        try {
-          const mem = JSON.parse(readFileSync(path.join(this.workDir, "student_memory.json"), "utf-8"));
-          if (mem?.interaction_history?.dedicaces_text) {
-            dedicacesNote = `\n\nTexte personnel fourni par l'étudiant(e) — utilise-le comme base, préserve chaque nom et sentiment mentionné :\n"""\n${mem.interaction_history.dedicaces_text}\n"""`;
-          }
-        } catch { /* no memory — generate universal */ }
-        return `${docNote}Lis profile.json.${dedicacesNote}
+        const dedicacesExtra = opts?.extraContext
+          ? `\n\nDemande spécifique de l'étudiant(e) — respecte-la impérativement, préserve chaque nom mentionné :\n"""\n${opts.extraContext}\n"""`
+          : "";
+        return `${docNote}Lis profile.json.${dedicacesExtra}
 Rédige les Dédicaces (8–20 lignes, style lyrique et sobre).
 Enregistre dans dedicaces.md.`;
       }
 
       case "remerciements": {
-        let remerciementsNote = "";
-        try {
-          const mem = JSON.parse(readFileSync(path.join(this.workDir, "student_memory.json"), "utf-8"));
-          if (mem?.interaction_history?.remerciements_text) {
-            remerciementsNote = `\n\nTexte personnel fourni par l'étudiant(e) :\n"""\n${mem.interaction_history.remerciements_text}\n"""`;
-          }
-        } catch { /* no memory */ }
-        return `${docNote}Lis profile.json pour les noms et titres des encadrants.${remerciementsNote}
+        const remExtra = opts?.extraContext
+          ? `\n\nDemande spécifique de l'étudiant(e) — intègre TOUS les noms et éléments mentionnés :\n"""\n${opts.extraContext}\n"""`
+          : "";
+        return `${docNote}Lis profile.json pour les noms et titres des encadrants.${remExtra}
 Rédige les Remerciements (200–350 mots, ton formel et sincère).
-Respecte l'ordre : encadrant pédagogique → encadrant professionnel → école → famille.
+Respecte l'ordre : encadrant pédagogique → encadrant professionnel → école → famille → amis si mentionnés.
 Varie les formules d'ouverture de chaque paragraphe.
 Enregistre dans remerciements.md.`;
       }

@@ -1,6 +1,6 @@
-import { useState } from "react";
-import { motion, AnimatePresence } from "framer-motion";
-import { Sparkles, ChevronRight, CheckCircle2, BrainCircuit, Wrench, Loader2 } from "lucide-react";
+import { useState, type ReactNode } from "react";
+import { motion } from "framer-motion";
+import { Sparkles, ChevronRight, CheckCircle2, BrainCircuit, Loader2, BookOpen, PenLine, Pencil, Globe, FolderSearch, Terminal, Search } from "lucide-react";
 
 export function ChatMessage({
   role,
@@ -60,38 +60,72 @@ export function ChatMessage({
   );
 }
 
-const TOOL_LABELS: Record<string, string> = {
-  Read: "📖 Lecture du rapport",
-  WebSearch: "🔍 Recherche académique",
-  WebFetch: "🔍 Recherche de sources",
-  Write: "✍️ Rédaction en cours",
-  Edit: "✏️ Révision",
-  Glob: "📂 Analyse des fichiers",
+const TOOL_CONFIG: Record<string, { icon: ReactNode; color: string }> = {
+  "Lecture du rapport":   { icon: <BookOpen className="h-3.5 w-3.5" />,    color: "#60a5fa" },
+  "Analyse des fichiers": { icon: <FolderSearch className="h-3.5 w-3.5" />, color: "#a78bfa" },
+  "Rédaction en cours":   { icon: <PenLine className="h-3.5 w-3.5" />,     color: "#34d399" },
+  "Révision en cours":    { icon: <Pencil className="h-3.5 w-3.5" />,      color: "#fbbf24" },
+  "Révision":             { icon: <Pencil className="h-3.5 w-3.5" />,      color: "#fbbf24" },
+  "Recherche académique": { icon: <Search className="h-3.5 w-3.5" />,      color: "#f97316" },
+  "Recherche de sources": { icon: <Globe className="h-3.5 w-3.5" />,       color: "#f97316" },
+  "Traitement":           { icon: <Terminal className="h-3.5 w-3.5" />,    color: "#94a3b8" },
 };
+
+function getToolCfg(name: string) {
+  if (TOOL_CONFIG[name]) return TOOL_CONFIG[name];
+  const key = Object.keys(TOOL_CONFIG).find((k) => name.includes(k) || k.includes(name));
+  return key ? TOOL_CONFIG[key] : { icon: <Search className="h-3.5 w-3.5" />, color: "#64748b" };
+}
 
 export function ToolCallCard({ name, detail, status, done }: { name: string; detail?: string; status?: "running" | "done"; done?: boolean }) {
   const isDone = done ?? status === "done";
+  const cfg = getToolCfg(name);
+
   return (
     <motion.div
-      initial={{ opacity: 0, x: -4 }}
-      animate={{ opacity: 1, x: 0 }}
-      className="flex items-center gap-2.5 rounded-lg px-3 py-2 text-sm mb-1.5 mx-4"
-      style={{ background: "#1e293b", border: "1px solid #334155" }}
+      initial={{ opacity: 0, x: -6, scale: 0.97 }}
+      animate={{ opacity: 1, x: 0, scale: 1 }}
+      transition={{ duration: 0.18 }}
+      className="flex items-center gap-2.5 rounded-lg px-3 py-2 mb-1.5 mx-4 overflow-hidden relative"
+      style={{
+        background: isDone ? "#0f172a" : "#0d1117",
+        border: `1px solid ${isDone ? "#1e293b" : cfg.color + "50"}`,
+        boxShadow: isDone ? "none" : `inset 0 0 24px ${cfg.color}0a`,
+      }}
     >
-      <Wrench className="h-3.5 w-3.5 shrink-0" style={{ color: "#475569" }} />
-      <span className="font-medium text-xs shrink-0" style={{ color: "#cbd5e1" }}>
+      {/* Animated left accent */}
+      <motion.div
+        className="absolute left-0 top-0 bottom-0 w-[2px] rounded-full"
+        style={{ background: isDone ? "#1e293b" : cfg.color }}
+        animate={isDone ? {} : { opacity: [0.5, 1, 0.5] }}
+        transition={{ duration: 1.4, repeat: Infinity, ease: "easeInOut" }}
+      />
+
+      {/* Icon */}
+      <span className="shrink-0 ml-1.5" style={{ color: isDone ? "#334155" : cfg.color }}>
+        {cfg.icon}
+      </span>
+
+      {/* Label */}
+      <span className="text-xs font-medium shrink-0" style={{ color: isDone ? "#475569" : "#e2e8f0" }}>
         {name}
       </span>
+
+      {/* Detail */}
       {detail && (
-        <span className="font-mono text-xs truncate flex-1" style={{ color: "#475569" }}>
+        <span className="font-mono text-xs truncate flex-1" style={{ color: isDone ? "#1e293b" : "#475569" }}>
           {detail}
         </span>
       )}
-      {isDone ? (
-        <CheckCircle2 className="h-3.5 w-3.5 shrink-0" style={{ color: "#10b981" }} />
-      ) : (
-        <Loader2 className="h-3.5 w-3.5 shrink-0 animate-spin" style={{ color: "#475569" }} />
-      )}
+
+      {/* Status */}
+      <span className="shrink-0 ml-auto">
+        {isDone ? (
+          <CheckCircle2 className="h-3.5 w-3.5" style={{ color: "#10b981" }} />
+        ) : (
+          <Loader2 className="h-3.5 w-3.5 animate-spin" style={{ color: cfg.color }} />
+        )}
+      </span>
     </motion.div>
   );
 }

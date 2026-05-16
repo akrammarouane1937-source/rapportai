@@ -17,6 +17,7 @@ export default function Step3() {
   const { generate, abort, isGenerating, toolCalls, streamedContent, thinkingText, error } = useGenerate();
   const [phase, setPhase] = useState<Phase>("dedicaces");
   const [dedicacesPrompt, setDedicacesPrompt] = useState("");
+  const [remPromptOverride, setRemPromptOverride] = useState("");
   const [msgs, setMsgs] = useState<Msg[]>([
     {
       role: "agent",
@@ -36,6 +37,17 @@ export default function Step3() {
     const isAI = /^(ia|ai|génère|genere|auto|automatique)$/i.test(t) || !t;
 
     if (phase === "dedicaces") {
+      // If the user is already talking about remerciements, route it there
+      const isAboutRem = /remerci/i.test(t);
+      if (isAboutRem) {
+        push(
+          { role: "user", content: t },
+          { role: "agent", content: `Noté — j'ajouterai ça dans les remerciements. Et pour les dédicaces, à qui tu veux dédier ton travail ? (ou "IA" pour automatique)` }
+        );
+        setDedicacesPrompt("");
+        setRemPromptOverride(t);
+        return;
+      }
       setDedicacesPrompt(isAI ? "" : t);
       push(
         { role: "user", content: t || "Laisser l'IA décider" },
@@ -44,21 +56,19 @@ export default function Step3() {
       setPhase("remerciements");
     } else if (phase === "remerciements") {
       const remPrompt = isAI ? "" : t;
+      // Merge any earlier remerciements-specific text the user gave during the dédicaces step
+      const finalRemPrompt = [remPromptOverride, remPrompt].filter(Boolean).join(" — ") || undefined;
       push({ role: "user", content: t || "Laisser l'IA décider" });
       push({ role: "agent", content: "Je génère tes dédicaces et remerciements..." });
       setPhase("generating");
-      const dedicaces = await generate(
-        "dedicaces",
-        report,
-        [dedicacesPrompt, remPrompt].filter(Boolean).join(" | Remerciements: ")
-      );
+      const dedicaces = await generate("dedicaces", report, dedicacesPrompt || undefined);
       if (!dedicaces) {
         push({ role: "agent", content: "❌ Génération échouée. Vérifie ta connexion et réessaie." });
         setPhase("remerciements");
         return;
       }
       updateReport({ dedicaces });
-      const remerciements = await generate("remerciements", { ...report, dedicaces }, remPrompt || undefined);
+      const remerciements = await generate("remerciements", { ...report, dedicaces }, finalRemPrompt);
       if (remerciements) updateReport({ remerciements });
       push({ role: "agent", content: "Dédicaces et remerciements rédigés ✅" });
       setPhase("done");
