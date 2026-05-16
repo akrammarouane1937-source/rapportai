@@ -24,7 +24,7 @@ export const SECTION_CONFIGS: Record<string, SectionConfig> = {
 
   dedicaces: {
     skillsFile:   "dedicaces-skills.md",
-    maxTurns:     8,
+    maxTurns:     12,
     dependencies: ["generation_context.md"],
     allowedTools: ["Read", "Write", "Glob"],
     description:  "Rédaction des dédicaces",
@@ -32,7 +32,7 @@ export const SECTION_CONFIGS: Record<string, SectionConfig> = {
 
   remerciements: {
     skillsFile:   "remerciements-skills.md",
-    maxTurns:     8,
+    maxTurns:     12,
     dependencies: ["generation_context.md"],
     allowedTools: ["Read", "Write", "Glob"],
     description:  "Rédaction des remerciements",
@@ -40,7 +40,7 @@ export const SECTION_CONFIGS: Record<string, SectionConfig> = {
 
   resume: {
     skillsFile:   "resume-skills.md",
-    maxTurns:     8,
+    maxTurns:     14,
     dependencies: ["generation_context.md", "introduction.md"],
     allowedTools: ["Read", "Write", "Glob"],
     description:  "Rédaction du résumé et abstract",
