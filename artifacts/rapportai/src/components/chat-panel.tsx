@@ -70,29 +70,27 @@ const TOOL_LABELS: Record<string, string> = {
 };
 
 export function ToolCallCard({ name, status }: { name: string; status: "running" | "done" }) {
-  const label = TOOL_LABELS[name] || name;
-
   return (
     <motion.div
-      initial={{ opacity: 0, x: -8 }}
+      initial={{ opacity: 0, x: -6 }}
       animate={{ opacity: 1, x: 0 }}
-      className="flex items-center gap-2 ml-10 mb-2 px-4"
+      className="flex items-center gap-2.5 ml-10 mb-1.5 px-4"
     >
-      <div
-        className="flex items-center gap-2 px-3 py-1.5 rounded-full text-xs font-medium"
-        style={{
-          background: status === "done" ? "#14532d22" : "#7c3aed15",
-          border: `1px solid ${status === "done" ? "#16a34a33" : "#7c3aed33"}`,
-          color: status === "done" ? "#4ade80" : "#a78bfa",
-        }}
-      >
+      {/* Status icon */}
+      <div className="shrink-0 w-4 h-4 flex items-center justify-center">
         {status === "running" ? (
-          <div className="w-3 h-3 rounded-full border border-violet-400 border-t-transparent animate-spin" />
+          <div className="w-3.5 h-3.5 rounded-full border-2 border-t-transparent animate-spin" style={{ borderColor: "#7c3aed55", borderTopColor: "transparent" }} />
         ) : (
-          <CheckCircle2 className="w-3 h-3" />
+          <CheckCircle2 className="w-3.5 h-3.5" style={{ color: "#22c55e" }} />
         )}
-        {label}
       </div>
+      {/* Step text */}
+      <span
+        className="text-xs"
+        style={{ color: status === "done" ? "#4b5563" : "#94a3b8" }}
+      >
+        {name}
+      </span>
     </motion.div>
   );
 }

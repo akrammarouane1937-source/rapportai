@@ -161,28 +161,30 @@ export function useGenerate() {
                 const data = JSON.parse(part.slice(6));
                 if (data.error) throw new Error(data.error);
                 if (data.content) {
+                  // First content chunk = all tool calls are done
+                  setToolCalls((prev) => prev.map((tc) => ({ ...tc, status: "done" as const })));
                   finalContent += data.content;
                   setStreamedContent((prev) => prev + data.content);
                 }
                 if (data.updatedContent) {
+                  setToolCalls((prev) => prev.map((tc) => ({ ...tc, status: "done" as const })));
                   finalContent = data.updatedContent;
                   setStreamedContent(data.updatedContent);
                 }
                 if (data.tool_call) {
                   const label = getToolLabel(data.tool_call.name ?? data.tool_call);
-                  const status: "running" | "done" = data.tool_call.status ?? "running";
+                  // Backend sends tool name as string — mark previous same-name call done, add new running one
                   setToolCalls((prev) => {
-                    const idx = prev.findIndex((tc) => tc.name === label);
-                    const entry = { name: label, status };
-                    if (idx !== -1) {
-                      const updated = [...prev];
-                      updated[idx] = entry;
-                      return updated;
-                    }
-                    return [...prev, entry];
+                    const marked = prev.map((tc) =>
+                      tc.status === "running" ? { ...tc, status: "done" as const } : tc
+                    );
+                    return [...marked, { name: label, status: "running" as const }];
                   });
                 }
-                if (data.done) done = true;
+                if (data.done) {
+                  setToolCalls((prev) => prev.map((tc) => ({ ...tc, status: "done" as const })));
+                  done = true;
+                }
               } catch (parseErr) {
                 if (parseErr instanceof Error && parseErr.message !== "JSON parse") {
                   throw parseErr;
