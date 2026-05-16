@@ -12,6 +12,7 @@ import humanizeRouter from "./humanize";
 import logoRouter from "./logo";
 import sdkTestRouter from "./sdk-test";
 import plagiatRouter from "./plagiat";
+import converseRouter from "./converse";
 // ─── Section agents (each has explicit system prompt + tools) ─────────────────
 import introductionRouter from "./introduction";
 import dedicacesRouter from "./dedicaces";
@@ -38,6 +39,7 @@ router.use(humanizeRouter);
 router.use(logoRouter);
 router.use(sdkTestRouter);
 router.use(plagiatRouter);
+router.use(converseRouter);
 // Section agents
 router.use(introductionRouter);
 router.use(dedicacesRouter);

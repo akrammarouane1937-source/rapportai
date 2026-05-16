@@ -1,18 +1,14 @@
 import { useState, useRef, useEffect } from "react";
-import { useLocation } from "wouter";
+import { useReportStore } from "@/lib/store";
+import { useConversation } from "@/hooks/use-conversation";
 import { Layout } from "@/components/layout";
 import { ChatMessage, ToolCallCard, ThinkingCard } from "@/components/chat-panel";
 import { PreviewPanel } from "@/components/preview-panel";
 import { ChatInput } from "@/components/chat-input";
-import { useReportStore } from "@/lib/store";
-import { useGenerate } from "@/hooks/use-generate";
 import { Download, Share2, Loader2, CheckCircle2 } from "lucide-react";
 import { generateDocx, downloadBlob } from "@/lib/generateDocx";
 import { generatePdf } from "@/lib/generatePdf";
 import { API_BASE } from "@/lib/apiBase";
-
-type Phase = "apports" | "perspectives" | "generating_conclusion" | "generating_abbrevs" | "done";
-type Msg = { role: "agent" | "user"; content: React.ReactNode };
 
 function totalWords(r: ReturnType<typeof useReportStore>["report"]) {
   return [r.dedicaces, r.remerciements, r.resumeFr, r.abstractEn, r.introduction, r.partieI, r.partieII, r.conclusion]
@@ -21,126 +17,40 @@ function totalWords(r: ReturnType<typeof useReportStore>["report"]) {
 
 export default function Step9() {
   const { report, updateReport } = useReportStore();
-  const { generate, abort, isGenerating, toolCalls, streamedContent, thinkingText } = useGenerate();
-  const [phase, setPhase] = useState<Phase>("apports");
   const [exporting, setExporting] = useState(false);
   const [sharing, setSharing] = useState(false);
   const [shareUrl, setShareUrl] = useState<string | null>(null);
   const [exported, setExported] = useState(false);
+  const [exportDone, setExportDone] = useState(false);
+  const bottomRef = useRef<HTMLDivElement>(null);
+
   const wc = totalWords(report);
   const pages = Math.max(1, Math.round(wc / 250));
 
-  const [msgs, setMsgs] = useState<Msg[]>([
-    {
-      role: "agent",
-      content: (
-        <div>
-          <p>Dernière étape 🎯 Ton rapport est presque complet.</p>
-          {wc > 0 && (
-            <div className="mt-2 p-3 rounded-lg bg-muted text-sm grid grid-cols-2 gap-2">
-              <div><span className="font-semibold">{wc.toLocaleString("fr-FR")}</span> mots</div>
-              <div><span className="font-semibold">~{pages}</span> pages</div>
-            </div>
-          )}
-          <p className="mt-3">Tu veux mentionner des apports ou limites spécifiques ? (ou tape "génère" pour que l'IA s'en charge)</p>
-        </div>
-      ),
+  const wordSummary = wc > 0
+    ? `\n\nTon rapport : **${wc.toLocaleString("fr-FR")} mots** (~${pages} pages).`
+    : "";
+
+  const { messages, send, abort, isThinking, isGenerating, toolCalls, thinkingText } = useConversation({
+    step: 9,
+    initialMessage: `Dernière étape 🎯 Ton rapport est presque complet.${wordSummary}\n\nTu veux mentionner des apports ou limites spécifiques ? (ou tape "génère" pour que l'IA s'en charge)`,
+    onSectionGenerated: (section, content) => {
+      if (section === "conclusion") updateReport({ conclusion: content });
+      if (section === "abbreviations") {
+        try {
+          // The agent returns raw JSON — extract it from the markdown if wrapped
+          const jsonMatch = content.match(/\[[\s\S]*\]/);
+          const parsed = JSON.parse(jsonMatch ? jsonMatch[0] : content);
+          if (Array.isArray(parsed)) updateReport({ abreviations: parsed, abbreviationsGenerated: true });
+        } catch { /* malformed JSON — ignore */ }
+      }
     },
-  ]);
-  const bottomRef = useRef<HTMLDivElement>(null);
+    onStepComplete: () => setExportDone(true),
+  });
 
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: "smooth" });
-  }, [msgs, toolCalls, isGenerating]);
-
-  const push = (...m: Msg[]) => setMsgs((p) => [...p, ...m]);
-
-  const handleSend = async (text: string) => {
-    const t = text.trim();
-    const auto = /^(génère|genere|auto|ia|ai|non|passer)$/i.test(t) || !t;
-
-    if (phase === "apports") {
-      if (!auto) updateReport({ checkpoints: { ...report.checkpoints, apports: t } });
-      push(
-        { role: "user", content: auto ? "Laisser l'IA générer" : t },
-        { role: "agent", content: "Des perspectives futures à inclure ? (ou 'génère' pour laisser l'IA)" }
-      );
-      setPhase("perspectives");
-    } else if (phase === "perspectives") {
-      const perspectives = auto ? "" : t;
-      push(
-        { role: "user", content: auto ? "Laisser l'IA générer" : t },
-        { role: "agent", content: "Je génère la conclusion en synthétisant tout ton rapport..." }
-      );
-      setPhase("generating_conclusion");
-      const prompt = [
-        report.checkpoints?.apports ? `Apports: ${report.checkpoints.apports}` : "",
-        perspectives ? `Perspectives: ${perspectives}` : "",
-      ].filter(Boolean).join(" | ") || undefined;
-      const finalConclusion = await generate("conclusion", report, prompt);
-      updateReport({ conclusion: finalConclusion });
-      push({
-        role: "agent",
-        content: (
-          <div>
-            <p>Conclusion générée ✅</p>
-            <div className="mt-2 p-3 rounded-lg bg-muted text-sm">
-              <span className="font-semibold">{finalConclusion.split(/\s+/).filter(Boolean).length.toLocaleString("fr-FR")} mots</span>
-            </div>
-          </div>
-        ),
-      });
-      // Auto-trigger abbreviation agent
-      push({
-        role: "agent",
-        content: (
-          <div>
-            <p>🔔 Je génère maintenant ta liste des abréviations. Je lis tout le rapport et recherche chaque terme...</p>
-          </div>
-        ),
-      });
-      setPhase("generating_abbrevs");
-      const abbrevRaw = await generate("abbreviations", { ...report, conclusion: finalConclusion });
-      try {
-        const parsed = JSON.parse(abbrevRaw);
-        if (Array.isArray(parsed)) {
-          updateReport({ abreviations: parsed, abbreviationsGenerated: true });
-          push({
-            role: "agent",
-            content: (
-              <div>
-                <p>Liste des abréviations complète ✅</p>
-                <div className="mt-2 space-y-1">
-                  {parsed.map((a: { abbr: string; sig: string }) => (
-                    <div key={a.abbr} className="flex gap-2 text-sm">
-                      <span className="font-semibold w-16 flex-shrink-0">{a.abbr}</span>
-                      <span className="text-muted-foreground">— {a.sig}</span>
-                    </div>
-                  ))}
-                </div>
-                <p className="mt-3 text-sm">Tu veux modifier quelque chose ou ajouter une abréviation ?</p>
-              </div>
-            ),
-          });
-        } else {
-          throw new Error("not array");
-        }
-      } catch {
-        push({ role: "agent", content: "Abréviations générées ✅ Ton rapport est prêt à exporter." });
-      }
-      setPhase("done");
-    } else if (phase === "done") {
-      push({ role: "user", content: t });
-      push({ role: "agent", content: "Je révise..." });
-      const conclusion = await generate("conclusion", report, t);
-      if (conclusion) {
-        updateReport({ conclusion });
-        push({ role: "agent", content: "Section mise à jour ✅" });
-      } else {
-        push({ role: "agent", content: "❌ Révision échouée. Réessaie." });
-      }
-    }
-  };
+  }, [messages, toolCalls, isThinking, isGenerating, exportDone]);
 
   const handleExportDocx = async () => {
     if (exporting) return;
@@ -175,27 +85,17 @@ export default function Step9() {
     }
   };
 
-  const previewContent = report.conclusion || streamedContent;
-
   return (
-    <Layout
-      stepName="Conclusion & Export"
-      stepNumber={9}
-      previewPanel={<PreviewPanel activeSection="conclusion" content={previewContent} />}
+    <Layout stepName="Conclusion & Export" stepNumber={9}
+      previewPanel={<PreviewPanel activeSection="conclusion" content={report.conclusion ?? ""} />}
     >
       <div className="flex-1 overflow-y-auto py-4 px-2 md:py-5 md:px-3">
-        {msgs.map((m, i) => <ChatMessage key={i} role={m.role} content={m.content} />)}
+        {messages.map((m) => <ChatMessage key={m.id} role={m.role} content={m.content} />)}
         {thinkingText && <ThinkingCard text={thinkingText} streaming={isGenerating} />}
-        {toolCalls.map((tc, i) => <ToolCallCard key={tc.id} name={tc.name} detail={tc.detail} done={tc.done} />)}
-        {isGenerating && (
-          <ChatMessage
-            role="agent"
-            content={phase === "generating_abbrevs" ? "Recherche des abréviations..." : "Rédaction de la conclusion..."}
-            isTyping
-          />
-        )}
+        {toolCalls.map((tc) => <ToolCallCard key={tc.id} name={tc.name} detail={tc.detail} done={tc.done} />)}
+        {(isThinking || isGenerating) && <ChatMessage role="agent" content="" isTyping />}
 
-        {phase === "done" && !isGenerating && (
+        {exportDone && !isThinking && !isGenerating && (
           <div className="ml-11 mb-6 space-y-3">
             <div className="p-4 rounded-xl border border-primary/20 bg-background">
               <p className="text-sm font-semibold text-foreground mb-3">Ton rapport est prêt 🎉</p>
@@ -210,7 +110,7 @@ export default function Step9() {
                   {exporting ? "Export..." : exported ? "Téléchargé !" : "Word .docx"}
                 </button>
                 <button
-                  onClick={() => { generatePdf(report as any); }}
+                  onClick={() => generatePdf(report as any)}
                   className="flex-1 h-11 rounded-xl font-bold text-sm flex items-center justify-center gap-2 text-white transition-all"
                   style={{ background: "linear-gradient(135deg, #dc2626, #b91c1c)", boxShadow: "0 4px 16px rgba(220,38,38,0.35)" }}
                 >
@@ -234,14 +134,12 @@ export default function Step9() {
         <div ref={bottomRef} />
       </div>
       <div className="shrink-0 border-t" style={{ borderColor: "#1e293b" }}>
-        <ChatInput isGenerating={isGenerating} onAbort={abort}
-          onSend={handleSend}
-          disabled={isGenerating || phase === "generating_conclusion" || phase === "generating_abbrevs"}
-          placeholder={
-            phase === "apports" ? "Apports et limites (ou 'génère')..." :
-            phase === "perspectives" ? "Perspectives futures (ou 'génère')..." :
-            phase === "done" ? "Demander une modification..." : ""
-          }
+        <ChatInput
+          isGenerating={isThinking || isGenerating}
+          onAbort={abort}
+          onSend={send}
+          disabled={isThinking || isGenerating}
+          placeholder={exportDone ? "Demander une modification..." : "Réponds naturellement..."}
         />
       </div>
     </Layout>

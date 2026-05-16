@@ -5,67 +5,38 @@ import { ChatMessage, ToolCallCard, StepTransitionCard, ThinkingCard } from "@/c
 import { PreviewPanel } from "@/components/preview-panel";
 import { ChatInput } from "@/components/chat-input";
 import { useReportStore } from "@/lib/store";
-import { useGenerate } from "@/hooks/use-generate";
-
-type Msg = { role: "agent" | "user"; content: React.ReactNode };
+import { useConversation } from "@/hooks/use-conversation";
 
 export default function Step5() {
   const [, setLocation] = useLocation();
   const { report, updateReport } = useReportStore();
-  const { generate, abort, isGenerating, toolCalls, streamedContent, thinkingText } = useGenerate();
-  const [generated, setGenerated] = useState(!!report.sommaire);
-  const [msgs, setMsgs] = useState<Msg[]>([
-    { role: "agent", content: "Je génère le sommaire depuis la structure standard de ton rapport. Un instant..." },
-  ]);
+  const [stepDone, setStepDone] = useState(false);
   const bottomRef = useRef<HTMLDivElement>(null);
-  const didGenerate = useRef(false);
+
+  const { messages, send, abort, isThinking, isGenerating, toolCalls, thinkingText } = useConversation({
+    step: 5,
+    initialMessage: "Je génère le sommaire de ton rapport...",
+    autoSend: "Génère le sommaire maintenant.",
+    onSectionGenerated: (section, content) => {
+      if (section === "sommaire") updateReport({ sommaire: content });
+    },
+    onStepComplete: () => setStepDone(true),
+  });
 
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: "smooth" });
-  }, [msgs, toolCalls, isGenerating]);
-
-  useEffect(() => {
-    if (!didGenerate.current && !report.sommaire) {
-      didGenerate.current = true;
-      generate("sommaire", report).then((sommaire) => {
-        if (sommaire) updateReport({ sommaire });
-        setGenerated(true);
-        setMsgs((p) => [...p, {
-          role: "agent",
-          content: sommaire ? "Sommaire prêt ✅ Tu peux me demander des modifications." : "❌ Génération échouée. Réessaie.",
-        }]);
-      });
-    } else if (report.sommaire && !generated) {
-      setGenerated(true);
-      setMsgs((p) => [...p, { role: "agent", content: "Sommaire déjà disponible ✅ Tu peux me demander des modifications." }]);
-    }
-  }, []);
-
-  const handleSend = async (text: string) => {
-    const t = text.trim();
-    setMsgs((p) => [...p, { role: "user", content: t }]);
-    setMsgs((p) => [...p, { role: "agent", content: "Je mets à jour le sommaire..." }]);
-    const sommaire = await generate("sommaire", report, t);
-    if (sommaire) {
-      updateReport({ sommaire });
-      setMsgs((p) => [...p, { role: "agent", content: "Sommaire mis à jour ✅" }]);
-    } else {
-      setMsgs((p) => [...p, { role: "agent", content: "❌ Mise à jour échouée. Réessaie." }]);
-    }
-  };
+  }, [messages, toolCalls, isThinking, isGenerating]);
 
   return (
-    <Layout
-      stepName="Sommaire"
-      stepNumber={5}
-      previewPanel={<PreviewPanel activeSection="sommaire" content={report.sommaire || streamedContent} />}
+    <Layout stepName="Sommaire" stepNumber={5}
+      previewPanel={<PreviewPanel activeSection="sommaire" content={report.sommaire ?? ""} />}
     >
       <div className="flex-1 overflow-y-auto py-4 px-2 md:py-5 md:px-3">
-        {msgs.map((m, i) => <ChatMessage key={i} role={m.role} content={m.content} />)}
+        {messages.map((m) => <ChatMessage key={m.id} role={m.role} content={m.content} />)}
         {thinkingText && <ThinkingCard text={thinkingText} streaming={isGenerating} />}
-        {toolCalls.map((tc, i) => <ToolCallCard key={tc.id} name={tc.name} detail={tc.detail} done={tc.done} />)}
-        {isGenerating && <ChatMessage role="agent" content="Génération du sommaire..." isTyping />}
-        {generated && !isGenerating && (
+        {toolCalls.map((tc) => <ToolCallCard key={tc.id} name={tc.name} detail={tc.detail} done={tc.done} />)}
+        {(isThinking || isGenerating) && <ChatMessage role="agent" content="" isTyping />}
+        {stepDone && !isThinking && !isGenerating && (
           <StepTransitionCard
             title="Sommaire prêt"
             subtitle="On passe à l'introduction générale."
@@ -76,10 +47,12 @@ export default function Step5() {
         <div ref={bottomRef} />
       </div>
       <div className="shrink-0 border-t" style={{ borderColor: "#1e293b" }}>
-        <ChatInput isGenerating={isGenerating} onAbort={abort}
-          onSend={handleSend}
-          disabled={isGenerating || !generated}
-          placeholder="Modifier le sommaire..."
+        <ChatInput
+          isGenerating={isThinking || isGenerating}
+          onAbort={abort}
+          onSend={send}
+          disabled={isThinking || isGenerating}
+          placeholder="Demander une modification du sommaire..."
         />
       </div>
     </Layout>
