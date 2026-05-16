@@ -337,8 +337,9 @@ Enregistre dans page-de-garde.md.`;
           ? `\n\nDemande spécifique de l'étudiant(e) — respecte-la impérativement, préserve chaque nom mentionné :\n"""\n${opts.extraContext}\n"""`
           : "";
         return `${docNote}Lis profile.json.${dedicacesExtra}
+IMPORTANT : Ne lis PAS dedicaces.md s'il existe — génère un texte entièrement nouveau from scratch.
 Rédige les Dédicaces (8–20 lignes, style lyrique et sobre).
-Enregistre dans dedicaces.md.`;
+Utilise Write pour écrire dedicaces.md (écrase tout contenu précédent).`;
       }
 
       case "remerciements": {
@@ -346,10 +347,11 @@ Enregistre dans dedicaces.md.`;
           ? `\n\nDemande spécifique de l'étudiant(e) — intègre TOUS les noms et éléments mentionnés :\n"""\n${opts.extraContext}\n"""`
           : "";
         return `${docNote}Lis profile.json pour les noms et titres des encadrants.${remExtra}
+IMPORTANT : Ne lis PAS remerciements.md s'il existe — génère un texte entièrement nouveau from scratch.
 Rédige les Remerciements (200–350 mots, ton formel et sincère).
 Respecte l'ordre : encadrant pédagogique → encadrant professionnel → école → famille → amis si mentionnés.
 Varie les formules d'ouverture de chaque paragraphe.
-Enregistre dans remerciements.md.`;
+Utilise Write pour écrire remerciements.md (écrase tout contenu précédent).`;
       }
 
       case "abbreviations":
