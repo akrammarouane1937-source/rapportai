@@ -16,7 +16,7 @@ export const SECTION_CONFIGS: Record<string, SectionConfig> = {
 
   sommaire: {
     skillsFile:   "sommaire-skills.md",
-    maxTurns:     10,
+    maxTurns:     30,
     dependencies: ["generation_context.md"],
     allowedTools: ["Read", "Write", "Glob"],
     description:  "Génération du plan et du sommaire",
@@ -24,7 +24,7 @@ export const SECTION_CONFIGS: Record<string, SectionConfig> = {
 
   dedicaces: {
     skillsFile:   "dedicaces-skills.md",
-    maxTurns:     12,
+    maxTurns:     30,
     dependencies: ["generation_context.md"],
     allowedTools: ["Read", "Write", "Glob"],
     description:  "Rédaction des dédicaces",
@@ -32,7 +32,7 @@ export const SECTION_CONFIGS: Record<string, SectionConfig> = {
 
   remerciements: {
     skillsFile:   "remerciements-skills.md",
-    maxTurns:     12,
+    maxTurns:     30,
     dependencies: ["generation_context.md"],
     allowedTools: ["Read", "Write", "Glob"],
     description:  "Rédaction des remerciements",
@@ -40,7 +40,7 @@ export const SECTION_CONFIGS: Record<string, SectionConfig> = {
 
   resume: {
     skillsFile:   "resume-skills.md",
-    maxTurns:     14,
+    maxTurns:     30,
     dependencies: ["generation_context.md", "introduction.md"],
     allowedTools: ["Read", "Write", "Glob"],
     description:  "Rédaction du résumé et abstract",
@@ -48,7 +48,7 @@ export const SECTION_CONFIGS: Record<string, SectionConfig> = {
 
   introduction: {
     skillsFile:   "introduction-skills.md",
-    maxTurns:     10,
+    maxTurns:     30,
     dependencies: ["generation_context.md"],
     allowedTools: ["Read", "Write", "Glob"],
     description:  "Rédaction de l'introduction générale",
@@ -56,7 +56,7 @@ export const SECTION_CONFIGS: Record<string, SectionConfig> = {
 
   "partie-i": {
     skillsFile:   "partie-i-skills.md",
-    maxTurns:     20,
+    maxTurns:     50,
     dependencies: ["generation_context.md", "sommaire.md", "introduction.md"],
     allowedTools: ["Read", "Write", "Edit", "Bash", "Glob", "Grep", "WebFetch", "WebSearch"],
     description:  "Rédaction du cadre théorique (Partie I)",
@@ -64,7 +64,7 @@ export const SECTION_CONFIGS: Record<string, SectionConfig> = {
 
   "partie-ii": {
     skillsFile:   "partie-ii-skills.md",
-    maxTurns:     20,
+    maxTurns:     50,
     dependencies: ["generation_context.md", "sommaire.md", "introduction.md", "partie-i.md"],
     allowedTools: ["Read", "Write", "Edit", "Bash", "Glob", "Grep", "WebFetch", "WebSearch"],
     description:  "Rédaction de l'étude empirique (Partie II)",
@@ -72,7 +72,7 @@ export const SECTION_CONFIGS: Record<string, SectionConfig> = {
 
   conclusion: {
     skillsFile:   "conclusion-skills.md",
-    maxTurns:     12,
+    maxTurns:     30,
     dependencies: ["generation_context.md", "introduction.md", "partie-i.md", "partie-ii.md"],
     allowedTools: ["Read", "Write", "Edit", "Bash", "Glob"],
     description:  "Rédaction de la conclusion générale",
@@ -80,7 +80,7 @@ export const SECTION_CONFIGS: Record<string, SectionConfig> = {
 
   bibliographie: {
     skillsFile:   "bibliographie-skills.md",
-    maxTurns:     8,
+    maxTurns:     30,
     dependencies: ["generation_context.md", "introduction.md", "partie-i.md", "partie-ii.md", "conclusion.md"],
     allowedTools: ["Read", "Write", "Glob", "Grep", "WebFetch", "WebSearch"],
     description:  "Génération de la bibliographie",
@@ -88,7 +88,7 @@ export const SECTION_CONFIGS: Record<string, SectionConfig> = {
 
   abbreviations: {
     skillsFile:   "abbreviations-skills.md",
-    maxTurns:     10,
+    maxTurns:     30,
     dependencies: ["introduction.md", "partie-i.md", "partie-ii.md", "conclusion.md"],
     allowedTools: ["Read", "Write", "Glob"],
     description:  "Extraction des abréviations et sigles",
