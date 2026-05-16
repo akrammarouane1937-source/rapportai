@@ -13,7 +13,7 @@ type Msg = { role: "agent" | "user"; content: React.ReactNode };
 export default function Step4() {
   const [, setLocation] = useLocation();
   const { report, updateReport } = useReportStore();
-  const { generate, isGenerating, toolCalls, streamedContent } = useGenerate();
+  const { generate, isGenerating, toolCalls, streamedContent, error } = useGenerate();
   const [phase, setPhase] = useState<Phase>("motsCles");
   const [msgs, setMsgs] = useState<Msg[]>([
     {
@@ -93,6 +93,7 @@ export default function Step4() {
         {msgs.map((m, i) => <ChatMessage key={i} role={m.role} content={m.content} />)}
         {toolCalls.map((tc, i) => <ToolCallCard key={i} name={tc.name} status={tc.status} />)}
         {isGenerating && <ChatMessage role="agent" content="Génération en cours..." isTyping />}
+        {error && !isGenerating && <ChatMessage role="agent" content={`❌ Erreur serveur : ${error}`} />}
         {phase === "done" && !isGenerating && (
           <StepTransitionCard
             title="Résumé & Abstract prêts"

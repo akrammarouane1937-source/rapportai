@@ -113,28 +113,30 @@ export function useGenerate() {
 
         let response: Response;
 
-        if (allFiles.length > 0) {
-          const form = new FormData();
-          form.append("section", section);
-          form.append("reportData", JSON.stringify(reportData));
-          if (extraPrompt) form.append("prompt", extraPrompt);
-          for (const file of allFiles) {
-            form.append("files", file, file.name);
+        const makeRequest = (sid: string) => {
+          if (allFiles.length > 0) {
+            const form = new FormData();
+            form.append("section", section);
+            form.append("reportData", JSON.stringify(reportData));
+            if (extraPrompt) form.append("prompt", extraPrompt);
+            for (const file of allFiles) form.append("files", file, file.name);
+            return fetch(`${API_BASE}/api/session/${sid}/generate`, { method: "POST", body: form });
           }
-          response = await fetch(`${API_BASE}/api/session/${sessionId}/generate`, {
-            method: "POST",
-            body: form,
-          });
-        } else {
-          response = await fetch(`${API_BASE}/api/session/${sessionId}/generate`, {
+          return fetch(`${API_BASE}/api/session/${sid}/generate`, {
             method: "POST",
             headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({
-              section,
-              ...reportData,
-              prompt: extraPrompt,
-            }),
+            body: JSON.stringify({ section, ...reportData, prompt: extraPrompt }),
           });
+        };
+
+        response = await makeRequest(sessionId);
+
+        // Session expired on server — clear cache and retry once with a fresh session
+        if (response.status === 404) {
+          localStorage.removeItem(SESSION_KEY);
+          localStorage.removeItem(SESSION_TS_KEY);
+          const newId = await getOrCreateSession();
+          response = await makeRequest(newId);
         }
 
         if (!response.ok) throw new Error(`HTTP ${response.status}`);
