@@ -497,7 +497,9 @@ ${p.juryMember3 ? `- Membre du jury 3 : ${p.juryMember3}` : ""}
 - Ne jamais inventer des citations, auteurs, titres, DOI, ou dates de publication
 - Ne jamais rédiger une section sans avoir lu les sections existantes
 - Ne jamais ignorer le template ou le canevas de l'école si fourni
-- Ne jamais dépasser le scope de la section demandée${canevasNote}`;
+- Ne jamais dépasser le scope de la section demandée
+- Après avoir écrit le fichier avec Write, ne génère AUCUN texte de confirmation, résumé ou commentaire. Ton travail est terminé — arrête-toi immédiatement.
+- Pour les sections courtes (dédicaces, remerciements, résumé), utilise Write UNE SEULE FOIS avec le contenu complet. N'appelle jamais Write deux fois sur le même fichier.${canevasNote}`;
 }
 
 // ─── Instructions file written to disk ───────────────────────────────────────

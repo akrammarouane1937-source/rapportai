@@ -64,20 +64,26 @@ export default function Step3() {
       setPhase("done");
     } else if (phase === "done") {
       push({ role: "user", content: t });
-      push({ role: "agent", content: "Je révise..." });
-      const revised = await generate("dedicaces", report, t);
+      const targetSection = /remerci/i.test(t) ? "remerciements" : "dedicaces";
+      const sectionLabel = targetSection === "remerciements" ? "remerciements" : "dédicaces";
+      push({ role: "agent", content: `Je révise les ${sectionLabel}...` });
+      const revised = await generate(targetSection, report, t);
       if (revised) {
-        updateReport({ dedicaces: revised });
-        push({ role: "agent", content: "Section mise à jour ✅" });
+        updateReport(targetSection === "remerciements" ? { remerciements: revised } : { dedicaces: revised });
+        push({ role: "agent", content: `${sectionLabel.charAt(0).toUpperCase() + sectionLabel.slice(1)} mis à jour ✅` });
       } else {
         push({ role: "agent", content: "❌ Révision échouée. Réessaie." });
       }
     }
   };
 
+  // Strip any leading title the agent may have included (e.g. "Dédicaces\n" or "# Remerciements")
+  const stripTitle = (text: string, title: string) =>
+    text.replace(new RegExp(`^#{0,3}\\s*${title}\\s*\\n+`, "i"), "").trim();
+
   const previewContent =
-    (report.dedicaces ? `## Dédicaces\n\n${report.dedicaces}\n\n` : "") +
-    (report.remerciements ? `## Remerciements\n\n${report.remerciements}` : "") ||
+    (report.dedicaces ? `## Dédicaces\n\n${stripTitle(report.dedicaces, "Dédicaces")}\n\n` : "") +
+    (report.remerciements ? `## Remerciements\n\n${stripTitle(report.remerciements, "Remerciements")}` : "") ||
     streamedContent;
 
   return (

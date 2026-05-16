@@ -126,6 +126,10 @@ export function PreviewPanel({ activeSection, content }: PreviewPanelProps) {
             minHeight: "22cm",
             boxShadow: "0 2px 12px rgba(0,0,0,0.15)",
             marginBottom: "0.6cm",
+            fontFamily: "Times New Roman, Times, serif",
+            fontSize: "12pt",
+            lineHeight: "1.5",
+            color: "#111",
           }}
         >
           <ReactMarkdown remarkPlugins={[remarkGfm]}>{pageText}</ReactMarkdown>
