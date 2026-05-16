@@ -38,6 +38,7 @@ const SECTION_IDS = [
   "partie-i",
   "partie-ii",
   "conclusion",
+  "abbreviations",
 ];
 
 // ─── SDKReportAgent ───────────────────────────────────────────────────────────
@@ -280,12 +281,16 @@ Structure : Contexte → Problématique → Objectifs → Structure du rapport.
 Problématique : ${prob}
 Enregistre dans introduction.md.`;
 
-      case "conclusion":
+      case "conclusion": {
+        const conclusionExtra = opts?.extraContext
+          ? `\n\nÉléments spécifiques à intégrer : ${opts.extraContext}`
+          : "";
         return `${docNote}Lis introduction.md, partie-i.md, partie-ii.md (obligatoire).
 Rédige la Conclusion Générale (400–600 mots).
 Structure : Synthèse → Apports → Limites → Perspectives.
-Références directes vers les deux parties.
+Références directes vers les deux parties.${conclusionExtra}
 Enregistre dans conclusion.md.`;
+      }
 
       case "resume":
         return `${docNote}Lis introduction.md si présent.
@@ -354,6 +359,15 @@ Respecte l'ordre : encadrant pédagogique → encadrant professionnel → école
 Varie les formules d'ouverture de chaque paragraphe.
 Enregistre dans remerciements.md.`;
       }
+
+      case "abbreviations":
+        return `${docNote}Lis toutes les sections .md existantes (introduction.md, partie-i.md, partie-ii.md, conclusion.md, resume.md).
+Identifie TOUTES les abréviations, sigles et acronymes utilisés dans le rapport.
+Génère un tableau JSON UNIQUEMENT (sans texte avant/après) avec ce format exact :
+[{"abbr":"OPCVM","sig":"Organisme de Placement Collectif en Valeurs Mobilières"},...]
+Chaque abréviation doit avoir "abbr" (le sigle) et "sig" (la signification complète en français).
+Inclus minimum 10 abréviations. Ne génère AUCUN texte en dehors du JSON.
+Enregistre dans abbreviations.md.`;
 
       default:
         return `${docNote}Rédige la section "${section}" du rapport.${opts?.extraContext ? `\n\nContexte supplémentaire : ${opts.extraContext}` : ""}\nEnregistre dans ${section}.md.`;

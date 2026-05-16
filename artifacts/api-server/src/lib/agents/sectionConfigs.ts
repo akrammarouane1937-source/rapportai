@@ -85,6 +85,14 @@ export const SECTION_CONFIGS: Record<string, SectionConfig> = {
     allowedTools: ["Read", "Write", "Glob", "Grep", "WebFetch", "WebSearch"],
     description:  "Génération de la bibliographie",
   },
+
+  abbreviations: {
+    skillsFile:   "abbreviations-skills.md",
+    maxTurns:     10,
+    dependencies: ["introduction.md", "partie-i.md", "partie-ii.md", "conclusion.md"],
+    allowedTools: ["Read", "Write", "Glob"],
+    description:  "Extraction des abréviations et sigles",
+  },
 };
 
 export function getSectionConfig(section: string): SectionConfig {

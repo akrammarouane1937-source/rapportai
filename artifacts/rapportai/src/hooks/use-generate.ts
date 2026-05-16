@@ -141,7 +141,7 @@ export function useGenerate() {
           return fetch(`${API_BASE}/api/session/${sid}/generate`, {
             method: "POST",
             headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ section, ...reportData, prompt: extraPrompt }),
+            body: JSON.stringify({ section, ...reportData, extraContext: extraPrompt }),
             signal: controller.signal,
           });
         };
