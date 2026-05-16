@@ -1,5 +1,6 @@
-import { motion } from "framer-motion";
-import { Sparkles, ChevronRight, CheckCircle2 } from "lucide-react";
+import { useState } from "react";
+import { motion, AnimatePresence } from "framer-motion";
+import { Sparkles, ChevronRight, CheckCircle2, BrainCircuit } from "lucide-react";
 
 export function ChatMessage({
   role,
@@ -91,6 +92,58 @@ export function ToolCallCard({ name, status }: { name: string; status: "running"
           <CheckCircle2 className="w-3 h-3" />
         )}
         {label}
+      </div>
+    </motion.div>
+  );
+}
+
+export function ThinkingCard({ title, detail }: { title: string; detail?: string }) {
+  const [expanded, setExpanded] = useState(false);
+
+  return (
+    <motion.div
+      initial={{ opacity: 0, y: 4 }}
+      animate={{ opacity: 1, y: 0 }}
+      exit={{ opacity: 0, height: 0, marginBottom: 0 }}
+      transition={{ duration: 0.2 }}
+      className="flex gap-2.5 mb-2 px-4"
+    >
+      <div
+        className="shrink-0 w-5 h-5 rounded-full flex items-center justify-center mt-0.5"
+        style={{ background: "#1e293b", border: "1px solid #334155" }}
+      >
+        <BrainCircuit className="w-3 h-3" style={{ color: "#7c3aed" }} />
+      </div>
+      <div className="flex-1 min-w-0">
+        <button
+          onClick={() => setExpanded((v) => !v)}
+          className="flex items-center gap-1 text-xs transition-colors"
+          style={{ color: "#64748b" }}
+        >
+          <ChevronRight
+            className="w-3 h-3 transition-transform"
+            style={{ transform: expanded ? "rotate(90deg)" : "rotate(0deg)" }}
+          />
+          {title}
+        </button>
+        <AnimatePresence>
+          {expanded && detail && (
+            <motion.div
+              initial={{ opacity: 0, height: 0 }}
+              animate={{ opacity: 1, height: "auto" }}
+              exit={{ opacity: 0, height: 0 }}
+              className="mt-1.5 px-3 py-2 rounded-lg text-xs"
+              style={{
+                background: "#0f172a",
+                color: "#475569",
+                borderLeft: "2px solid #334155",
+                lineHeight: "1.6",
+              }}
+            >
+              {detail}
+            </motion.div>
+          )}
+        </AnimatePresence>
       </div>
     </motion.div>
   );
