@@ -41,6 +41,8 @@ export interface Report {
   partieIITitle: string;
   partieIIChapters: number;
   conclusion: string;
+  bibliographie: string;
+  annexes: string;
 
   // Meta
   currentStep: number;
@@ -76,6 +78,8 @@ export const initialReportState: Report = {
   partieIITitle: "",
   partieIIChapters: 2,
   conclusion: "",
+  bibliographie: "",
+  annexes: "",
 
   currentStep: 1,
   checkpoints: {},

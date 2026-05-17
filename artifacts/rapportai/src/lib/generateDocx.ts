@@ -342,6 +342,59 @@ function buildConclusion(d: Report): Paragraph[] {
   ];
 }
 
+function buildBibliographie(d: Report): Paragraph[] {
+  if (!d.bibliographie?.trim()) return [];
+  return [
+    heading1("Bibliographie et Webographie"),
+    emptyLine(),
+    ...markdownToParas(d.bibliographie),
+  ];
+}
+
+function buildTableDesFigures(): Paragraph[] {
+  return [
+    heading1("Table des figures"),
+    emptyLine(),
+    new TableOfContents("Table des figures", {
+      hyperlink: true,
+      captionLabel: "Figure",
+    }) as unknown as Paragraph,
+  ];
+}
+
+function buildListeDesTableaux(): Paragraph[] {
+  return [
+    heading1("Liste des tableaux"),
+    emptyLine(),
+    new TableOfContents("Liste des tableaux", {
+      hyperlink: true,
+      captionLabel: "Tableau",
+    }) as unknown as Paragraph,
+  ];
+}
+
+function buildAnnexes(d: Report): Paragraph[] {
+  const content = d.annexes?.trim();
+  return [
+    heading1("Annexes"),
+    emptyLine(),
+    ...(content
+      ? markdownToParas(content)
+      : [bodyPara("(Insérez ici vos annexes : questionnaires, tableaux de données, captures d'écran, etc.)")]),
+  ];
+}
+
+function buildTableDesMatieres(): Paragraph[] {
+  return [
+    heading1("Table des matières"),
+    emptyLine(),
+    new TableOfContents("Table des matières", {
+      hyperlink: true,
+      headingStyleRange: "1-3",
+    }) as unknown as Paragraph,
+  ];
+}
+
 // ─── Styles ─────────────────────────────────────────────────────────────────
 
 const PARAGRAPH_STYLES = [
@@ -421,6 +474,11 @@ export async function generateDocx(data: Report): Promise<Blob> {
           ...buildPartieI(data),
           ...buildPartieII(data),
           ...buildConclusion(data),
+          ...buildBibliographie(data),
+          ...buildTableDesFigures(),
+          ...buildListeDesTableaux(),
+          ...buildAnnexes(data),
+          ...buildTableDesMatieres(),
         ],
       },
     ],

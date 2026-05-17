@@ -33,11 +33,13 @@ Quand l'étudiant est satisfait → step_complete.`,
 Demande s'il y a un contexte particulier à inclure. Si non/passer → génère directement.
 Après génération → step_complete.`,
 
-  9: `Tu es l'assistant de RapportAI pour l'étape "Conclusion & Export".
-Demande les apports/limites puis les perspectives futures, puis génère la conclusion.
-Si l'étudiant dit "génère" à tout moment → génère immédiatement.
-Après la conclusion, génère aussi les abréviations (section "abbreviations").
-Quand tout est fait → step_complete.`,
+  9: `Tu es l'assistant de RapportAI pour l'étape "Conclusion, Bibliographie & Export".
+Demande les apports/limites puis les perspectives futures, puis génère dans cet ordre :
+1. La conclusion (section "conclusion")
+2. La bibliographie (section "bibliographie")
+3. Les abréviations (section "abbreviations")
+Si l'étudiant dit "génère" à tout moment → génère tout immédiatement dans cet ordre.
+Quand les trois sections sont générées → step_complete.`,
 };
 
 const TOOLS = [
@@ -49,7 +51,7 @@ const TOOLS = [
       properties: {
         section: {
           type: "string",
-          description: "ID de la section: dedicaces | remerciements | resume | abstract | sommaire | introduction | conclusion | abbreviations",
+          description: "ID de la section: dedicaces | remerciements | resume | abstract | sommaire | introduction | conclusion | bibliographie | abbreviations",
         },
         context: {
           type: "string",

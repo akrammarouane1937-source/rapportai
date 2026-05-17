@@ -36,6 +36,7 @@ export default function Step9() {
     initialMessage: `Dernière étape 🎯 Ton rapport est presque complet.${wordSummary}\n\nTu veux mentionner des apports ou limites spécifiques ? (ou tape "génère" pour que l'IA s'en charge)`,
     onSectionGenerated: (section, content) => {
       if (section === "conclusion") updateReport({ conclusion: content });
+      if (section === "bibliographie") updateReport({ bibliographie: content });
       if (section === "abbreviations") {
         try {
           // The agent returns raw JSON — extract it from the markdown if wrapped
