@@ -8,6 +8,7 @@ import { UploadCard } from "@/components/upload-card";
 import { useReportStore } from "@/lib/store";
 import { useGenerate } from "@/hooks/use-generate";
 import { useFileStore } from "@/lib/fileStore";
+import { getApprovedFigures } from "@/lib/figureStore";
 import { motion } from "framer-motion";
 import { AlertTriangle } from "lucide-react";
 
@@ -110,7 +111,10 @@ export default function PartieII() {
       push({ role: "agent", content: "Je génère la Partie II..." });
       setPhase("generating");
       const allFiles = [...sourceFiles, ...figureFiles, ...(files || [])];
-      const partieII = await generate("partie-ii", report, undefined, allFiles.length > 0 ? allFiles : undefined);
+      const figuresForII = getApprovedFigures()
+        .filter((f) => f.placement === "Partie II")
+        .map((f) => ({ figureNumber: f.figureNumber, title: f.title, source: f.source ?? "", author: f.author ?? "", caption: f.caption, placement: f.placement }));
+      const partieII = await generate("partie-ii", report, undefined, allFiles.length > 0 ? allFiles : undefined, figuresForII.length > 0 ? figuresForII : undefined);
       if (!partieII) {
         push({ role: "agent", content: "❌ Génération échouée. Vérifie ta connexion et réessaie." });
         setPhase("figures");

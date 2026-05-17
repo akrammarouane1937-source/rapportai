@@ -145,10 +145,11 @@ router.post(
   "/session/:sessionId/generate",
   async (req: Request, res: Response) => {
     const { sessionId } = req.params;
-    const { section, problematique, extraContext } = req.body as {
+    const { section, problematique, extraContext, figures } = req.body as {
       section: string;
       problematique?: string;
       extraContext?: string;
+      figures?: { figureNumber: number; title: string; source: string; author: string; caption: string; placement: string }[];
     };
 
     if (!section) {
@@ -179,7 +180,7 @@ router.post(
     let partialSections: Record<string, string> = {};
 
     try {
-      const task = agent.buildSectionTask(section, { extraContext });
+      const task = agent.buildSectionTask(section, { extraContext, figures });
 
       res.write(`data: ${JSON.stringify({ phase: "writing" })}\n\n`);
       const finished = await streamToSSE(res, agent.streamSection(section, task));

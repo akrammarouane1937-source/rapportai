@@ -4,6 +4,7 @@ import {
   Footer,
   Header,
   HeadingLevel,
+  ImageRun,
   LineRuleType,
   NumberFormat,
   Packer,
@@ -14,6 +15,7 @@ import {
   convertMillimetersToTwip,
 } from "docx";
 import type { Report } from "./store";
+import { getApprovedFigures, type ApprovedFigure } from "./figureStore";
 
 // ─── Constants ───────────────────────────────────────────────────────────────
 
@@ -351,15 +353,110 @@ function buildBibliographie(d: Report): Paragraph[] {
   ];
 }
 
+// Decode base64 image string to Uint8Array for docx ImageRun
+function base64ToUint8Array(b64: string): Uint8Array {
+  const stripped = b64.includes(",") ? b64.split(",")[1] : b64;
+  const binary = atob(stripped);
+  const arr = new Uint8Array(binary.length);
+  for (let i = 0; i < binary.length; i++) arr[i] = binary.charCodeAt(i);
+  return arr;
+}
+
+// Max display size for embedded figures (fits within A4 margins ~160mm wide)
+const MAX_FIG_W = convertMillimetersToTwip(155);
+const MAX_FIG_H = convertMillimetersToTwip(100);
+
+function scaleFigure(w: number, h: number): { width: number; height: number } {
+  const wTwip = w * 15; // rough px → twip (1px ≈ 15 twip at 96dpi)
+  const hTwip = h * 15;
+  const scaleW = wTwip > MAX_FIG_W ? MAX_FIG_W / wTwip : 1;
+  const scaleH = hTwip > MAX_FIG_H ? MAX_FIG_H / hTwip : 1;
+  const scale = Math.min(scaleW, scaleH);
+  return { width: Math.round(wTwip * scale), height: Math.round(hTwip * scale) };
+}
+
+// Build the "Caption" style paragraph for a figure — Word uses this for auto TOC
+function figureCaption(fig: ApprovedFigure): Paragraph {
+  const sourceNote = fig.source ? ` — Source : ${fig.source}${fig.author ? `, ${fig.author}` : ""}` : "";
+  return new Paragraph({
+    style: "Caption",
+    alignment: AlignmentType.CENTER,
+    spacing: { before: 80, after: 200 },
+    children: [
+      new TextRun({
+        text: `Figure ${fig.figureNumber} — ${fig.title}${sourceNote}`,
+        font: FONT,
+        size: 20, // 10pt
+        italics: true,
+      }),
+    ],
+  });
+}
+
+// Embed all figures for a given partie in the document body
+function buildFiguresSection(placement: "Partie I" | "Partie II"): Paragraph[] {
+  const figs = getApprovedFigures().filter((f) => f.placement === placement);
+  if (figs.length === 0) return [];
+
+  const paras: Paragraph[] = [
+    new Paragraph({
+      text: `Figures — ${placement}`,
+      heading: HeadingLevel.HEADING_2,
+      spacing: { before: 480, after: 240 },
+      keepNext: true,
+      pageBreakBefore: true,
+    }),
+  ];
+
+  for (const fig of figs) {
+    try {
+      const imgData = base64ToUint8Array(fig.pngBase64);
+      const { width, height } = scaleFigure(fig.width || 600, fig.height || 400);
+      paras.push(
+        new Paragraph({
+          alignment: AlignmentType.CENTER,
+          spacing: { before: 240, after: 60 },
+          children: [
+            new ImageRun({
+              data: imgData,
+              transformation: { width, height },
+              type: fig.pngBase64.includes("image/png") ? "png" : "jpg",
+            }),
+          ],
+        })
+      );
+    } catch {
+      // If image fails to embed, insert placeholder text
+      paras.push(bodyPara(`[Figure ${fig.figureNumber} — image non disponible]`));
+    }
+    paras.push(figureCaption(fig));
+  }
+
+  return paras;
+}
+
+// Liste des figures — static numbered list with source/author, plus Word TOC field
 function buildTableDesFigures(): Paragraph[] {
-  return [
-    heading1("Table des figures"),
+  const figs = getApprovedFigures();
+  const paras: Paragraph[] = [
+    heading1("Liste des figures"),
     emptyLine(),
-    new TableOfContents("Table des figures", {
+  ];
+
+  if (figs.length === 0) {
+    paras.push(bodyPara("(Aucune figure ajoutée)"));
+    return paras;
+  }
+
+  // Word TOC field — auto-updates page numbers from Caption-styled paragraphs
+  paras.push(
+    new TableOfContents("Liste des figures", {
       hyperlink: true,
       captionLabel: "Figure",
-    }) as unknown as Paragraph,
-  ];
+    }) as unknown as Paragraph
+  );
+
+  return paras;
 }
 
 function buildListeDesTableaux(): Paragraph[] {
@@ -428,6 +525,13 @@ const PARAGRAPH_STYLES = [
     run: { font: FONT, size: H3_PT, bold: true },
     paragraph: { spacing: { before: 240, after: 120 }, keepNext: true },
   },
+  {
+    id: "Caption",
+    name: "Caption",
+    basedOn: "Normal",
+    run: { font: FONT, size: 20, italics: true },
+    paragraph: { alignment: AlignmentType.CENTER, spacing: { before: 80, after: 200 } },
+  },
 ];
 
 // ─── Main export ─────────────────────────────────────────────────────────────
@@ -472,7 +576,9 @@ export async function generateDocx(data: Report): Promise<Blob> {
         children: [
           ...buildIntroduction(data),
           ...buildPartieI(data),
+          ...buildFiguresSection("Partie I"),
           ...buildPartieII(data),
+          ...buildFiguresSection("Partie II"),
           ...buildConclusion(data),
           ...buildBibliographie(data),
           ...buildTableDesFigures(),

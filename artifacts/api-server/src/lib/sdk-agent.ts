@@ -247,7 +247,7 @@ export class SDKReportAgent {
   }
 
   // Build the task prompt for a report section
-  buildSectionTask(section: string, opts?: { extraContext?: string }): string {
+  buildSectionTask(section: string, opts?: { extraContext?: string; figures?: { figureNumber: number; title: string; source: string; author: string; caption: string; placement: string }[] }): string {
     const p = this.profile;
     const style = p.citationStyle ?? "APA 7th ed.";
     const prob =
@@ -261,18 +261,30 @@ export class SDKReportAgent {
         : "";
 
     switch (section) {
-      case "partie-i":
+      case "partie-i": {
+        const figsI = (opts?.figures ?? []).filter(f => f.placement === "Partie I");
+        const figNoteI = figsI.length > 0
+          ? `\n\nFigures uploadées par l'étudiant pour la Partie I — intègre-les dans le texte avec "La Figure N montre..." :\n` +
+            figsI.map(f => `- Figure ${f.figureNumber} — "${f.title}" (Source : ${f.source}, Auteur : ${f.author})\n  Légende : ${f.caption}`).join("\n")
+          : "";
         return `${docNote}Lis sommaire.md pour extraire la structure exacte de la Partie I (chapitres et sections).
 Génère ensuite la Partie I complète en suivant cette structure — ne modifie aucun titre, n'ajoute aucun chapitre.
-Problématique : ${prob} | Style de citation : ${style}
+Problématique : ${prob} | Style de citation : ${style}${figNoteI}
 Enregistre dans partie-i.md une fois terminé.`;
+      }
 
-      case "partie-ii":
+      case "partie-ii": {
+        const figsII = (opts?.figures ?? []).filter(f => f.placement === "Partie II");
+        const figNoteII = figsII.length > 0
+          ? `\n\nFigures uploadées par l'étudiant pour la Partie II — intègre-les dans le texte avec "La Figure N montre..." :\n` +
+            figsII.map(f => `- Figure ${f.figureNumber} — "${f.title}" (Source : ${f.source}, Auteur : ${f.author})\n  Légende : ${f.caption}`).join("\n")
+          : "";
         return `${docNote}Lis sommaire.md pour extraire la structure exacte de la Partie II (chapitres et sections).
 Lis aussi partie-i.md — les références croisées vers Partie I sont obligatoires.
 Génère ensuite la Partie II complète en suivant la structure du sommaire.
-Problématique : ${prob} | Style de citation : ${style}
+Problématique : ${prob} | Style de citation : ${style}${figNoteII}
 Enregistre dans partie-ii.md une fois terminé.`;
+      }
 
       case "introduction":
         return `${docNote}Lis INSTRUCTIONS.md, profile.json, et toutes les sections .md existantes.

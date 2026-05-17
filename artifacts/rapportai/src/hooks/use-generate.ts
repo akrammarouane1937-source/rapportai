@@ -99,7 +99,8 @@ export function useGenerate() {
       section: string,
       reportData: Parameters<typeof useReportStore.getState>["length"] extends never ? never : ReturnType<typeof useReportStore.getState>["report"],
       extraPrompt?: string,
-      files?: File[]
+      files?: File[],
+      figures?: { figureNumber: number; title: string; source: string; author: string; caption: string; placement: string }[]
     ) => {
       // Cancel any in-flight request (Replit pattern)
       abortRef.current?.abort();
@@ -141,7 +142,7 @@ export function useGenerate() {
           return fetch(`${API_BASE}/api/session/${sid}/generate`, {
             method: "POST",
             headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ section, ...reportData, extraContext: extraPrompt }),
+            body: JSON.stringify({ section, ...reportData, extraContext: extraPrompt, figures }),
             signal: controller.signal,
           });
         };

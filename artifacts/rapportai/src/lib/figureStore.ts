@@ -5,12 +5,14 @@ export interface ApprovedFigure {
   figureNumber: number;
   title: string;
   caption: string;
-  type: "bar" | "line" | "pie" | "doughnut";
+  type: "bar" | "line" | "pie" | "doughnut" | "uploaded";
   placement: "Partie I" | "Partie II";
   description: string;  // academic introduction sentence
+  source: string;       // e.g. "Rapport annuel 2023, Office des Changes"
+  author: string;       // e.g. "Direction financière" or "Auteur propre"
   pngBase64: string;    // data:image/png;base64,...
-  labels: string[];     // x-axis labels used
-  series: number[];     // y-axis values used
+  labels: string[];
+  series: number[];
   width: number;
   height: number;
 }
