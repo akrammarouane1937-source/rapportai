@@ -127,8 +127,22 @@ When company/field data is available and no uploaded figure covers it:
 
 **No data and no uploaded figure:**
 ```markdown
-[DONNÉES REQUISES — Insérer ici les données réelles de [type]. Figure à compléter. Source : [à préciser].]
+*Figure N — [Description]. Source : [à préciser], [Auteur/Service].*
 ```
+
+### Caption format — MANDATORY for all figures
+
+Every figure caption MUST follow this exact format so it feeds the automatic Table of Figures in the Word export:
+
+```
+*Figure N — [Titre complet]. Source : [Référence], [Auteur/Service], [Année].*
+```
+
+- Wrap the entire line in single asterisks `*...*`
+- Start with `Figure N` (N = sequential number across the whole report)
+- Use ` — ` (space dash dash space) after the number
+- Always include `Source :` and the author/origin/year
+- This is the only way the caption appears in the Liste des figures automatically — no other format works
 
 ---
 

@@ -154,10 +154,24 @@ print('saved')
 
 No uploaded figures AND no PDF → placeholder:
 ```markdown
-*[Figure 1.1 — [Description précise]. Source : [Auteur, Année].]*
+*Figure 1.1 — [Description précise]. Source : [Auteur, Année].*
 ```
 
 If pdf2image fails → placeholder immediately, no retry.
+
+### Caption format — MANDATORY for all figures
+
+Every figure caption MUST follow this exact format so it feeds the automatic Table of Figures in the Word export:
+
+```
+*Figure N — [Titre complet]. Source : [Référence], [Auteur/Service].*
+```
+
+- Wrap the entire line in single asterisks `*...*`
+- Start with `Figure N` (N = figure number)
+- Use ` — ` (space dash dash space) after the number
+- Always include `Source :` and the author/origin
+- This is the only way the caption appears in the Liste des figures automatically
 
 ---
 

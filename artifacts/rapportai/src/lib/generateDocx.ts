@@ -114,6 +114,39 @@ function centerPara(text: string, size = BODY_PT, bold = false): Paragraph {
   });
 }
 
+// Matches agent-written figure/table captions: *Figure N — Titre. Source: ...*
+const CAPTION_RE = /^\*{1,2}((?:Figure|Tableau|Fig\.?|Tab\.?)\s+[\d.]+\s*[—–-].+)\*{1,2}$/i;
+
+// Matches markdown image lines: ![alt](path)
+const IMAGE_RE = /^!\[([^\]]*)\]\([^)]*\)$/;
+
+function agentCaptionPara(text: string): Paragraph {
+  // Strip leading/trailing asterisks already removed by regex group
+  return new Paragraph({
+    style: "Caption",
+    alignment: AlignmentType.CENTER,
+    spacing: { before: 60, after: 200 },
+    children: [new TextRun({ text: text.trim(), font: FONT, size: 20, italics: true })],
+  });
+}
+
+function imagePlaceholderPara(alt: string): Paragraph {
+  // Shown when agent references an image file we can't embed (server-side only)
+  return new Paragraph({
+    alignment: AlignmentType.CENTER,
+    spacing: { before: 240, after: 60 },
+    border: {
+      top:    { style: "single", size: 4, color: "CCCCCC", space: 4 },
+      bottom: { style: "single", size: 4, color: "CCCCCC", space: 4 },
+      left:   { style: "single", size: 4, color: "CCCCCC", space: 4 },
+      right:  { style: "single", size: 4, color: "CCCCCC", space: 4 },
+    },
+    children: [
+      new TextRun({ text: alt || "[Image]", font: FONT, size: BODY_PT, color: "888888", italics: true }),
+    ],
+  });
+}
+
 function markdownToParas(md: string): Paragraph[] {
   if (!md?.trim()) return [bodyPara("(Section non générée)")];
 
@@ -129,6 +162,7 @@ function markdownToParas(md: string): Paragraph[] {
 
   for (const raw of lines) {
     const line = raw.trimEnd();
+
     if (line.startsWith("### ")) {
       flushBuf();
       paras.push(heading3(line.slice(4).trim()));
@@ -141,7 +175,19 @@ function markdownToParas(md: string): Paragraph[] {
     } else if (line === "") {
       flushBuf();
     } else {
-      buf += (buf ? " " : "") + line;
+      // Check for figure/table caption line (full-line italic)
+      const captionMatch = line.match(CAPTION_RE);
+      if (captionMatch) {
+        flushBuf();
+        paras.push(agentCaptionPara(captionMatch[1]));
+      // Check for markdown image reference
+      } else if (IMAGE_RE.test(line)) {
+        flushBuf();
+        const imgMatch = line.match(IMAGE_RE);
+        paras.push(imagePlaceholderPara(imgMatch?.[1] ?? ""));
+      } else {
+        buf += (buf ? " " : "") + line;
+      }
     }
   }
   flushBuf();
