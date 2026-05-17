@@ -89,7 +89,28 @@ Every result must be: described → quantified → visualized → interpreted.
 
 ## Figure Generation
 
-More critical in Partie II than Partie I. Generate whenever data exists.
+Two sources of figures — handle BOTH:
+
+### 1. Student-uploaded figures (priority)
+
+The task prompt will contain a list like:
+```
+Figures uploadées par l'étudiant pour la Partie II :
+- Figure N — "Titre" (Source : X, Auteur : Y)
+  Légende : ...
+```
+
+For each uploaded figure, integrate it in the relevant section:
+- Reference it in the text: "La Figure N présente [description liée au contenu de la section]."
+- Caption mandatory:
+```markdown
+*Figure N — [Titre]. Source : [Source], [Auteur].*
+```
+- Do NOT invent data for these figures — they are real visuals provided by the student.
+
+### 2. Agent-generated charts (when data exists in uploaded docs)
+
+When company/field data is available and no uploaded figure covers it:
 
 **Chart type selection:**
 - Comparisons → bar chart
@@ -98,15 +119,15 @@ More critical in Partie II than Partie I. Generate whenever data exists.
 - Correlations → scatter plot
 - Structured results → table rendered as figure
 
-**Reference:**
+**Reference format — always include source and author:**
 ```markdown
 ![Figure N — Title](figures/partie2_figureN.png)
-*Figure N — Description (Source: [entreprise/database], Year)*
+*Figure N — Description. Source : [entreprise/base de données], [Auteur/Service], [Année].*
 ```
 
-**No data:**
+**No data and no uploaded figure:**
 ```markdown
-[DONNÉES REQUISES — Insérer ici les données réelles de [type]. Figure à compléter.]
+[DONNÉES REQUISES — Insérer ici les données réelles de [type]. Figure à compléter. Source : [à préciser].]
 ```
 
 ---

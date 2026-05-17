@@ -110,9 +110,32 @@ Mark unverifiable citations as **[SOURCE]** for student review.
 
 ---
 
-## Figures — PDF Screenshots Only
+## Figures
 
-Partie I = no data charts. Only screenshot relevant pages from uploaded PDFs.
+Two sources of figures for Partie I — check BOTH before writing any section:
+
+### 1. Student-uploaded figures (priority)
+
+The task prompt will contain a list like:
+```
+Figures uploadées par l'étudiant pour la Partie I :
+- Figure N — "Titre" (Source : X, Auteur : Y)
+  Légende : ...
+```
+
+For each of these, reference them in the relevant section text:
+```markdown
+La Figure N illustre [description en lien avec le contenu]. [Auteur, Source].
+```
+
+Caption format (mandatory after each figure reference):
+```markdown
+*Figure N — [Titre]. Source : [Source], [Auteur].*
+```
+
+### 2. PDF screenshots (fallback when no uploaded figure)
+
+Only when no uploaded figure is available for a section:
 
 ```bash
 mkdir -p figures
@@ -129,7 +152,7 @@ print('saved')
 *Figure 1.1 — [Titre]. Source : [Auteur(s), Année], p. [N].*
 ```
 
-No PDF or no relevant figure → placeholder:
+No uploaded figures AND no PDF → placeholder:
 ```markdown
 *[Figure 1.1 — [Description précise]. Source : [Auteur, Année].]*
 ```
