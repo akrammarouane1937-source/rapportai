@@ -47,7 +47,16 @@ export default function LandingPage() {
               RapportAI
             </span>
           </div>
-          <div className="flex items-center gap-4">
+          <div className="flex items-center gap-5">
+            <Link href="/about">
+              <span className="hidden md:inline text-sm font-medium text-gray-500 hover:text-gray-900 transition-colors cursor-pointer">À propos</span>
+            </Link>
+            <Link href="/why">
+              <span className="hidden md:inline text-sm font-medium text-gray-500 hover:text-gray-900 transition-colors cursor-pointer">Pourquoi RapportAI</span>
+            </Link>
+            <Link href="/story">
+              <span className="hidden md:inline text-sm font-medium text-gray-500 hover:text-gray-900 transition-colors cursor-pointer">Notre histoire</span>
+            </Link>
             <Link href="/sign-in">
               <Button variant="ghost" className="hidden sm:inline-flex text-foreground hover:text-primary hover:bg-primary-light/50">
                 Se connecter

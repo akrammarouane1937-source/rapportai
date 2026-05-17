@@ -26,6 +26,9 @@ import SharePage from "@/pages/SharePage";
 import PaymentSuccessPage from "@/pages/PaymentSuccessPage";
 import ParametresPage from "@/pages/ParametresPage";
 import FiguresPage from "@/pages/FiguresPage";
+import AboutPage from "@/pages/AboutPage";
+import WhyRapportAIPage from "@/pages/WhyRapportAIPage";
+import StoryPage from "@/pages/StoryPage";
 import NotFound from "@/pages/not-found";
 
 const queryClient = new QueryClient();
@@ -343,6 +346,9 @@ function ClerkProviderWithRoutes() {
             </Route>
             <Route path="/share/:id" component={SharePage} />
             <Route path="/payment/success" component={PaymentSuccessPage} />
+            <Route path="/about" component={AboutPage} />
+            <Route path="/why" component={WhyRapportAIPage} />
+            <Route path="/story" component={StoryPage} />
             <Route component={NotFound} />
           </Switch>
           <Toaster />
@@ -379,6 +385,9 @@ function NoAuthApp() {
           <Route path="/figures" component={FiguresPage} />
           <Route path="/share/:id" component={SharePage} />
           <Route path="/payment/success" component={PaymentSuccessPage} />
+          <Route path="/about" component={AboutPage} />
+          <Route path="/why" component={WhyRapportAIPage} />
+          <Route path="/story" component={StoryPage} />
           <Route component={NotFound} />
         </Switch>
         <Toaster />
