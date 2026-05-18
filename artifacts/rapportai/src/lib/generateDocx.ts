@@ -262,7 +262,7 @@ function buildPageDeGarde(d: Report): (Paragraph | Table)[] {
   const jury2     = d.juryMember2   || "";
   const jury3     = d.juryMember3   || "";
 
-  const ACCENT = "00467F"; // EMSI-style dark blue — works for any school
+  const ACCENT = "1F3864"; // neutral dark navy — works for any school
   const C = AlignmentType.CENTER;
   const L = AlignmentType.LEFT;
 
