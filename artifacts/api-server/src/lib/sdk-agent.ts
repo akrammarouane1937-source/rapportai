@@ -310,15 +310,14 @@ Rédige le Résumé (250–300 mots) : Contexte → Objectifs → Méthodologie 
 Termine par les mots-clés (5–8).
 Enregistre dans resume.md.`;
 
-      case "page-de-garde":
-        return `Tu vas générer la page de garde du rapport.
+      case "page-de-garde": {
+        const missingFields: string[] = [];
+        if (!p.encadrantPeda) missingFields.push("encadrant pédagogique");
+        if (!p.encadrantPro && p.reportType !== "Mémoire") missingFields.push("encadrant professionnel");
+        if (!p.entreprise && p.reportType !== "Mémoire") missingFields.push("entreprise d'accueil");
+        if (!p.juryMember1) missingFields.push("membres du jury (optionnel)");
 
-1. Utilise Glob pour lister tous les fichiers du dossier
-2. Si template-screenshot.png existe, lis-le avec Read pour voir visuellement la mise en page (couleurs, bordures, logo position, typographie)
-3. Si un fichier .docx existe, lis-le avec Read pour extraire la structure textuelle exacte (placeholders, labels, disposition)
-4. Lis profile.json pour les informations complètes de l'étudiant
-
-Informations de l'étudiant à insérer :
+        return `CONTEXTE ÉTUDIANT — NE REDEMANDE JAMAIS CES INFOS :
 - Nom : ${p.studentName}
 - École : ${p.school}
 - Filière : ${p.filiere}
@@ -329,20 +328,13 @@ ${p.encadrantPeda ? `- Encadrant pédagogique : ${p.encadrantPeda}` : ""}
 ${p.encadrantPro ? `- Encadrant professionnel : ${p.encadrantPro}` : ""}
 ${p.entreprise ? `- Entreprise d'accueil : ${p.entreprise}` : ""}
 ${p.ville ? `- Ville : ${p.ville}` : ""}
-${p.dateDebutStage ? `- Date de début de stage : ${p.dateDebutStage}` : ""}
-${p.dateFinStage ? `- Date de fin de stage : ${p.dateFinStage}` : ""}
-${p.juryMember1 ? `- Membre du jury 1 : ${p.juryMember1}` : ""}
-${p.juryMember2 ? `- Membre du jury 2 : ${p.juryMember2}` : ""}
-${p.juryMember3 ? `- Membre du jury 3 : ${p.juryMember3}` : ""}
+${p.juryMember1 ? `- Jury : ${p.juryMember1}${p.juryMember2 ? `, ${p.juryMember2}` : ""}${p.juryMember3 ? `, ${p.juryMember3}` : ""}` : ""}
 
-Génère page-de-garde.md avec le contenu exact en respectant :
-- La structure visuelle du template si fourni (couleurs, titres, disposition, bordures)
-- TOUS les placeholders remplacés par les vraies données de l'étudiant ci-dessus
-- Aucun placeholder restant — tout doit être rempli
-- Format Markdown fidèle à la mise en page Word
-- Si aucun template fourni, structure académique standard marocaine
+${missingFields.length > 0 ? `INFOS MANQUANTES — pose ces questions en UN SEUL message avant de générer :\n${missingFields.map(f => `- ${f} ?`).join("\n")}` : "Toutes les infos sont présentes — génère directement la page de garde."}
 
+Suis les instructions du skills file (page-de-garde-skills.md) pour choisir PATH A (template) ou PATH B (pas de template).
 Enregistre dans page-de-garde.md.`;
+      }
 
       case "dedicaces": {
         const dedicacesExtra = opts?.extraContext

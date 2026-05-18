@@ -14,6 +14,14 @@ export interface SectionConfig {
 
 export const SECTION_CONFIGS: Record<string, SectionConfig> = {
 
+  "page-de-garde": {
+    skillsFile:   "page-de-garde-skills.md",
+    maxTurns:     20,
+    dependencies: [],
+    allowedTools: ["Read", "Write", "Glob", "Bash", "WebSearch", "WebFetch"],
+    description:  "Génération de la page de garde",
+  },
+
   sommaire: {
     skillsFile:   "sommaire-skills.md",
     maxTurns:     30,

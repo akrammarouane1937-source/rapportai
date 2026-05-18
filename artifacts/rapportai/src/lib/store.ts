@@ -26,6 +26,7 @@ export interface Report {
   entreprise: string;
 
   // Generated sections
+  pageDeGarde: string;
   dedicaces: string;
   remerciements: string;
   resumeFr: string;
@@ -63,6 +64,7 @@ export const initialReportState: Report = {
   encadrantPro: "",
   entreprise: "",
 
+  pageDeGarde: "",
   dedicaces: "",
   remerciements: "",
   resumeFr: "",
