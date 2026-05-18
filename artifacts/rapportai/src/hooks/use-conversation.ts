@@ -19,6 +19,7 @@ interface UseConversationOpts {
 }
 
 const SECTION_LABELS: Record<string, string> = {
+  "page-de-garde": "la page de garde",
   dedicaces: "les dédicaces",
   remerciements: "les remerciements",
   resume: "le résumé",

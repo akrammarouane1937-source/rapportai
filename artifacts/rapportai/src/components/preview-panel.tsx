@@ -1,4 +1,4 @@
-import { useRef, useState } from "react";
+import { useRef, useState, useEffect } from "react";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import { useReportStore } from "@/lib/store";
@@ -13,6 +13,7 @@ interface PreviewPanelProps {
 }
 
 const SECTIONS = [
+  { id: "page-de-garde", field: "pageDeGarde" },
   { id: "dedicaces",     field: "dedicaces" },
   { id: "remerciements", field: "remerciements" },
   { id: "resume",        field: "resumeFr" },
@@ -53,6 +54,13 @@ export function PreviewPanel({ activeSection, content }: PreviewPanelProps) {
   const [sharing, setSharing] = useState(false);
   const [shareUrl, setShareUrl] = useState<string | null>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
+
+  // Scroll to active section when it changes
+  useEffect(() => {
+    if (!scrollRef.current) return;
+    const el = scrollRef.current.querySelector(`[data-section="${activeSection}"]`);
+    if (el) el.scrollIntoView({ behavior: "smooth", block: "start" });
+  }, [activeSection]);
 
   // Total words across all generated sections
   const allText = SECTIONS.map(({ field }) => (report as Record<string, string>)[field] || "").join(" ");
@@ -115,9 +123,11 @@ export function PreviewPanel({ activeSection, content }: PreviewPanelProps) {
 
     for (const pageText of pages) {
       const pn = pageNumber++;
+      const isFirstOfSection = pn === pageNumber - pages.length;
       allPageCards.push(
         <div
           key={`${id}-${pn}`}
+          {...(isFirstOfSection ? { "data-section": id } : {})}
           className="bg-white word-preview-content relative"
           style={{
             width: "21cm",

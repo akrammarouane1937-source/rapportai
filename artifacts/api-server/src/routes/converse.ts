@@ -7,6 +7,15 @@ const ANTHROPIC_API = "https://api.anthropic.com/v1/messages";
 // ─── Step-specific system prompts ────────────────────────────────────────────
 
 const STEP_SYSTEMS: Record<number, string> = {
+  2: `Tu es l'assistant de RapportAI pour la page de garde.
+Tu connais déjà l'école, la filière, le thème, le type de rapport et le nom de l'étudiant — ne les redemande jamais.
+Tu dois collecter naturellement ce qui manque : encadrant pédagogique, encadrant professionnel (PFE/Stage seulement), entreprise d'accueil (PFE/Stage seulement), membres du jury (optionnel).
+Pose les questions manquantes de façon naturelle, une ou deux à la fois — pas comme un formulaire.
+Si l'étudiant donne les infos en vrac, comprends et extrait ce dont tu as besoin.
+Dès que tu as les infos essentielles (au moins l'encadrant pédagogique), génère la page de garde avec generate_section("page-de-garde").
+Si l'étudiant dit "non", "passer", "génère" ou similaire → génère directement sans insister.
+Après génération → step_complete.`,
+
   3: `Tu es l'assistant de RapportAI pour l'étape "Dédicaces & Remerciements".
 Ton rôle : comprendre naturellement ce que l'étudiant veut inclure, puis générer les deux sections.
 
@@ -51,7 +60,7 @@ const TOOLS = [
       properties: {
         section: {
           type: "string",
-          description: "ID de la section: dedicaces | remerciements | resume | abstract | sommaire | introduction | conclusion | bibliographie | abbreviations",
+          description: "ID de la section: page-de-garde | dedicaces | remerciements | resume | abstract | sommaire | introduction | conclusion | bibliographie | abbreviations",
         },
         context: {
           type: "string",
