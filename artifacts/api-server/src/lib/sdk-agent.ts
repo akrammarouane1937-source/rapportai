@@ -31,6 +31,7 @@ export interface ReportProfile {
 }
 
 const SECTION_IDS = [
+  "page-de-garde",
   "dedicaces",
   "remerciements",
   "resume",

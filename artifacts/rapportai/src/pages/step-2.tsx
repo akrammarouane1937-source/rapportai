@@ -102,16 +102,28 @@ export default function Step2Page() {
 
     if (phase === "missing") {
       push({ role: "user", content: t || "Non" });
-      // Best-effort parse — the agent will handle the rest via profile.json
       if (!skip && t) {
         const updates: Partial<typeof report> = {};
-        if (needsEncPeda) {
-          const m = t.match(/(?:encadrant\s+p[eé]da\w*\s*[:–-]?\s*)?([A-ZÀ-Ö][a-zà-ö.]+(?:\s+[A-ZÀ-Ö][a-zà-ö.]+){1,3})/);
-          if (m) updates.encadrantPeda = m[1];
+        const lines = t.split(/\n|,|;/).map(l => l.trim()).filter(Boolean);
+
+        // Parse each line for known fields
+        for (const line of lines) {
+          if (/encadrant\s+p[eé]da/i.test(line)) {
+            const m = line.match(/[:–-]\s*(.+)$/); if (m) updates.encadrantPeda = m[1].trim();
+          } else if (/encadrant\s+pro/i.test(line)) {
+            const m = line.match(/[:–-]\s*(.+)$/); if (m && !/non/i.test(m[1])) updates.encadrantPro = m[1].trim();
+          } else if (/entreprise/i.test(line)) {
+            const m = line.match(/[:–-]\s*(.+)$/); if (m && !/non/i.test(m[1])) updates.entreprise = m[1].trim();
+          } else if (/jury/i.test(line)) {
+            const names = line.replace(/jury\s*[:–-]?/i, "").split(/[,;]/).map(n => n.trim()).filter(n => n && !/non/i.test(n));
+            if (names[0]) updates.juryMember1 = names[0];
+            if (names[1]) updates.juryMember2 = names[1];
+            if (names[2]) updates.juryMember3 = names[2];
+          }
         }
-        if (needsEntreprise && !/non/i.test(t)) {
-          const m = t.match(/entreprise\s*[:–-]?\s*(.+?)(?:\n|,|$)/i);
-          if (m) updates.entreprise = m[1].trim();
+        // Fallback: if no labeled answer but single-line with a name, treat as encadrantPeda
+        if (!updates.encadrantPeda && needsEncPeda && lines.length === 1 && !/non/i.test(lines[0])) {
+          updates.encadrantPeda = lines[0];
         }
         if (Object.keys(updates).length > 0) updateReport(updates);
       }

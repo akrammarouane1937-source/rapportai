@@ -24,6 +24,12 @@ export interface Report {
   encadrantPeda: string;
   encadrantPro: string;
   entreprise: string;
+  ville: string;
+  dateDebutStage: string;
+  dateFinStage: string;
+  juryMember1: string;
+  juryMember2: string;
+  juryMember3: string;
 
   // Generated sections
   pageDeGarde: string;
@@ -63,6 +69,12 @@ export const initialReportState: Report = {
   encadrantPeda: "",
   encadrantPro: "",
   entreprise: "",
+  ville: "",
+  dateDebutStage: "",
+  dateFinStage: "",
+  juryMember1: "",
+  juryMember2: "",
+  juryMember3: "",
 
   pageDeGarde: "",
   dedicaces: "",

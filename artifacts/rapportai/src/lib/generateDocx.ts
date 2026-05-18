@@ -1,5 +1,6 @@
 import {
   AlignmentType,
+  BorderStyle,
   Document,
   Footer,
   Header,
@@ -10,8 +11,14 @@ import {
   Packer,
   PageNumber,
   Paragraph,
-  TableOfContents,
+  Table,
+  TableCell,
+  TableRow,
+  TableLayoutType,
   TextRun,
+  TableOfContents,
+  VerticalAlign,
+  WidthType,
   convertMillimetersToTwip,
 } from "docx";
 import type { Report } from "./store";
@@ -226,78 +233,156 @@ function buildFooter(): Footer {
 
 // ─── Section builders ─────────────────────────────────────────────────────────
 
-function buildPageDeGarde(d: Report): Paragraph[] {
-  const school = d.school || "École";
-  const filiere = d.filiere || "Filière";
-  const type = d.reportType || "PFE";
-  const theme = d.theme || "Titre du rapport";
-  const student = d.studentName || "Prénom Nom";
-  const encPeda = d.encadrantPeda || "";
-  const encPro = d.encadrantPro || "";
-  const entreprise = d.entreprise || "";
-  const annee = d.academicYear || "2024–2025";
+const NO_BORDER = { style: BorderStyle.NONE, size: 0, color: "FFFFFF", space: 0 };
+const CELL_BORDERS = { top: NO_BORDER, bottom: NO_BORDER, left: NO_BORDER, right: NO_BORDER };
 
+function pgRun(text: string, bold = false, size = BODY_PT, color?: string): TextRun {
+  return new TextRun({ text, font: FONT, size, bold, ...(color ? { color } : {}) });
+}
+
+function pgPara(children: TextRun[], align: (typeof AlignmentType)[keyof typeof AlignmentType] = AlignmentType.LEFT, before = 0, after = 80): Paragraph {
+  return new Paragraph({
+    alignment: align,
+    spacing: { line: 300, lineRule: LineRuleType.AUTO, before, after },
+    children,
+  });
+}
+
+function buildPageDeGarde(d: Report): (Paragraph | Table)[] {
+  const school    = d.school      || "École";
+  const filiere   = d.filiere     || "Filière";
+  const type      = d.reportType  || "PFE";
+  const theme     = d.theme       || "Titre du rapport";
+  const student   = d.studentName || "Prénom Nom";
+  const encPeda   = d.encadrantPeda  || "";
+  const encPro    = d.encadrantPro   || "";
+  const entreprise = d.entreprise   || "";
+  const annee     = d.academicYear  || "2024–2025";
+  const jury1     = d.juryMember1   || "";
+  const jury2     = d.juryMember2   || "";
+  const jury3     = d.juryMember3   || "";
+
+  const ACCENT = "00467F"; // EMSI-style dark blue — works for any school
   const C = AlignmentType.CENTER;
   const L = AlignmentType.LEFT;
-  const R = AlignmentType.RIGHT;
 
-  const para = (text: string, align: typeof C | typeof L | typeof R, size: number, bold = false, italic = false) =>
-    new Paragraph({
-      alignment: align,
-      spacing: { line: 320, lineRule: LineRuleType.AUTO, before: 0, after: 100 },
-      children: [new TextRun({ text, font: FONT, size, bold, italics: italic })],
-    });
+  const elems: (Paragraph | Table)[] = [];
 
-  const paras: Paragraph[] = [];
-
-  paras.push(new Paragraph({
-    alignment: C,
-    spacing: { line: 320, lineRule: LineRuleType.AUTO, before: 0, after: 180 },
-    children: [new TextRun({ text: school.toUpperCase(), font: FONT, size: H1_PT, bold: true })],
+  // ── Logo row (school left, company right) ─────────────────────────────────
+  // Logos are server-side files — show text placeholders until image embedding is wired
+  elems.push(new Table({
+    layout: TableLayoutType.FIXED,
+    width: { size: 100, type: WidthType.PERCENTAGE },
+    rows: [
+      new TableRow({
+        children: [
+          new TableCell({
+            borders: CELL_BORDERS,
+            verticalAlign: VerticalAlign.CENTER,
+            width: { size: 50, type: WidthType.PERCENTAGE },
+            children: [pgPara([pgRun(`[ ${school} ]`, true, 20, ACCENT)], L)],
+          }),
+          new TableCell({
+            borders: CELL_BORDERS,
+            verticalAlign: VerticalAlign.CENTER,
+            width: { size: 50, type: WidthType.PERCENTAGE },
+            children: [pgPara([pgRun(entreprise ? `[ ${entreprise} ]` : "", true, 20, ACCENT)], AlignmentType.RIGHT)],
+          }),
+        ],
+      }),
+    ],
   }));
 
-  paras.push(new Paragraph({
-    alignment: C,
-    spacing: { line: 320, lineRule: LineRuleType.AUTO, before: 480, after: 120 },
-    children: [new TextRun({ text: type.toUpperCase(), font: FONT, size: H2_PT, bold: true })],
-  }));
+  elems.push(emptyLine());
 
-  paras.push(para(`FILIÈRE : ${filiere.toUpperCase()}`, C, BODY_PT, true));
-  paras.push(emptyLine());
-  paras.push(emptyLine());
+  // ── School name + filière ─────────────────────────────────────────────────
+  elems.push(pgPara([pgRun(school.toUpperCase(), true, H1_PT, ACCENT)], C, 120, 40));
+  elems.push(pgPara([pgRun(`Filière : ${filiere}`, false, BODY_PT)], C, 0, 200));
 
-  paras.push(new Paragraph({
+  elems.push(emptyLine());
+  elems.push(emptyLine());
+
+  // ── Type ──────────────────────────────────────────────────────────────────
+  elems.push(pgPara([pgRun(type.toUpperCase(), true, H2_PT)], C, 0, 80));
+  elems.push(pgPara([pgRun(`Pour l'obtention du diplôme de ${filiere}`, false, BODY_PT)], C, 0, 200));
+
+  elems.push(emptyLine());
+
+  // ── Bordered theme title box ──────────────────────────────────────────────
+  elems.push(new Paragraph({
     alignment: C,
     border: {
-      top: { style: "single", size: 4, color: "000000", space: 12 },
-      bottom: { style: "single", size: 4, color: "000000", space: 12 },
-      left: { style: "single", size: 4, color: "000000", space: 12 },
-      right: { style: "single", size: 4, color: "000000", space: 12 },
+      top:    { style: BorderStyle.SINGLE, size: 12, color: ACCENT, space: 8 },
+      bottom: { style: BorderStyle.SINGLE, size: 12, color: ACCENT, space: 8 },
+      left:   { style: BorderStyle.SINGLE, size: 12, color: ACCENT, space: 8 },
+      right:  { style: BorderStyle.SINGLE, size: 12, color: ACCENT, space: 8 },
     },
     spacing: { line: 420, lineRule: LineRuleType.AUTO, before: 160, after: 160 },
-    indent: { left: convertMillimetersToTwip(15), right: convertMillimetersToTwip(15) },
-    children: [new TextRun({ text: theme, font: FONT, size: H2_PT, bold: true })],
+    indent: { left: convertMillimetersToTwip(12), right: convertMillimetersToTwip(12) },
+    children: [new TextRun({ text: theme, font: FONT, size: H2_PT, bold: true, color: ACCENT })],
   }));
 
-  paras.push(emptyLine());
-  paras.push(emptyLine());
+  elems.push(emptyLine());
+  elems.push(emptyLine());
 
-  paras.push(para(`Réalisé par : M. ${student}`, R, BODY_PT));
-  paras.push(para("Soutenu publiquement le : ………………………", R, BODY_PT));
-  if (encPeda) paras.push(para(`Encadrant pédagogique : ${encPeda}`, L, BODY_PT));
+  // ── Two-column table: Réalisé par | Encadrants ────────────────────────────
+  const leftCellParas: Paragraph[] = [
+    pgPara([pgRun("Réalisé par :", true, BODY_PT)], L),
+    pgPara([pgRun(`M. ${student}`, false, BODY_PT)], L),
+    pgPara([pgRun(""), ], L, 60),
+    pgPara([pgRun("Soutenu publiquement le : ………………", false, BODY_PT)], L),
+  ];
+
+  const rightCellParas: Paragraph[] = [];
+  if (encPeda) {
+    rightCellParas.push(pgPara([pgRun("Encadrant pédagogique :", true, BODY_PT)], L));
+    rightCellParas.push(pgPara([pgRun(encPeda, false, BODY_PT)], L, 0, 80));
+  }
   if (encPro) {
-    const encProFull = entreprise ? `${encPro}, ${entreprise}` : encPro;
-    paras.push(para(`Encadrant professionnel : ${encProFull}`, L, BODY_PT));
+    rightCellParas.push(pgPara([pgRun("Encadrant professionnel :", true, BODY_PT)], L, 60));
+    rightCellParas.push(pgPara([pgRun(encPro, false, BODY_PT)], L));
+    if (entreprise) rightCellParas.push(pgPara([pgRun(entreprise, false, BODY_PT)], L));
   }
 
-  paras.push(emptyLine());
-  paras.push(new Paragraph({
+  elems.push(new Table({
+    layout: TableLayoutType.FIXED,
+    width: { size: 100, type: WidthType.PERCENTAGE },
+    rows: [
+      new TableRow({
+        children: [
+          new TableCell({
+            borders: CELL_BORDERS,
+            width: { size: 50, type: WidthType.PERCENTAGE },
+            children: leftCellParas.length ? leftCellParas : [pgPara([pgRun("")], L)],
+          }),
+          new TableCell({
+            borders: CELL_BORDERS,
+            width: { size: 50, type: WidthType.PERCENTAGE },
+            children: rightCellParas.length ? rightCellParas : [pgPara([pgRun("")], L)],
+          }),
+        ],
+      }),
+    ],
+  }));
+
+  // ── Jury ──────────────────────────────────────────────────────────────────
+  if (jury1 || jury2 || jury3) {
+    elems.push(emptyLine());
+    elems.push(pgPara([pgRun("Membres du jury :", true, BODY_PT)], L, 120, 60));
+    if (jury1) elems.push(pgPara([pgRun(`• ${jury1}`, false, BODY_PT)], L));
+    if (jury2) elems.push(pgPara([pgRun(`• ${jury2}`, false, BODY_PT)], L));
+    if (jury3) elems.push(pgPara([pgRun(`• ${jury3}`, false, BODY_PT)], L));
+  }
+
+  // ── Année académique ──────────────────────────────────────────────────────
+  elems.push(emptyLine());
+  elems.push(new Paragraph({
     alignment: C,
     spacing: { line: 280, lineRule: LineRuleType.AUTO, before: 240, after: 0 },
     children: [new TextRun({ text: `Année universitaire : ${annee}`, font: FONT, size: BODY_PT, bold: true })],
   }));
 
-  return paras;
+  return elems;
 }
 
 function buildDedicaces(d: Report): Paragraph[] {
