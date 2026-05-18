@@ -1,23 +1,138 @@
 import { useEffect, useState, useRef } from "react";
 import { Link } from "wouter";
 import { motion, useInView } from "framer-motion";
-import { 
-  ChevronRight, 
-  CheckCircle2, 
-  XCircle, 
-  FileText, 
-  Upload, 
+import {
+  ChevronRight,
+  CheckCircle2,
+  XCircle,
+  FileText,
+  Upload,
   MessageSquare,
   Sparkles,
-  ArrowRight
+  ArrowRight,
+  Timer,
+  Users,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { 
-  Accordion, 
-  AccordionContent, 
-  AccordionItem, 
-  AccordionTrigger 
+import {
+  Accordion,
+  AccordionContent,
+  AccordionItem,
+  AccordionTrigger
 } from "@/components/ui/accordion";
+
+// ─── LAUNCH BANNER CONFIG ─────────────────────────────────────────────────────
+// UPDATE THESE when you launch:
+// Set LAUNCH_END to exactly 48h after you post in the FB groups
+const LAUNCH_END   = "2026-05-26T23:59:00Z"; // <-- change this on launch day
+const TOTAL_SLOTS  = 10;
+// Slots auto-decrement organically: 1 slot taken every ~5h after launch start
+const LAUNCH_START = "2026-05-25T00:00:00Z"; // <-- same day you post
+// ─────────────────────────────────────────────────────────────────────────────
+
+function useLaunchBanner() {
+  const [timeLeft, setTimeLeft] = useState({ h: 0, m: 0, s: 0, expired: false });
+  const [slotsLeft, setSlotsLeft] = useState(TOTAL_SLOTS);
+
+  useEffect(() => {
+    const tick = () => {
+      const now    = Date.now();
+      const end    = new Date(LAUNCH_END).getTime();
+      const start  = new Date(LAUNCH_START).getTime();
+      const diff   = end - now;
+
+      if (diff <= 0) {
+        setTimeLeft({ h: 0, m: 0, s: 0, expired: true });
+        setSlotsLeft(0);
+        return;
+      }
+
+      const h = Math.floor(diff / 3_600_000);
+      const m = Math.floor((diff % 3_600_000) / 60_000);
+      const s = Math.floor((diff % 60_000) / 1_000);
+      setTimeLeft({ h, m, s, expired: false });
+
+      // Organic slot depletion: 1 slot taken every ~5h
+      const hoursSinceStart = Math.max(0, (now - start) / 3_600_000);
+      const taken = Math.min(TOTAL_SLOTS - 1, Math.floor(hoursSinceStart / 5));
+      setSlotsLeft(TOTAL_SLOTS - taken);
+    };
+
+    tick();
+    const id = setInterval(tick, 1000);
+    return () => clearInterval(id);
+  }, []);
+
+  return { timeLeft, slotsLeft };
+}
+
+function LaunchBanner() {
+  const { timeLeft, slotsLeft } = useLaunchBanner();
+  const [dismissed, setDismissed] = useState(false);
+
+  if (timeLeft.expired || dismissed) return null;
+
+  const pad = (n: number) => String(n).padStart(2, "0");
+  const slotsPct = ((TOTAL_SLOTS - slotsLeft) / TOTAL_SLOTS) * 100;
+
+  return (
+    <div className="relative z-50 text-white text-sm" style={{ background: "linear-gradient(90deg, #7c3aed, #a855f7, #7c3aed)", backgroundSize: "200% 100%", animation: "gradientShift 4s ease infinite" }}>
+      <style>{`@keyframes gradientShift { 0%,100%{background-position:0%} 50%{background-position:100%} }`}</style>
+      <div className="container mx-auto px-4 py-2.5 flex flex-col sm:flex-row items-center justify-center gap-2 sm:gap-6 text-center">
+
+        {/* Left: label */}
+        <div className="flex items-center gap-2 font-bold">
+          <span className="text-base">🎉</span>
+          <span>Lancement RapportAI — Accès <span className="underline underline-offset-2">gratuit</span></span>
+        </div>
+
+        {/* Center: countdown + slots */}
+        <div className="flex items-center gap-4">
+          {/* Timer */}
+          <div className="flex items-center gap-1.5">
+            <Timer className="w-3.5 h-3.5 opacity-80" />
+            <span className="font-mono font-bold tracking-wider text-white">
+              {pad(timeLeft.h)}:{pad(timeLeft.m)}:{pad(timeLeft.s)}
+            </span>
+          </div>
+
+          <span className="opacity-40">·</span>
+
+          {/* Slots */}
+          <div className="flex items-center gap-1.5">
+            <Users className="w-3.5 h-3.5 opacity-80" />
+            <span className="font-semibold">
+              <span className="text-yellow-300 font-black">{slotsLeft}</span> place{slotsLeft !== 1 ? "s" : ""} restante{slotsLeft !== 1 ? "s" : ""}
+            </span>
+          </div>
+
+          {/* Slot progress bar */}
+          <div className="hidden sm:block w-20 h-1.5 bg-white/20 rounded-full overflow-hidden">
+            <div
+              className="h-full bg-yellow-300 rounded-full transition-all duration-1000"
+              style={{ width: `${slotsPct}%` }}
+            />
+          </div>
+        </div>
+
+        {/* Right: CTA */}
+        <Link href="/sign-up">
+          <button className="bg-white text-purple-700 font-black text-xs px-4 py-1.5 rounded-full hover:bg-yellow-300 hover:text-purple-900 transition-all shadow-md">
+            Commencer gratuitement →
+          </button>
+        </Link>
+      </div>
+
+      {/* Dismiss */}
+      <button
+        onClick={() => setDismissed(true)}
+        className="absolute right-3 top-1/2 -translate-y-1/2 opacity-50 hover:opacity-100 text-white text-lg leading-none"
+      >
+        ×
+      </button>
+    </div>
+  );
+}
 
 export default function LandingPage() {
   const [isScrolled, setIsScrolled] = useState(false);
@@ -32,6 +147,7 @@ export default function LandingPage() {
 
   return (
     <div className="min-h-[100dvh] flex flex-col font-sans bg-background selection:bg-primary/20">
+      <LaunchBanner />
       {/* 1. NAVBAR */}
       <header 
         className={`sticky top-0 z-50 w-full transition-all duration-200 border-b ${
