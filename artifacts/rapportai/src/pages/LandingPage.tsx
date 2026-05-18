@@ -23,11 +23,9 @@ import {
 
 // ─── LAUNCH BANNER CONFIG ─────────────────────────────────────────────────────
 // UPDATE THESE when you launch:
-// Set LAUNCH_END to exactly 48h after you post in the FB groups
-const LAUNCH_END   = "2026-05-26T23:59:00Z"; // <-- change this on launch day
-const TOTAL_SLOTS  = 10;
-// Slots auto-decrement organically: 1 slot taken every ~5h after launch start
-const LAUNCH_START = "2026-05-25T00:00:00Z"; // <-- same day you post
+const LAUNCH_END   = "2026-05-26T23:59:00Z"; // <-- 48h after you post
+const TOTAL_SLOTS  = 20;
+const LAUNCH_START = "2026-05-25T00:00:00Z"; // <-- when you post
 // ─────────────────────────────────────────────────────────────────────────────
 
 function useLaunchBanner() {
@@ -76,49 +74,54 @@ function LaunchBanner() {
   const slotsPct = ((TOTAL_SLOTS - slotsLeft) / TOTAL_SLOTS) * 100;
 
   return (
-    <div className="relative z-50 text-white text-sm" style={{ background: "linear-gradient(90deg, #7c3aed, #a855f7, #7c3aed)", backgroundSize: "200% 100%", animation: "gradientShift 4s ease infinite" }}>
-      <style>{`@keyframes gradientShift { 0%,100%{background-position:0%} 50%{background-position:100%} }`}</style>
-      <div className="container mx-auto px-4 py-2.5 flex flex-col sm:flex-row items-center justify-center gap-2 sm:gap-6 text-center">
+    <div className="relative z-50 text-white" style={{ background: "linear-gradient(90deg, #b91c1c, #dc2626, #b91c1c)", backgroundSize: "200% 100%", animation: "gradientShift 3s ease infinite" }}>
+      <style>{`@keyframes gradientShift { 0%,100%{background-position:0%} 50%{background-position:100%} } @keyframes pulse-badge { 0%,100%{opacity:1} 50%{opacity:.6} }`}</style>
 
-        {/* Left: label */}
-        <div className="flex items-center gap-2 font-bold">
-          <span className="text-base">🎉</span>
-          <span>Lancement RapportAI — Accès <span className="underline underline-offset-2">gratuit</span></span>
+      <div className="container mx-auto px-4 py-3 flex flex-col sm:flex-row items-center justify-center gap-3 sm:gap-8 text-center">
+
+        {/* Left: urgent label */}
+        <div className="flex items-center gap-2">
+          <span className="text-lg" style={{ animation: "pulse-badge 1.2s ease infinite" }}>🔥</span>
+          <div className="text-left">
+            <span className="font-black text-sm uppercase tracking-wide">Lancement officiel</span>
+            <span className="mx-2 opacity-50">—</span>
+            <span className="font-bold text-sm">Accès <span className="underline underline-offset-2 decoration-yellow-300">100% gratuit</span> limité</span>
+          </div>
         </div>
 
         {/* Center: countdown + slots */}
-        <div className="flex items-center gap-4">
-          {/* Timer */}
-          <div className="flex items-center gap-1.5">
-            <Timer className="w-3.5 h-3.5 opacity-80" />
-            <span className="font-mono font-bold tracking-wider text-white">
+        <div className="flex items-center gap-3 sm:gap-5">
+
+          {/* Countdown */}
+          <div className="flex items-center gap-2 bg-black/25 px-3 py-1.5 rounded-lg">
+            <Timer className="w-3.5 h-3.5 text-yellow-300 flex-shrink-0" />
+            <span className="font-mono font-black text-base tracking-widest text-yellow-300">
               {pad(timeLeft.h)}:{pad(timeLeft.m)}:{pad(timeLeft.s)}
             </span>
           </div>
 
-          <span className="opacity-40">·</span>
+          <span className="opacity-30 font-bold text-lg">|</span>
 
           {/* Slots */}
-          <div className="flex items-center gap-1.5">
-            <Users className="w-3.5 h-3.5 opacity-80" />
-            <span className="font-semibold">
-              <span className="text-yellow-300 font-black">{slotsLeft}</span> place{slotsLeft !== 1 ? "s" : ""} restante{slotsLeft !== 1 ? "s" : ""}
-            </span>
-          </div>
-
-          {/* Slot progress bar */}
-          <div className="hidden sm:block w-20 h-1.5 bg-white/20 rounded-full overflow-hidden">
-            <div
-              className="h-full bg-yellow-300 rounded-full transition-all duration-1000"
-              style={{ width: `${slotsPct}%` }}
-            />
+          <div className="flex flex-col items-center">
+            <div className="flex items-center gap-1.5">
+              <Users className="w-3.5 h-3.5 text-yellow-300" />
+              <span className="font-black text-base text-yellow-300">{slotsLeft}</span>
+              <span className="font-bold text-sm"> / {TOTAL_SLOTS} places restantes</span>
+            </div>
+            <div className="w-32 h-2 bg-black/30 rounded-full overflow-hidden mt-1">
+              <div
+                className="h-full bg-yellow-300 rounded-full transition-all duration-1000"
+                style={{ width: `${slotsPct}%` }}
+              />
+            </div>
           </div>
         </div>
 
-        {/* Right: CTA */}
+        {/* CTA */}
         <Link href="/sign-up">
-          <button className="bg-white text-purple-700 font-black text-xs px-4 py-1.5 rounded-full hover:bg-yellow-300 hover:text-purple-900 transition-all shadow-md">
-            Commencer gratuitement →
+          <button className="bg-yellow-300 text-red-900 font-black text-sm px-5 py-2 rounded-full hover:bg-white hover:text-red-700 transition-all shadow-lg shadow-black/20 flex-shrink-0">
+            Profiter maintenant →
           </button>
         </Link>
       </div>
@@ -126,7 +129,7 @@ function LaunchBanner() {
       {/* Dismiss */}
       <button
         onClick={() => setDismissed(true)}
-        className="absolute right-3 top-1/2 -translate-y-1/2 opacity-50 hover:opacity-100 text-white text-lg leading-none"
+        className="absolute right-3 top-1/2 -translate-y-1/2 opacity-60 hover:opacity-100 text-white text-xl leading-none font-bold"
       >
         ×
       </button>
@@ -136,6 +139,7 @@ function LaunchBanner() {
 
 export default function LandingPage() {
   const [isScrolled, setIsScrolled] = useState(false);
+  const { timeLeft, slotsLeft } = useLaunchBanner();
 
   useEffect(() => {
     const handleScroll = () => {
@@ -195,14 +199,30 @@ export default function LandingPage() {
           </div>
           
           <div className="container mx-auto px-4 text-center max-w-4xl relative z-10">
-            <motion.div
-              initial={{ opacity: 0, y: 12 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.4 }}
-              className="inline-flex items-center gap-2 bg-purple-50 border border-purple-100 text-purple-700 text-sm font-semibold px-4 py-2 rounded-full mb-8"
-            >
-              <span>🎓</span> Utilisé par <span className="font-black">500+</span> étudiants au Maroc
-            </motion.div>
+            <div className="flex flex-col items-center gap-3 mb-8">
+              {!timeLeft.expired && (
+                <motion.div
+                  initial={{ opacity: 0, scale: 0.9 }}
+                  animate={{ opacity: 1, scale: 1 }}
+                  transition={{ duration: 0.4 }}
+                  className="inline-flex items-center gap-2 bg-red-600 text-white text-sm font-black px-4 py-2 rounded-full shadow-lg"
+                  style={{ boxShadow: "0 0 20px rgba(220,38,38,0.5)" }}
+                >
+                  <span>🔥</span>
+                  <span className="uppercase tracking-wide">Offre de lancement</span>
+                  <span className="mx-1 opacity-60">—</span>
+                  <span className="bg-white text-red-600 rounded-full px-2 py-0.5 text-xs font-black">{slotsLeft} places restantes</span>
+                </motion.div>
+              )}
+              <motion.div
+                initial={{ opacity: 0, y: 12 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.4, delay: timeLeft.expired ? 0 : 0.1 }}
+                className="inline-flex items-center gap-2 bg-purple-50 border border-purple-100 text-purple-700 text-sm font-semibold px-4 py-2 rounded-full"
+              >
+                <span>🎓</span> Utilisé par <span className="font-black">500+</span> étudiants au Maroc
+              </motion.div>
+            </div>
             <motion.h1 
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
