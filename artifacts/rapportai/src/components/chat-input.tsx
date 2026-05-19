@@ -66,7 +66,8 @@ export function ChatInput({
 
   return (
     <div
-      className={cn("mx-4 mb-4 rounded-xl transition-all bg-card border border-border", isDragging && "ring-2 ring-violet-500")}
+      className={cn("mx-4 mb-4 rounded-xl transition-all", isDragging && "ring-2 ring-violet-500")}
+      style={{ background: "#1e293b", border: "1px solid #334155" }}
       onDragOver={onDragOver}
       onDragLeave={onDragLeave}
       onDrop={onDrop}
@@ -77,7 +78,8 @@ export function ChatInput({
           {attachedFiles.map((file, idx) => (
             <div
               key={idx}
-              className="flex items-center gap-1.5 px-2 py-1 rounded-lg text-xs bg-background text-muted-foreground border border-border"
+              className="flex items-center gap-1.5 px-2 py-1 rounded-lg text-xs"
+              style={{ background: "#0f172a", color: "#94a3b8", border: "1px solid #334155" }}
             >
               <FileText className="w-3 h-3 shrink-0" />
               <span className="max-w-[120px] truncate">{file.name}</span>
@@ -153,8 +155,8 @@ export function ChatInput({
             disabled={!canSend}
             className="w-8 h-8 rounded-lg flex items-center justify-center transition-all disabled:opacity-30"
             style={{
-              background: canSend ? "linear-gradient(135deg,#7c3aed,#a855f7)" : "hsl(var(--muted))",
-              border: canSend ? "none" : "1px solid hsl(var(--border))",
+              background: canSend ? "linear-gradient(135deg,#7c3aed,#a855f7)" : "#1e293b",
+              border: canSend ? "none" : "1px solid #334155",
             }}
           >
             <ArrowUp className="w-4 h-4 text-white" />

@@ -133,7 +133,7 @@ export default function Step1() {
         )}
         <div ref={bottomRef} />
       </div>
-      <div className="shrink-0 border-t border-border">
+      <div className="shrink-0 border-t" style={{ borderColor: "#1e293b" }}>
         <ChatInput
           onSend={handleSend}
           disabled={phase === "type" || phase === "done" || !!thinking}

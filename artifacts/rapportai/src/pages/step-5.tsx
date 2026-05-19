@@ -46,7 +46,7 @@ export default function Step5() {
         )}
         <div ref={bottomRef} />
       </div>
-      <div className="shrink-0 border-t border-border">
+      <div className="shrink-0 border-t" style={{ borderColor: "#1e293b" }}>
         <ChatInput
           isGenerating={isThinking || isGenerating}
           onAbort={abort}

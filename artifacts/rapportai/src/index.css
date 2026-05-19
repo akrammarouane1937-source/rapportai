@@ -157,54 +157,6 @@
   --sidebar-accent-border: hsl(from hsl(var(--sidebar-accent)) h s calc(l + var(--opaque-button-border-intensity)) / alpha);
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --button-outline: rgba(255,255,255,.08);
-    --badge-outline: rgba(255,255,255,.05);
-    --opaque-button-border-intensity: 8;
-    --elevate-1: rgba(255,255,255,.03);
-    --elevate-2: rgba(255,255,255,.06);
-
-    --background: 222 47% 8%;
-    --foreground: 210 40% 96%;
-    --border: 217 33% 18%;
-    --input: 217 33% 18%;
-    --ring: 263 82% 68%;
-
-    --card: 222 47% 11%;
-    --card-foreground: 210 40% 96%;
-    --card-border: 217 33% 18%;
-
-    --popover: 222 47% 11%;
-    --popover-foreground: 210 40% 96%;
-    --popover-border: 217 33% 18%;
-
-    --primary: 263 82% 68%;
-    --primary-foreground: 0 0% 100%;
-
-    --secondary: 217 33% 18%;
-    --secondary-foreground: 210 40% 96%;
-
-    --muted: 217 33% 18%;
-    --muted-foreground: 215 20% 65%;
-
-    --accent: 217 33% 18%;
-    --accent-foreground: 210 40% 96%;
-
-    --destructive: 0 72% 55%;
-    --destructive-foreground: 0 0% 100%;
-
-    --sidebar: 222 47% 8%;
-    --sidebar-foreground: 210 40% 96%;
-    --sidebar-border: 217 33% 18%;
-    --sidebar-primary: 263 82% 68%;
-    --sidebar-primary-foreground: 0 0% 100%;
-    --sidebar-accent: 217 33% 22%;
-    --sidebar-accent-foreground: 210 40% 96%;
-    --sidebar-ring: 263 82% 68%;
-  }
-}
-
 @layer base {
   * {
     @apply border-border;

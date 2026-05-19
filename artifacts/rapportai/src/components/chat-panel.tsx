@@ -19,8 +19,8 @@ export function ChatMessage({
         className="flex justify-end mb-4 px-4"
       >
         <div
-          className="max-w-[80%] rounded-2xl rounded-tr-sm px-4 py-2.5 text-sm bg-muted text-foreground"
-          style={{ lineHeight: "1.55" }}
+          className="max-w-[80%] rounded-2xl rounded-tr-sm px-4 py-2.5 text-sm"
+          style={{ background: "#1e293b", color: "#e2e8f0", lineHeight: "1.55" }}
         >
           {content}
         </div>
@@ -44,8 +44,8 @@ export function ChatMessage({
 
       {/* Message bubble */}
       <div
-        className="flex-1 min-w-0 rounded-2xl rounded-tl-sm px-4 py-2.5 text-sm bg-muted text-foreground/90"
-        style={{ lineHeight: "1.6" }}
+        className="flex-1 min-w-0 rounded-2xl rounded-tl-sm px-4 py-2.5 text-sm"
+        style={{ background: "#1e293b", color: "#cbd5e1", lineHeight: "1.6" }}
       >
         {content}
         {isTyping && (
@@ -88,21 +88,21 @@ export function ToolCallCard({ name, detail, status, done }: { name: string; det
       transition={{ duration: 0.18 }}
       className="flex items-center gap-2.5 rounded-lg px-3 py-2 mb-1.5 mx-4 overflow-hidden relative"
       style={{
-        background: isDone ? "hsl(var(--background))" : "hsl(var(--card))",
-        border: `1px solid ${isDone ? "hsl(var(--border))" : cfg.color + "50"}`,
+        background: isDone ? "#0f172a" : "#0d1117",
+        border: `1px solid ${isDone ? "#1e293b" : cfg.color + "50"}`,
         boxShadow: isDone ? "none" : `inset 0 0 24px ${cfg.color}0a`,
       }}
     >
       {/* Animated left accent */}
       <motion.div
         className="absolute left-0 top-0 bottom-0 w-[2px] rounded-full"
-        style={{ background: isDone ? "hsl(var(--muted))" : cfg.color }}
+        style={{ background: isDone ? "#1e293b" : cfg.color }}
         animate={isDone ? {} : { opacity: [0.5, 1, 0.5] }}
         transition={{ duration: 1.4, repeat: Infinity, ease: "easeInOut" }}
       />
 
       {/* Icon */}
-      <span className="shrink-0 ml-1.5" style={{ color: isDone ? "hsl(var(--muted-foreground))" : cfg.color }}>
+      <span className="shrink-0 ml-1.5" style={{ color: isDone ? "#334155" : cfg.color }}>
         {cfg.icon}
       </span>
 
@@ -113,7 +113,7 @@ export function ToolCallCard({ name, detail, status, done }: { name: string; det
 
       {/* Detail */}
       {detail && (
-        <span className="font-mono text-xs truncate flex-1" style={{ color: isDone ? "hsl(var(--muted))" : "hsl(var(--muted-foreground))" }}>
+        <span className="font-mono text-xs truncate flex-1" style={{ color: isDone ? "#1e293b" : "#475569" }}>
           {detail}
         </span>
       )}
@@ -190,12 +190,13 @@ export function StepTransitionCard({
     <motion.div
       initial={{ opacity: 0, y: 8 }}
       animate={{ opacity: 1, y: 0 }}
-      className="mx-4 mb-4 rounded-xl p-4 bg-card border border-border"
+      className="mx-4 mb-4 rounded-xl p-4"
+      style={{ background: "#1e293b", border: "1px solid #334155" }}
     >
       <div className="flex items-center justify-between gap-3">
         <div>
-          <p className="text-sm font-semibold text-foreground">{title}</p>
-          {subtitle && <p className="text-xs mt-0.5 text-muted-foreground">{subtitle}</p>}
+          <p className="text-sm font-semibold" style={{ color: "#e2e8f0" }}>{title}</p>
+          {subtitle && <p className="text-xs mt-0.5" style={{ color: "#64748b" }}>{subtitle}</p>}
         </div>
         <button
           onClick={onNext}
