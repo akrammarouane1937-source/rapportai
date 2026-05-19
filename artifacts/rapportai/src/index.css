@@ -5,7 +5,7 @@
 @import '@clerk/themes/shadcn.css';
 @plugin "@tailwindcss/typography";
 
-@custom-variant dark (@media (prefers-color-scheme: dark));
+@custom-variant dark (&:is(.dark *));
 
 @theme inline {
   --color-background: hsl(var(--background));
