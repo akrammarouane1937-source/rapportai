@@ -199,41 +199,6 @@ export default function LandingPage() {
           </div>
           
           <div className="container mx-auto px-4 text-center max-w-4xl relative z-10">
-
-            {/* ── Announcement headline ── */}
-            <motion.div
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.5 }}
-              className="mb-10"
-            >
-              <h1 className="text-5xl md:text-6xl lg:text-7xl font-black font-heading tracking-tight leading-[1.08] mb-5 text-foreground">
-                RapportAI célèbre<br />
-                son{" "}
-                <span style={{ background: "linear-gradient(135deg,#7c3aed,#a855f7)", WebkitBackgroundClip: "text", WebkitTextFillColor: "transparent" }}>
-                  lancement
-                </span>{" "}
-                🎉
-              </h1>
-              <p className="text-lg md:text-xl text-muted-foreground max-w-2xl mx-auto mb-8 leading-relaxed">
-                L'Agent IA pour rapports académiques marocains est{" "}
-                <strong className="text-foreground">gratuit pour les {slotsLeft} premiers étudiants</strong>.
-                {" "}Génère ton PFE, stage ou mémoire complet en 30 minutes.
-              </p>
-              <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
-                <Link href="/sign-up">
-                  <Button size="lg" className="w-full sm:w-auto text-lg h-14 px-8 rounded-full bg-primary hover:bg-primary-dark shadow-[0_4px_24px_rgba(124,58,237,0.25)] text-white">
-                    Commencer gratuitement <ArrowRight className="w-5 h-5 ml-2" />
-                  </Button>
-                </Link>
-                <Link href="/demo">
-                  <Button size="lg" variant="outline" className="w-full sm:w-auto text-lg h-14 px-8 rounded-full border-border hover:bg-muted text-foreground">
-                    Voir la démo
-                  </Button>
-                </Link>
-              </div>
-            </motion.div>
-
             <div className="flex flex-col items-center gap-3 mb-8">
               {!timeLeft.expired && (
                 <motion.div
@@ -258,6 +223,41 @@ export default function LandingPage() {
                 <span>🎓</span> Utilisé par <span className="font-black">500+</span> étudiants au Maroc
               </motion.div>
             </div>
+            <motion.h1 
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.5 }}
+              className="text-5xl md:text-6xl lg:text-7xl font-extrabold font-heading text-foreground tracking-tight leading-[1.1] mb-6"
+            >
+              Le premier outil IA pour les rapports académiques marocains
+            </motion.h1>
+            
+            <motion.p 
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.5, delay: 0.1 }}
+              className="text-xl md:text-2xl text-secondary-foreground font-medium mb-10 max-w-2xl mx-auto"
+            >
+              3 mois de rédaction. 30 minutes avec RapportAI.
+            </motion.p>
+            
+            <motion.div 
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.5, delay: 0.2 }}
+              className="flex flex-col sm:flex-row items-center justify-center gap-4"
+            >
+              <Link href="/sign-up">
+                <Button size="lg" className="w-full sm:w-auto text-lg h-14 px-8 rounded-full bg-primary hover:bg-primary-dark shadow-[0_4px_24px_rgba(124,58,237,0.25)] text-white">
+                  Générer mon rapport <ArrowRight className="w-5 h-5 ml-2" />
+                </Button>
+              </Link>
+              <Link href="/demo">
+                <Button size="lg" variant="outline" className="w-full sm:w-auto text-lg h-14 px-8 rounded-full border-border hover:bg-muted text-foreground">
+                  Voir la démo
+                </Button>
+              </Link>
+            </motion.div>
           </div>
         </section>
 
