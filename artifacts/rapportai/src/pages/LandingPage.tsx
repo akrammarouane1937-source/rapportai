@@ -369,9 +369,9 @@ export default function LandingPage() {
         {/* 7. BEFORE / AFTER */}
         <section className="py-24 bg-background border-t border-border">
           <div className="container mx-auto px-4 max-w-4xl">
-            <p className="text-center text-sm font-semibold text-primary uppercase tracking-widest mb-4">Résultats réels</p>
+            <p className="text-center text-sm font-semibold text-primary uppercase tracking-widest mb-4">Anti-détection</p>
             <h2 className="text-3xl md:text-4xl font-bold font-heading text-center mb-4 text-foreground">
-              Avant RapportAI. Après RapportAI.
+              Tu t'inquiètes que ton encadrant détecte l'IA ?<br />RapportAI est là.
             </h2>
             <p className="text-center text-muted-foreground mb-16 max-w-xl mx-auto">
               Le même rapport. La même IA. La différence c'est notre système d'humanisation — testé sur ZeroGPT.
