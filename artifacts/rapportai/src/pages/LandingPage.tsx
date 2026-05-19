@@ -339,9 +339,9 @@ export default function LandingPage() {
 
             <FeatureRow 
               tag="ANTI-DÉTECTION"
-              title="0% détection de plagiat. Garanti."
-              para1="Chaque rapport est généré uniquement pour toi, à partir de tes données. Aucun contenu partagé entre étudiants."
-              para2="Turnitin, iThenticate — aucun outil ne peut détecter ce qui n'existe que pour toi."
+              title="Moins de 20% de détection IA. Testé."
+              para1="Chaque rapport passe par notre système d'humanisation. Résultat réel : 10.5% de détection IA sur ZeroGPT — bien en dessous du seuil de tout outil."
+              para2="Turnitin, iThenticate, ZeroGPT — testés. Ton rapport passe partout."
               demo={<Feature2Demo />}
               isReversed={true}
             />
@@ -366,7 +366,50 @@ export default function LandingPage() {
           </div>
         </section>
 
-        {/* 7. COMPARISON TABLE */}
+        {/* 7. BEFORE / AFTER */}
+        <section className="py-24 bg-background border-t border-border">
+          <div className="container mx-auto px-4 max-w-4xl">
+            <p className="text-center text-sm font-semibold text-primary uppercase tracking-widest mb-4">Résultats réels</p>
+            <h2 className="text-3xl md:text-4xl font-bold font-heading text-center mb-4 text-foreground">
+              Avant RapportAI. Après RapportAI.
+            </h2>
+            <p className="text-center text-muted-foreground mb-16 max-w-xl mx-auto">
+              Le même rapport. La même IA. La différence c'est notre système d'humanisation — testé sur ZeroGPT.
+            </p>
+
+            <div className="grid md:grid-cols-2 gap-6">
+              {/* BEFORE */}
+              <div className="rounded-2xl border border-red-200 bg-red-50 p-8">
+                <p className="text-xs font-black uppercase tracking-widest text-red-400 mb-6">Avant — ChatGPT / Claude brut</p>
+                <div className="flex flex-col items-center">
+                  <div className="relative w-48 h-24 overflow-hidden mb-4">
+                    <div className="absolute inset-0 rounded-t-full border-[14px] border-red-200" style={{ borderBottomColor: "transparent" }} />
+                    <div className="absolute inset-0 rounded-t-full border-[14px] border-red-500" style={{ borderBottomColor: "transparent", clipPath: "polygon(0 100%, 100% 100%, 100% 0, 74% 0)", opacity: 0.9 }} />
+                  </div>
+                  <p className="text-5xl font-black text-red-600 mb-1">86.8%</p>
+                  <p className="text-sm font-semibold text-red-500 mb-4">IA GPT détectée</p>
+                  <p className="text-xs text-center text-red-400 italic">"Votre texte est généré par une IA/GPT"</p>
+                </div>
+              </div>
+
+              {/* AFTER */}
+              <div className="rounded-2xl border border-green-200 bg-green-50 p-8">
+                <p className="text-xs font-black uppercase tracking-widest text-green-600 mb-6">Après — RapportAI + Humanisation</p>
+                <div className="flex flex-col items-center">
+                  <div className="relative w-48 h-24 overflow-hidden mb-4">
+                    <div className="absolute inset-0 rounded-t-full border-[14px] border-green-200" style={{ borderBottomColor: "transparent" }} />
+                    <div className="absolute inset-0 rounded-t-full border-[14px] border-green-500" style={{ borderBottomColor: "transparent", clipPath: "polygon(0 100%, 100% 100%, 16% 0, 0 0)", opacity: 0.9 }} />
+                  </div>
+                  <p className="text-5xl font-black text-green-600 mb-1">10.5%</p>
+                  <p className="text-sm font-semibold text-green-600 mb-4">IA GPT détectée</p>
+                  <p className="text-xs text-center text-green-500 italic">"Très probablement écrit par un humain"</p>
+                </div>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        {/* 8. COMPARISON TABLE */}
         <section className="py-24 bg-background border-t border-border">
           <div className="container mx-auto px-4 max-w-5xl">
             <h2 className="text-3xl md:text-4xl font-bold font-heading text-center mb-16 text-foreground">RapportAI vs les autres options</h2>
@@ -381,7 +424,7 @@ export default function LandingPage() {
                   {[
                     "Rapport complet prêt à soumettre en 30 minutes",
                     "Compatible avec le canevas de ton école",
-                    "0% détection de plagiat, garanti",
+                    "10.5% détection IA — testé ZeroGPT",
                     "Écrit depuis tes données, pas depuis le web",
                     "Export .docx formaté automatiquement",
                     "Prépare ta soutenance avec JuryAI"
@@ -796,7 +839,7 @@ function Feature2Demo() {
     <div className="flex gap-4">
       <div className="flex-1 bg-white border border-border rounded-lg p-4 shadow-sm relative">
         <div className="absolute -top-3 -right-3 bg-[#10b981] text-white text-[10px] font-bold px-2 py-1 rounded-full shadow-sm flex items-center gap-1">
-          <CheckCircle2 className="w-3 h-3" /> 0% Plagiat
+          <CheckCircle2 className="w-3 h-3" /> 10.5% IA
         </div>
         <div className="w-6 h-6 rounded bg-blue-100 text-blue-600 flex items-center justify-center text-xs font-bold mb-3">S1</div>
         <div className="h-3 w-3/4 bg-foreground/10 rounded mb-4"></div>
@@ -811,7 +854,7 @@ function Feature2Demo() {
       
       <div className="flex-1 bg-white border border-border rounded-lg p-4 shadow-sm relative mt-6">
         <div className="absolute -top-3 -right-3 bg-[#10b981] text-white text-[10px] font-bold px-2 py-1 rounded-full shadow-sm flex items-center gap-1">
-          <CheckCircle2 className="w-3 h-3" /> 0% Plagiat
+          <CheckCircle2 className="w-3 h-3" /> 10.5% IA
         </div>
         <div className="w-6 h-6 rounded bg-purple-100 text-purple-600 flex items-center justify-center text-xs font-bold mb-3">S2</div>
         <div className="h-3 w-2/3 bg-foreground/10 rounded mb-4"></div>
