@@ -63,7 +63,7 @@ export default function Step2Page() {
         )}
         <div ref={bottomRef} />
       </div>
-      <div className="shrink-0 border-t" style={{ borderColor: "#1e293b" }}>
+      <div className="shrink-0 border-t border-border">
         <ChatInput
           isGenerating={isThinking || isGenerating}
           onAbort={abort}

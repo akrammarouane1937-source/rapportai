@@ -180,7 +180,7 @@ export default function PartieI() {
         )}
         <div ref={bottomRef} />
       </div>
-      <div className="shrink-0 border-t" style={{ borderColor: "#1e293b" }}>
+      <div className="shrink-0 border-t border-border">
         <ChatInput isGenerating={isGenerating} onAbort={abort}
           onSend={handleSend}
           disabled={isGenerating || phase === "generating"}

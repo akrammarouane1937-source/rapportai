@@ -121,13 +121,13 @@ export function PreviewPanel({ activeSection, content }: PreviewPanelProps) {
     const pages = splitIntoPages(text);
     if (pages.length === 0) continue;
 
-    for (const pageText of pages) {
+    for (let pageIdx = 0; pageIdx < pages.length; pageIdx++) {
+      const pageText = pages[pageIdx];
       const pn = pageNumber++;
-      const isFirstOfSection = pn === pageNumber - pages.length;
       allPageCards.push(
         <div
           key={`${id}-${pn}`}
-          {...(isFirstOfSection ? { "data-section": id } : {})}
+          {...(pageIdx === 0 ? { "data-section": id } : {})}
           className="bg-white word-preview-content relative"
           style={{
             width: "21cm",
