@@ -1,379 +1,236 @@
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { motion } from "framer-motion";
-import {
-  Plus, Search, FileText, Clock, ChevronRight,
-  Trash2, MoreVertical, Edit3, Download,
-} from "lucide-react";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
+import { FileText, Search, CheckCircle2, Clock, ChevronRight, LayoutGrid } from "lucide-react";
+import { useLocation } from "wouter";
 import { Sidebar, SidebarSpacer } from "@/components/layout/Sidebar";
 import { FloatingChat } from "@/components/dashboard/FloatingChat";
-import { useLocation } from "wouter";
-import { getReport, saveReport } from "@/lib/reportStore";
+import { useReportStore } from "@/lib/store";
 
-interface Report {
-  id: string;
-  title: string;
-  type: "PFE" | "Rapport de Stage" | "Mémoire";
-  school: string;
-  field: string;
-  status: "draft" | "in_progress" | "completed";
-  currentStep: number;
-  completedSteps: number[];
-  updatedAt: string;
-  wordCount: number;
+interface StepConfig {
+  id: number;
+  label: string;
+  field: string | null;
+  path: string;
 }
 
-function loadRealReports(): Report[] {
-  const d = getReport();
-  if (!d.theme && !d.school) return [];
-
-  const sections = [d.introduction, d.resume, d.dedicaces, d.remerciements, d.partieI, d.partieII, d.conclusion] as (string | undefined)[];
-  const completedSteps = sections
-    .map((s, i) => (s && s.trim().length > 50 ? i + 1 : null))
-    .filter((v): v is number => v !== null);
-
-  const wordCount = sections
-    .filter(Boolean)
-    .join(" ")
-    .trim()
-    .split(/\s+/)
-    .filter(Boolean).length;
-
-  const status: Report["status"] =
-    completedSteps.length === 0 ? "draft"
-    : completedSteps.length >= 6 ? "completed"
-    : "in_progress";
-
-  const currentStep = completedSteps.length > 0 ? Math.max(...completedSteps) + 1 : 1;
-
-  const type = (d.reportType as Report["type"]) ?? "PFE";
-
-  return [
-    {
-      id: "current",
-      title: d.theme ?? "Rapport sans titre",
-      type,
-      school:        d.school   ?? "",
-      field:         d.filiere  ?? "",
-      status,
-      currentStep,
-      completedSteps,
-      updatedAt:     "Maintenant",
-      wordCount,
-    },
-  ];
-}
-
-const STEP_LABELS = ["Infos", "Garde", "Dédicaces", "Remerciements", "Sommaire", "Partie I", "Partie II"];
-
-const STATUS_CONFIG = {
-  draft: { label: "Brouillon", bg: "bg-gray-100", text: "text-gray-600" },
-  in_progress: { label: "En cours", bg: "bg-blue-50", text: "text-blue-600" },
-  completed: { label: "Terminé", bg: "bg-green-50", text: "text-green-600" },
-};
-
-const TYPE_COLORS: Record<string, string> = {
-  "PFE": "bg-purple-50 text-purple-700",
-  "Rapport de Stage": "bg-orange-50 text-orange-700",
-  "Mémoire": "bg-indigo-50 text-indigo-700",
-};
-
-const STEP_PATHS: Record<number, string> = {
-  1: "/rapport/step-1", 2: "/rapport/step-2", 3: "/rapport/step-3",
-  4: "/rapport/step-4", 5: "/rapport/step-5", 6: "/rapport/step-6",
-  7: "/rapport/partie-i", 8: "/rapport/partie-ii", 9: "/rapport/step-9",
-};
-
-const STEP_LABEL_PATHS = [
-  "/rapport/step-1",
-  "/rapport/step-2",
-  "/rapport/step-3",
-  "/rapport/step-4",
-  "/rapport/step-5",
-  "/rapport/partie-i",
-  "/rapport/partie-ii",
+const STEPS: StepConfig[] = [
+  { id: 1, label: "Informations générales", field: null,            path: "/rapport/step-1"  },
+  { id: 2, label: "Page de garde",          field: "pageDeGarde",  path: "/rapport/step-2"  },
+  { id: 3, label: "Dédicaces",              field: "dedicaces",    path: "/rapport/step-3"  },
+  { id: 4, label: "Résumé & Abstract",      field: "resumeFr",     path: "/rapport/step-4"  },
+  { id: 5, label: "Sommaire",               field: "sommaire",     path: "/rapport/step-5"  },
+  { id: 6, label: "Introduction",           field: "introduction", path: "/rapport/step-6"  },
+  { id: 7, label: "Partie I",               field: "partieI",      path: "/rapport/partie-i"},
+  { id: 8, label: "Partie II",              field: "partieII",     path: "/rapport/partie-ii"},
+  { id: 9, label: "Conclusion",             field: "conclusion",   path: "/rapport/step-9"  },
 ];
 
-function ReportCard({ report, onDelete, onContinue, onStepClick }: { report: Report; onDelete: (id: string) => void; onContinue: (report: Report) => void; onStepClick: (path: string) => void }) {
-  const [menuOpen, setMenuOpen] = useState(false);
-  const status = STATUS_CONFIG[report.status];
-  const progress = Math.round((report.completedSteps.length / 7) * 100);
+type FilterStatus = "all" | "completed" | "in_progress" | "not_started";
+
+function getStatus(text: string | null | undefined): "completed" | "in_progress" | "not_started" {
+  if (!text || text.trim().length === 0) return "not_started";
+  if (text.trim().length >= 100) return "completed";
+  return "in_progress";
+}
+
+const STATUS_CONFIG = {
+  completed:   { label: "Complété",       bg: "#f0fdf4", text: "#15803d", dot: "#22c55e" },
+  in_progress: { label: "En cours",       bg: "#eff6ff", text: "#1d4ed8", dot: "#3b82f6" },
+  not_started: { label: "Non commencé",   bg: "#f9fafb", text: "#9ca3af", dot: "#d1d5db" },
+};
+
+function SectionThumbnail({ text }: { text: string | undefined }) {
+  if (!text?.trim()) {
+    return (
+      <div
+        className="w-full h-full flex flex-col items-center justify-center"
+        style={{ background: "#f8fafc" }}
+      >
+        <FileText className="w-8 h-8 mb-1.5" style={{ color: "#e2e8f0" }} />
+        <span className="text-xs" style={{ color: "#cbd5e1" }}>Non commencé</span>
+      </div>
+    );
+  }
+
+  return (
+    <div className="w-full h-full overflow-hidden relative" style={{ background: "#fff" }}>
+      <div
+        className="absolute top-0 left-0 pointer-events-none select-none"
+        style={{
+          transform: "scale(0.22)",
+          transformOrigin: "top left",
+          width: "455%",
+          padding: "24px 28px",
+          fontFamily: "Times New Roman, Times, serif",
+          fontSize: "11pt",
+          lineHeight: "1.65",
+          color: "#1a1a1a",
+          whiteSpace: "pre-wrap",
+          wordBreak: "break-word",
+        }}
+      >
+        {text.slice(0, 1200)}
+      </div>
+      {/* fade at bottom */}
+      <div
+        className="absolute bottom-0 left-0 right-0"
+        style={{ height: 40, background: "linear-gradient(to bottom, transparent, rgba(255,255,255,0.95))" }}
+      />
+    </div>
+  );
+}
+
+function StepCard({ step, text, onOpen }: { step: StepConfig; text: string | undefined; onOpen: () => void }) {
+  const status = step.field ? getStatus(text) : "not_started";
+  const cfg    = STATUS_CONFIG[status];
 
   return (
     <motion.div
       initial={{ opacity: 0, y: 8 }}
       animate={{ opacity: 1, y: 0 }}
-      className="bg-white rounded-2xl border border-gray-100 overflow-hidden hover:border-purple-200 transition-all group"
-      style={{ boxShadow: "0 1px 3px rgba(0,0,0,0.06)" }}
-      data-testid={`report-card-${report.id}`}
+      whileHover={{ y: -2, boxShadow: "0 8px 24px rgba(0,0,0,0.10)" }}
+      transition={{ duration: 0.15 }}
+      onClick={onOpen}
+      className="rounded-xl overflow-hidden cursor-pointer border"
+      style={{
+        background: "#fff",
+        borderColor: "#e5e7eb",
+        boxShadow: "0 1px 4px rgba(0,0,0,0.06)",
+      }}
     >
-      <div className="p-5">
-        {/* Top row */}
-        <div className="flex items-start justify-between mb-3">
-          <div className="flex items-start gap-3 flex-1 min-w-0">
-            <div className="w-9 h-9 bg-purple-50 rounded-xl flex items-center justify-center flex-shrink-0 mt-0.5">
-              <FileText className="w-4 h-4 text-purple-500" />
-            </div>
-            <div className="flex-1 min-w-0">
-              <div className="flex flex-wrap items-center gap-1.5 mb-1">
-                <span className={`text-xs font-semibold px-2 py-0.5 rounded-full ${TYPE_COLORS[report.type]}`}>
-                  {report.type}
-                </span>
-                <span className={`text-xs font-medium px-2 py-0.5 rounded-full ${status.bg} ${status.text}`}>
-                  {status.label}
-                </span>
-              </div>
-              <h3
-                className="font-semibold text-gray-900 text-sm leading-snug truncate"
-                style={{ fontFamily: "'Plus Jakarta Sans', sans-serif" }}
-                title={report.title}
-              >
-                {report.title}
-              </h3>
-              <div className="flex items-center gap-2 mt-1">
-                <span className="text-xs text-gray-400">{report.school}</span>
-                <span className="text-gray-200">·</span>
-                <span className="text-xs text-gray-400">{report.field}</span>
-              </div>
-            </div>
-          </div>
-          <div className="relative flex-shrink-0 ml-2">
-            <button
-              data-testid={`button-menu-report-${report.id}`}
-              onClick={() => setMenuOpen(!menuOpen)}
-              className="w-7 h-7 rounded-lg flex items-center justify-center text-gray-400 hover:text-gray-600 hover:bg-gray-100 transition-colors"
-            >
-              <MoreVertical className="w-4 h-4" />
-            </button>
-            {menuOpen && (
-              <div
-                className="absolute right-0 top-8 w-44 bg-white rounded-xl border border-gray-100 overflow-hidden z-20"
-                style={{ boxShadow: "0 8px 24px rgba(0,0,0,0.1)" }}
-              >
-                <button
-                  className="w-full flex items-center gap-2.5 px-3.5 py-2.5 text-sm text-gray-700 hover:bg-gray-50 transition-colors"
-                  onClick={() => setMenuOpen(false)}
-                >
-                  <Edit3 className="w-4 h-4 text-gray-400" />
-                  Renommer
-                </button>
-                <button
-                  className="w-full flex items-center gap-2.5 px-3.5 py-2.5 text-sm text-gray-700 hover:bg-gray-50 transition-colors"
-                  onClick={() => setMenuOpen(false)}
-                >
-                  <Download className="w-4 h-4 text-gray-400" />
-                  Exporter .docx
-                </button>
-                <div className="border-t border-gray-100" />
-                <button
-                  className="w-full flex items-center gap-2.5 px-3.5 py-2.5 text-sm text-red-600 hover:bg-red-50 transition-colors"
-                  onClick={() => { onDelete(report.id); setMenuOpen(false); }}
-                  data-testid={`button-delete-report-${report.id}`}
-                >
-                  <Trash2 className="w-4 h-4" />
-                  Supprimer
-                </button>
-              </div>
-            )}
-          </div>
+      {/* Thumbnail */}
+      <div
+        className="w-full overflow-hidden relative"
+        style={{ height: 148, borderBottom: "1px solid #f3f4f6" }}
+      >
+        <SectionThumbnail text={text} />
+
+        {/* Step number badge */}
+        <div
+          className="absolute top-2 left-2 w-5 h-5 rounded-full flex items-center justify-center text-[10px] font-bold"
+          style={{ background: "#fff", color: "#7c3aed", boxShadow: "0 1px 4px rgba(0,0,0,0.12)" }}
+        >
+          {step.id}
         </div>
 
-        {/* Progress */}
-        <div className="mb-3">
-          <div className="flex items-center justify-between mb-1.5">
-            <span className="text-xs text-gray-400">
-              {report.completedSteps.length}/{7} sections · {report.wordCount.toLocaleString("fr-FR")} mots
-            </span>
-            <span className="text-xs font-semibold text-purple-600">{progress}%</span>
+        {/* Status dot */}
+        {status === "completed" && (
+          <div className="absolute top-2 right-2">
+            <CheckCircle2 className="w-4 h-4" style={{ color: "#22c55e" }} />
           </div>
-          <div className="h-1.5 bg-gray-100 rounded-full overflow-hidden">
-            <div
-              className="h-full rounded-full transition-all"
-              style={{
-                width: `${progress}%`,
-                background: progress === 100
-                  ? "linear-gradient(90deg, #10b981, #34d399)"
-                  : "linear-gradient(90deg, #7c3aed, #a855f7)",
-              }}
-            />
-          </div>
+        )}
+      </div>
+
+      {/* Card body */}
+      <div className="px-3 py-2.5">
+        <div className="flex items-start justify-between gap-2 mb-1.5">
+          <h3 className="text-sm font-semibold text-gray-900 leading-tight" style={{ fontFamily: "'Plus Jakarta Sans', sans-serif" }}>
+            {step.label}
+          </h3>
+          <ChevronRight className="w-3.5 h-3.5 text-gray-300 flex-shrink-0 mt-0.5" />
         </div>
 
-        {/* Step pills */}
-        <div className="flex flex-wrap gap-1 mb-4">
-          {STEP_LABELS.map((label, i) => {
-            const stepId = i + 1;
-            const done = report.completedSteps.includes(stepId);
-            const current = report.currentStep === stepId;
-            return (
-              <button
-                key={stepId}
-                title={`Aller à : ${label}`}
-                onClick={() => onStepClick(STEP_LABEL_PATHS[i])}
-                className={`text-xs px-2 py-0.5 rounded-full font-medium border transition-all cursor-pointer
-                  hover:scale-105 hover:shadow-sm active:scale-95
-                  ${done
-                    ? "bg-green-50 text-green-700 border-green-200 hover:bg-green-100"
-                    : current
-                    ? "bg-purple-600 text-white border-purple-600 hover:bg-purple-700"
-                    : "bg-gray-50 text-gray-400 border-gray-200 hover:bg-gray-100 hover:text-gray-600"
-                  }
-                `}
-              >
-                {label}
-              </button>
-            );
-          })}
-        </div>
-
-        {/* Footer */}
         <div className="flex items-center justify-between">
-          <span className="text-xs text-gray-400 flex items-center gap-1">
-            <Clock className="w-3 h-3" />
-            {report.updatedAt}
-          </span>
-          <button
-            data-testid={`button-open-report-${report.id}`}
-            onClick={() => onContinue(report)}
-            className="flex items-center gap-1 text-xs font-semibold text-purple-600 hover:text-purple-700 bg-purple-50 hover:bg-purple-100 px-3 py-1.5 rounded-lg transition-colors"
+          <span
+            className="inline-flex items-center gap-1 text-[11px] font-medium px-1.5 py-0.5 rounded-full"
+            style={{ background: cfg.bg, color: cfg.text }}
           >
-            {report.status === "completed" ? "Voir" : "Continuer"}
-            <ChevronRight className="w-3 h-3" />
-          </button>
+            <span className="w-1.5 h-1.5 rounded-full flex-shrink-0" style={{ background: cfg.dot }} />
+            {cfg.label}
+          </span>
+
+          {text && text.trim().length > 0 && (
+            <span className="text-[10px] text-gray-400 flex items-center gap-0.5">
+              <Clock className="w-2.5 h-2.5" />
+              {Math.ceil(text.trim().split(/\s+/).filter(Boolean).length / 250)} min de lecture
+            </span>
+          )}
         </div>
       </div>
     </motion.div>
   );
 }
 
-function EmptyState({ onNew }: { onNew: () => void }) {
-  return (
-    <motion.div
-      initial={{ opacity: 0, y: 12 }}
-      animate={{ opacity: 1, y: 0 }}
-      className="col-span-full flex flex-col items-center justify-center py-20 text-center"
-    >
-      <div className="w-20 h-20 bg-purple-50 rounded-3xl flex items-center justify-center mb-5">
-        <FileText className="w-9 h-9 text-purple-300" />
-      </div>
-      <h2
-        className="text-xl font-bold text-gray-900 mb-2"
-        style={{ fontFamily: "'Plus Jakarta Sans', sans-serif" }}
-      >
-        Aucun rapport
-      </h2>
-      <p className="text-gray-500 text-sm max-w-xs mb-6">
-        Tu n'as pas encore créé de rapport. Génère ton premier PFE, mémoire ou rapport de stage en 30 minutes.
-      </p>
-      <Button
-        data-testid="button-create-first-report"
-        onClick={onNew}
-        className="bg-purple-600 hover:bg-purple-700 text-white flex items-center gap-2"
-        style={{ boxShadow: "0 4px 24px rgba(124,58,237,0.25)" }}
-      >
-        <Plus className="w-4 h-4" />
-        Créer mon premier rapport
-      </Button>
-    </motion.div>
-  );
+interface RapportsPageProps {
+  completedOnly?: boolean;
 }
 
-export default function RapportsPage() {
-  const [reports, setReports] = useState<Report[]>(() => loadRealReports());
-  const [search, setSearch] = useState("");
-  const [filter, setFilter] = useState<"all" | "draft" | "in_progress" | "completed">("all");
-  const [, navigate] = useLocation();
+export default function RapportsPage({ completedOnly = false }: RapportsPageProps) {
+  const { report } = useReportStore();
+  const [, navigate]  = useLocation();
+  const [search, setSearch]   = useState("");
+  const [filter, setFilter]   = useState<FilterStatus>(completedOnly ? "completed" : "all");
 
-  useEffect(() => {
-    setReports(loadRealReports());
-  }, []);
+  const reportData = report as Record<string, string>;
 
-  const goToNewReport = () => navigate("/rapport/step-1");
+  const filtered = STEPS.filter((step) => {
+    const text   = step.field ? reportData[step.field] : undefined;
+    const status = step.field ? getStatus(text) : "not_started";
 
-  const handleContinue = (report: Report) => {
-    const path = STEP_PATHS[report.currentStep] ?? STEP_PATHS[1];
-    navigate(path);
-  };
+    if (search && !step.label.toLowerCase().includes(search.toLowerCase())) return false;
+    if (filter === "all") return true;
+    return status === filter;
+  });
 
-  const filtered = reports
-    .filter((r) => filter === "all" || r.status === filter)
-    .filter((r) =>
-      !search ||
-      r.title.toLowerCase().includes(search.toLowerCase()) ||
-      r.school.toLowerCase().includes(search.toLowerCase()) ||
-      r.field.toLowerCase().includes(search.toLowerCase())
-    );
+  const completedCount = STEPS.filter((s) => s.field && getStatus(reportData[s.field]) === "completed").length;
 
-  const deleteReport = (id: string) => {
-    if (id === "current") {
-      saveReport({ theme: undefined, school: undefined, filiere: undefined, reportType: undefined, partieI: undefined, partieII: undefined, introduction: undefined, conclusion: undefined, resume: undefined, dedicaces: undefined, remerciements: undefined });
-    }
-    setReports((prev) => prev.filter((r) => r.id !== id));
-  };
-
-  const filterOptions: { value: typeof filter; label: string }[] = [
-    { value: "all", label: "Tous" },
-    { value: "in_progress", label: "En cours" },
-    { value: "completed", label: "Terminés" },
-    { value: "draft", label: "Brouillons" },
+  const filterOptions: { value: FilterStatus; label: string }[] = [
+    { value: "all",          label: "Toutes" },
+    { value: "completed",    label: "Complétées" },
+    { value: "in_progress",  label: "En cours" },
+    { value: "not_started",  label: "Non commencées" },
   ];
 
   return (
-    <div className="flex min-h-screen bg-[#f9f8ff]">
+    <div className="flex min-h-screen" style={{ background: "#f9f8ff" }}>
       <Sidebar />
       <SidebarSpacer />
 
       <main className="flex-1 p-8 min-w-0">
         <div className="max-w-5xl mx-auto">
-          <motion.div
-            initial={{ opacity: 0, y: 12 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.35 }}
-          >
+          <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.3 }}>
+
             {/* Header */}
-            <div className="flex items-center justify-between mb-7">
-              <div>
-                <h1
-                  className="text-2xl font-bold text-gray-900"
-                  style={{ fontFamily: "'Plus Jakarta Sans', sans-serif" }}
+            <div className="flex items-center justify-between mb-6">
+              <div className="flex items-center gap-3">
+                <div
+                  className="w-8 h-8 rounded-lg flex items-center justify-center"
+                  style={{ background: "linear-gradient(135deg,#7c3aed,#a855f7)" }}
                 >
-                  Mes rapports
-                </h1>
-                <p className="text-gray-500 text-sm mt-0.5">
-                  {reports.length} rapport{reports.length !== 1 ? "s" : ""} au total
-                </p>
+                  <LayoutGrid className="w-4 h-4 text-white" />
+                </div>
+                <div>
+                  <h1
+                    className="text-xl font-bold text-gray-900"
+                    style={{ fontFamily: "'Plus Jakarta Sans', sans-serif" }}
+                  >
+                    {completedOnly ? "Sections terminées" : "Mon Rapport"}
+                  </h1>
+                  <p className="text-xs text-gray-400 mt-0.5">
+                    {completedCount}/9 sections complétées
+                  </p>
+                </div>
               </div>
-              <Button
-                data-testid="button-new-report"
-                onClick={goToNewReport}
-                className="flex items-center gap-2 bg-purple-600 hover:bg-purple-700 text-white"
-                style={{ boxShadow: "0 4px 24px rgba(124,58,237,0.25)" }}
-              >
-                <Plus className="w-4 h-4" />
-                Nouveau rapport
-              </Button>
             </div>
 
-            {/* Filters */}
+            {/* Search + Filters */}
             <div className="flex items-center gap-3 mb-6 flex-wrap">
-              <div className="relative flex-1 max-w-xs">
-                <Search className="w-4 h-4 text-gray-400 absolute left-3 top-1/2 -translate-y-1/2" />
-                <Input
-                  data-testid="input-search-reports"
-                  placeholder="Rechercher..."
+              <div className="relative">
+                <Search className="w-3.5 h-3.5 text-gray-400 absolute left-3 top-1/2 -translate-y-1/2" />
+                <input
+                  placeholder="Rechercher une section..."
                   value={search}
                   onChange={(e) => setSearch(e.target.value)}
-                  className="pl-9 bg-white border-gray-200 text-sm"
+                  className="pl-8 pr-3 py-1.5 text-sm bg-white border border-gray-200 rounded-lg outline-none focus:border-purple-400 transition-colors"
+                  style={{ width: 220 }}
                 />
               </div>
-              <div className="flex items-center gap-2 bg-white border border-gray-200 rounded-xl p-1">
+              <div className="flex items-center gap-1 bg-white border border-gray-200 rounded-xl p-1">
                 {filterOptions.map((opt) => (
                   <button
                     key={opt.value}
-                    data-testid={`filter-${opt.value}`}
                     onClick={() => setFilter(opt.value)}
-                    className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-all ${
+                    className={`px-3 py-1 rounded-lg text-xs font-medium transition-all ${
                       filter === opt.value
                         ? "bg-purple-600 text-white shadow-sm"
                         : "text-gray-500 hover:text-gray-700"
@@ -385,16 +242,30 @@ export default function RapportsPage() {
               </div>
             </div>
 
-            {/* Grid */}
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              {filtered.length === 0 ? (
-                <EmptyState onNew={goToNewReport} />
-              ) : (
-                filtered.map((report) => (
-                  <ReportCard key={report.id} report={report} onDelete={deleteReport} onContinue={handleContinue} onStepClick={navigate} />
-                ))
-              )}
-            </div>
+            {/* Steps grid */}
+            {filtered.length === 0 ? (
+              <div className="flex flex-col items-center justify-center py-24 text-center">
+                <div className="w-16 h-16 rounded-2xl flex items-center justify-center mb-4" style={{ background: "#f3f4f6" }}>
+                  <FileText className="w-7 h-7 text-gray-300" />
+                </div>
+                <p className="text-sm font-semibold text-gray-500 mb-1">Aucune section trouvée</p>
+                <p className="text-xs text-gray-400">
+                  {filter !== "all" ? "Change le filtre pour voir d'autres sections." : "Commence ton rapport pour voir les sections ici."}
+                </p>
+              </div>
+            ) : (
+              <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
+                {filtered.map((step) => (
+                  <StepCard
+                    key={step.id}
+                    step={step}
+                    text={step.field ? reportData[step.field] : undefined}
+                    onOpen={() => navigate(step.path)}
+                  />
+                ))}
+              </div>
+            )}
+
           </motion.div>
         </div>
       </main>
@@ -403,3 +274,4 @@ export default function RapportsPage() {
     </div>
   );
 }
+

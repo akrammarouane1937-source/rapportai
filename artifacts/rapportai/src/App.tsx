@@ -10,6 +10,7 @@ import LandingPage from "@/pages/LandingPage";
 import OnboardingPage from "@/pages/OnboardingPage";
 import DashboardPage from "@/pages/DashboardPage";
 import RapportsPage from "@/pages/RapportsPage";
+function SectionsTermineesPage() { return <RapportsPage completedOnly />; }
 import DemoPage from "@/pages/DemoPage";
 import Step1Page from "@/pages/step-1";
 import Step4Page from "@/pages/step-4";
@@ -295,6 +296,9 @@ function ClerkProviderWithRoutes() {
             <Route path="/rapports">
               <ProtectedRoute component={RapportsPage} />
             </Route>
+            <Route path="/sections-terminees">
+              <ProtectedRoute component={SectionsTermineesPage} />
+            </Route>
             <Route path="/demo" component={DemoPage} />
             <Route path="/rapport/step-1">
               <ProtectedRoute component={Step1Page} />
@@ -369,6 +373,7 @@ function NoAuthApp() {
           <Route path="/onboarding" component={OnboardingPage} />
           <Route path="/dashboard" component={DashboardPage} />
           <Route path="/rapports" component={RapportsPage} />
+          <Route path="/sections-terminees" component={SectionsTermineesPage} />
           <Route path="/demo" component={DemoPage} />
           <Route path="/rapport/step-1" component={Step1Page} />
           <Route path="/rapport/step-2" component={Step2Page} />

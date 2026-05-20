@@ -2,39 +2,51 @@ import { useState } from "react";
 import { useLocation } from "wouter";
 import { useOptionalUser as useUser, useOptionalClerk as useClerk } from "@/lib/useOptionalClerk";
 import {
-  LayoutDashboard, FileText, BookOpen, MessageSquare,
-  ImageIcon, Settings, LogOut,
+  Home, LayoutGrid, ListChecks, ImageIcon, BookOpen,
+  MessageSquare, Settings, LogOut, Search, Plus,
+  FileInput, GraduationCap, BookMarked, ChevronDown, Zap,
 } from "lucide-react";
 import { UpsellModal } from "@/components/report/UpsellModal";
-import { getMyPlan, canUseFeature } from "@/lib/userPlan";
+import { getMyPlan, canUseFeature, PLAN_LIMITS } from "@/lib/userPlan";
+import { getReport } from "@/lib/reportStore";
 
-const navItems = [
-  { icon: LayoutDashboard, label: "Tableau de bord", path: "/dashboard",   proFeature: "" },
-  { icon: FileText,        label: "Mes rapports",    path: "/rapports",    proFeature: "" },
-  { icon: BookOpen,        label: "Bibliothèque",    path: "/bibliotheque",proFeature: "citations" },
-  { icon: MessageSquare,   label: "JuryAI",          path: "/juryai",      proFeature: "juryai" },
-  { icon: ImageIcon,       label: "Figures",         path: "/figures",     proFeature: "" },
-  { icon: Settings,        label: "Paramètres",      path: "/parametres",  proFeature: "" },
+const NAV_ITEMS = [
+  { icon: Home,          label: "Accueil",            path: "/dashboard",          proFeature: "" },
+  { icon: LayoutGrid,    label: "Mon Rapport",         path: "/rapports",           proFeature: "" },
+  { icon: ListChecks,    label: "Sections terminées",  path: "/sections-terminees", proFeature: "" },
+  { icon: ImageIcon,     label: "Figures",             path: "/figures",            proFeature: "" },
+  { icon: BookOpen,      label: "Bibliothèque",        path: "/bibliotheque",       proFeature: "citations" },
+  { icon: MessageSquare, label: "JuryAI",              path: "/juryai",             proFeature: "juryai" },
+  { icon: Settings,      label: "Paramètres",          path: "/parametres",         proFeature: "" },
+];
+
+const BOTTOM_NAV = [
+  { icon: GraduationCap, label: "Tutoriel",      path: "/tutoriel" },
+  { icon: BookMarked,    label: "Documentation", path: "/documentation" },
 ];
 
 export function Sidebar() {
-  const [hovered, setHovered] = useState(false);
   const [location, setLocation] = useLocation();
   const { user } = useUser();
   const { signOut } = useClerk();
-  const [upsellOpen, setUpsellOpen] = useState(false);
+  const [upsellOpen, setUpsellOpen]   = useState(false);
   const [upsellFeature, setUpsellFeature] = useState("");
 
-  const plan = getMyPlan();
-  const expanded = hovered;
-  const w = expanded ? 220 : 60;
+  const plan   = getMyPlan();
+  const limits = PLAN_LIMITS[plan.planId];
+  const report = getReport();
+
+  const sectionsWithContent = [
+    report.introduction, report.resume, report.dedicaces,
+    report.remerciements, report.partieI, report.partieII, report.conclusion,
+  ].filter((s) => s && s.length > 50).length;
 
   const handleSignOut = async () => {
     await signOut();
     setLocation("/");
   };
 
-  const handleNavClick = (item: typeof navItems[number]) => {
+  const handleNavClick = (item: typeof NAV_ITEMS[number]) => {
     if (item.proFeature && !canUseFeature(item.proFeature, plan.planId)) {
       setUpsellFeature(item.label);
       setUpsellOpen(true);
@@ -43,94 +55,129 @@ export function Sidebar() {
     setLocation(item.path);
   };
 
-  const userInitial = user?.firstName?.[0]
-    || user?.emailAddresses?.[0]?.emailAddress?.[0]?.toUpperCase()
-    || "U";
+  const userInitial =
+    user?.firstName?.[0] ||
+    user?.emailAddresses?.[0]?.emailAddress?.[0]?.toUpperCase() ||
+    "U";
   const userName = user?.firstName
     ? `${user.firstName} ${user.lastName || ""}`.trim()
-    : "Étudiant";
+    : user?.emailAddresses?.[0]?.emailAddress?.split("@")[0] || "Étudiant";
 
   const planLabel: Record<string, string> = {
     free: "Gratuit", essentiel: "Essentiel", pro: "Pro", premium: "Premium",
   };
 
+  const hasReport      = !!(report.theme || report.school);
+  const pagesUsed      = sectionsWithContent;
+  const pagesLimit     = limits.pages === Infinity ? "∞" : limits.pages;
+  const revisionsUsed  = plan.revisionCount;
+  const revisionsLimit = limits.revisions === Infinity ? "∞" : limits.revisions;
+  const pagesPct       = limits.pages === Infinity ? 0 : Math.min(100, (pagesUsed / (limits.pages as number)) * 100);
+  const revPct         = limits.revisions === Infinity ? 0 : Math.min(100, (revisionsUsed / (limits.revisions as number)) * 100);
+
+  const isActive = (path: string) =>
+    location === path || location.startsWith(path + "/");
+
   return (
     <>
       <aside
-        onMouseEnter={() => setHovered(true)}
-        onMouseLeave={() => setHovered(false)}
-        style={{
-          width: w,
-          minWidth: w,
-          transition: "width 200ms ease, min-width 200ms ease",
-        }}
-        className="fixed inset-y-0 left-0 bg-white border-r border-gray-100 flex flex-col z-40 overflow-hidden"
+        className="fixed inset-y-0 left-0 flex flex-col z-40 overflow-hidden"
+        style={{ width: 200, background: "#ffffff", borderRight: "1px solid #e5e7eb" }}
       >
-        {/* Logo */}
+        {/* Logo + Search */}
         <div
-          className="flex items-center border-b border-gray-100 flex-shrink-0"
-          style={{ height: 64, paddingLeft: expanded ? 20 : 0, justifyContent: expanded ? "flex-start" : "center", transition: "padding 200ms ease" }}
+          className="flex items-center justify-between px-4 flex-shrink-0"
+          style={{ height: 56, borderBottom: "1px solid #f3f4f6" }}
         >
-          <div className="w-8 h-8 bg-purple-600 rounded-lg flex items-center justify-center flex-shrink-0">
-            <span className="text-white font-bold text-sm">R</span>
+          <div className="flex items-center gap-2">
+            <div
+              className="w-7 h-7 rounded-lg flex items-center justify-center flex-shrink-0"
+              style={{ background: "linear-gradient(135deg,#7c3aed,#a855f7)" }}
+            >
+              <span className="text-white font-bold text-xs">R</span>
+            </div>
+            <span
+              className="font-bold text-gray-900 text-sm"
+              style={{ fontFamily: "'Plus Jakarta Sans', sans-serif" }}
+            >
+              RapportAI
+            </span>
           </div>
-          <span
-            className="font-bold text-gray-900 text-base ml-3 whitespace-nowrap overflow-hidden"
-            style={{
-              opacity: expanded ? 1 : 0,
-              maxWidth: expanded ? 120 : 0,
-              transition: "opacity 150ms ease, max-width 200ms ease",
-              fontFamily: "'Plus Jakarta Sans', sans-serif",
-            }}
+          <button
+            className="w-7 h-7 rounded-lg flex items-center justify-center text-gray-400 hover:text-gray-600 hover:bg-gray-100 transition-colors"
+            title="Rechercher (Ctrl+K)"
           >
-            RapportAI
-          </span>
+            <Search className="w-3.5 h-3.5" />
+          </button>
         </div>
 
-        {/* Nav */}
-        <nav className="flex-1 overflow-y-auto py-3 px-2 space-y-0.5">
-          {navItems.map((item) => {
-            const isActive = location === item.path || location.startsWith(item.path + "/");
-            const isLocked = !!(item.proFeature && !canUseFeature(item.proFeature, plan.planId));
+        {/* Workspace / User */}
+        <div className="px-3 py-2 flex-shrink-0" style={{ borderBottom: "1px solid #f3f4f6" }}>
+          <button className="w-full flex items-center gap-2 px-2 py-1.5 rounded-lg hover:bg-gray-50 transition-colors">
+            <div className="w-6 h-6 rounded-full bg-purple-100 flex items-center justify-center flex-shrink-0 overflow-hidden">
+              {user?.imageUrl ? (
+                <img src={user.imageUrl} alt="avatar" className="w-6 h-6 object-cover" />
+              ) : (
+                <span className="text-purple-600 font-semibold text-[10px]">{userInitial}</span>
+              )}
+            </div>
+            <span className="text-xs font-medium text-gray-700 truncate flex-1 text-left">
+              {userName}
+            </span>
+            <ChevronDown className="w-3 h-3 text-gray-400 flex-shrink-0" />
+          </button>
+        </div>
+
+        {/* Action buttons */}
+        <div className="px-3 py-2.5 space-y-1.5 flex-shrink-0" style={{ borderBottom: "1px solid #f3f4f6" }}>
+          <button
+            onClick={() => setLocation(hasReport ? "/rapports" : "/rapport/step-1")}
+            className="w-full flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs font-semibold transition-all"
+            style={{
+              background: "linear-gradient(135deg,#7c3aed,#a855f7)",
+              color: "#fff",
+              boxShadow: "0 2px 8px rgba(124,58,237,0.25)",
+            }}
+          >
+            <Plus className="w-3.5 h-3.5 flex-shrink-0" />
+            Nouveau rapport
+          </button>
+          <button
+            onClick={() => setLocation("/figures")}
+            className="w-full flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs font-medium text-gray-600 hover:bg-gray-50 transition-colors"
+            style={{ border: "1px solid #e5e7eb" }}
+          >
+            <FileInput className="w-3.5 h-3.5 flex-shrink-0 text-gray-400" />
+            Documents
+          </button>
+        </div>
+
+        {/* Nav items */}
+        <nav className="flex-1 overflow-y-auto py-2 px-2 space-y-0.5 min-h-0">
+          {NAV_ITEMS.map((item) => {
+            const active = isActive(item.path);
+            const locked = !!(item.proFeature && !canUseFeature(item.proFeature, plan.planId));
             return (
               <button
                 key={item.path}
-                data-testid={`nav-${item.label.toLowerCase().replace(/\s+/g, "-")}`}
                 onClick={() => handleNavClick(item)}
-                title={!expanded ? item.label : undefined}
-                className={`w-full flex items-center rounded-xl transition-all text-left group
-                  ${isActive ? "bg-purple-50" : isLocked ? "opacity-60 hover:bg-gray-50 cursor-pointer" : "hover:bg-gray-50"}
+                className={`w-full flex items-center gap-2.5 px-2.5 py-1.5 rounded-lg text-sm font-medium transition-all text-left
+                  ${active
+                    ? "bg-gray-100 text-gray-900"
+                    : locked
+                    ? "text-gray-300 hover:bg-gray-50 cursor-pointer"
+                    : "text-gray-600 hover:bg-gray-50 hover:text-gray-900"
+                  }
                 `}
-                style={{
-                  height: 40,
-                  paddingLeft: expanded ? 12 : 0,
-                  paddingRight: expanded ? 8 : 0,
-                  justifyContent: expanded ? "flex-start" : "center",
-                  transition: "padding 200ms ease, background 150ms ease",
-                }}
               >
                 <item.icon
-                  className={`flex-shrink-0 w-4 h-4
-                    ${isActive ? "text-purple-600" : isLocked ? "text-gray-300" : "text-gray-400 group-hover:text-gray-600"}
-                  `}
+                  className={`w-4 h-4 flex-shrink-0 ${
+                    active ? "text-gray-900" : locked ? "text-gray-300" : "text-gray-500"
+                  }`}
                 />
-                <span
-                  className={`ml-3 text-sm font-medium whitespace-nowrap overflow-hidden
-                    ${isActive ? "text-purple-700" : isLocked ? "text-gray-300" : "text-gray-600"}
-                  `}
-                  style={{
-                    opacity: expanded ? 1 : 0,
-                    maxWidth: expanded ? 120 : 0,
-                    transition: "opacity 150ms ease, max-width 200ms ease",
-                  }}
-                >
-                  {item.label}
-                </span>
-                {expanded && isLocked && (
-                  <span
-                    className="ml-auto text-xs bg-purple-100 text-purple-600 px-1.5 py-0.5 rounded-full font-semibold flex-shrink-0"
-                    style={{ opacity: expanded ? 1 : 0, transition: "opacity 150ms ease" }}
-                  >
+                <span className="truncate flex-1">{item.label}</span>
+                {locked && (
+                  <span className="text-[10px] bg-purple-100 text-purple-600 px-1.5 py-0.5 rounded-full font-semibold flex-shrink-0">
                     Pro
                   </span>
                 )}
@@ -139,60 +186,87 @@ export function Sidebar() {
           })}
         </nav>
 
-        {/* User */}
-        <div className="border-t border-gray-100 py-3 px-2 space-y-0.5 flex-shrink-0">
-          <div
-            className="flex items-center rounded-xl"
-            style={{
-              height: 44,
-              paddingLeft: expanded ? 8 : 0,
-              justifyContent: expanded ? "flex-start" : "center",
-              transition: "padding 200ms ease",
-            }}
-          >
-            <div className="w-7 h-7 rounded-full bg-purple-100 flex items-center justify-center flex-shrink-0 overflow-hidden">
-              {user?.imageUrl
-                ? <img src={user.imageUrl} alt="avatar" className="w-7 h-7 object-cover" />
-                : <span className="text-purple-600 font-semibold text-xs">{userInitial}</span>
-              }
-            </div>
-            <div
-              className="ml-2.5 flex-1 overflow-hidden"
-              style={{
-                opacity: expanded ? 1 : 0,
-                maxWidth: expanded ? 120 : 0,
-                transition: "opacity 150ms ease, max-width 200ms ease",
-              }}
-            >
-              <div className="text-xs font-medium text-gray-800 truncate">{userName}</div>
-              <div className="text-xs text-gray-400 truncate">{planLabel[plan.planId] ?? "Gratuit"}</div>
-            </div>
+        {/* Bottom section */}
+        <div className="flex-shrink-0" style={{ borderTop: "1px solid #f3f4f6" }}>
+          {/* Tutoriel / Documentation */}
+          <div className="px-2 py-2 space-y-0.5">
+            {BOTTOM_NAV.map((item) => (
+              <button
+                key={item.path}
+                onClick={() => setLocation(item.path)}
+                className="w-full flex items-center gap-2.5 px-2.5 py-1.5 rounded-lg text-sm text-gray-500 hover:bg-gray-50 hover:text-gray-700 transition-colors text-left"
+              >
+                <item.icon className="w-4 h-4 flex-shrink-0 text-gray-400" />
+                <span className="truncate">{item.label}</span>
+              </button>
+            ))}
           </div>
 
-          <button
-            data-testid="button-signout"
-            onClick={handleSignOut}
-            title={!expanded ? "Déconnexion" : undefined}
-            className="w-full flex items-center rounded-xl text-sm text-gray-500 hover:bg-gray-50 hover:text-gray-700 transition-all"
-            style={{
-              height: 36,
-              paddingLeft: expanded ? 10 : 0,
-              justifyContent: expanded ? "flex-start" : "center",
-              transition: "padding 200ms ease",
-            }}
-          >
-            <LogOut className="w-4 h-4 flex-shrink-0" />
-            <span
-              className="ml-2.5 whitespace-nowrap overflow-hidden text-sm"
-              style={{
-                opacity: expanded ? 1 : 0,
-                maxWidth: expanded ? 100 : 0,
-                transition: "opacity 150ms ease, max-width 200ms ease",
-              }}
+          {/* Plan info + usage bars */}
+          <div className="px-3 py-2 space-y-1.5" style={{ borderTop: "1px solid #f3f4f6" }}>
+            <div
+              className="text-xs font-semibold text-gray-600"
+              style={{ fontFamily: "'Plus Jakarta Sans', sans-serif" }}
             >
+              Ton plan {planLabel[plan.planId] ?? "Gratuit"}
+            </div>
+
+            <div>
+              <div className="flex justify-between text-[10px] text-gray-400 mb-0.5">
+                <span>Sections générées</span>
+                <span>{pagesUsed}/{pagesLimit}</span>
+              </div>
+              <div className="h-1 bg-gray-100 rounded-full overflow-hidden">
+                <div
+                  className="h-full rounded-full"
+                  style={{
+                    width: `${pagesPct}%`,
+                    background: "linear-gradient(90deg,#7c3aed,#a855f7)",
+                    transition: "width 0.4s ease",
+                  }}
+                />
+              </div>
+            </div>
+
+            <div>
+              <div className="flex justify-between text-[10px] text-gray-400 mb-0.5">
+                <span>Révisions</span>
+                <span>{revisionsUsed}/{revisionsLimit}</span>
+              </div>
+              <div className="h-1 bg-gray-100 rounded-full overflow-hidden">
+                <div
+                  className="h-full rounded-full"
+                  style={{
+                    width: `${revPct}%`,
+                    background: "linear-gradient(90deg,#7c3aed,#a855f7)",
+                    transition: "width 0.4s ease",
+                  }}
+                />
+              </div>
+            </div>
+
+            {plan.planId !== "premium" && (
+              <button
+                onClick={() => { setUpsellFeature("upgrade"); setUpsellOpen(true); }}
+                className="w-full flex items-center justify-center gap-1.5 text-xs font-semibold text-white rounded-lg py-1.5 transition-all hover:opacity-90"
+                style={{ background: "linear-gradient(135deg,#7c3aed,#a855f7)" }}
+              >
+                <Zap className="w-3 h-3" />
+                Passer au Pro
+              </button>
+            )}
+          </div>
+
+          {/* Sign out */}
+          <div className="px-2 pb-3" style={{ borderTop: "1px solid #f3f4f6" }}>
+            <button
+              onClick={handleSignOut}
+              className="w-full flex items-center gap-2.5 px-2.5 py-1.5 rounded-lg text-xs text-gray-400 hover:text-gray-600 hover:bg-gray-50 transition-colors"
+            >
+              <LogOut className="w-3.5 h-3.5 flex-shrink-0" />
               Déconnexion
-            </span>
-          </button>
+            </button>
+          </div>
         </div>
       </aside>
 
@@ -208,5 +282,5 @@ export function Sidebar() {
 }
 
 export function SidebarSpacer() {
-  return <div className="w-[60px] flex-shrink-0" />;
+  return <div className="w-[200px] flex-shrink-0" />;
 }
