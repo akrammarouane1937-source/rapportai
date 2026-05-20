@@ -1,6 +1,6 @@
 import { useState, useRef, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { Send, Loader2, Sparkles, ArrowRight } from "lucide-react";
+import { Send, Loader2, Sparkles, ArrowRight, ChevronDown } from "lucide-react";
 import { useLocation } from "wouter";
 import { useOptionalUser as useUser } from "@/lib/useOptionalClerk";
 import { Sidebar, SidebarSpacer } from "@/components/layout/Sidebar";
@@ -75,7 +75,10 @@ export default function DashboardPage() {
     9: !!report.conclusion,
   };
   const currentStep = ([1,2,3,4,5,6,7,8,9].find((n) => !stepDone[n])) ?? 9;
-  const name = user?.firstName || rawReport.studentName?.split(" ")[0] || "là";
+  const name = user?.firstName
+    || user?.emailAddresses?.[0]?.emailAddress?.split("@")[0]
+    || rawReport.studentName?.split(" ")[0]
+    || "Étudiant";
 
   const greeting = hasReport
     ? `Bonjour ${name}, ton rapport avance.`
@@ -203,34 +206,59 @@ export default function DashboardPage() {
 
   const showGreeting = messages.length === 0;
 
+  // Recent sections (last 3 with content)
+  const recentSections = [
+    { label: "Page de garde",     field: "pageDeGarde",  path: "/rapport/step-2"   },
+    { label: "Dédicaces",         field: "dedicaces",    path: "/rapport/step-3"   },
+    { label: "Résumé",            field: "resumeFr",     path: "/rapport/step-4"   },
+    { label: "Sommaire",          field: "sommaire",     path: "/rapport/step-5"   },
+    { label: "Introduction",      field: "introduction", path: "/rapport/step-6"   },
+    { label: "Partie I",          field: "partieI",      path: "/rapport/partie-i" },
+    { label: "Partie II",         field: "partieII",     path: "/rapport/partie-ii"},
+    { label: "Conclusion",        field: "conclusion",   path: "/rapport/step-9"   },
+  ].filter((s) => !!(report as Record<string, string>)[s.field]).slice(0, 3);
+
+  const workspaceName = user?.emailAddresses?.[0]?.emailAddress?.split("@")[0]
+    || user?.firstName
+    || "Mon espace";
+
   return (
     <div className="flex h-screen overflow-hidden" style={{ background: "#f9f8ff" }}>
       <Sidebar />
       <SidebarSpacer />
 
-      <main className="flex-1 flex flex-col min-h-0 min-w-0">
+      <main className="flex-1 flex flex-col min-h-0 min-w-0 overflow-y-auto">
 
-        {/* ── Messages scroll area ── */}
-        <div className="flex-1 overflow-y-auto min-h-0 px-6 py-8">
-          <div className="max-w-2xl mx-auto">
+        {/* ── Workspace name (top center, like Replit) ── */}
+        {showGreeting && (
+          <div className="flex justify-center pt-6 pb-0 flex-shrink-0">
+            <button className="flex items-center gap-2 px-3 py-1.5 rounded-full border border-gray-200 bg-white hover:bg-gray-50 transition-colors text-sm font-medium text-gray-700"
+              style={{ boxShadow: "0 1px 4px rgba(0,0,0,0.06)" }}>
+              {user?.imageUrl
+                ? <img src={user.imageUrl} alt="" className="w-5 h-5 rounded-full object-cover" />
+                : <div className="w-5 h-5 rounded-full bg-purple-200 flex items-center justify-center text-[10px] font-bold text-purple-700">{name[0]?.toUpperCase()}</div>
+              }
+              {workspaceName}'s Workspace
+              <ChevronDown className="w-3.5 h-3.5 text-gray-400" />
+            </button>
+          </div>
+        )}
 
-            {/* Greeting */}
+        {/* ── Center zone: greeting + input ── */}
+        <div className={`flex-1 flex flex-col ${showGreeting ? "justify-center" : "justify-start pt-6"} px-6`}>
+          <div className="max-w-2xl mx-auto w-full">
+
+            {/* Greeting — only when no messages */}
             <AnimatePresence>
               {showGreeting && (
                 <motion.div
-                  initial={{ opacity: 0, y: 16 }}
+                  initial={{ opacity: 0, y: 12 }}
                   animate={{ opacity: 1, y: 0 }}
                   exit={{ opacity: 0, y: -8 }}
-                  transition={{ duration: 0.35 }}
-                  className="text-center mb-12 mt-10"
+                  transition={{ duration: 0.3 }}
+                  className="text-center mb-6"
                 >
-                  <div
-                    className="w-12 h-12 rounded-2xl flex items-center justify-center mx-auto mb-4"
-                    style={{ background: "linear-gradient(135deg,#7c3aed,#a855f7)", boxShadow: "0 4px 20px rgba(124,58,237,0.28)" }}
-                  >
-                    <Sparkles className="w-5 h-5 text-white" />
-                  </div>
-                  <h1 className="text-2xl font-bold text-gray-900 mb-1.5" style={{ fontFamily: "'Plus Jakarta Sans', sans-serif" }}>
+                  <h1 className="text-2xl font-bold text-gray-900 mb-1" style={{ fontFamily: "'Plus Jakarta Sans', sans-serif" }}>
                     {greeting}
                   </h1>
                   <p className="text-gray-400 text-sm">{subtitle}</p>
@@ -238,114 +266,65 @@ export default function DashboardPage() {
               )}
             </AnimatePresence>
 
-            {/* Messages */}
-            <div className="space-y-6">
-              {messages.map((msg) => (
-                <motion.div
-                  key={msg.id}
-                  initial={{ opacity: 0, y: 8 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  transition={{ duration: 0.2 }}
-                  className={`flex ${msg.role === "user" ? "justify-end" : "justify-start"}`}
-                >
-                  <div className={msg.role === "user" ? "max-w-[78%]" : "w-full"}>
-
-                    {msg.role === "assistant" && (
-                      <div className="flex items-center gap-2 mb-2">
-                        <div
-                          className="w-5 h-5 rounded-md flex items-center justify-center"
-                          style={{ background: "linear-gradient(135deg,#7c3aed,#a855f7)" }}
-                        >
-                          <Sparkles className="w-2.5 h-2.5 text-white" />
+            {/* Messages (when chatting) */}
+            {!showGreeting && (
+              <div className="space-y-6 mb-6">
+                {messages.map((msg) => (
+                  <motion.div
+                    key={msg.id}
+                    initial={{ opacity: 0, y: 8 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ duration: 0.2 }}
+                    className={`flex ${msg.role === "user" ? "justify-end" : "justify-start"}`}
+                  >
+                    <div className={msg.role === "user" ? "max-w-[78%]" : "w-full"}>
+                      {msg.role === "assistant" && (
+                        <div className="flex items-center gap-2 mb-2">
+                          <div className="w-5 h-5 rounded-md flex items-center justify-center"
+                            style={{ background: "linear-gradient(135deg,#7c3aed,#a855f7)" }}>
+                            <Sparkles className="w-2.5 h-2.5 text-white" />
+                          </div>
+                          <span className="text-xs font-semibold text-gray-400">RapportAI</span>
                         </div>
-                        <span className="text-xs font-semibold text-gray-400">RapportAI</span>
+                      )}
+                      <div
+                        className={`px-4 py-3 rounded-2xl text-sm leading-relaxed ${
+                          msg.role === "user"
+                            ? "text-white rounded-tr-sm"
+                            : "bg-white text-gray-800 rounded-tl-sm border border-gray-100"
+                        }`}
+                        style={msg.role === "user"
+                          ? { background: "linear-gradient(135deg,#7c3aed,#a855f7)", boxShadow: "0 2px 8px rgba(124,58,237,0.22)" }
+                          : { boxShadow: "0 1px 4px rgba(0,0,0,0.05)" }
+                        }
+                      >
+                        {msg.role === "assistant" ? (
+                          msg.streaming && !msg.text
+                            ? <span className="flex items-center gap-1.5 text-gray-400"><Loader2 className="w-3.5 h-3.5 animate-spin" />En train d'écrire…</span>
+                            : <ReactMarkdown remarkPlugins={[remarkGfm]} className="prose prose-sm max-w-none prose-p:my-1 prose-headings:font-semibold">{msg.text}</ReactMarkdown>
+                        ) : msg.text}
                       </div>
-                    )}
-
-                    <div
-                      className={`px-4 py-3 rounded-2xl text-sm leading-relaxed ${
-                        msg.role === "user"
-                          ? "text-white rounded-tr-sm"
-                          : "bg-white text-gray-800 rounded-tl-sm border border-gray-100"
-                      }`}
-                      style={msg.role === "user"
-                        ? { background: "linear-gradient(135deg,#7c3aed,#a855f7)", boxShadow: "0 2px 8px rgba(124,58,237,0.22)" }
-                        : { boxShadow: "0 1px 4px rgba(0,0,0,0.05)" }
-                      }
-                    >
-                      {msg.role === "assistant" ? (
-                        msg.streaming && !msg.text ? (
-                          <span className="flex items-center gap-1.5 text-gray-400">
-                            <Loader2 className="w-3.5 h-3.5 animate-spin" />
-                            En train d'écrire…
-                          </span>
-                        ) : (
-                          <ReactMarkdown
-                            remarkPlugins={[remarkGfm]}
-                            className="prose prose-sm max-w-none prose-p:my-1 prose-headings:font-semibold prose-headings:text-gray-900"
-                          >
-                            {msg.text}
-                          </ReactMarkdown>
-                        )
-                      ) : (
-                        msg.text
+                      {msg.role === "assistant" && !msg.streaming && msg.navSuggestion && (
+                        <motion.button
+                          initial={{ opacity: 0, y: 4 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.2 }}
+                          onClick={() => setLocation(msg.navSuggestion!.path)}
+                          className="mt-2 flex items-center gap-1.5 text-xs font-semibold px-3 py-1.5 rounded-lg hover:opacity-90 transition-all"
+                          style={{ background: "linear-gradient(135deg,#7c3aed,#a855f7)", color: "#fff" }}
+                        >
+                          Aller à {msg.navSuggestion.label} <ArrowRight className="w-3 h-3" />
+                        </motion.button>
                       )}
                     </div>
+                  </motion.div>
+                ))}
+                <div ref={bottomRef} />
+              </div>
+            )}
 
-                    {/* Auto navigation button */}
-                    {msg.role === "assistant" && !msg.streaming && msg.navSuggestion && (
-                      <motion.button
-                        initial={{ opacity: 0, y: 4 }}
-                        animate={{ opacity: 1, y: 0 }}
-                        transition={{ delay: 0.2 }}
-                        onClick={() => setLocation(msg.navSuggestion!.path)}
-                        className="mt-2 flex items-center gap-1.5 text-xs font-semibold px-3 py-1.5 rounded-lg transition-all hover:opacity-90"
-                        style={{ background: "linear-gradient(135deg,#7c3aed,#a855f7)", color: "#fff" }}
-                      >
-                        Aller à {msg.navSuggestion.label}
-                        <ArrowRight className="w-3 h-3" />
-                      </motion.button>
-                    )}
-                  </div>
-                </motion.div>
-              ))}
-            </div>
-
-            <div ref={bottomRef} />
-          </div>
-        </div>
-
-        {/* ── Input area ── */}
-        <div className="flex-shrink-0 bg-white px-6 py-4" style={{ borderTop: "1px solid #f3f4f6" }}>
-          <div className="max-w-2xl mx-auto">
-
-            {/* Quick action pills — only when no messages yet */}
-            <AnimatePresence>
-              {showGreeting && (
-                <motion.div
-                  initial={{ opacity: 0, y: 4 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  exit={{ opacity: 0 }}
-                  transition={{ duration: 0.2 }}
-                  className="flex flex-wrap gap-2 mb-3"
-                >
-                  {quickActions.map((a) => (
-                    <button
-                      key={a.label}
-                      onClick={a.action}
-                      className="text-xs font-medium px-3 py-1.5 rounded-full border border-gray-200 bg-white text-gray-600 hover:border-purple-300 hover:text-purple-600 hover:bg-purple-50 transition-all"
-                    >
-                      {a.label}
-                    </button>
-                  ))}
-                </motion.div>
-              )}
-            </AnimatePresence>
-
-            {/* Chat input box */}
+            {/* Input box */}
             <div
               className="flex items-end gap-3 rounded-2xl border border-gray-200 bg-white px-4 py-3 transition-all focus-within:border-purple-300 focus-within:shadow-sm"
-              style={{ boxShadow: "0 2px 12px rgba(0,0,0,0.05)" }}
+              style={{ boxShadow: "0 2px 12px rgba(0,0,0,0.06)" }}
             >
               <textarea
                 ref={textareaRef}
@@ -361,21 +340,75 @@ export default function DashboardPage() {
               <button
                 onClick={() => send()}
                 disabled={!input.trim() || loading}
-                className="w-8 h-8 rounded-xl flex items-center justify-center flex-shrink-0 transition-all disabled:opacity-30 hover:opacity-90"
+                className="w-8 h-8 rounded-xl flex items-center justify-center flex-shrink-0 disabled:opacity-30 hover:opacity-90 transition-all"
                 style={{ background: "linear-gradient(135deg,#7c3aed,#a855f7)" }}
               >
-                {loading
-                  ? <Loader2 className="w-3.5 h-3.5 text-white animate-spin" />
-                  : <Send className="w-3.5 h-3.5 text-white" />
-                }
+                {loading ? <Loader2 className="w-3.5 h-3.5 text-white animate-spin" /> : <Send className="w-3.5 h-3.5 text-white" />}
               </button>
             </div>
 
-            <p className="text-center text-[10px] text-gray-300 mt-2">
-              Entrée pour envoyer · Maj+Entrée pour nouvelle ligne
-            </p>
+            {/* Quick action pills — BELOW input, only on greeting screen */}
+            <AnimatePresence>
+              {showGreeting && (
+                <motion.div
+                  initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+                  className="flex flex-wrap justify-center gap-2 mt-4"
+                >
+                  {quickActions.map((a) => (
+                    <button
+                      key={a.label}
+                      onClick={a.action}
+                      className="text-xs font-medium px-3 py-1.5 rounded-full border border-gray-200 bg-white text-gray-600 hover:border-purple-300 hover:text-purple-600 hover:bg-purple-50 transition-all"
+                    >
+                      {a.label}
+                    </button>
+                  ))}
+                </motion.div>
+              )}
+            </AnimatePresence>
           </div>
         </div>
+
+        {/* ── Recent sections (bottom, like Replit's recent projects) ── */}
+        {showGreeting && recentSections.length > 0 && (
+          <div className="flex-shrink-0 px-6 pb-8 mt-8">
+            <div className="max-w-2xl mx-auto">
+              <div className="flex items-center justify-between mb-3">
+                <span className="text-sm font-semibold text-gray-700" style={{ fontFamily: "'Plus Jakarta Sans', sans-serif" }}>
+                  Tes sections récentes
+                </span>
+                <button onClick={() => setLocation("/rapports")}
+                  className="text-xs text-purple-600 hover:text-purple-700 font-medium flex items-center gap-1">
+                  Voir tout <ArrowRight className="w-3 h-3" />
+                </button>
+              </div>
+              <div className="grid grid-cols-3 gap-3">
+                {recentSections.map((s) => (
+                  <button
+                    key={s.field}
+                    onClick={() => setLocation(s.path)}
+                    className="rounded-xl border border-gray-200 bg-white p-3 text-left hover:border-purple-200 hover:shadow-sm transition-all group"
+                    style={{ boxShadow: "0 1px 3px rgba(0,0,0,0.05)" }}
+                  >
+                    <div className="w-full h-16 rounded-lg mb-2 overflow-hidden"
+                      style={{ background: "#f8fafc", border: "1px solid #f1f5f9" }}>
+                      <div className="w-full h-full overflow-hidden relative">
+                        <div className="absolute top-0 left-0 pointer-events-none"
+                          style={{ transform: "scale(0.18)", transformOrigin: "top left", width: "556%",
+                            padding: "10px", fontFamily: "Times New Roman, serif", fontSize: "11pt",
+                            lineHeight: "1.5", color: "#111", whiteSpace: "pre-wrap" }}>
+                          {((report as Record<string, string>)[s.field] || "").slice(0, 600)}
+                        </div>
+                      </div>
+                    </div>
+                    <p className="text-xs font-semibold text-gray-700 group-hover:text-purple-700 transition-colors">{s.label}</p>
+                    <p className="text-[10px] text-gray-400 mt-0.5">Sauvegardé auto</p>
+                  </button>
+                ))}
+              </div>
+            </div>
+          </div>
+        )}
 
       </main>
     </div>
