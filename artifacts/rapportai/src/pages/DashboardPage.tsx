@@ -44,6 +44,38 @@ function detectNav(text: string) {
   return null;
 }
 
+// ── Animated placeholder hook ─────────────────────────────────────────────────
+const PLACEHOLDERS = [
+  "Mon intro fait 2 pages, c'est assez ?",
+  "Comment finir ma conclusion sans répéter l'intro ?",
+  "C'est quoi le format APA pour une source internet ?",
+  "Mon encadrant dit que ma Partie II manque de profondeur…",
+  "Comment formuler une problématique claire ?",
+  "Combien de mots pour un PFE bien noté ?",
+  "Quelles erreurs éviter avant la soutenance ?",
+  "Aide-moi à structurer mon plan de Partie I",
+];
+
+function useAnimatedPlaceholder(active: boolean) {
+  const [index, setIndex]   = useState(0);
+  const [visible, setVisible] = useState(true);
+
+  useEffect(() => {
+    if (!active) return;
+    const cycle = () => {
+      setVisible(false);
+      setTimeout(() => {
+        setIndex((i) => (i + 1) % PLACEHOLDERS.length);
+        setVisible(true);
+      }, 400);
+    };
+    const id = setInterval(cycle, 3200);
+    return () => clearInterval(id);
+  }, [active]);
+
+  return { text: PLACEHOLDERS[index], visible };
+}
+
 // ── Main component ────────────────────────────────────────────────────────────
 export default function DashboardPage() {
   const [, setLocation] = useLocation();
@@ -57,6 +89,8 @@ export default function DashboardPage() {
   const bottomRef               = useRef<HTMLDivElement>(null);
   const textareaRef             = useRef<HTMLTextAreaElement>(null);
   const abortRef                = useRef<AbortController | null>(null);
+  const showGreeting            = messages.length === 0;
+  const placeholder             = useAnimatedPlaceholder(showGreeting && !input);
 
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -80,24 +114,43 @@ export default function DashboardPage() {
     || rawReport.studentName?.split(" ")[0]
     || "Étudiant";
 
+  const theme = report.theme || rawReport.theme || "";
+  const shortTheme = theme.length > 28 ? theme.slice(0, 28) + "…" : theme;
+
   const greeting = hasReport
     ? `Bonjour ${name}, ton rapport avance.`
-    : `Bonjour ${name}, on commence ton rapport ?`;
+    : `Bonjour ${name}, on commence ?`;
+
+  const completedCount = Object.values(stepDone).filter(Boolean).length;
   const subtitle = hasReport
-    ? "Dis-moi ce que tu veux améliorer, clarifier ou générer."
-    : "Dis-moi sur quoi tu travailles — je t'aide à démarrer.";
+    ? completedCount >= 7
+      ? "Tu es presque au bout — pose-moi n'importe quelle question."
+      : `${completedCount}/9 sections générées. Dis-moi ce qui bloque.`
+    : "Dis-moi ce qui te bloque, je t'aide à démarrer.";
 
   const quickActions = hasReport
     ? [
-        { label: "Reprendre l'étape en cours", action: () => setLocation(STEP_PATHS[currentStep] ?? "/rapport/step-1") },
-        { label: "Voir mon rapport",           action: () => setLocation("/rapports") },
-        { label: "Améliorer mon introduction", action: () => sendWithText("Comment améliorer mon introduction générale ?") },
-        { label: "Exporter en Word",           action: () => sendWithText("Comment exporter mon rapport en Word ?") },
+        {
+          label: shortTheme ? `Analyse la structure de "${shortTheme}"` : "Analyse la structure de mon rapport",
+          action: () => sendWithText(`Analyse la structure de mon rapport sur "${theme}". Est-ce que le plan est cohérent ?`),
+        },
+        {
+          label: "Prépare-moi pour la soutenance",
+          action: () => sendWithText("Quelles questions difficiles mon jury risque de me poser ? Comment bien me préparer ?"),
+        },
+        {
+          label: "Points faibles à corriger",
+          action: () => sendWithText("Quels sont les points faibles classiques dans un rapport comme le mien ? Qu'est-ce que je dois vérifier avant de rendre ?"),
+        },
+        {
+          label: "Comment éviter la détection IA ?",
+          action: () => sendWithText("Comment reformuler mon texte généré par IA pour qu'il passe inaperçu auprès de mon encadrant ?"),
+        },
       ]
     : [
-        { label: "Créer un rapport PFE",   action: () => setLocation("/rapport/step-1") },
-        { label: "Rapport de stage",       action: () => setLocation("/rapport/step-1") },
-        { label: "Comment ça marche ?",    action: () => sendWithText("Comment fonctionne RapportAI ? Explique-moi les étapes.") },
+        { label: "Par où commencer un PFE ?",       action: () => sendWithText("Je dois rédiger un PFE. Par où je commence ? Explique-moi toutes les étapes dans l'ordre.") },
+        { label: "Rapport de stage en 30 min",      action: () => setLocation("/rapport/step-1") },
+        { label: "C'est quoi une bonne problématique ?", action: () => sendWithText("Explique-moi comment formuler une bonne problématique pour un rapport académique marocain.") },
       ];
 
   const sendWithText = (text: string) => {
@@ -203,8 +256,6 @@ export default function DashboardPage() {
     el.style.height = "auto";
     el.style.height = `${Math.min(el.scrollHeight, 140)}px`;
   };
-
-  const showGreeting = messages.length === 0;
 
   // Recent sections (last 3 with content)
   const recentSections = [
@@ -326,17 +377,36 @@ export default function DashboardPage() {
               className="flex items-end gap-3 rounded-2xl border border-gray-200 bg-white px-4 py-3 transition-all focus-within:border-purple-300 focus-within:shadow-sm"
               style={{ boxShadow: "0 2px 12px rgba(0,0,0,0.06)" }}
             >
-              <textarea
-                ref={textareaRef}
-                value={input}
-                onChange={(e) => { setInput(e.target.value); autoResize(e.target); }}
-                onKeyDown={handleKeyDown}
-                disabled={loading}
-                placeholder="Pose une question sur ton rapport…"
-                rows={1}
-                className="flex-1 text-sm text-gray-800 placeholder-gray-400 outline-none resize-none bg-transparent leading-relaxed disabled:opacity-50"
-                style={{ minHeight: 24, maxHeight: 140 }}
-              />
+              <div className="flex-1 relative" style={{ minHeight: 24 }}>
+                {/* Animated placeholder overlay */}
+                {!input && (
+                  <div className="absolute inset-0 pointer-events-none flex items-center overflow-hidden">
+                    <AnimatePresence mode="wait">
+                      <motion.span
+                        key={placeholder.text}
+                        initial={{ opacity: 0, y: 6 }}
+                        animate={{ opacity: placeholder.visible ? 1 : 0, y: placeholder.visible ? 0 : -6 }}
+                        exit={{ opacity: 0, y: -6 }}
+                        transition={{ duration: 0.35 }}
+                        className="text-sm text-gray-400 truncate leading-relaxed select-none"
+                      >
+                        {placeholder.text}
+                      </motion.span>
+                    </AnimatePresence>
+                  </div>
+                )}
+                <textarea
+                  ref={textareaRef}
+                  value={input}
+                  onChange={(e) => { setInput(e.target.value); autoResize(e.target); }}
+                  onKeyDown={handleKeyDown}
+                  disabled={loading}
+                  placeholder=""
+                  rows={1}
+                  className="w-full text-sm text-gray-800 outline-none resize-none bg-transparent leading-relaxed disabled:opacity-50"
+                  style={{ minHeight: 24, maxHeight: 140 }}
+                />
+              </div>
               <button
                 onClick={() => send()}
                 disabled={!input.trim() || loading}
