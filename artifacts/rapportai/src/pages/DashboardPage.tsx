@@ -45,35 +45,49 @@ function detectNav(text: string) {
 }
 
 // ── Animated placeholder hook ─────────────────────────────────────────────────
-const PLACEHOLDERS = [
-  "Mon intro fait 2 pages, c'est assez ?",
-  "Comment finir ma conclusion sans répéter l'intro ?",
-  "C'est quoi le format APA pour une source internet ?",
-  "Mon encadrant dit que ma Partie II manque de profondeur…",
-  "Comment formuler une problématique claire ?",
-  "Combien de mots pour un PFE bien noté ?",
-  "Quelles erreurs éviter avant la soutenance ?",
-  "Aide-moi à structurer mon plan de Partie I",
+const PLACEHOLDERS_NEW = [
+  "C'est quoi la différence entre PFE, stage et mémoire ?",
+  "Comment RapportAI génère mon rapport exactement ?",
+  "J'ai mon thème — par où je commence ?",
+  "Mon école est-elle supportée par RapportAI ?",
+  "Combien de temps pour générer un rapport complet ?",
+  "Est-ce que je peux modifier ce que l'IA génère ?",
 ];
 
-function useAnimatedPlaceholder(active: boolean) {
-  const [index, setIndex]   = useState(0);
+const PLACEHOLDERS_ACTIVE = [
+  "Mon rapport est-il cohérent de l'intro à la conclusion ?",
+  "Qu'est-ce qu'il manque dans mon rapport ?",
+  "Emmène-moi à l'étape où j'en suis",
+  "Prépare-moi pour la soutenance avec mon rapport",
+  "Y a-t-il des contradictions entre mes sections ?",
+  "Mon plan est-il logique pour un jury ?",
+];
+
+function useAnimatedPlaceholder(active: boolean, hasReport: boolean) {
+  const pool = hasReport ? PLACEHOLDERS_ACTIVE : PLACEHOLDERS_NEW;
+  const [index, setIndex]     = useState(0);
   const [visible, setVisible] = useState(true);
+
+  useEffect(() => {
+    if (!active) return;
+    setIndex(0);
+    setVisible(true);
+  }, [hasReport, active]);
 
   useEffect(() => {
     if (!active) return;
     const cycle = () => {
       setVisible(false);
       setTimeout(() => {
-        setIndex((i) => (i + 1) % PLACEHOLDERS.length);
+        setIndex((i) => (i + 1) % pool.length);
         setVisible(true);
       }, 400);
     };
-    const id = setInterval(cycle, 3200);
+    const id = setInterval(cycle, 3400);
     return () => clearInterval(id);
-  }, [active]);
+  }, [active, pool.length]);
 
-  return { text: PLACEHOLDERS[index], visible };
+  return { text: pool[index] ?? pool[0], visible };
 }
 
 // ── Main component ────────────────────────────────────────────────────────────
@@ -90,7 +104,7 @@ export default function DashboardPage() {
   const textareaRef             = useRef<HTMLTextAreaElement>(null);
   const abortRef                = useRef<AbortController | null>(null);
   const showGreeting            = messages.length === 0;
-  const placeholder             = useAnimatedPlaceholder(showGreeting && !input);
+  const placeholder             = useAnimatedPlaceholder(showGreeting && !input, hasReport);
 
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -117,40 +131,50 @@ export default function DashboardPage() {
   const theme = report.theme || rawReport.theme || "";
   const shortTheme = theme.length > 28 ? theme.slice(0, 28) + "…" : theme;
 
+  const completedCount = Object.values(stepDone).filter(Boolean).length;
+
   const greeting = hasReport
     ? `Bonjour ${name}, ton rapport avance.`
-    : `Bonjour ${name}, on commence ?`;
+    : `Bonjour ${name}, bienvenue sur RapportAI.`;
 
-  const completedCount = Object.values(stepDone).filter(Boolean).length;
-  const subtitle = hasReport
+  const subtitle = hasReport && completedCount > 0
     ? completedCount >= 7
-      ? "Tu es presque au bout — pose-moi n'importe quelle question."
-      : `${completedCount}/9 sections générées. Dis-moi ce qui bloque.`
-    : "Dis-moi ce qui te bloque, je t'aide à démarrer.";
+      ? "Ton rapport est presque complet. Que veux-tu affiner ?"
+      : "Je connais toutes tes sections. Dis-moi ce qui bloque."
+    : "Je génère ton rapport complet, section par section. Par où on commence ?";
 
-  const quickActions = hasReport
+  const quickActions = hasReport && completedCount > 0
     ? [
         {
-          label: shortTheme ? `Analyse la structure de "${shortTheme}"` : "Analyse la structure de mon rapport",
-          action: () => sendWithText(`Analyse la structure de mon rapport sur "${theme}". Est-ce que le plan est cohérent ?`),
+          label: "Qu'est-ce qu'il manque dans mon rapport ?",
+          action: () => sendWithText(`J'ai généré ${completedCount} sections sur 9 dans mon rapport sur "${theme}". Qu'est-ce qui manque et dans quel ordre je dois continuer ?`),
+        },
+        {
+          label: "Mon rapport est-il cohérent ?",
+          action: () => sendWithText(`Analyse la cohérence globale de mon rapport sur "${theme}" — est-ce que l'intro, le développement et la conclusion se tiennent ?`),
+        },
+        {
+          label: "Emmène-moi à l'étape suivante",
+          action: () => setLocation(STEP_PATHS[currentStep] ?? "/rapport/step-1"),
         },
         {
           label: "Prépare-moi pour la soutenance",
-          action: () => sendWithText("Quelles questions difficiles mon jury risque de me poser ? Comment bien me préparer ?"),
-        },
-        {
-          label: "Points faibles à corriger",
-          action: () => sendWithText("Quels sont les points faibles classiques dans un rapport comme le mien ? Qu'est-ce que je dois vérifier avant de rendre ?"),
-        },
-        {
-          label: "Comment éviter la détection IA ?",
-          action: () => sendWithText("Comment reformuler mon texte généré par IA pour qu'il passe inaperçu auprès de mon encadrant ?"),
+          action: () => sendWithText(`Prépare-moi pour la soutenance de mon rapport sur "${theme}". Quelles questions difficiles mon jury va me poser ?`),
         },
       ]
     : [
-        { label: "Par où commencer un PFE ?",       action: () => sendWithText("Je dois rédiger un PFE. Par où je commence ? Explique-moi toutes les étapes dans l'ordre.") },
-        { label: "Rapport de stage en 30 min",      action: () => setLocation("/rapport/step-1") },
-        { label: "C'est quoi une bonne problématique ?", action: () => sendWithText("Explique-moi comment formuler une bonne problématique pour un rapport académique marocain.") },
+        {
+          label: "Comment RapportAI génère mon rapport ?",
+          action: () => sendWithText("Explique-moi exactement comment RapportAI génère mon rapport. C'est quoi les étapes, combien de temps ça prend, et qu'est-ce que je dois faire moi ?"),
+        },
+        {
+          label: "PFE, stage ou mémoire — c'est quoi la différence ?",
+          action: () => sendWithText("C'est quoi la différence entre un PFE, un rapport de stage et un mémoire ? Lequel me correspond ?"),
+        },
+        {
+          label: "Commencer mon rapport maintenant",
+          action: () => setLocation("/rapport/step-1"),
+        },
       ];
 
   const sendWithText = (text: string) => {
