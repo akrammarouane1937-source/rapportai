@@ -1,253 +1,383 @@
-import { useOptionalUser as useUser } from "@/lib/useOptionalClerk";
-import { motion } from "framer-motion";
-import { Plus, ChevronRight } from "lucide-react";
+import { useState, useRef, useEffect } from "react";
+import { motion, AnimatePresence } from "framer-motion";
+import { Send, Loader2, Sparkles, ArrowRight } from "lucide-react";
 import { useLocation } from "wouter";
-import { Button } from "@/components/ui/button";
+import { useOptionalUser as useUser } from "@/lib/useOptionalClerk";
 import { Sidebar, SidebarSpacer } from "@/components/layout/Sidebar";
-import { StatsRow } from "@/components/dashboard/StatsRow";
-import { ActiveReportCard } from "@/components/dashboard/ActiveReportCard";
-import { FiguresPanel } from "@/components/dashboard/FiguresPanel";
-import { FloatingChat } from "@/components/dashboard/FloatingChat";
+import { useReportStore } from "@/lib/store";
 import { getReport } from "@/lib/reportStore";
-import { getMyPlan, PLAN_LIMITS } from "@/lib/userPlan";
+import { API_BASE } from "@/lib/apiBase";
+import ReactMarkdown from "react-markdown";
+import remarkGfm from "remark-gfm";
 
-function wordCount(s?: string) {
-  return s ? s.trim().split(/\s+/).filter(Boolean).length : 0;
+// ── Navigation detection ──────────────────────────────────────────────────────
+const STEP_NAV = [
+  { pattern: /page de garde/i,          path: "/rapport/step-2",   label: "Page de garde" },
+  { pattern: /dédicaces?/i,             path: "/rapport/step-3",   label: "Dédicaces" },
+  { pattern: /remerciements?/i,         path: "/rapport/step-3",   label: "Remerciements" },
+  { pattern: /résumé|abstract/i,        path: "/rapport/step-4",   label: "Résumé & Abstract" },
+  { pattern: /sommaire/i,               path: "/rapport/step-5",   label: "Sommaire" },
+  { pattern: /introduction/i,           path: "/rapport/step-6",   label: "Introduction" },
+  { pattern: /partie\s+i(?!\s*i)/i,     path: "/rapport/partie-i", label: "Partie I" },
+  { pattern: /partie\s+ii/i,            path: "/rapport/partie-ii",label: "Partie II" },
+  { pattern: /conclusion/i,             path: "/rapport/step-9",   label: "Conclusion" },
+];
+
+const STEP_PATHS: Record<number, string> = {
+  1: "/rapport/step-1", 2: "/rapport/step-2", 3: "/rapport/step-3",
+  4: "/rapport/step-4", 5: "/rapport/step-5", 6: "/rapport/step-6",
+  7: "/rapport/partie-i", 8: "/rapport/partie-ii", 9: "/rapport/step-9",
+};
+
+interface Message {
+  id: string;
+  role: "user" | "assistant";
+  text: string;
+  streaming?: boolean;
+  navSuggestion?: { path: string; label: string } | null;
 }
 
-function computeDashboard() {
-  const d = getReport();
-
-  const stepDone: Record<number, boolean> = {
-    1: !!(d.theme && d.school),
-    2: !!d.studentName,
-    3: !!(d.dedicaces || d.remerciements),
-    4: !!d.resume,
-    5: !!(d.introduction),
-    6: !!d.introduction,
-    7: !!d.partieI,
-    8: !!d.partieII,
-    9: !!d.conclusion,
-  };
-
-  const completedSteps = Object.entries(stepDone)
-    .filter(([, v]) => v)
-    .map(([k]) => Number(k));
-
-  const currentStep = ([1, 2, 3, 4, 5, 6, 7, 8, 9].find((n) => !stepDone[n])) ?? 9;
-
-  const totalWords =
-    wordCount(d.introduction) +
-    wordCount(d.partieI) +
-    wordCount(d.partieII) +
-    wordCount(d.conclusion) +
-    wordCount(d.resume);
-
-  const title = d.theme
-    ? `${d.theme.slice(0, 55)}${d.theme.length > 55 ? "…" : ""} — ${d.school ?? ""}`
-    : "Mon rapport";
-
-  return { completedSteps, currentStep, totalWords, title, reportType: d.reportType ?? "PFE" };
+function detectNav(text: string) {
+  for (const item of STEP_NAV) {
+    if (item.pattern.test(text)) return { path: item.path, label: item.label };
+  }
+  return null;
 }
 
-// ── Submission checklist ──────────────────────────────────────────────────────
-function SubmissionChecklist() {
-  const d = getReport();
-
-  const items = [
-    { label: "Informations générales",  done: !!(d.theme && d.school) },
-    { label: "Page de garde",           done: !!d.studentName },
-    { label: "Dédicaces",               done: !!(d.dedicaces   && d.dedicaces.length   > 50) },
-    { label: "Remerciements",           done: !!(d.remerciements && d.remerciements.length > 50) },
-    { label: "Résumé / Abstract",       done: !!(d.resume      && d.resume.length      > 100) },
-    { label: "Introduction générale",   done: !!(d.introduction && d.introduction.length > 200) },
-    { label: "Mots-clés définis",       done: !!(d.motsCles    && d.motsCles.length    > 0) },
-    { label: "Partie I rédigée",        done: !!(d.partieI     && d.partieI.length     > 200) },
-    { label: "Partie II rédigée",       done: !!(d.partieII    && d.partieII.length    > 200) },
-    { label: "Conclusion rédigée",      done: !!(d.conclusion  && d.conclusion.length  > 200) },
-  ];
-
-  const doneCount = items.filter((i) => i.done).length;
-  const pct       = Math.round((doneCount / items.length) * 100);
-  const circumference = 2 * Math.PI * 15;
-  const isReady   = pct === 100;
-
-  return (
-    <div
-      className="h-full rounded-2xl bg-white border border-gray-100 flex flex-col overflow-hidden"
-      style={{ boxShadow: "0 1px 3px rgba(0,0,0,0.06)" }}
-    >
-      {/* Header */}
-      <div className="px-4 py-3 border-b border-gray-100 flex items-center justify-between flex-shrink-0">
-        <div>
-          <p className="text-sm font-semibold text-gray-900" style={{ fontFamily: "'Plus Jakarta Sans', sans-serif" }}>
-            Checklist de rendu
-          </p>
-          <p className="text-xs text-gray-400 mt-0.5">{doneCount}/{items.length} sections complètes</p>
-        </div>
-        {/* Circular progress */}
-        <div className="relative w-11 h-11 flex items-center justify-center flex-shrink-0">
-          <svg className="w-11 h-11 -rotate-90" viewBox="0 0 36 36">
-            <circle cx="18" cy="18" r="15" fill="none" stroke="#f3f4f6" strokeWidth="3" />
-            <circle
-              cx="18" cy="18" r="15" fill="none"
-              stroke={isReady ? "#10b981" : "#7c3aed"}
-              strokeWidth="3"
-              strokeLinecap="round"
-              strokeDasharray={`${(pct / 100) * circumference} ${circumference}`}
-              style={{ transition: "stroke-dasharray 0.6s ease" }}
-            />
-          </svg>
-          <span className={`absolute text-[10px] font-bold ${isReady ? "text-emerald-600" : "text-purple-700"}`}>
-            {pct}%
-          </span>
-        </div>
-      </div>
-
-      {/* Items */}
-      <div className="flex-1 overflow-y-auto p-3 space-y-1" style={{ minHeight: 0 }}>
-        {items.map((item, i) => (
-          <div
-            key={i}
-            className={`flex items-center gap-2.5 px-2.5 py-1.5 rounded-lg transition-colors ${
-              item.done ? "bg-green-50" : "bg-gray-50"
-            }`}
-          >
-            <div
-              className={`w-4 h-4 rounded-full flex items-center justify-center flex-shrink-0 transition-colors ${
-                item.done ? "bg-green-500" : "border-2 border-gray-200 bg-white"
-              }`}
-            >
-              {item.done && (
-                <svg className="w-2.5 h-2.5 text-white" fill="none" viewBox="0 0 12 12">
-                  <path d="M2 6l3 3 5-5" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
-                </svg>
-              )}
-            </div>
-            <span className={`text-xs leading-tight ${item.done ? "text-green-700 font-medium" : "text-gray-400"}`}>
-              {item.label}
-            </span>
-          </div>
-        ))}
-      </div>
-
-      {/* Footer */}
-      <div className={`px-4 py-2.5 border-t flex-shrink-0 text-center transition-colors ${
-        isReady ? "bg-green-50 border-green-100" : "bg-gray-50 border-gray-100"
-      }`}>
-        <p className={`text-xs font-semibold ${isReady ? "text-green-700" : "text-gray-400"}`}>
-          {isReady
-            ? "🎓 Rapport prêt pour la soutenance !"
-            : `Encore ${items.length - doneCount} section${items.length - doneCount > 1 ? "s" : ""} à compléter`}
-        </p>
-      </div>
-    </div>
-  );
-}
-
-// ── Main dashboard ─────────────────────────────────────────────────────────────
+// ── Main component ────────────────────────────────────────────────────────────
 export default function DashboardPage() {
-  const [, setLocation]  = useLocation();
-  const { user }         = useUser();
-  const { completedSteps, currentStep, totalWords, title, reportType } = computeDashboard();
+  const [, setLocation] = useLocation();
+  const { user }        = useUser();
+  const { report }      = useReportStore();
+  const rawReport       = getReport();
 
-  const plan           = getMyPlan();
-  const revisionLimit  = PLAN_LIMITS[plan.planId].revisions;
-  const hasActiveReport = completedSteps.length > 0;
+  const [messages, setMessages] = useState<Message[]>([]);
+  const [input, setInput]       = useState("");
+  const [loading, setLoading]   = useState(false);
+  const bottomRef               = useRef<HTMLDivElement>(null);
+  const textareaRef             = useRef<HTMLTextAreaElement>(null);
+  const abortRef                = useRef<AbortController | null>(null);
 
-  const stepPaths: Record<number, string> = {
-    1: "/rapport/step-1", 2: "/rapport/step-2", 3: "/rapport/step-3",
-    4: "/rapport/step-4", 5: "/rapport/step-5", 6: "/rapport/step-6",
-    7: "/rapport/partie-i", 8: "/rapport/partie-ii", 9: "/rapport/step-9",
+  useEffect(() => {
+    bottomRef.current?.scrollIntoView({ behavior: "smooth" });
+  }, [messages]);
+
+  const hasReport  = !!(report.theme || report.school);
+  const stepDone: Record<number, boolean> = {
+    1: !!(report.theme && report.school),
+    2: !!report.pageDeGarde,
+    3: !!(report.dedicaces || report.remerciements),
+    4: !!report.resumeFr,
+    5: !!report.sommaire,
+    6: !!report.introduction,
+    7: !!report.partieI,
+    8: !!report.partieII,
+    9: !!report.conclusion,
+  };
+  const currentStep = ([1,2,3,4,5,6,7,8,9].find((n) => !stepDone[n])) ?? 9;
+  const name = user?.firstName || rawReport.studentName?.split(" ")[0] || "là";
+
+  const greeting = hasReport
+    ? `Bonjour ${name}, ton rapport avance.`
+    : `Bonjour ${name}, on commence ton rapport ?`;
+  const subtitle = hasReport
+    ? "Dis-moi ce que tu veux améliorer, clarifier ou générer."
+    : "Dis-moi sur quoi tu travailles — je t'aide à démarrer.";
+
+  const quickActions = hasReport
+    ? [
+        { label: "Reprendre l'étape en cours", action: () => setLocation(STEP_PATHS[currentStep] ?? "/rapport/step-1") },
+        { label: "Voir mon rapport",           action: () => setLocation("/rapports") },
+        { label: "Améliorer mon introduction", action: () => sendWithText("Comment améliorer mon introduction générale ?") },
+        { label: "Exporter en Word",           action: () => sendWithText("Comment exporter mon rapport en Word ?") },
+      ]
+    : [
+        { label: "Créer un rapport PFE",   action: () => setLocation("/rapport/step-1") },
+        { label: "Rapport de stage",       action: () => setLocation("/rapport/step-1") },
+        { label: "Comment ça marche ?",    action: () => sendWithText("Comment fonctionne RapportAI ? Explique-moi les étapes.") },
+      ];
+
+  const sendWithText = (text: string) => {
+    setInput(text);
+    setTimeout(() => send(text), 0);
   };
 
-  const handleContinue = () => setLocation(stepPaths[currentStep] ?? "/rapport/step-1");
+  const send = async (overrideText?: string) => {
+    const text = (overrideText ?? input).trim();
+    if (!text || loading) return;
+    setInput("");
+    if (textareaRef.current) textareaRef.current.style.height = "auto";
+
+    const userMsg: Message = { id: crypto.randomUUID(), role: "user", text };
+    setMessages((prev) => [...prev, userMsg]);
+    setLoading(true);
+
+    const assistantId = crypto.randomUUID();
+    setMessages((prev) => [...prev, { id: assistantId, role: "assistant", text: "", streaming: true }]);
+
+    const ctrl = new AbortController();
+    abortRef.current = ctrl;
+
+    const history = [...messages, userMsg].map((m) => ({
+      role: m.role as "user" | "assistant",
+      content: m.text,
+    }));
+
+    try {
+      const resp = await fetch(`${API_BASE}/api/chat`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          messages:    history,
+          mode:        "assistant",
+          theme:       report.theme || rawReport.theme,
+          reportType:  report.reportType || rawReport.reportType,
+          school:      report.school || rawReport.school,
+          filiere:     report.filiere || rawReport.filiere,
+          studentName: report.studentName || rawReport.studentName,
+          sessionId:   rawReport.sessionId,
+        }),
+        signal: ctrl.signal,
+      });
+
+      if (!resp.ok || !resp.body) throw new Error(`HTTP ${resp.status}`);
+
+      const reader  = resp.body.getReader();
+      const decoder = new TextDecoder();
+      let buf = "";
+      let fullText = "";
+
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+        buf += decoder.decode(value, { stream: true });
+        const lines = buf.split("\n\n");
+        buf = lines.pop() ?? "";
+        for (const line of lines) {
+          if (!line.startsWith("data: ")) continue;
+          try {
+            const msg = JSON.parse(line.slice(6)) as { content?: string; done?: boolean; error?: string };
+            if (msg.error) throw new Error(msg.error);
+            if (msg.done) break;
+            if (msg.content) {
+              fullText += msg.content;
+              setMessages((prev) =>
+                prev.map((m) => m.id === assistantId ? { ...m, text: fullText } : m)
+              );
+            }
+          } catch { /* skip malformed */ }
+        }
+      }
+
+      const nav = detectNav(text) || detectNav(fullText);
+      setMessages((prev) =>
+        prev.map((m) =>
+          m.id === assistantId ? { ...m, streaming: false, navSuggestion: nav } : m
+        )
+      );
+    } catch (err) {
+      if (err instanceof Error && err.name === "AbortError") return;
+      setMessages((prev) =>
+        prev.map((m) =>
+          m.id === assistantId
+            ? { ...m, text: "Une erreur est survenue. Réessaie.", streaming: false }
+            : m
+        )
+      );
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
+    if (e.key === "Enter" && !e.shiftKey) {
+      e.preventDefault();
+      send();
+    }
+  };
+
+  const autoResize = (el: HTMLTextAreaElement) => {
+    el.style.height = "auto";
+    el.style.height = `${Math.min(el.scrollHeight, 140)}px`;
+  };
+
+  const showGreeting = messages.length === 0;
 
   return (
-    <div className="flex min-h-screen bg-[#f9f8ff]">
+    <div className="flex h-screen overflow-hidden" style={{ background: "#f9f8ff" }}>
       <Sidebar />
       <SidebarSpacer />
 
-      <main className="flex-1 p-8 min-w-0">
-        <div className="max-w-5xl mx-auto">
-          <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.35 }}>
+      <main className="flex-1 flex flex-col min-h-0 min-w-0">
 
-            {/* Header */}
-            <div className="flex items-center justify-between mb-7">
-              <div>
-                <h1 className="text-2xl font-bold text-gray-900" style={{ fontFamily: "'Plus Jakarta Sans', sans-serif" }}>
-                  Bonjour, {user?.firstName || "Étudiant"} 👋
-                </h1>
-                <p className="text-gray-500 mt-0.5 text-sm">
-                  {hasActiveReport
-                    ? "Tu as un rapport en cours. Continue là où tu t'es arrêté."
-                    : "Prêt à générer ton rapport ? C'est parti."}
-                </p>
-              </div>
-              <Button
-                data-testid="button-new-report"
-                onClick={() => setLocation("/rapport/step-1")}
-                className="flex items-center gap-2 bg-purple-600 hover:bg-purple-700 text-white"
-                style={{ boxShadow: "0 4px 24px rgba(124,58,237,0.25)" }}
-              >
-                <Plus className="w-4 h-4" />
-                {hasActiveReport ? "Nouveau rapport" : "Commencer maintenant"}
-              </Button>
-            </div>
+        {/* ── Messages scroll area ── */}
+        <div className="flex-1 overflow-y-auto min-h-0 px-6 py-8">
+          <div className="max-w-2xl mx-auto">
 
-            {/* Stats row */}
-            <div className="mb-6">
-              <StatsRow
-                progressionGlobale={Math.round((completedSteps.length / 9) * 100)}
-                sectionsCompletes={completedSteps.length}
-                totalSections={9}
-                motsGeneres={totalWords}
-                revisionCount={plan.revisionCount}
-                revisionLimit={revisionLimit}
-              />
-            </div>
-
-            {/* Active report */}
-            <div className="mb-6">
-              <div className="flex items-center justify-between mb-3">
-                <h2 className="text-sm font-semibold text-gray-700" style={{ fontFamily: "'Plus Jakarta Sans', sans-serif" }}>
-                  {hasActiveReport ? "Rapport en cours" : "Démarrer un rapport"}
-                </h2>
-                <button
-                  className="text-xs text-purple-600 hover:text-purple-700 flex items-center gap-1 font-medium"
-                  data-testid="link-all-reports"
-                  onClick={() => setLocation("/rapports")}
+            {/* Greeting */}
+            <AnimatePresence>
+              {showGreeting && (
+                <motion.div
+                  initial={{ opacity: 0, y: 16 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  exit={{ opacity: 0, y: -8 }}
+                  transition={{ duration: 0.35 }}
+                  className="text-center mb-12 mt-10"
                 >
-                  Voir tous les rapports
-                  <ChevronRight className="w-3 h-3" />
-                </button>
-              </div>
-              <ActiveReportCard
-                title={hasActiveReport ? title : "Nouveau rapport PFE/Stage/Mémoire"}
-                type={reportType}
-                currentStep={currentStep}
-                completedSteps={completedSteps}
-                updatedAt={hasActiveReport ? "Sauvegarde auto" : "Pas encore commencé"}
-                onContinue={handleContinue}
-                onStepClick={(stepId) => setLocation(stepPaths[stepId] ?? "/rapport/step-1")}
-              />
+                  <div
+                    className="w-12 h-12 rounded-2xl flex items-center justify-center mx-auto mb-4"
+                    style={{ background: "linear-gradient(135deg,#7c3aed,#a855f7)", boxShadow: "0 4px 20px rgba(124,58,237,0.28)" }}
+                  >
+                    <Sparkles className="w-5 h-5 text-white" />
+                  </div>
+                  <h1 className="text-2xl font-bold text-gray-900 mb-1.5" style={{ fontFamily: "'Plus Jakarta Sans', sans-serif" }}>
+                    {greeting}
+                  </h1>
+                  <p className="text-gray-400 text-sm">{subtitle}</p>
+                </motion.div>
+              )}
+            </AnimatePresence>
+
+            {/* Messages */}
+            <div className="space-y-6">
+              {messages.map((msg) => (
+                <motion.div
+                  key={msg.id}
+                  initial={{ opacity: 0, y: 8 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ duration: 0.2 }}
+                  className={`flex ${msg.role === "user" ? "justify-end" : "justify-start"}`}
+                >
+                  <div className={msg.role === "user" ? "max-w-[78%]" : "w-full"}>
+
+                    {msg.role === "assistant" && (
+                      <div className="flex items-center gap-2 mb-2">
+                        <div
+                          className="w-5 h-5 rounded-md flex items-center justify-center"
+                          style={{ background: "linear-gradient(135deg,#7c3aed,#a855f7)" }}
+                        >
+                          <Sparkles className="w-2.5 h-2.5 text-white" />
+                        </div>
+                        <span className="text-xs font-semibold text-gray-400">RapportAI</span>
+                      </div>
+                    )}
+
+                    <div
+                      className={`px-4 py-3 rounded-2xl text-sm leading-relaxed ${
+                        msg.role === "user"
+                          ? "text-white rounded-tr-sm"
+                          : "bg-white text-gray-800 rounded-tl-sm border border-gray-100"
+                      }`}
+                      style={msg.role === "user"
+                        ? { background: "linear-gradient(135deg,#7c3aed,#a855f7)", boxShadow: "0 2px 8px rgba(124,58,237,0.22)" }
+                        : { boxShadow: "0 1px 4px rgba(0,0,0,0.05)" }
+                      }
+                    >
+                      {msg.role === "assistant" ? (
+                        msg.streaming && !msg.text ? (
+                          <span className="flex items-center gap-1.5 text-gray-400">
+                            <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                            En train d'écrire…
+                          </span>
+                        ) : (
+                          <ReactMarkdown
+                            remarkPlugins={[remarkGfm]}
+                            className="prose prose-sm max-w-none prose-p:my-1 prose-headings:font-semibold prose-headings:text-gray-900"
+                          >
+                            {msg.text}
+                          </ReactMarkdown>
+                        )
+                      ) : (
+                        msg.text
+                      )}
+                    </div>
+
+                    {/* Auto navigation button */}
+                    {msg.role === "assistant" && !msg.streaming && msg.navSuggestion && (
+                      <motion.button
+                        initial={{ opacity: 0, y: 4 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        transition={{ delay: 0.2 }}
+                        onClick={() => setLocation(msg.navSuggestion!.path)}
+                        className="mt-2 flex items-center gap-1.5 text-xs font-semibold px-3 py-1.5 rounded-lg transition-all hover:opacity-90"
+                        style={{ background: "linear-gradient(135deg,#7c3aed,#a855f7)", color: "#fff" }}
+                      >
+                        Aller à {msg.navSuggestion.label}
+                        <ArrowRight className="w-3 h-3" />
+                      </motion.button>
+                    )}
+                  </div>
+                </motion.div>
+              ))}
             </div>
 
-            {/* Bottom row: figures + checklist */}
-            <div className="grid grid-cols-5 gap-4" style={{ minHeight: 220 }}>
-              <div className="col-span-3">
-                <FiguresPanel />
-              </div>
-              <div className="col-span-2">
-                <SubmissionChecklist />
-              </div>
-            </div>
-
-          </motion.div>
+            <div ref={bottomRef} />
+          </div>
         </div>
-      </main>
 
-      <FloatingChat />
+        {/* ── Input area ── */}
+        <div className="flex-shrink-0 bg-white px-6 py-4" style={{ borderTop: "1px solid #f3f4f6" }}>
+          <div className="max-w-2xl mx-auto">
+
+            {/* Quick action pills — only when no messages yet */}
+            <AnimatePresence>
+              {showGreeting && (
+                <motion.div
+                  initial={{ opacity: 0, y: 4 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  exit={{ opacity: 0 }}
+                  transition={{ duration: 0.2 }}
+                  className="flex flex-wrap gap-2 mb-3"
+                >
+                  {quickActions.map((a) => (
+                    <button
+                      key={a.label}
+                      onClick={a.action}
+                      className="text-xs font-medium px-3 py-1.5 rounded-full border border-gray-200 bg-white text-gray-600 hover:border-purple-300 hover:text-purple-600 hover:bg-purple-50 transition-all"
+                    >
+                      {a.label}
+                    </button>
+                  ))}
+                </motion.div>
+              )}
+            </AnimatePresence>
+
+            {/* Chat input box */}
+            <div
+              className="flex items-end gap-3 rounded-2xl border border-gray-200 bg-white px-4 py-3 transition-all focus-within:border-purple-300 focus-within:shadow-sm"
+              style={{ boxShadow: "0 2px 12px rgba(0,0,0,0.05)" }}
+            >
+              <textarea
+                ref={textareaRef}
+                value={input}
+                onChange={(e) => { setInput(e.target.value); autoResize(e.target); }}
+                onKeyDown={handleKeyDown}
+                disabled={loading}
+                placeholder="Pose une question sur ton rapport…"
+                rows={1}
+                className="flex-1 text-sm text-gray-800 placeholder-gray-400 outline-none resize-none bg-transparent leading-relaxed disabled:opacity-50"
+                style={{ minHeight: 24, maxHeight: 140 }}
+              />
+              <button
+                onClick={() => send()}
+                disabled={!input.trim() || loading}
+                className="w-8 h-8 rounded-xl flex items-center justify-center flex-shrink-0 transition-all disabled:opacity-30 hover:opacity-90"
+                style={{ background: "linear-gradient(135deg,#7c3aed,#a855f7)" }}
+              >
+                {loading
+                  ? <Loader2 className="w-3.5 h-3.5 text-white animate-spin" />
+                  : <Send className="w-3.5 h-3.5 text-white" />
+                }
+              </button>
+            </div>
+
+            <p className="text-center text-[10px] text-gray-300 mt-2">
+              Entrée pour envoyer · Maj+Entrée pour nouvelle ligne
+            </p>
+          </div>
+        </div>
+
+      </main>
     </div>
   );
 }
