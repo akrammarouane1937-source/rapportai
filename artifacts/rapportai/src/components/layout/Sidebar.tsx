@@ -90,12 +90,7 @@ export function Sidebar() {
           style={{ height: 56, borderBottom: "1px solid #f3f4f6" }}
         >
           <div className="flex items-center gap-2">
-            <div
-              className="w-7 h-7 rounded-lg flex items-center justify-center flex-shrink-0"
-              style={{ background: "linear-gradient(135deg,#7c3aed,#a855f7)" }}
-            >
-              <span className="text-white font-bold text-xs">R</span>
-            </div>
+            <img src="/logo.svg" alt="RapportAI" className="w-7 h-7 flex-shrink-0" />
             <span
               className="font-bold text-gray-900 text-sm"
               style={{ fontFamily: "'Plus Jakarta Sans', sans-serif" }}

@@ -160,9 +160,7 @@ export default function LandingPage() {
       >
         <div className="container mx-auto px-4 h-16 flex items-center justify-between">
           <div className="flex items-center gap-2">
-            <div className="w-8 h-8 rounded flex items-center justify-center text-white" style={{ background: "#7c3aed" }}>
-              <Sparkles size={18} />
-            </div>
+            <img src="/logo.svg" alt="RapportAI" className="w-8 h-8" />
             <span className="font-bold font-heading text-xl tracking-tight text-foreground">
               RapportAI
             </span>
@@ -591,9 +589,7 @@ export default function LandingPage() {
           <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-8 mb-12">
             <div>
               <div className="flex items-center gap-2 mb-3">
-                <div className="w-6 h-6 bg-primary rounded flex items-center justify-center text-white">
-                  <Sparkles size={14} />
-                </div>
+                <img src="/logo.svg" alt="RapportAI" className="w-6 h-6" />
                 <span className="font-bold font-heading text-lg text-foreground">RapportAI</span>
               </div>
               <p className="text-secondary-foreground text-sm">Le rapport académique en 30 minutes</p>
