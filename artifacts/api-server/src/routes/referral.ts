@@ -11,12 +11,17 @@ const router = Router();
 // Creates a user row + pending referral if a refCode was supplied.
 
 router.post("/referral/register", async (req: Request, res: Response) => {
-  const { clerkId, refCode } = req.body as { clerkId?: string; refCode?: string };
+  const { clerkId, refCode, email, name } = req.body as {
+    clerkId?: string;
+    refCode?:  string;
+    email?:    string;
+    name?:     string;
+  };
   if (!clerkId) { res.status(400).json({ error: "clerkId required" }); return; }
 
   try {
-    const user = await upsertUser(clerkId, refCode);
-    res.json({ referralCode: user.referralCode, balance: user.referralBalance });
+    const user = await upsertUser(clerkId, { referredByCode: refCode, email, name });
+    res.json({ referralCode: user.referralCode, balance: user.referralBalance, isFoundingUser: user.isFoundingUser });
   } catch (err) {
     logger.error({ err }, "referral/register error");
     res.status(500).json({ error: "Failed to register user" });

@@ -1,6 +1,7 @@
 import { eq, and, count } from "drizzle-orm";
 import { db, usersTable, referralsTable, referralRewardsTable } from "@workspace/db";
 import { logger } from "./logger";
+import { sendEmail } from "./email";
 
 // ─── Code generation ──────────────────────────────────────────────────────────
 
@@ -18,13 +19,17 @@ export function generateReferralCode(clerkId: string): string {
 
 const FOUNDING_LIMIT = 20;
 
-export async function upsertUser(clerkId: string, referredByCode?: string) {
+export async function upsertUser(
+  clerkId: string,
+  opts?: { referredByCode?: string; email?: string; name?: string },
+) {
   const existing = await db.query.usersTable.findFirst({
     where: eq(usersTable.clerkId, clerkId),
   });
   if (existing) return existing;
 
   const referralCode = generateReferralCode(clerkId);
+  const { referredByCode, email, name } = opts ?? {};
 
   // First 20 users get founding status — free forever
   const [{ value: totalUsers }] = await db.select({ value: count() }).from(usersTable);
@@ -43,6 +48,8 @@ export async function upsertUser(clerkId: string, referredByCode?: string) {
     .insert(usersTable)
     .values({
       clerkId,
+      email:          email ?? null,
+      name:           name  ?? null,
       referralCode,
       referredByCode: referredByCode ?? null,
       isFoundingUser,
@@ -62,6 +69,16 @@ export async function upsertUser(clerkId: string, referredByCode?: string) {
     { event: "user_created", clerkId, referralCode, referredByCode, isFoundingUser },
     isFoundingUser ? "New FOUNDING user" : "New user",
   );
+
+  // Fire welcome email — non-blocking, never throws
+  if (email) {
+    void sendEmail(email, "welcome", {
+      name:             name || email.split("@")[0],
+      is_founding_user: isFoundingUser,
+      referral_code:    referralCode,
+    });
+  }
+
   return created;
 }
 
@@ -77,9 +94,23 @@ export async function getUserByClerkId(clerkId: string) {
 const CASHBACK_THRESHOLD = 2;    // referrals needed
 const CASHBACK_AMOUNT    = 1000; // $10 in cents
 
-export async function onReportCompleted(clerkId: string) {
+export async function onReportCompleted(
+  clerkId: string,
+  reportMeta?: { reportId?: string; subject?: string; wordCount?: number; sectionsCount?: number },
+) {
   const user = await getUserByClerkId(clerkId);
   if (!user) return;
+
+  // Send report_ready email — non-blocking
+  if (user.email) {
+    void sendEmail(user.email, "report_ready", {
+      name:           user.name || user.email.split("@")[0],
+      report_subject: reportMeta?.subject ?? "Rapport académique",
+      report_id:      reportMeta?.reportId ?? "",
+      word_count:     reportMeta?.wordCount ?? 0,
+      sections_count: reportMeta?.sectionsCount ?? 0,
+    });
+  }
 
   // Find a pending referral where this user is the referred party
   const referral = await db.query.referralsTable.findFirst({

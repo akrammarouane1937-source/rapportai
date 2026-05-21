@@ -823,12 +823,21 @@ router.get("/session/:sessionId/page-state", (req: Request, res: Response) => {
 
 router.post("/session/:sessionId/complete", async (req: Request, res: Response) => {
   const clerkId = req.headers["x-clerk-id"] as string | undefined;
+  const { subject, word_count, sections_count } = req.body as {
+    subject?:        string;
+    word_count?:     number;
+    sections_count?: number;
+  };
   if (clerkId) {
     try {
       const { onReportCompleted } = await import("../lib/referral");
-      await onReportCompleted(clerkId);
+      await onReportCompleted(clerkId, {
+        reportId:      req.params.sessionId,
+        subject,
+        wordCount:     word_count,
+        sectionsCount: sections_count,
+      });
     } catch (err) {
-      // Non-fatal — don't block the response if DB is unavailable
       logger.warn({ err }, "onReportCompleted failed (non-fatal)");
     }
   }

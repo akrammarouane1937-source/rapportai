@@ -13,6 +13,8 @@ export const rewardStatusEnum    = pgEnum("reward_status",    ["pending", "proce
 export const usersTable = pgTable("users", {
   id:                     serial("id").primaryKey(),
   clerkId:                text("clerk_id").notNull().unique(),
+  email:                  text("email"),
+  name:                   text("name"),
   referralCode:           text("referral_code").notNull().unique(),
   referredByCode:         text("referred_by_code"),
   referralBalance:        integer("referral_balance").notNull().default(0),
