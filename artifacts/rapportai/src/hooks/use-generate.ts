@@ -5,7 +5,7 @@ import { useFileStore } from "@/lib/fileStore";
 
 const SESSION_KEY = "rapportai_session";
 const SESSION_TS_KEY = "rapportai_session_ts";
-const SESSION_TTL = 45 * 60 * 1000;
+const SESSION_TTL = 4 * 60 * 60 * 1000; // 4 hours — matches server-side session TTL
 
 export interface ToolCall {
   id: string;

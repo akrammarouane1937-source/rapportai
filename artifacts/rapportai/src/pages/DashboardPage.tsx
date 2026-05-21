@@ -1,4 +1,5 @@
 import { useState, useRef, useEffect } from "react";
+import { useSessionRecover } from "@/hooks/use-session-recover";
 import { motion, AnimatePresence } from "framer-motion";
 import { Send, Loader2, Sparkles, ArrowRight, ChevronDown } from "lucide-react";
 import { useLocation } from "wouter";
@@ -110,6 +111,8 @@ export default function DashboardPage() {
   const { user }        = useUser();
   const { report, updateReport } = useReportStore();
   const rawReport       = getReport();
+
+  useSessionRecover(); // silently merge any server-side disk content into Zustand
 
   const [messages, setMessages] = useState<Message[]>([]);
   const [input, setInput]       = useState("");
