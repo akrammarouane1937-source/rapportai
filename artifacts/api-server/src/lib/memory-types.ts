@@ -29,6 +29,8 @@ export interface ReportConfig {
   type: "PFE" | "PFA" | "Mémoire" | "Thèse" | "Rapport de stage";
   structure: "deux-parties" | "trois-parties";
   language: string;
+  generated_plan?: unknown;
+  plan_approved?: boolean;
   company?: Company;
   canevas_uploaded: boolean;
   canevas_filename?: string;

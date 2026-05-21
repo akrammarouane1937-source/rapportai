@@ -254,6 +254,41 @@ export class SDKReportAgent {
     );
   }
 
+  // Build a structured context packet — injected before every agent call.
+  // Passes summaries only (never full section text) to keep prompts lean.
+  buildContextPacket(section: string, sectionSummaries: Record<string, { key_points: string; word_count: number }> = {}): string {
+    const p = this.profile;
+    const doneSummaries = Object.entries(sectionSummaries)
+      .filter(([s]) => s !== section)
+      .reduce<Record<string, string>>((acc, [s, v]) => {
+        acc[s] = v.key_points;
+        return acc;
+      }, {});
+
+    const packet = {
+      student_profile: {
+        name:           p.studentName,
+        institution:    p.school,
+        department:     p.filiere,
+        supervisor:     p.encadrantPeda,
+        academic_year:  p.annee,
+        report_type:    p.reportType,
+        language:       "français",
+      },
+      section_instructions: {
+        name:       section,
+        tone:       "academic",
+      },
+      previous_sections_summary: doneSummaries,
+      coherence_rules: [
+        "La problématique de l'Introduction doit être adressée dans chaque partie",
+        "Ne jamais répéter des informations déjà couvertes dans les sections précédentes",
+        "Maintenir une terminologie cohérente tout au long du rapport",
+      ],
+    };
+    return JSON.stringify(packet, null, 2);
+  }
+
   // Build the task prompt for a report section
   buildSectionTask(section: string, opts?: { extraContext?: string; figures?: { figureNumber: number; title: string; source: string; author: string; caption: string; placement: string }[] }): string {
     const p = this.profile;

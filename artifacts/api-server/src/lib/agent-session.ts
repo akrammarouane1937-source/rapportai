@@ -2,7 +2,6 @@ import Anthropic from "@anthropic-ai/sdk";
 import { anthropic } from "@workspace/integrations-anthropic-ai";
 
 // ─── Stream event types ───────────────────────────────────────────────────────
-// The session yields typed events so routes can handle each case specifically.
 
 export type StreamEvent =
   | { type: "text";        content: string }
@@ -10,6 +9,25 @@ export type StreamEvent =
   | { type: "tool_result"; name: string; summary: string }
   | { type: "phase";       text: string }
   | { type: "question";    question: string; choices?: string[]; toolUseId: string };
+
+// ─── Per-section token budgets ────────────────────────────────────────────────
+
+export const SECTION_MAX_TOKENS: Record<string, number> = {
+  "page-de-garde":  600,
+  "remerciements":  500,
+  "dedicaces":      400,
+  "resume":         800,
+  "sommaire":       600,
+  "introduction":  1500,
+  "partie-i":      4096,
+  "partie-ii":     4096,
+  "conclusion":    1200,
+  "bibliographie": 1000,
+};
+
+export function maxTokensForSection(section: string): number {
+  return SECTION_MAX_TOKENS[section] ?? 2048;
+}
 
 // ─── AgentSession ─────────────────────────────────────────────────────────────
 
@@ -34,10 +52,6 @@ export class AgentSession {
     return this.history;
   }
 
-  /**
-   * Resume the session after a user answered a question.
-   * The answer is injected as a tool result, then generation continues.
-   */
   injectToolResult(toolUseId: string, answer: string): void {
     this.history.push({
       role: "user",
@@ -45,22 +59,12 @@ export class AgentSession {
     });
   }
 
-  /**
-   * Send a user message and stream typed events back.
-   * Text is yielded as { type: "text" } chunks.
-   * Tool calls fire { type: "tool_call" } then resolve internally.
-   * ask_user yields { type: "question" } and stops — caller must resume via injectToolResult.
-   */
   async *stream(userContent: string): AsyncGenerator<StreamEvent> {
     this.lastActiveAt = new Date();
     this.history.push({ role: "user", content: userContent });
     yield* this._run();
   }
 
-  /**
-   * Continue streaming after a tool result was injected (used for ask_user resume).
-   * Does NOT push a new user message — history already has the tool result.
-   */
   async *resume(): AsyncGenerator<StreamEvent> {
     this.lastActiveAt = new Date();
     yield* this._run();
@@ -99,15 +103,13 @@ export class AgentSession {
 
         yield { type: "tool_call", name: block.name };
 
-        // ask_user is special — pause and let the caller collect the answer
         if (block.name === "ask_user") {
-          // Flush any tool results accumulated before this ask_user call
           if (toolResults.length > 0) {
             this.history.push({ role: "user", content: toolResults });
           }
           const input = block.input as { question: string; choices?: string[] };
           yield { type: "question", question: input.question, choices: input.choices, toolUseId: block.id };
-          return; // Stop here — caller must inject the answer and call resume()
+          return;
         }
 
         const result = await this.handleTool(block.name, block.input);

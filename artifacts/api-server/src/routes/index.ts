@@ -15,6 +15,8 @@ import plagiatRouter from "./plagiat";
 import converseRouter from "./converse";
 import summarizeRouter from "./summarize";
 import referralRouter from "./referral";
+import planApprovalRouter from "./plan-approval";
+import adminRouter from "./admin";
 // ─── Section agents (each has explicit system prompt + tools) ─────────────────
 import introductionRouter from "./introduction";
 import dedicacesRouter from "./dedicaces";
@@ -44,6 +46,8 @@ router.use(plagiatRouter);
 router.use(converseRouter);
 router.use(summarizeRouter);
 router.use(referralRouter);
+router.use(planApprovalRouter);
+router.use(adminRouter);
 // Section agents
 router.use(introductionRouter);
 router.use(dedicacesRouter);

@@ -387,7 +387,13 @@ router.post(
     metrics.recordStart();
 
     try {
-      const task = agent.buildSectionTask(section, { extraContext, figures });
+      // Build context packet from stored summaries and inject into task
+      const memory = readMemory(sessionId);
+      const summaries = (memory?.section_summaries ?? {}) as Record<string, { key_points: string; word_count: number }>;
+      const contextPacket = agent.buildContextPacket(section, summaries);
+      const enrichedExtraContext = contextPacket + (extraContext ? `\n\n${extraContext}` : "");
+
+      const task = agent.buildSectionTask(section, { extraContext: enrichedExtraContext, figures });
 
       res.write(`data: ${JSON.stringify({ phase: "writing" })}\n\n`);
       const finished = await streamToSSE(res, agent.streamSection(section, task));
