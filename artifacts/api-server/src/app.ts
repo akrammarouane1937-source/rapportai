@@ -61,6 +61,16 @@ app.use(
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
+// Force UTF-8 charset on all JSON responses so French accents never corrupt
+app.use((_req: Request, res: Response, next: NextFunction) => {
+  const originalJson = res.json.bind(res);
+  res.json = (body) => {
+    res.setHeader("Content-Type", "application/json; charset=utf-8");
+    return originalJson(body);
+  };
+  next();
+});
+
 // Only activate Clerk middleware when the secret key is present.
 // Without it the middleware throws on every request, blocking all routes.
 if (process.env.CLERK_SECRET_KEY) {
@@ -107,9 +117,46 @@ setInterval(() => {
   }
 }, 5 * 60_000);
 
-app.use("/api/generate", rateLimit);
-app.use("/api/chat", rateLimit);
+// Strict limit on session start (prevent session flooding — 10/min per IP)
+const rateBucketsStrict = new Map<string, { count: number; resetAt: number }>();
+function rateLimitStrict(req: Request, res: Response, next: NextFunction) {
+  const ip = (req.headers["x-forwarded-for"] as string | undefined)?.split(",")[0]?.trim()
+    ?? req.socket?.remoteAddress ?? "unknown";
+  const now = Date.now();
+  let bucket = rateBucketsStrict.get(ip);
+  if (!bucket || now > bucket.resetAt) {
+    bucket = { count: 0, resetAt: now + RATE_WINDOW_MS };
+    rateBucketsStrict.set(ip, bucket);
+  }
+  bucket.count++;
+  if (bucket.count > 10) {
+    res.status(429).json({ error: "Trop de sessions créées. Attends 1 minute." });
+    return;
+  }
+  next();
+}
+setInterval(() => {
+  const now = Date.now();
+  for (const [ip, bucket] of rateBucketsStrict) {
+    if (now > bucket.resetAt) rateBucketsStrict.delete(ip);
+  }
+}, 5 * 60_000);
+
+app.use("/api/generate",        rateLimit);
+app.use("/api/chat",            rateLimit);
+app.use("/api/session/start",   rateLimitStrict);
+app.use("/api/session",         rateLimit);  // generate + revise + upload
 
 app.use("/api", router);
+
+// ── Global error handler ───────────────────────────────────────────────────
+// Catches any unhandled Express errors and logs them before responding.
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
+app.use((err: Error, req: Request, res: Response, _next: NextFunction) => {
+  logger.error({ err, url: req.url, method: req.method }, "Unhandled server error");
+  if (!res.headersSent) {
+    res.status(500).json({ error: "Une erreur interne est survenue. Réessaie." });
+  }
+});
 
 export default app;

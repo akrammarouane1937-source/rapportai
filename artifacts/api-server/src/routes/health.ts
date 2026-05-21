@@ -6,6 +6,11 @@ import { execSync } from "child_process";
 const router: IRouter = Router();
 
 router.get("/healthz", (_req, res) => {
+  const hasApiKey = !!process.env.ANTHROPIC_API_KEY;
+  if (!hasApiKey) {
+    res.status(503).json({ status: "error", reason: "ANTHROPIC_API_KEY missing" });
+    return;
+  }
   const data = HealthCheckResponse.parse({ status: "ok" });
   res.json(data);
 });
