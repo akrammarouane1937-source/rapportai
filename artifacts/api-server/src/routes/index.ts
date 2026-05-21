@@ -14,6 +14,7 @@ import sdkTestRouter from "./sdk-test";
 import plagiatRouter from "./plagiat";
 import converseRouter from "./converse";
 import summarizeRouter from "./summarize";
+import referralRouter from "./referral";
 // ─── Section agents (each has explicit system prompt + tools) ─────────────────
 import introductionRouter from "./introduction";
 import dedicacesRouter from "./dedicaces";
@@ -42,6 +43,7 @@ router.use(sdkTestRouter);
 router.use(plagiatRouter);
 router.use(converseRouter);
 router.use(summarizeRouter);
+router.use(referralRouter);
 // Section agents
 router.use(introductionRouter);
 router.use(dedicacesRouter);

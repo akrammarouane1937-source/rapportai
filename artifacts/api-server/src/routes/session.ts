@@ -14,6 +14,7 @@ import {
   updateReportFields,
 } from "../lib/memory";
 import { guardSectionLimit, guardRevisionLimit } from "../lib/plan-guard";
+import { logger } from "../lib/logger";
 
 // ─── Input sanitization + prompt injection prevention ────────────────────────
 
@@ -791,6 +792,24 @@ router.get("/session/:sessionId/page-state", (req: Request, res: Response) => {
     "partie-i":  state?.get("partie-i")  ?? 0,
     "partie-ii": state?.get("partie-ii") ?? 0,
   });
+});
+
+// ─── POST /api/session/:sessionId/complete ───────────────────────────────────
+// Called by the frontend when the user exports/downloads their finished report.
+// Triggers referral cashback logic for the user identified by x-clerk-id header.
+
+router.post("/session/:sessionId/complete", async (req: Request, res: Response) => {
+  const clerkId = req.headers["x-clerk-id"] as string | undefined;
+  if (clerkId) {
+    try {
+      const { onReportCompleted } = await import("../lib/referral");
+      await onReportCompleted(clerkId);
+    } catch (err) {
+      // Non-fatal — don't block the response if DB is unavailable
+      logger.warn({ err }, "onReportCompleted failed (non-fatal)");
+    }
+  }
+  res.json({ ok: true });
 });
 
 // ─── DELETE /api/session/:sessionId ──────────────────────────────────────────
