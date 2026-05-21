@@ -38,7 +38,21 @@
 
 ---
 
-## 5. Turn off FREE_LAUNCH
+## 5. Activate email system (Resend)
+**What:** Welcome + report_ready emails are built and wired — just need the API key and domain.
+**Three steps:**
+
+1. **Add env var** — `RESEND_API_KEY=re_...` on Render (free account at resend.com, 3 000 emails/month free)
+2. **Verify domain** — Add rapportai.ma in Resend dashboard → adds 2 DNS records → takes ~10 min
+3. **Wire frontend signup** — On Clerk sign-in callback, call `POST /api/referral/register` with `{ clerkId, email, name, refCode? }`. The `email` and `name` come from `useUser()` (Clerk). This fires the welcome email automatically.
+
+**Also update export:** When calling `POST /api/session/:id/complete`, pass `{ subject, word_count, sections_count }` in the body to populate the report_ready email content.
+
+**Note:** Password reset is handled by Clerk — no action needed there.
+
+---
+
+## 6. Turn off FREE_LAUNCH
 **What:** `FREE_LAUNCH=true` on Render bypasses all plan limits.
 **When to flip:** After Stripe + Clerk metadata are wired and tested.
 **Action:** Set `FREE_LAUNCH=false` on Render — no redeploy needed, takes effect immediately.
