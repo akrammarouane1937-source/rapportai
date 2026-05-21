@@ -140,6 +140,8 @@ export function useGenerate() {
             form.append("section", section);
             form.append("reportData", JSON.stringify(reportData));
             if (extraPrompt) form.append("prompt", extraPrompt);
+            // Include figures even when files are present — drop them and agents lose figure context
+            if (figures && figures.length > 0) form.append("figures", JSON.stringify(figures));
             for (const file of allFiles) form.append("files", file, file.name);
             return fetch(`${API_BASE}/api/session/${sid}/generate`, {
               method: "POST",

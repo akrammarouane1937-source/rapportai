@@ -351,12 +351,20 @@ router.post(
   guardSectionLimit,
   async (req: Request, res: Response) => {
     const { sessionId } = req.params;
-    const { section, problematique, extraContext, figures } = req.body as {
+    const rawBody = req.body as {
       section: string;
       problematique?: string;
       extraContext?: string;
-      figures?: { figureNumber: number; title: string; source: string; author: string; caption: string; placement: string }[];
+      figures?: unknown;  // JSON string when from FormData, array when from JSON body
     };
+    const { section, problematique, extraContext } = rawBody;
+    // figures arrives as a JSON string in FormData, as an array in JSON body
+    let figures: { figureNumber: number; title: string; source: string; author: string; caption: string; placement: string }[] | undefined;
+    if (Array.isArray(rawBody.figures)) {
+      figures = rawBody.figures as typeof figures;
+    } else if (typeof rawBody.figures === "string") {
+      try { figures = JSON.parse(rawBody.figures) as typeof figures; } catch { /* ignore */ }
+    }
 
     if (!section) {
       res.status(400).json({ error: "section is required" });
