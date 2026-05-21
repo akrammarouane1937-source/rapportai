@@ -11,6 +11,7 @@ import {
   Packer,
   PageNumber,
   Paragraph,
+  StyleLevel,
   Table,
   TableCell,
   TableRow,
@@ -106,6 +107,15 @@ function heading3(text: string): Paragraph {
   });
 }
 
+function heading4(text: string): Paragraph {
+  return new Paragraph({
+    text,
+    heading: HeadingLevel.HEADING_4,
+    spacing: { before: 180, after: 80 },
+    keepNext: true,
+  });
+}
+
 function emptyLine(): Paragraph {
   return new Paragraph({
     children: [new TextRun("")],
@@ -170,7 +180,10 @@ function markdownToParas(md: string): Paragraph[] {
   for (const raw of lines) {
     const line = raw.trimEnd();
 
-    if (line.startsWith("### ")) {
+    if (line.startsWith("#### ")) {
+      flushBuf();
+      paras.push(heading4(line.slice(5).trim()));
+    } else if (line.startsWith("### ")) {
       flushBuf();
       paras.push(heading3(line.slice(4).trim()));
     } else if (line.startsWith("## ")) {
@@ -432,15 +445,49 @@ function buildAbreviations(d: Report): Paragraph[] {
   ];
 }
 
-function buildSommaire(): Paragraph[] {
-  return [
+// Sommaire — front matter only, brief overview from plan data (NO page numbers, NO TOC field)
+// Shows: Introduction, Partie I (title + chapter count), Partie II, Conclusion, Bibliographie, TDM
+function buildSommaire(d: Report): Paragraph[] {
+  const sommaireLines: Paragraph[] = [
     heading1("Sommaire"),
     emptyLine(),
-    new TableOfContents("Table des matières", {
-      hyperlink: true,
-      headingStyleRange: "1-3",
-    }) as unknown as Paragraph,
+    bodyPara("Introduction Générale", { indent: { firstLine: 0 } }),
   ];
+
+  const partieITitle  = d.partieITitle  || "Partie I : Revue de Littérature";
+  const partieIITitle = d.partieIITitle || "Partie II : Étude Empirique";
+
+  // Partie I — bold title
+  sommaireLines.push(new Paragraph({
+    spacing: PARA_SPACING,
+    children: [new TextRun({ text: partieITitle, font: FONT, size: BODY_PT, bold: true })],
+  }));
+  for (let i = 1; i <= (d.partieIChapters || 2); i++) {
+    sommaireLines.push(new Paragraph({
+      indent: { left: convertMillimetersToTwip(12) },
+      spacing: { ...LINE_SPACING, before: 60, after: 60 },
+      children: [new TextRun({ text: `Chapitre ${i}`, font: FONT, size: BODY_PT })],
+    }));
+  }
+
+  // Partie II — bold title
+  sommaireLines.push(new Paragraph({
+    spacing: PARA_SPACING,
+    children: [new TextRun({ text: partieIITitle, font: FONT, size: BODY_PT, bold: true })],
+  }));
+  for (let i = 1; i <= (d.partieIIChapters || 2); i++) {
+    sommaireLines.push(new Paragraph({
+      indent: { left: convertMillimetersToTwip(12) },
+      spacing: { ...LINE_SPACING, before: 60, after: 60 },
+      children: [new TextRun({ text: `Chapitre ${i}`, font: FONT, size: BODY_PT })],
+    }));
+  }
+
+  sommaireLines.push(bodyPara("Conclusion Générale",        { indent: { firstLine: 0 } }));
+  sommaireLines.push(bodyPara("Bibliographie",              { indent: { firstLine: 0 } }));
+  sommaireLines.push(bodyPara("Table des Matières",         { indent: { firstLine: 0 } }));
+
+  return sommaireLines;
 }
 
 function buildIntroduction(d: Report): Paragraph[] {
@@ -612,13 +659,21 @@ function buildAnnexes(d: Report): Paragraph[] {
   ];
 }
 
+// Table des Matières — LAST PAGE — real Word TOC field with page numbers + hyperlinks.
+// updateFields: true on Document forces Word to populate it automatically on open.
 function buildTableDesMatieres(): Paragraph[] {
   return [
-    heading1("Table des matières"),
+    heading1("Table des Matières"),
     emptyLine(),
-    new TableOfContents("Table des matières", {
-      hyperlink: true,
-      headingStyleRange: "1-3",
+    new TableOfContents("Table des Matières", {
+      hyperlink:         true,
+      headingStyleRange: "1-4",
+      stylesWithLevels: [
+        new StyleLevel("Heading1", 1),
+        new StyleLevel("Heading2", 2),
+        new StyleLevel("Heading3", 3),
+        new StyleLevel("Heading4", 4),
+      ],
     }) as unknown as Paragraph,
   ];
 }
@@ -657,6 +712,14 @@ const PARAGRAPH_STYLES = [
     paragraph: { spacing: { before: 240, after: 120 }, keepNext: true },
   },
   {
+    id: "Heading4",
+    name: "Heading 4",
+    basedOn: "Normal",
+    next: "Normal",
+    run: { font: FONT, size: BODY_PT, bold: true, italics: true },
+    paragraph: { spacing: { before: 180, after: 80 }, keepNext: true },
+  },
+  {
     id: "Caption",
     name: "Caption",
     basedOn: "Normal",
@@ -672,17 +735,20 @@ export async function generateDocx(data: Report): Promise<Blob> {
   const pageBase = { page: { margin: MARGIN } };
 
   const doc = new Document({
+    features: { updateFields: true },  // forces Word to update TOC on open
     styles: { paragraphStyles: PARAGRAPH_STYLES },
     sections: [
       {
+        // Page de garde — no page number
         properties: { ...pageBase },
         children: buildPageDeGarde(data),
       },
       {
+        // Front matter — roman numerals (i, ii, iii…)
         properties: {
           page: {
             margin: MARGIN,
-            pageNumbers: { start: 2, formatType: NumberFormat.DECIMAL },
+            pageNumbers: { start: 1, formatType: NumberFormat.LOWER_ROMAN },
           },
         },
         headers: { default: header },
@@ -692,14 +758,15 @@ export async function generateDocx(data: Report): Promise<Blob> {
           ...buildRemerciements(data),
           ...buildResume(data),
           ...buildAbreviations(data),
-          ...buildSommaire(),
+          ...buildSommaire(data),
         ],
       },
       {
+        // Body + back matter — arabic numerals starting at 1
         properties: {
           page: {
             margin: MARGIN,
-            pageNumbers: { formatType: NumberFormat.DECIMAL },
+            pageNumbers: { start: 1, formatType: NumberFormat.DECIMAL },
           },
         },
         headers: { default: header },
@@ -715,7 +782,7 @@ export async function generateDocx(data: Report): Promise<Blob> {
           ...buildTableDesFigures(),
           ...buildListeDesTableaux(),
           ...buildAnnexes(data),
-          ...buildTableDesMatieres(),
+          ...buildTableDesMatieres(),  // always last
         ],
       },
     ],

@@ -136,7 +136,25 @@ function buildSystemPrompt(ctx: GenerateBody, memory?: StudentMemory): string {
   // Inject student memory context so agent never contradicts established decisions
   const memoryContext = memory ? buildMemoryContext(memory) : "";
 
-  return `${basePrompt}${memoryContext}${buildDocumentContext(ctx)}${skillsContent}`;
+  // Heading format rule — injected only for sections that write structured body content
+  // The DOCX export depends on these exact markdown prefixes to generate Word heading styles
+  const BODY_SECTIONS = new Set(["introduction", "partie-i", "partie-ii", "conclusion"]);
+  const headingRule = BODY_SECTIONS.has(ctx.section) ? `
+
+## FORMAT DES TITRES — OBLIGATOIRE POUR L'EXPORT WORD
+Le système d'export convertit les préfixes markdown en styles Word. Respecte EXACTEMENT :
+- \`# Titre\` → Partie (Heading 1) — ex: \`# Partie I : Revue de Littérature\`
+- \`## Titre\` → Chapitre (Heading 2) — ex: \`## Chapitre I : Fondements théoriques\`
+- \`### Titre\` → Section (Heading 3) — ex: \`### Section 1 : Définitions et concepts\`
+- \`#### Titre\` → Sous-section (Heading 4) — ex: \`#### 1.1 Définition du concept\`
+- Paragraphes normaux : aucun préfixe
+
+Structure obligatoire pour chaque Partie :
+1. Introduction de la Partie (paragraphe normal, pas de titre # )
+2. Chapitres numérotés (Chapitre I, Chapitre II…) avec Sections et Sous-sections
+3. Conclusion de la Partie (paragraphe normal)` : "";
+
+  return `${basePrompt}${memoryContext}${buildDocumentContext(ctx)}${headingRule}${skillsContent}`;
 }
 
 function buildPrompt(ctx: GenerateBody): string {
