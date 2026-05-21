@@ -1,14 +1,23 @@
-import { Link } from "wouter";
+import { Link, useLocation } from "wouter";
 import { Button } from "@/components/ui/button";
 import { ArrowRight } from "lucide-react";
 
 export default function PublicNavbar() {
+  const [location] = useLocation();
+
+  function handleLogo(e: React.MouseEvent) {
+    if (location === "/") {
+      e.preventDefault();
+      window.scrollTo({ top: 0, behavior: "smooth" });
+    }
+  }
+
   return (
     <header className="sticky top-0 z-50 w-full bg-white/95 backdrop-blur-sm border-b border-gray-100 shadow-sm">
       <div className="container mx-auto px-4 h-16 grid grid-cols-3 items-center">
 
         {/* Left — Logo */}
-        <Link href="/">
+        <Link href="/" onClick={handleLogo}>
           <div className="flex items-center gap-2 cursor-pointer">
             <img src="/logo.svg" alt="RapportAI" className="w-8 h-8" />
             <span className="font-bold text-xl tracking-tight text-gray-900">RapportAI</span>
