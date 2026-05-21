@@ -104,6 +104,72 @@ import path from "path";
 
 // ─── Validation + retry (Replit architecture) ─────────────────────────────────
 
+// ─── Output quality: refusal detection + content repair ──────────────────────
+
+const REFUSAL_PATTERNS = [
+  /je ne peux pas (vous )?aider/i,
+  /je suis désolé,? (mais )?je ne/i,
+  /en tant qu['']ia/i,
+  /en tant qu['']assistant ia/i,
+  /I('m| am) (sorry|unable|not able)/i,
+  /I can('t|not) (help|generate|create|write)/i,
+  /I (must|need to) (decline|refuse)/i,
+  /as an? (AI|language model)/i,
+  /this (request|content) (violates|goes against)/i,
+  /je ne suis pas en mesure/i,
+  /il m['']est impossible/i,
+];
+
+// Common prefixes Claude adds that should not appear in the final .md file
+const META_PREFIXES = [
+  /^(voici|here is|here's)\s+(votre|your|la|l['']|le)\s+\w+\s*[:]\s*/i,
+  /^bien sûr\s*[!,]?\s*/i,
+  /^absolument\s*[!,]?\s*/i,
+  /^d['']accord\s*[!,]?\s*/i,
+  /^avec plaisir\s*[!,]?\s*/i,
+  /^je vais (rédiger|générer|créer|écrire)\s+.{0,60}\n/i,
+  /^---\ntask completed.*?\n---\n/is,
+  /^```(markdown|md)?\n/i,  // strip opening code fence
+];
+
+const TRAILING_CODE_FENCE = /\n```\s*$/;
+
+function detectRefusal(content: string): boolean {
+  const first500 = content.slice(0, 500);
+  return REFUSAL_PATTERNS.some((p) => p.test(first500));
+}
+
+function repairContent(raw: string): string {
+  let s = raw.trim();
+
+  // Strip trailing code fence if content was wrapped in a fenced block
+  s = s.replace(TRAILING_CODE_FENCE, "").trim();
+
+  // Strip meta-commentary prefixes one by one
+  let changed = true;
+  while (changed) {
+    changed = false;
+    for (const pattern of META_PREFIXES) {
+      const replaced = s.replace(pattern, "");
+      if (replaced !== s) { s = replaced.trim(); changed = true; }
+    }
+  }
+
+  // Strip JSON blobs that slipped into the content (Claude sometimes wraps in JSON)
+  if (s.startsWith("{") || s.startsWith("[")) {
+    try {
+      const parsed = JSON.parse(s) as Record<string, unknown>;
+      // If it has a "content" or "text" field, extract it
+      const extracted = parsed.content ?? parsed.text ?? parsed.section_content;
+      if (typeof extracted === "string" && extracted.length > 50) return extracted.trim();
+    } catch { /* not JSON — keep as-is */ }
+  }
+
+  return s;
+}
+
+// ─── Validation + retry (Replit architecture) ─────────────────────────────────
+
 const MIN_WORDS: Record<string, number> = {
   "partie-i":      1500,
   "partie-ii":     1500,
@@ -336,11 +402,29 @@ router.post(
           return;
         }
 
+        // ── Output quality: repair + refusal detection ────────────────────────
+        const repairedContent = repairContent(rawContent);
+
+        if (detectRefusal(repairedContent)) {
+          res.write(`data: ${JSON.stringify({
+            error: "Le contenu généré a été refusé par le modèle. Essaie de reformuler le thème ou la problématique.",
+            refusal: true,
+          })}\n\n`);
+          return;
+        }
+
+        // Use repaired content for all subsequent steps
+        if (repairedContent !== rawContent) {
+          const sectionFile = path.join(agent.workDir, `${section}.md`);
+          writeFileSync(sectionFile, repairedContent, "utf-8");
+          partialSections[section] = repairedContent;
+        }
+
         // ── Validation + retry (Replit pattern) ─────────────────────────────────
         // If content fails quality checks, re-run the agent with specific error
         // feedback instead of a blank retry — up to 2 correction passes.
         const MAX_RETRIES = 2;
-        let contentToHumanize = rawContent;
+        let contentToHumanize = repairedContent;
 
         for (let attempt = 1; attempt <= MAX_RETRIES; attempt++) {
           const validation = validateSection(section, contentToHumanize);
@@ -364,7 +448,8 @@ router.post(
 
           if (retryFinished) {
             partialSections = agent.getSections();
-            contentToHumanize = partialSections[section] ?? contentToHumanize;
+            const retryRaw = partialSections[section] ?? contentToHumanize;
+            contentToHumanize = detectRefusal(retryRaw) ? contentToHumanize : repairContent(retryRaw);
           } else {
             // Agent paused mid-retry — exit loop, use what we have
             break;

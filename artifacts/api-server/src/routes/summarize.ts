@@ -94,13 +94,18 @@ ${excerpt}${content.trim().length > 2500 ? "\n[…]" : ""}`;
       content: Array<{ type: string; text?: string }>;
     };
 
-    const summary = data.content
+    const rawSummary = data.content
       .filter((b) => b.type === "text")
       .map((b) => b.text ?? "")
       .join("")
       .trim();
 
-    res.json({ summary });
+    // Fallback: if model returned nothing useful, extract first 2 sentences from content
+    const summary = rawSummary.length > 20
+      ? rawSummary
+      : excerpt.replace(/#+[^\n]*/g, "").trim().split(/[.!?]\s+/).slice(0, 2).join(". ").slice(0, 300);
+
+    res.json({ summary: summary || excerpt.slice(0, 200) });
   } catch (err) {
     const msg = err instanceof Error ? err.message : "Unknown error";
     res.status(500).json({ error: msg });
