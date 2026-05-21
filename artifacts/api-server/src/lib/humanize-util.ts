@@ -11,8 +11,8 @@ const HUMANIZE_SECTIONS = new Set([
   "section",
 ]);
 
-// Skip humanize for very large texts to avoid timeout (page-by-page will handle those)
-const MAX_WORDS_FOR_INLINE_HUMANIZE = 1200;
+// Skip humanize for very large texts to avoid timeout
+const MAX_WORDS_FOR_INLINE_HUMANIZE = 2500;
 
 export async function runInternalHumanize(
   rawText: string,
@@ -34,7 +34,7 @@ export async function runInternalHumanize(
 
   try {
     for await (const message of query({
-      prompt: `Applique les 26 techniques de transformation sur ce texte académique (section: ${sectionType}). Deux passes obligatoires — retourne UNIQUEMENT le texte final :\n\n${rawText}`,
+      prompt: `Applique les 36 patterns de transformation (incluant les patterns français 30-36 et le BURSTINESS CHECKLIST) sur ce texte académique (section: ${sectionType}). Trois passes obligatoires : draft → self-audit → final. Retourne UNIQUEMENT le texte final humanisé, même structure Markdown, aucune explication :\n\n${rawText}`,
       options: {
         systemPrompt,
         maxTurns: 2,

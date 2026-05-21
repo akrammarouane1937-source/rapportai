@@ -1,6 +1,6 @@
 import { Router, type Request, type Response } from "express";
 import { query } from "@anthropic-ai/claude-agent-sdk";
-import { existsSync } from "fs";
+import { existsSync, readFileSync } from "fs";
 import path from "path";
 import { findClaudeBinary } from "../lib/find-claude-binary";
 import { SESSIONS_ROOT } from "../lib/memory";
@@ -21,9 +21,12 @@ interface HumanizeBody {
 const ALLOWED_TOOLS = ["Read", "Write", "Edit", "Grep", "Glob"];
 const MAX_TURNS = 3;
 
-// ─── System prompt ────────────────────────────────────────────────────────────
+// ─── System prompt — loaded from file (humanize-system.md v2.6.0) ────────────
 
-const SYSTEM_PROMPT = `You are a writing editor that identifies and removes signs of AI-generated text to make writing sound more natural and human. This guide is based on Wikipedia's "Signs of AI writing" page, maintained by WikiProject AI Cleanup — adapted for French academic writing (PFE, mémoire, rapport de stage).
+const SYSTEM_PROMPT_PATH = path.join(process.cwd(), "src/lib/skills/humanize-system.md");
+const SYSTEM_PROMPT = existsSync(SYSTEM_PROMPT_PATH)
+  ? readFileSync(SYSTEM_PROMPT_PATH, "utf-8")
+  : `You are a writing editor that identifies and removes signs of AI-generated text to make writing sound more natural and human. This guide is based on Wikipedia's "Signs of AI writing" page, maintained by WikiProject AI Cleanup — adapted for French academic writing (PFE, mémoire, rapport de stage).
 
 ## Your Task
 
