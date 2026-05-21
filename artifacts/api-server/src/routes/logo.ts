@@ -2,6 +2,7 @@ import { Router, type Request, type Response } from "express";
 import { query } from "@anthropic-ai/claude-agent-sdk";
 import { findClaudeBinary } from "../lib/find-claude-binary";
 import { resolveSchool } from "../lib/moroccan-schools";
+import { logger } from "../lib/logger";
 
 const router = Router();
 
@@ -69,7 +70,7 @@ Reply with ONLY this JSON (no explanation, no markdown):
       res.json({ logoUrl: null });
     }
   } catch (err) {
-    console.error("Logo agent error:", err);
+    logger.error({ event: "logo_agent_error", err }, "Logo agent error");
     res.json({ logoUrl: null });
   }
 });

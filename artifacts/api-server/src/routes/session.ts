@@ -101,7 +101,7 @@ function resetPage(sessionId: string, sectionId: string): void {
   pageStateMap.get(sessionId)?.set(sectionId, 0);
 }
 import { runInternalHumanize } from "../lib/humanize-util";
-import { metrics, estimateCost } from "../lib/metrics";
+import { metrics, estimateCost, estimateTokens } from "../lib/metrics";
 import { writeFileSync } from "fs";
 import path from "path";
 
@@ -437,6 +437,7 @@ router.post(
         // feedback instead of a blank retry — up to 2 correction passes.
         const MAX_RETRIES = 2;
         let contentToHumanize = repairedContent;
+        let attemptsUsed = 1;
 
         for (let attempt = 1; attempt <= MAX_RETRIES; attempt++) {
           const validation = validateSection(section, contentToHumanize);
@@ -455,6 +456,7 @@ router.post(
             })}\n\n`
           );
 
+          attemptsUsed = attempt + 1;
           const retryTask = buildRetryTask(section, validation.errors, attempt);
           const retryFinished = await streamToSSE(res, agent.streamSection(section, retryTask));
 
@@ -483,11 +485,14 @@ router.post(
         });
 
         metrics.record({
+          sessionId:  sessionId,
           section,
           latencyMs:  Date.now() - genStart,
           success:    true,
           wordCount:  finalWords,
+          tokensUsed: estimateTokens(finalWords),
           costUsd:    estimateCost(section, finalWords),
+          attempts:   attemptsUsed,
         });
 
         res.write(`data: ${JSON.stringify({ done: true, sections: partialSections })}\n\n`);
@@ -495,12 +500,15 @@ router.post(
     } catch (err: unknown) {
       const message = err instanceof Error ? err.message : "Unknown error";
       metrics.record({
+        sessionId:  sessionId,
         section,
-        latencyMs: Date.now() - genStart,
-        success:   false,
-        wordCount: 0,
-        costUsd:   0,
-        error:     message.slice(0, 200),
+        latencyMs:  Date.now() - genStart,
+        success:    false,
+        wordCount:  0,
+        tokensUsed: 0,
+        costUsd:    0,
+        attempts:   1,
+        error:      message.slice(0, 200),
       });
       // Turn-limit hit — read disk and return whatever was generated (Replit pattern)
       partialSections = agent.getSections();
