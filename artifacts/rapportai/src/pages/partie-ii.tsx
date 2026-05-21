@@ -27,6 +27,9 @@ export default function PartieII() {
   const titleFromStore = report.partieIITitle || "Partie II — Étude empirique";
   const chaptersFromStore = report.partieIIChapters || 2;
 
+  // Context injected by the orchestrator (e.g. Partie I summary for cross-section coherence)
+  const injectedContext = report.pendingContextInjection || "";
+
   const [msgs, setMsgs] = useState<Msg[]>([
     {
       role: "agent",
@@ -35,6 +38,11 @@ export default function PartieII() {
           <p>Excellente progression 💪 On attaque la Partie II. D'après ton sommaire :</p>
           <p className="mt-2 font-semibold">"{titleFromStore}"</p>
           <p className="mt-1 text-muted-foreground text-sm">{chaptersFromStore} chapitre(s) prévu(s). C'est toujours bon ?</p>
+          {injectedContext && (
+            <p className="mt-2 text-xs text-blue-700 bg-blue-50 rounded-lg px-3 py-2 border border-blue-100">
+              Contexte Partie I chargé — la génération tiendra compte de ta partie théorique pour assurer la cohérence.
+            </p>
+          )}
         </div>
       ),
     },
@@ -110,11 +118,13 @@ export default function PartieII() {
       }
       push({ role: "agent", content: "Je génère la Partie II..." });
       setPhase("generating");
+      // Clear injected context after first use
+      if (injectedContext) updateReport({ pendingContextInjection: "" });
       const allFiles = [...sourceFiles, ...figureFiles, ...(files || [])];
       const figuresForII = getApprovedFigures()
         .filter((f) => f.placement === "Partie II")
         .map((f) => ({ figureNumber: f.figureNumber, title: f.title, source: f.source ?? "", author: f.author ?? "", caption: f.caption, placement: f.placement }));
-      const partieII = await generate("partie-ii", report, undefined, allFiles.length > 0 ? allFiles : undefined, figuresForII.length > 0 ? figuresForII : undefined);
+      const partieII = await generate("partie-ii", report, injectedContext || undefined, allFiles.length > 0 ? allFiles : undefined, figuresForII.length > 0 ? figuresForII : undefined);
       if (!partieII) {
         push({ role: "agent", content: "❌ Génération échouée. Vérifie ta connexion et réessaie." });
         setPhase("figures");

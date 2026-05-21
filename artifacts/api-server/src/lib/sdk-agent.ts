@@ -268,8 +268,12 @@ export class SDKReportAgent {
           ? `\n\nFigures uploadées par l'étudiant pour la Partie I — intègre-les dans le texte avec "La Figure N montre..." :\n` +
             figsI.map(f => `- Figure ${f.figureNumber} — "${f.title}" (Source : ${f.source}, Auteur : ${f.author})\n  Légende : ${f.caption}`).join("\n")
           : "";
-        return `${docNote}Lis sommaire.md pour extraire la structure exacte de la Partie I (chapitres et sections).
+        const contextPacketI = opts?.extraContext
+          ? `\n\n## CONTEXTE INJECTÉ PAR L'ORCHESTRATEUR\n${opts.extraContext}\n---\n`
+          : "";
+        return `${docNote}${contextPacketI}Lis sommaire.md pour extraire la structure exacte de la Partie I (chapitres et sections).
 Génère ensuite la Partie I complète en suivant cette structure — ne modifie aucun titre, n'ajoute aucun chapitre.
+La Partie I est le cadre THÉORIQUE — elle doit poser les fondements conceptuels que la Partie II empirique va tester ou appliquer.
 Problématique : ${prob} | Style de citation : ${style}${figNoteI}
 Enregistre dans partie-i.md une fois terminé.`;
       }
@@ -280,8 +284,11 @@ Enregistre dans partie-i.md une fois terminé.`;
           ? `\n\nFigures uploadées par l'étudiant pour la Partie II — intègre-les dans le texte avec "La Figure N montre..." :\n` +
             figsII.map(f => `- Figure ${f.figureNumber} — "${f.title}" (Source : ${f.source}, Auteur : ${f.author})\n  Légende : ${f.caption}`).join("\n")
           : "";
-        return `${docNote}Lis sommaire.md pour extraire la structure exacte de la Partie II (chapitres et sections).
-Lis aussi partie-i.md — les références croisées vers Partie I sont obligatoires.
+        const contextPacket = opts?.extraContext
+          ? `\n\n## CONTEXTE INJECTÉ PAR L'ORCHESTRATEUR\n${opts.extraContext}\n---\n`
+          : "";
+        return `${docNote}${contextPacket}Lis sommaire.md pour extraire la structure exacte de la Partie II (chapitres et sections).
+Lis aussi partie-i.md — les références croisées vers Partie I sont OBLIGATOIRES. Chaque chapitre de la Partie II doit s'ancrer dans le cadre théorique établi en Partie I.
 Génère ensuite la Partie II complète en suivant la structure du sommaire.
 Problématique : ${prob} | Style de citation : ${style}${figNoteII}
 Enregistre dans partie-ii.md une fois terminé.`;
@@ -295,13 +302,13 @@ Problématique : ${prob}
 Enregistre dans introduction.md.`;
 
       case "conclusion": {
-        const conclusionExtra = opts?.extraContext
-          ? `\n\nÉléments spécifiques à intégrer : ${opts.extraContext}`
+        const contextPacketConclusion = opts?.extraContext
+          ? `\n\n## CONTEXTE INJECTÉ PAR L'ORCHESTRATEUR\n${opts.extraContext}\n---\n`
           : "";
-        return `${docNote}Lis introduction.md, partie-i.md, partie-ii.md (obligatoire).
+        return `${docNote}${contextPacketConclusion}Lis introduction.md, partie-i.md, partie-ii.md (OBLIGATOIRE — la conclusion doit synthétiser les deux parties et répondre à la problématique posée en introduction).
 Rédige la Conclusion Générale (400–600 mots).
-Structure : Synthèse → Apports → Limites → Perspectives.
-Références directes vers les deux parties.${conclusionExtra}
+Structure : Synthèse des apports → Réponse à la problématique → Limites → Perspectives futures.
+Chaque paragraphe doit référencer explicitement une des deux parties.
 Enregistre dans conclusion.md.`;
       }
 

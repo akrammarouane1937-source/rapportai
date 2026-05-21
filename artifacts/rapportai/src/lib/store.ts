@@ -51,11 +51,16 @@ export interface Report {
   bibliographie: string;
   annexes: string;
 
+  // Report intelligence
+  problematique: string;
+  sectionSummaries: Record<string, string>;
+
   // Meta
   currentStep: number;
   checkpoints: Record<string, string>;
   uploadedFiles: UploadedFile[];
   abbreviationsGenerated: boolean;
+  pendingContextInjection: string;
 }
 
 export const initialReportState: Report = {
@@ -95,10 +100,14 @@ export const initialReportState: Report = {
   bibliographie: "",
   annexes: "",
 
+  problematique: "",
+  sectionSummaries: {},
+
   currentStep: 1,
   checkpoints: {},
   uploadedFiles: [],
   abbreviationsGenerated: false,
+  pendingContextInjection: "",
 };
 
 interface ReportStore {

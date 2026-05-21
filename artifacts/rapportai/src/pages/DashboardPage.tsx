@@ -10,6 +10,8 @@ import { API_BASE } from "@/lib/apiBase";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 
+type SectionSummary = { content: string; wordCount: number };
+
 // ── Navigation detection ──────────────────────────────────────────────────────
 const STEP_NAV = [
   { pattern: /page de garde/i,          path: "/rapport/step-2",   label: "Page de garde" },
@@ -35,6 +37,7 @@ interface Message {
   text: string;
   streaming?: boolean;
   navSuggestion?: { path: string; label: string } | null;
+  navAction?: { path: string; label: string; injection: string } | null;
 }
 
 function detectNav(text: string) {
@@ -91,10 +94,21 @@ function useAnimatedPlaceholder(active: boolean, hasReport: boolean) {
 }
 
 // ── Main component ────────────────────────────────────────────────────────────
+const SECTION_NAV_LABELS: Record<string, string> = {
+  "/rapport/step-2":   "Page de garde",
+  "/rapport/step-3":   "Dédicaces",
+  "/rapport/step-4":   "Résumé & Abstract",
+  "/rapport/step-5":   "Sommaire",
+  "/rapport/step-6":   "Introduction",
+  "/rapport/partie-i": "Partie I",
+  "/rapport/partie-ii":"Partie II",
+  "/rapport/step-9":   "Conclusion",
+};
+
 export default function DashboardPage() {
   const [, setLocation] = useLocation();
   const { user }        = useUser();
-  const { report }      = useReportStore();
+  const { report, updateReport } = useReportStore();
   const rawReport       = getReport();
 
   const [messages, setMessages] = useState<Message[]>([]);
@@ -104,13 +118,12 @@ export default function DashboardPage() {
   const textareaRef             = useRef<HTMLTextAreaElement>(null);
   const abortRef                = useRef<AbortController | null>(null);
   const showGreeting            = messages.length === 0;
+  const hasReport               = !!(report.theme || report.school);
   const placeholder             = useAnimatedPlaceholder(showGreeting && !input, hasReport);
 
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages]);
-
-  const hasReport  = !!(report.theme || report.school);
   const stepDone: Record<number, boolean> = {
     1: !!(report.theme && report.school),
     2: !!report.pageDeGarde,
@@ -203,19 +216,41 @@ export default function DashboardPage() {
       content: m.text,
     }));
 
+    // Build sections summaries for orchestrator cross-section intelligence
+    const sectionFields: [string, string][] = [
+      ["pageDeGarde", report.pageDeGarde],
+      ["dedicaces", report.dedicaces],
+      ["resumeFr", report.resumeFr],
+      ["sommaire", report.sommaire],
+      ["introduction", report.introduction],
+      ["partieI", report.partieI],
+      ["partieII", report.partieII],
+      ["conclusion", report.conclusion],
+    ];
+    const sections: Record<string, SectionSummary | null> = {};
+    for (const [key, content] of sectionFields) {
+      if (content && content.trim().length > 0) {
+        sections[key] = { content: content.trim(), wordCount: content.trim().split(/\s+/).filter(Boolean).length };
+      } else {
+        sections[key] = null;
+      }
+    }
+
     try {
       const resp = await fetch(`${API_BASE}/api/chat`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          messages:    history,
-          mode:        "assistant",
-          theme:       report.theme || rawReport.theme,
-          reportType:  report.reportType || rawReport.reportType,
-          school:      report.school || rawReport.school,
-          filiere:     report.filiere || rawReport.filiere,
-          studentName: report.studentName || rawReport.studentName,
-          sessionId:   rawReport.sessionId,
+          messages:        history,
+          mode:            "assistant",
+          theme:           report.theme || rawReport.theme,
+          reportType:      report.reportType || rawReport.reportType,
+          school:          report.school || rawReport.school,
+          filiere:         report.filiere || rawReport.filiere,
+          studentName:     report.studentName || rawReport.studentName,
+          problematique:   report.problematique || undefined,
+          sections,
+          sectionSummaries: report.sectionSummaries ?? {},
         }),
         signal: ctrl.signal,
       });
@@ -226,6 +261,7 @@ export default function DashboardPage() {
       const decoder = new TextDecoder();
       let buf = "";
       let fullText = "";
+      let pendingNav: { path: string; injection: string } | null = null;
 
       while (true) {
         const { done, value } = await reader.read();
@@ -236,9 +272,17 @@ export default function DashboardPage() {
         for (const line of lines) {
           if (!line.startsWith("data: ")) continue;
           try {
-            const msg = JSON.parse(line.slice(6)) as { content?: string; done?: boolean; error?: string };
+            const msg = JSON.parse(line.slice(6)) as {
+              content?: string;
+              done?: boolean;
+              error?: string;
+              action?: { type: string; path?: string; injection?: string };
+            };
             if (msg.error) throw new Error(msg.error);
             if (msg.done) break;
+            if (msg.action?.type === "navigate" && msg.action.path) {
+              pendingNav = { path: msg.action.path, injection: msg.action.injection ?? "" };
+            }
             if (msg.content) {
               fullText += msg.content;
               setMessages((prev) =>
@@ -249,12 +293,23 @@ export default function DashboardPage() {
         }
       }
 
-      const nav = detectNav(text) || detectNav(fullText);
-      setMessages((prev) =>
-        prev.map((m) =>
-          m.id === assistantId ? { ...m, streaming: false, navSuggestion: nav } : m
-        )
-      );
+      if (pendingNav) {
+        const navLabel = SECTION_NAV_LABELS[pendingNav.path] ?? "section";
+        setMessages((prev) =>
+          prev.map((m) =>
+            m.id === assistantId
+              ? { ...m, streaming: false, navSuggestion: null, navAction: { path: pendingNav!.path, label: navLabel, injection: pendingNav!.injection } }
+              : m
+          )
+        );
+      } else {
+        const nav = detectNav(text) || detectNav(fullText);
+        setMessages((prev) =>
+          prev.map((m) =>
+            m.id === assistantId ? { ...m, streaming: false, navSuggestion: nav } : m
+          )
+        );
+      }
     } catch (err) {
       if (err instanceof Error && err.name === "AbortError") return;
       setMessages((prev) =>
@@ -379,7 +434,22 @@ export default function DashboardPage() {
                             : <ReactMarkdown remarkPlugins={[remarkGfm]} className="prose prose-sm max-w-none prose-p:my-1 prose-headings:font-semibold">{msg.text}</ReactMarkdown>
                         ) : msg.text}
                       </div>
-                      {msg.role === "assistant" && !msg.streaming && msg.navSuggestion && (
+                      {msg.role === "assistant" && !msg.streaming && msg.navAction && (
+                        <motion.button
+                          initial={{ opacity: 0, y: 4 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.2 }}
+                          onClick={() => {
+                            if (msg.navAction!.injection) {
+                              updateReport({ pendingContextInjection: msg.navAction!.injection });
+                            }
+                            setLocation(msg.navAction!.path);
+                          }}
+                          className="mt-2 flex items-center gap-1.5 text-xs font-semibold px-3 py-1.5 rounded-lg hover:opacity-90 transition-all"
+                          style={{ background: "linear-gradient(135deg,#7c3aed,#a855f7)", color: "#fff" }}
+                        >
+                          Aller à {msg.navAction.label} <ArrowRight className="w-3 h-3" />
+                        </motion.button>
+                      )}
+                      {msg.role === "assistant" && !msg.streaming && !msg.navAction && msg.navSuggestion && (
                         <motion.button
                           initial={{ opacity: 0, y: 4 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.2 }}
                           onClick={() => setLocation(msg.navSuggestion!.path)}

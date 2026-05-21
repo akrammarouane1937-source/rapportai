@@ -26,6 +26,7 @@ export default function PartieI() {
 
   const titleFromStore = report.partieITitle || "Partie I — Cadre théorique";
   const chaptersFromStore = report.partieIChapters || 2;
+  const injectedContext = report.pendingContextInjection || "";
 
   const [msgs, setMsgs] = useState<Msg[]>([
     {
@@ -35,6 +36,11 @@ export default function PartieI() {
           <p>On attaque la Partie I. D'après ton sommaire :</p>
           <p className="mt-2 font-semibold">"{titleFromStore}"</p>
           <p className="mt-1 text-muted-foreground text-sm">{chaptersFromStore} chapitre(s) prévu(s). C'est toujours bon ?</p>
+          {injectedContext && (
+            <p className="mt-2 text-xs text-blue-700 bg-blue-50 rounded-lg px-3 py-2 border border-blue-100">
+              Contexte chargé — la génération tiendra compte des instructions de ton assistant principal.
+            </p>
+          )}
         </div>
       ),
     },
@@ -117,11 +123,12 @@ export default function PartieI() {
       }
       push({ role: "agent", content: "Parfait, je génère la Partie I..." });
       setPhase("generating");
+      if (injectedContext) updateReport({ pendingContextInjection: "" });
       const allFiles = [...sourceFiles, ...figureFiles, ...(files || [])];
       const figuresForI = getApprovedFigures()
         .filter((f) => f.placement === "Partie I")
         .map((f) => ({ figureNumber: f.figureNumber, title: f.title, source: f.source ?? "", author: f.author ?? "", caption: f.caption, placement: f.placement }));
-      const partieI = await generate("partie-i", report, undefined, allFiles.length > 0 ? allFiles : undefined, figuresForI.length > 0 ? figuresForI : undefined);
+      const partieI = await generate("partie-i", report, injectedContext || undefined, allFiles.length > 0 ? allFiles : undefined, figuresForI.length > 0 ? figuresForI : undefined);
       if (!partieI) {
         push({ role: "agent", content: "❌ Génération échouée. Vérifie ta connexion et réessaie." });
         setPhase("figures");

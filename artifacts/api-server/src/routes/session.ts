@@ -35,6 +35,79 @@ import { runInternalHumanize } from "../lib/humanize-util";
 import { writeFileSync } from "fs";
 import path from "path";
 
+// ─── Validation + retry (Replit architecture) ─────────────────────────────────
+
+const MIN_WORDS: Record<string, number> = {
+  "partie-i":      1500,
+  "partie-ii":     1500,
+  "introduction":  280,
+  "conclusion":    280,
+  "resume":        180,
+  "remerciements": 150,
+  "sommaire":      100,
+  "dedicaces":     50,
+};
+
+const STRUCTURE_SECTIONS = new Set(["partie-i", "partie-ii", "introduction", "conclusion"]);
+
+const INCOMPLETE_MARKERS = [
+  "[À COMPLÉTER]", "[SOURCE À VÉRIFIER]", "[SOURCE À COMPLÉTER]",
+  "[INSÉRER]", "[TODO]", "[NOM DE L'AUTEUR]", "Lorem ipsum",
+];
+
+interface ValidationResult {
+  valid: boolean;
+  errors: string[];
+  wordCount: number;
+}
+
+function validateSection(section: string, content: string): ValidationResult {
+  const errors: string[] = [];
+  const wordCount = content.split(/\s+/).filter(Boolean).length;
+
+  // 1. Word count — most common failure
+  const minWords = MIN_WORDS[section];
+  if (minWords && wordCount < minWords) {
+    errors.push(
+      `Contenu insuffisant : ${wordCount} mots générés, minimum requis ${minWords}. ` +
+      `Développe chaque sous-section avec plus d'arguments, exemples et données.`
+    );
+  }
+
+  // 2. Required section structure (## headings)
+  if (STRUCTURE_SECTIONS.has(section) && !/^##\s+\S/m.test(content)) {
+    errors.push(
+      `Structure manquante : organise le contenu avec des titres de chapitres (## Titre du chapitre). ` +
+      `Chaque chapitre et sous-section doit avoir son propre titre.`
+    );
+  }
+
+  // 3. Unfilled placeholders — agent left template gaps
+  const found = INCOMPLETE_MARKERS.filter((m) => content.includes(m));
+  if (found.length > 0) {
+    errors.push(
+      `${found.length} placeholder(s) non remplacé(s) : ${found.slice(0, 3).join(", ")}. ` +
+      `Remplace chacun par du contenu académique réel et spécifique.`
+    );
+  }
+
+  return { valid: errors.length === 0, errors, wordCount };
+}
+
+function buildRetryTask(section: string, errors: string[], attempt: number): string {
+  return `AMÉLIORATION REQUISE — révision ${attempt}/2
+
+Le contenu généré pour "${section}" ne respecte pas ces critères qualité :
+
+${errors.map((e, i) => `${i + 1}. ${e}`).join("\n")}
+
+Instructions :
+- Lis le fichier ${section}.md existant
+- Corrige TOUS les problèmes listés ci-dessus
+- Ne te contente pas de légèrement modifier — génère un contenu substantiellement amélioré
+- Écrase ${section}.md avec la version corrigée`;
+}
+
 const upload = multer({ storage: multer.memoryStorage(), limits: { fileSize: 20 * 1024 * 1024 } });
 
 async function extractText(buffer: Buffer, filename: string): Promise<string> {
@@ -201,9 +274,44 @@ router.post(
           return;
         }
 
+        // ── Validation + retry (Replit pattern) ─────────────────────────────────
+        // If content fails quality checks, re-run the agent with specific error
+        // feedback instead of a blank retry — up to 2 correction passes.
+        const MAX_RETRIES = 2;
+        let contentToHumanize = rawContent;
+
+        for (let attempt = 1; attempt <= MAX_RETRIES; attempt++) {
+          const validation = validateSection(section, contentToHumanize);
+          if (validation.valid) break;
+
+          if (attempt === MAX_RETRIES) {
+            // Last attempt still invalid — continue with what we have
+            break;
+          }
+
+          res.write(
+            `data: ${JSON.stringify({
+              phase: "retrying",
+              attempt,
+              errors: validation.errors,
+            })}\n\n`
+          );
+
+          const retryTask = buildRetryTask(section, validation.errors, attempt);
+          const retryFinished = await streamToSSE(res, agent.streamSection(section, retryTask));
+
+          if (retryFinished) {
+            partialSections = agent.getSections();
+            contentToHumanize = partialSections[section] ?? contentToHumanize;
+          } else {
+            // Agent paused mid-retry — exit loop, use what we have
+            break;
+          }
+        }
+
         res.write(`data: ${JSON.stringify({ phase: "humanizing" })}\n\n`);
-        const humanized = await runInternalHumanize(rawContent, section);
-        if (humanized !== rawContent) {
+        const humanized = await runInternalHumanize(contentToHumanize, section);
+        if (humanized !== contentToHumanize) {
           const sectionFile = path.join(agent.workDir, `${section}.md`);
           writeFileSync(sectionFile, humanized, "utf-8");
           partialSections[section] = humanized;

@@ -13,6 +13,7 @@ import logoRouter from "./logo";
 import sdkTestRouter from "./sdk-test";
 import plagiatRouter from "./plagiat";
 import converseRouter from "./converse";
+import summarizeRouter from "./summarize";
 // ─── Section agents (each has explicit system prompt + tools) ─────────────────
 import introductionRouter from "./introduction";
 import dedicacesRouter from "./dedicaces";
@@ -40,6 +41,7 @@ router.use(logoRouter);
 router.use(sdkTestRouter);
 router.use(plagiatRouter);
 router.use(converseRouter);
+router.use(summarizeRouter);
 // Section agents
 router.use(introductionRouter);
 router.use(dedicacesRouter);

@@ -49,6 +49,7 @@ async function getOrCreateSession(): Promise<string> {
     reportType: report.reportType,
     theme: report.theme,
     annee: report.academicYear,
+    problematique: report.problematique || undefined,
     encadrantPeda: report.encadrantPeda,
     encadrantPro: report.encadrantPro,
     entreprise: report.entreprise,
@@ -195,6 +196,26 @@ export function useGenerate() {
               );
             }
 
+            if (data.phase) {
+              const phase = data.phase as string;
+              if (phase === "retrying") {
+                const attempt = data.attempt as number | undefined;
+                const errors = data.errors as string[] | undefined;
+                const detail = errors ? errors[0] : undefined;
+                const id = `retry-${Date.now()}`;
+                setToolCalls((prev) => [
+                  ...prev.map((t) => ({ ...t, done: true })),
+                  { id, name: `🔄 Amélioration en cours${attempt ? ` (${attempt}/2)` : ""}`, detail, done: false },
+                ]);
+              } else if (phase === "humanizing") {
+                const id = `humanize-${Date.now()}`;
+                setToolCalls((prev) => [
+                  ...prev.map((t) => ({ ...t, done: true })),
+                  { id, name: "✨ Humanisation du style académique", done: false },
+                ]);
+              }
+            }
+
             if (data.tool_call) {
               const rawName = typeof data.tool_call === "string"
                 ? data.tool_call
@@ -237,6 +258,31 @@ export function useGenerate() {
             }
           }
         }
+      // ── Auto-summarize for orchestrator cross-section intelligence ───────────
+      // Replit pattern: after each section, create a 2-3 sentence summary so
+      // subsequent agents receive focused context instead of reading 5000 words.
+      if (finalContent && finalContent.split(/\s+/).filter(Boolean).length > 150) {
+        try {
+          const { updateReport, report: r } = useReportStore.getState();
+          const summarizeRes = await fetch(`${API_BASE}/api/summarize`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              section,
+              content: finalContent,
+              theme: r.theme,
+              reportType: r.reportType,
+            }),
+          });
+          if (summarizeRes.ok) {
+            const { summary } = (await summarizeRes.json()) as { summary?: string };
+            if (summary) {
+              const existing = useReportStore.getState().report.sectionSummaries ?? {};
+              updateReport({ sectionSummaries: { ...existing, [section]: summary } });
+            }
+          }
+        } catch { /* silent — summarization failure never blocks the user */ }
+      }
       } catch (err) {
         if ((err as { name?: string }).name === "AbortError") return finalContent;
         const msg = err instanceof Error ? err.message : "Erreur inconnue";
