@@ -18,6 +18,13 @@ interface BibEntry {
   doi?: string;
 }
 
+interface FigureRef {
+  id:            string;
+  figure_number: number;
+  description:   string;
+  placement:     string;  // "Partie I" | "Partie II"
+}
+
 interface GenerateBody {
   section: string;
   sessionId?: string;
@@ -43,6 +50,7 @@ interface GenerateBody {
   remerciements?: string;
   sources?: BibEntry[];
   extraContext?: string;
+  availableFigures?: FigureRef[];  // figures the student approved for this section
 }
 
 function buildDocumentContext(ctx: GenerateBody): string {
@@ -154,7 +162,21 @@ Structure obligatoire pour chaque Partie :
 2. Chapitres numérotés (Chapitre I, Chapitre II…) avec Sections et Sous-sections
 3. Conclusion de la Partie (paragraphe normal)` : "";
 
-  return `${basePrompt}${memoryContext}${buildDocumentContext(ctx)}${headingRule}${skillsContent}`;
+  // Figures context — injected for partie-i/ii so agent references them naturally
+  const figuresContext = (() => {
+    if (!ctx.availableFigures?.length) return "";
+    const sectionFigs = ctx.availableFigures.filter(
+      (f) => (ctx.section === "partie-i" && f.placement === "Partie I")
+           || (ctx.section === "partie-ii" && f.placement === "Partie II"),
+    );
+    if (!sectionFigs.length) return "";
+    const list = sectionFigs
+      .map((f) => `  - Figure ${f.figure_number} : ${f.description}`)
+      .join("\n");
+    return `\n\n## FIGURES DISPONIBLES POUR CETTE SECTION\nL'étudiant a approuvé ces figures. Référence-les naturellement dans le texte avec leur numéro exact :\n${list}\nExemple : « Comme l'illustre la Figure ${sectionFigs[0].figure_number}, … »\nN'invente PAS d'autres numéros de figures.`;
+  })();
+
+  return `${basePrompt}${memoryContext}${buildDocumentContext(ctx)}${headingRule}${figuresContext}${skillsContent}`;
 }
 
 function buildPrompt(ctx: GenerateBody): string {

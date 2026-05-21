@@ -553,38 +553,32 @@ function scaleFigure(w: number, h: number): { width: number; height: number } {
   return { width: Math.round(wTwip * scale), height: Math.round(hTwip * scale) };
 }
 
-// Build the "Caption" style paragraph for a figure — Word uses this for auto TOC
-function figureCaption(fig: ApprovedFigure): Paragraph {
-  const sourceNote = fig.source ? ` — Source : ${fig.source}${fig.author ? `, ${fig.author}` : ""}` : "";
-  return new Paragraph({
-    style: "Caption",
-    alignment: AlignmentType.CENTER,
-    spacing: { before: 80, after: 200 },
-    children: [
-      new TextRun({
-        text: `Figure ${fig.figureNumber} — ${fig.title}${sourceNote}`,
-        font: FONT,
-        size: 20, // 10pt
-        italics: true,
-      }),
-    ],
-  });
+// Build the two-line Caption paragraph for a figure (Word uses "Caption" style for auto TOC)
+// Line 1: bold figure title  Line 2: italic formatted source
+function figureCaption(fig: ApprovedFigure): Paragraph[] {
+  const titleLine = `Figure ${fig.figureNumber} — ${fig.title}`;
+  const sourceLine = fig.formattedSource || (fig.source ? `Source : ${fig.source}` : "Source : [À compléter]");
+  return [
+    new Paragraph({
+      style: "Caption",
+      alignment: AlignmentType.CENTER,
+      spacing: { before: 80, after: 40 },
+      children: [new TextRun({ text: titleLine, font: FONT, size: 20, bold: true })],
+    }),
+    new Paragraph({
+      alignment: AlignmentType.CENTER,
+      spacing: { before: 0, after: 200 },
+      children: [new TextRun({ text: sourceLine, font: FONT, size: 18, italics: true, color: "555555" })],
+    }),
+  ];
 }
 
-// Embed all figures for a given partie in the document body
+// Embed figures for a given placement, inline after section content
 function buildFiguresSection(placement: "Partie I" | "Partie II"): Paragraph[] {
   const figs = getApprovedFigures().filter((f) => f.placement === placement);
   if (figs.length === 0) return [];
 
-  const paras: Paragraph[] = [
-    new Paragraph({
-      text: `Figures — ${placement}`,
-      heading: HeadingLevel.HEADING_2,
-      spacing: { before: 480, after: 240 },
-      keepNext: true,
-      pageBreakBefore: true,
-    }),
-  ];
+  const paras: Paragraph[] = [];
 
   for (const fig of figs) {
     try {
@@ -593,7 +587,7 @@ function buildFiguresSection(placement: "Partie I" | "Partie II"): Paragraph[] {
       paras.push(
         new Paragraph({
           alignment: AlignmentType.CENTER,
-          spacing: { before: 240, after: 60 },
+          spacing: { before: 360, after: 60 },
           children: [
             new ImageRun({
               data: imgData,
@@ -601,50 +595,51 @@ function buildFiguresSection(placement: "Partie I" | "Partie II"): Paragraph[] {
               type: fig.pngBase64.includes("image/png") ? "png" : "jpg",
             }),
           ],
-        })
+        }),
       );
     } catch {
-      // If image fails to embed, insert placeholder text
       paras.push(bodyPara(`[Figure ${fig.figureNumber} — image non disponible]`));
     }
-    paras.push(figureCaption(fig));
+    paras.push(...figureCaption(fig));
   }
 
   return paras;
 }
 
 // Liste des figures — static numbered list with source/author, plus Word TOC field
+// Table des figures — built from approved figures manifest (Word also auto-updates from Caption styles)
 function buildTableDesFigures(): Paragraph[] {
   const figs = getApprovedFigures();
-  const paras: Paragraph[] = [
-    heading1("Liste des figures"),
-    emptyLine(),
-  ];
+  const paras: Paragraph[] = [heading1("Table des Figures"), emptyLine()];
 
   if (figs.length === 0) {
     paras.push(bodyPara("(Aucune figure ajoutée)"));
     return paras;
   }
 
-  // Word TOC field — auto-updates page numbers from Caption-styled paragraphs
-  paras.push(
-    new TableOfContents("Liste des figures", {
-      hyperlink: true,
-      captionLabel: "Figure",
-    }) as unknown as Paragraph
-  );
+  for (const fig of figs) {
+    paras.push(new Paragraph({
+      spacing: { ...LINE_SPACING, before: 60, after: 60 },
+      children: [
+        new TextRun({ text: `Figure ${fig.figureNumber}`, font: FONT, size: BODY_PT, bold: true }),
+        new TextRun({ text: ` — ${fig.title}`, font: FONT, size: BODY_PT }),
+      ],
+    }));
+    paras.push(new Paragraph({
+      indent: { left: convertMillimetersToTwip(8) },
+      spacing: { ...LINE_SPACING, before: 0, after: 80 },
+      children: [new TextRun({ text: fig.formattedSource || fig.source || "", font: FONT, size: 20, italics: true, color: "555555" })],
+    }));
+  }
 
   return paras;
 }
 
 function buildListeDesTableaux(): Paragraph[] {
   return [
-    heading1("Liste des tableaux"),
+    heading1("Liste des Tableaux"),
     emptyLine(),
-    new TableOfContents("Liste des tableaux", {
-      hyperlink: true,
-      captionLabel: "Tableau",
-    }) as unknown as Paragraph,
+    bodyPara("(Les tableaux seront numérotés automatiquement lors de la mise en page finale)"),
   ];
 }
 

@@ -1,13 +1,15 @@
 import { useState, useEffect, useRef } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { ImageIcon, Trash2, Upload, X, Check } from "lucide-react";
+import { ImageIcon, Trash2, Upload, X, Check, FileText, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Sidebar, SidebarSpacer } from "@/components/layout/Sidebar";
 import {
   getApprovedFigures,
   addApprovedFigure,
   removeApprovedFigure,
+  buildFormattedSource,
   type ApprovedFigure,
+  type FigureSourceType,
 } from "@/lib/figureStore";
 
 // ─── Constants ────────────────────────────────────────────────────────────────
@@ -17,94 +19,296 @@ const PLACEMENT_COLORS: Record<string, string> = {
   "Partie II": "bg-orange-50 text-orange-700 border border-orange-100",
 };
 
-// ─── Upload Modal ─────────────────────────────────────────────────────────────
+const API = import.meta.env.VITE_API_URL ?? "";
+
+// ─── Extracted figure from backend ───────────────────────────────────────────
+
+interface ExtractedFigure {
+  page:              number;
+  image_base64:      string;
+  mime_type:         string;
+  type:              string;
+  auto_description:  string;
+  suggested_caption: string;
+  suggested_source:  string;
+}
+
+// ─── Caption Builder ──────────────────────────────────────────────────────────
+// Shared by both upload modal and extraction flow.
+
+interface CaptionBuilderProps {
+  preview: string;
+  nextNumber: number;
+  prefillTitle?: string;
+  prefillSource?: string;
+  prefillDocTitle?: string;
+  onSave: (fig: ApprovedFigure) => void;
+  onCancel: () => void;
+  saving?: boolean;
+}
+
+function CaptionBuilder({
+  preview, nextNumber, prefillTitle = "", prefillSource = "", prefillDocTitle = "",
+  onSave, onCancel, saving = false,
+}: CaptionBuilderProps) {
+  const [title,         setTitle]         = useState(prefillTitle);
+  const [sourceType,    setSourceType]    = useState<FigureSourceType>("self");
+  const [author,        setAuthor]        = useState("");
+  const [documentTitle, setDocumentTitle] = useState(prefillDocTitle);
+  const [year,          setYear]          = useState(new Date().getFullYear().toString());
+  const [pageRef,       setPageRef]       = useState("");
+  const [placement,     setPlacement]     = useState<"Partie I" | "Partie II">("Partie I");
+
+  // Pre-fill source from extraction suggestion
+  useEffect(() => {
+    if (prefillSource && prefillSource !== "Source : [À compléter par l'auteur]") {
+      // Try to detect type from suggestion
+      if (prefillSource.includes("Élaboré par l'auteur")) setSourceType("self");
+      else if (prefillSource.includes("adapté par l'auteur")) setSourceType("framework");
+    }
+  }, [prefillSource]);
+
+  const formattedSource = buildFormattedSource({ sourceType, author, documentTitle, yearCreated: year, pageRef });
+
+  const canSave = title.trim() && (sourceType === "self" || author.trim());
+
+  const handleSave = () => {
+    if (!canSave) return;
+    const img = new Image();
+    const finish = (w: number, h: number) => {
+      const fig: ApprovedFigure = {
+        id:              `fig-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`,
+        figureNumber:    nextNumber,
+        title:           title.trim(),
+        caption:         `Figure ${nextNumber} — ${title.trim()}\n${formattedSource}`,
+        type:            "uploaded",
+        placement,
+        description:     title.trim(),
+        sourceType,
+        source:          author.trim() || "Auteur",
+        author:          author.trim() || "Auteur",
+        documentTitle:   documentTitle.trim() || undefined,
+        yearCreated:     year,
+        pageRef:         pageRef.trim() || undefined,
+        formattedSource,
+        pngBase64:       preview,
+        labels:          [],
+        series:          [],
+        width:           w,
+        height:          h,
+      };
+      onSave(fig);
+    };
+    img.onload  = () => finish(img.naturalWidth || 600, img.naturalHeight || 400);
+    img.onerror = () => finish(600, 400);
+    img.src = preview;
+  };
+
+  return (
+    <div className="space-y-4">
+      {/* Preview */}
+      <div className="rounded-xl overflow-hidden bg-gray-50 border border-gray-100 flex items-center justify-center" style={{ height: 140 }}>
+        <img src={preview} alt="preview" className="max-h-full max-w-full object-contain" />
+      </div>
+
+      {/* Title */}
+      <div>
+        <label className="block text-xs font-semibold text-gray-600 mb-1.5">Titre de la figure <span className="text-red-400">*</span></label>
+        <input
+          value={title}
+          onChange={(e) => setTitle(e.target.value)}
+          placeholder="Ex: Évolution du chiffre d'affaires 2020–2024"
+          className="w-full text-sm border border-gray-200 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-purple-400"
+        />
+      </div>
+
+      {/* Source type */}
+      <div>
+        <label className="block text-xs font-semibold text-gray-600 mb-2">Type de source <span className="text-red-400">*</span></label>
+        <div className="grid grid-cols-2 gap-1.5">
+          {([
+            ["self",      "Je l'ai créé"],
+            ["document",  "Document (livre/article)"],
+            ["web",       "Source internet"],
+            ["framework", "Modèle académique"],
+          ] as [FigureSourceType, string][]).map(([val, label]) => (
+            <button
+              key={val}
+              onClick={() => setSourceType(val)}
+              className={`py-2 px-3 rounded-lg text-xs font-semibold border transition-all text-left ${
+                sourceType === val
+                  ? "bg-purple-50 border-purple-300 text-purple-700"
+                  : "bg-white border-gray-200 text-gray-500 hover:border-gray-300"
+              }`}
+            >
+              {label}
+            </button>
+          ))}
+        </div>
+      </div>
+
+      {/* Conditional source fields */}
+      {sourceType !== "self" && (
+        <div className="space-y-3">
+          <div>
+            <label className="block text-xs font-semibold text-gray-600 mb-1.5">
+              {sourceType === "framework" ? "Nom du modèle / auteur" : "Auteur / Organisation"} <span className="text-red-400">*</span>
+            </label>
+            <input
+              value={author}
+              onChange={(e) => setAuthor(e.target.value)}
+              placeholder={sourceType === "framework" ? "Ex: Porter, M.E." : "Ex: Bank Al-Maghrib"}
+              className="w-full text-sm border border-gray-200 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-purple-400"
+            />
+          </div>
+          {sourceType === "document" && (
+            <div className="grid grid-cols-2 gap-2">
+              <div>
+                <label className="block text-xs font-semibold text-gray-600 mb-1.5">Titre du document</label>
+                <input
+                  value={documentTitle}
+                  onChange={(e) => setDocumentTitle(e.target.value)}
+                  placeholder="Titre du livre/rapport"
+                  className="w-full text-sm border border-gray-200 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-purple-400"
+                />
+              </div>
+              <div>
+                <label className="block text-xs font-semibold text-gray-600 mb-1.5">Page</label>
+                <input
+                  value={pageRef}
+                  onChange={(e) => setPageRef(e.target.value)}
+                  placeholder="Ex: 42"
+                  className="w-full text-sm border border-gray-200 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-purple-400"
+                />
+              </div>
+            </div>
+          )}
+          <div>
+            <label className="block text-xs font-semibold text-gray-600 mb-1.5">Année</label>
+            <input
+              value={year}
+              onChange={(e) => setYear(e.target.value)}
+              placeholder="2023"
+              className="w-full text-sm border border-gray-200 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-purple-400"
+            />
+          </div>
+        </div>
+      )}
+
+      {/* Caption preview */}
+      <div className="bg-gray-50 rounded-xl p-3 border border-gray-100">
+        <p className="text-xs font-semibold text-gray-500 mb-1">Aperçu de la légende :</p>
+        <p className="text-xs text-gray-800 font-medium">Figure {nextNumber} — {title || "[Titre]"}</p>
+        <p className="text-xs text-gray-500 italic">{formattedSource}</p>
+      </div>
+
+      {/* Placement */}
+      <div>
+        <label className="block text-xs font-semibold text-gray-600 mb-2">Quelle partie ? <span className="text-red-400">*</span></label>
+        <div className="flex gap-2">
+          {(["Partie I", "Partie II"] as const).map((p) => (
+            <button
+              key={p}
+              onClick={() => setPlacement(p)}
+              className={`flex-1 py-2.5 rounded-xl text-sm font-semibold border transition-all ${
+                placement === p
+                  ? p === "Partie I"
+                    ? "bg-blue-50 border-blue-300 text-blue-700"
+                    : "bg-orange-50 border-orange-300 text-orange-700"
+                  : "bg-white border-gray-200 text-gray-500 hover:border-gray-300"
+              }`}
+            >
+              {p}
+            </button>
+          ))}
+        </div>
+      </div>
+
+      {/* Actions */}
+      <div className="flex items-center justify-end gap-3 pt-1">
+        <button onClick={onCancel} className="text-sm text-gray-500 hover:text-gray-700 font-medium px-4 py-2">
+          Ignorer
+        </button>
+        <Button
+          onClick={handleSave}
+          disabled={!canSave || saving}
+          className="bg-purple-600 hover:bg-purple-700 text-white gap-2 rounded-xl"
+        >
+          {saving ? <><Loader2 className="w-4 h-4 animate-spin" /> Ajout…</> : <><Check className="w-4 h-4" /> Ajouter au rapport</>}
+        </Button>
+      </div>
+    </div>
+  );
+}
+
+// ─── Upload Modal (image upload tab) ─────────────────────────────────────────
 
 interface UploadModalProps {
-  onClose: () => void;
-  onAdded: () => void;
+  onClose:    () => void;
+  onAdded:    () => void;
   nextNumber: number;
 }
 
 function UploadModal({ onClose, onAdded, nextNumber }: UploadModalProps) {
-  const [preview, setPreview] = useState<string | null>(null);
-  const [title, setTitle]     = useState("");
-  const [caption, setCaption] = useState("");
-  const [source, setSource]   = useState("");
-  const [author, setAuthor]   = useState("");
-  const [placement, setPlacement] = useState<"Partie I" | "Partie II">("Partie I");
-  const [dragOver, setDragOver] = useState(false);
-  const [saving, setSaving]   = useState(false);
+  const [tab,         setTab]         = useState<"image" | "document">("image");
+  // Image upload state
+  const [preview,     setPreview]     = useState<string | null>(null);
+  const [saving,      setSaving]      = useState(false);
   const fileRef = useRef<HTMLInputElement>(null);
+  const docRef  = useRef<HTMLInputElement>(null);
+  // Document extraction state
+  const [extracting,  setExtracting]  = useState(false);
+  const [extracted,   setExtracted]   = useState<ExtractedFigure[]>([]);
+  const [currentIdx,  setCurrentIdx]  = useState(0);
+  const [docTitle,    setDocTitle]    = useState("");
+  const [nextNum,     setNextNum]     = useState(nextNumber);
 
-  const loadFile = (file: File) => {
+  const [dragOver, setDragOver] = useState(false);
+
+  const loadImageFile = (file: File) => {
     if (!file.type.startsWith("image/")) return;
     const reader = new FileReader();
     reader.onload = (e) => setPreview(e.target?.result as string);
     reader.readAsDataURL(file);
   };
 
-  const handleDrop = (e: React.DragEvent) => {
-    e.preventDefault();
-    setDragOver(false);
-    const file = e.dataTransfer.files[0];
-    if (file) loadFile(file);
+  const handleDocumentUpload = async (file: File) => {
+    setExtracting(true);
+    setExtracted([]);
+    setDocTitle(file.name.replace(/\.[^.]+$/, ""));
+    try {
+      const formData = new FormData();
+      formData.append("document", file);
+      const resp = await fetch(`${API}/api/figures/extract`, { method: "POST", body: formData });
+      const data = await resp.json() as { figures: ExtractedFigure[]; count: number };
+      setExtracted(data.figures ?? []);
+      setCurrentIdx(0);
+    } catch {
+      alert("Extraction échouée. Réessaie ou uploade les images directement.");
+    } finally {
+      setExtracting(false);
+    }
   };
 
-  const canSave = preview && title.trim() && source.trim() && author.trim();
-
-  const handleSave = () => {
-    if (!canSave) return;
+  const handleSaveFigure = (fig: ApprovedFigure) => {
     setSaving(true);
-
-    // Measure image dimensions
-    const img = new Image();
-    img.onload = () => {
-      const fig: ApprovedFigure = {
-        id: `uploaded-${Date.now()}`,
-        figureNumber: nextNumber,
-        title: title.trim(),
-        caption: caption.trim() || title.trim(),
-        type: "uploaded",
-        placement,
-        description: caption.trim() || title.trim(),
-        source: source.trim(),
-        author: author.trim(),
-        pngBase64: preview!,
-        labels: [],
-        series: [],
-        width: img.naturalWidth || 600,
-        height: img.naturalHeight || 400,
-      };
-      addApprovedFigure(fig);
-      setSaving(false);
-      onAdded();
+    addApprovedFigure(fig);
+    setSaving(false);
+    onAdded();
+    if (tab === "image") {
       onClose();
-    };
-    img.onerror = () => {
-      // fallback if image fails to load dimensions
-      const fig: ApprovedFigure = {
-        id: `uploaded-${Date.now()}`,
-        figureNumber: nextNumber,
-        title: title.trim(),
-        caption: caption.trim() || title.trim(),
-        type: "uploaded",
-        placement,
-        description: caption.trim() || title.trim(),
-        source: source.trim(),
-        author: author.trim(),
-        pngBase64: preview!,
-        labels: [],
-        series: [],
-        width: 600,
-        height: 400,
-      };
-      addApprovedFigure(fig);
-      setSaving(false);
-      onAdded();
-      onClose();
-    };
-    img.src = preview!;
+    } else {
+      // Advance to next extracted figure
+      if (currentIdx + 1 < extracted.length) {
+        setCurrentIdx((i) => i + 1);
+        setNextNum((n) => n + 1);
+      } else {
+        onClose();
+      }
+    }
   };
+
+  const currentFig = extracted[currentIdx];
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4" style={{ background: "rgba(0,0,0,0.45)" }}>
@@ -125,125 +329,126 @@ function UploadModal({ onClose, onAdded, nextNumber }: UploadModalProps) {
           </button>
         </div>
 
-        <div className="px-6 py-5 space-y-4 max-h-[80vh] overflow-y-auto">
-          {/* Image drop zone */}
-          {!preview ? (
-            <div
-              onDrop={handleDrop}
-              onDragOver={(e) => { e.preventDefault(); setDragOver(true); }}
-              onDragLeave={() => setDragOver(false)}
-              onClick={() => fileRef.current?.click()}
-              className={`border-2 border-dashed rounded-xl flex flex-col items-center justify-center gap-3 cursor-pointer transition-colors ${
-                dragOver ? "border-purple-400 bg-purple-50" : "border-gray-200 hover:border-purple-300 hover:bg-gray-50"
+        {/* Tabs */}
+        <div className="flex border-b border-gray-100">
+          {([["image", "Image directe"], ["document", "Extraire d'un PDF/Word"]] as const).map(([t, label]) => (
+            <button
+              key={t}
+              onClick={() => setTab(t)}
+              className={`flex-1 py-3 text-sm font-semibold transition-colors ${
+                tab === t ? "text-purple-700 border-b-2 border-purple-500" : "text-gray-400 hover:text-gray-600"
               }`}
-              style={{ height: 160 }}
             >
-              <div className="w-10 h-10 bg-purple-50 rounded-xl flex items-center justify-center">
-                <Upload className="w-5 h-5 text-purple-400" />
-              </div>
-              <div className="text-center">
-                <p className="text-sm font-semibold text-gray-700">Glisse ton image ici</p>
-                <p className="text-xs text-gray-400 mt-0.5">ou clique pour sélectionner (PNG, JPG, SVG)</p>
-              </div>
-              <input
-                ref={fileRef}
-                type="file"
-                accept="image/*"
-                className="hidden"
-                onChange={(e) => { const f = e.target.files?.[0]; if (f) loadFile(f); }}
-              />
-            </div>
-          ) : (
-            <div className="relative rounded-xl overflow-hidden bg-gray-50 border border-gray-100" style={{ height: 160 }}>
-              <img src={preview} alt="preview" className="w-full h-full object-contain" />
-              <button
-                onClick={() => setPreview(null)}
-                className="absolute top-2 right-2 w-6 h-6 bg-white rounded-full shadow flex items-center justify-center text-gray-500 hover:text-red-500"
-              >
-                <X className="w-3 h-3" />
-              </button>
-            </div>
-          )}
-
-          {/* Title */}
-          <div>
-            <label className="block text-xs font-semibold text-gray-600 mb-1.5">Titre de la figure <span className="text-red-400">*</span></label>
-            <input
-              value={title}
-              onChange={(e) => setTitle(e.target.value)}
-              placeholder="Ex: Évolution du chiffre d'affaires 2020–2023"
-              className="w-full text-sm border border-gray-200 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-purple-400 focus:border-transparent"
-            />
-          </div>
-
-          {/* Caption */}
-          <div>
-            <label className="block text-xs font-semibold text-gray-600 mb-1.5">Légende <span className="text-gray-400">(optionnel)</span></label>
-            <input
-              value={caption}
-              onChange={(e) => setCaption(e.target.value)}
-              placeholder="Ex: La figure illustre la progression du CA sur 4 ans"
-              className="w-full text-sm border border-gray-200 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-purple-400 focus:border-transparent"
-            />
-          </div>
-
-          {/* Source */}
-          <div>
-            <label className="block text-xs font-semibold text-gray-600 mb-1.5">Source <span className="text-red-400">*</span></label>
-            <input
-              value={source}
-              onChange={(e) => setSource(e.target.value)}
-              placeholder="Ex: Rapport annuel 2023, Office des Changes"
-              className="w-full text-sm border border-gray-200 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-purple-400 focus:border-transparent"
-            />
-          </div>
-
-          {/* Author */}
-          <div>
-            <label className="block text-xs font-semibold text-gray-600 mb-1.5">Auteur <span className="text-red-400">*</span></label>
-            <input
-              value={author}
-              onChange={(e) => setAuthor(e.target.value)}
-              placeholder="Ex: Direction financière, ou 'Auteur propre'"
-              className="w-full text-sm border border-gray-200 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-purple-400 focus:border-transparent"
-            />
-          </div>
-
-          {/* Partie selector */}
-          <div>
-            <label className="block text-xs font-semibold text-gray-600 mb-2">Quelle partie ? <span className="text-red-400">*</span></label>
-            <div className="flex gap-2">
-              {(["Partie I", "Partie II"] as const).map((p) => (
-                <button
-                  key={p}
-                  onClick={() => setPlacement(p)}
-                  className={`flex-1 py-2.5 rounded-xl text-sm font-semibold border transition-all ${
-                    placement === p
-                      ? p === "Partie I"
-                        ? "bg-blue-50 border-blue-300 text-blue-700"
-                        : "bg-orange-50 border-orange-300 text-orange-700"
-                      : "bg-white border-gray-200 text-gray-500 hover:border-gray-300"
-                  }`}
-                >
-                  {p}
-                </button>
-              ))}
-            </div>
-          </div>
+              {label}
+            </button>
+          ))}
         </div>
 
-        {/* Footer */}
-        <div className="px-6 py-4 border-t border-gray-100 flex items-center justify-end gap-3">
-          <button onClick={onClose} className="text-sm text-gray-500 hover:text-gray-700 font-medium px-4 py-2">
-            Annuler
-          </button>
-          <Button
-            onClick={handleSave}
-            disabled={!canSave || saving}
-            className="bg-purple-600 hover:bg-purple-700 text-white gap-2 rounded-xl"
-          >
-            {saving ? "Ajout..." : <><Check className="w-4 h-4" /> Valider la figure</>}
-          </Button>
+        <div className="px-6 py-5 max-h-[80vh] overflow-y-auto">
+          {/* ── TAB: Image directe ── */}
+          {tab === "image" && (
+            <>
+              {!preview ? (
+                <div
+                  onDrop={(e) => { e.preventDefault(); setDragOver(false); const f = e.dataTransfer.files[0]; if (f) loadImageFile(f); }}
+                  onDragOver={(e) => { e.preventDefault(); setDragOver(true); }}
+                  onDragLeave={() => setDragOver(false)}
+                  onClick={() => fileRef.current?.click()}
+                  className={`border-2 border-dashed rounded-xl flex flex-col items-center justify-center gap-3 cursor-pointer transition-colors mb-4 ${
+                    dragOver ? "border-purple-400 bg-purple-50" : "border-gray-200 hover:border-purple-300 hover:bg-gray-50"
+                  }`}
+                  style={{ height: 150 }}
+                >
+                  <div className="w-10 h-10 bg-purple-50 rounded-xl flex items-center justify-center">
+                    <Upload className="w-5 h-5 text-purple-400" />
+                  </div>
+                  <div className="text-center">
+                    <p className="text-sm font-semibold text-gray-700">Glisse ton image ici</p>
+                    <p className="text-xs text-gray-400 mt-0.5">PNG, JPG, SVG</p>
+                  </div>
+                  <input ref={fileRef} type="file" accept="image/*" className="hidden"
+                    onChange={(e) => { const f = e.target.files?.[0]; if (f) loadImageFile(f); }} />
+                </div>
+              ) : (
+                <CaptionBuilder
+                  preview={preview}
+                  nextNumber={nextNumber}
+                  onSave={handleSaveFigure}
+                  onCancel={onClose}
+                  saving={saving}
+                />
+              )}
+            </>
+          )}
+
+          {/* ── TAB: Document extraction ── */}
+          {tab === "document" && (
+            <>
+              {!extracting && extracted.length === 0 && (
+                <div
+                  onDrop={(e) => { e.preventDefault(); const f = e.dataTransfer.files[0]; if (f) handleDocumentUpload(f); }}
+                  onDragOver={(e) => e.preventDefault()}
+                  onClick={() => docRef.current?.click()}
+                  className="border-2 border-dashed border-gray-200 hover:border-purple-300 hover:bg-gray-50 rounded-xl flex flex-col items-center justify-center gap-3 cursor-pointer transition-colors"
+                  style={{ height: 200 }}
+                >
+                  <div className="w-12 h-12 bg-blue-50 rounded-xl flex items-center justify-center">
+                    <FileText className="w-6 h-6 text-blue-400" />
+                  </div>
+                  <div className="text-center">
+                    <p className="text-sm font-semibold text-gray-700">Uploade ton document</p>
+                    <p className="text-xs text-gray-400 mt-0.5">PDF, Word (.docx), PowerPoint (.pptx) — max 20 MB</p>
+                    <p className="text-xs text-gray-400 mt-0.5">L'IA extrait toutes les figures avec leurs légendes suggérées</p>
+                  </div>
+                  <input ref={docRef} type="file" accept=".pdf,.docx,.pptx,application/pdf,application/vnd.openxmlformats-officedocument.wordprocessingml.document,application/vnd.openxmlformats-officedocument.presentationml.presentation"
+                    className="hidden"
+                    onChange={(e) => { const f = e.target.files?.[0]; if (f) handleDocumentUpload(f); }} />
+                </div>
+              )}
+
+              {extracting && (
+                <div className="flex flex-col items-center justify-center py-12 gap-4">
+                  <Loader2 className="w-8 h-8 text-purple-400 animate-spin" />
+                  <div className="text-center">
+                    <p className="text-sm font-semibold text-gray-700">Extraction en cours…</p>
+                    <p className="text-xs text-gray-400 mt-1">L'IA analyse chaque page pour détecter les figures</p>
+                  </div>
+                </div>
+              )}
+
+              {!extracting && extracted.length === 0 && false && (
+                <p className="text-center text-sm text-gray-400 mt-4">Aucune figure détectée dans ce document.</p>
+              )}
+
+              {!extracting && extracted.length > 0 && currentFig && (
+                <div>
+                  <div className="flex items-center justify-between mb-3">
+                    <p className="text-xs font-semibold text-gray-500">
+                      Figure {currentIdx + 1} sur {extracted.length} — Page {currentFig.page}
+                    </p>
+                    <span className="text-xs bg-blue-50 text-blue-700 px-2 py-0.5 rounded-full font-semibold">{currentFig.type}</span>
+                  </div>
+                  <p className="text-xs text-gray-500 italic mb-3">{currentFig.auto_description}</p>
+                  <CaptionBuilder
+                    preview={currentFig.image_base64}
+                    nextNumber={nextNum}
+                    prefillTitle={currentFig.suggested_caption.replace(/^Figure — /, "")}
+                    prefillSource={currentFig.suggested_source}
+                    prefillDocTitle={docTitle}
+                    onSave={handleSaveFigure}
+                    onCancel={() => {
+                      if (currentIdx + 1 < extracted.length) {
+                        setCurrentIdx((i) => i + 1);
+                      } else {
+                        onClose();
+                      }
+                    }}
+                    saving={saving}
+                  />
+                </div>
+              )}
+            </>
+          )}
         </div>
       </motion.div>
     </div>
@@ -278,23 +483,10 @@ function FigureCard({ fig, onRemove }: { fig: ApprovedFigure; onRemove: () => vo
           </span>
         </div>
 
-        {/* Source / Author */}
-        {(fig.source || fig.author) && (
-          <div className="bg-gray-50 rounded-lg px-3 py-2 mb-2 space-y-0.5">
-            {fig.source && (
-              <p className="text-xs text-gray-500 truncate">
-                <span className="font-semibold text-gray-600">Source :</span> {fig.source}
-              </p>
-            )}
-            {fig.author && (
-              <p className="text-xs text-gray-500 truncate">
-                <span className="font-semibold text-gray-600">Auteur :</span> {fig.author}
-              </p>
-            )}
-          </div>
-        )}
-
-        {fig.caption && <p className="text-xs text-gray-400 italic line-clamp-2 mb-3">{fig.caption}</p>}
+        {/* Formatted source line */}
+        <div className="bg-gray-50 rounded-lg px-3 py-2 mb-2">
+          <p className="text-xs text-gray-500 italic line-clamp-2">{fig.formattedSource || fig.source}</p>
+        </div>
 
         <div className="flex items-center justify-end">
           {confirmDelete ? (
@@ -357,7 +549,7 @@ export default function FiguresPage() {
                 <p className="text-gray-500 text-sm mt-0.5">
                   {figures.length === 0
                     ? "Aucune figure ajoutée pour l'instant"
-                    : `${figures.length} figure${figures.length !== 1 ? "s" : ""} — intégrées automatiquement dans le rapport Word`}
+                    : `${figures.length} figure${figures.length !== 1 ? "s" : ""} — intégrées automatiquement dans le rapport Word avec sources`}
                 </p>
               </div>
               <Button
@@ -382,7 +574,7 @@ export default function FiguresPage() {
                   Aucune figure pour l'instant
                 </h2>
                 <p className="text-gray-500 text-sm max-w-sm mb-6">
-                  Uploade tes graphiques, tableaux ou captures d'écran. Précise la source, l'auteur et la partie. Elles seront intégrées automatiquement dans ton rapport Word avec la liste des figures.
+                  Uploade une image directement ou importe un PDF/Word — l'IA extrait toutes les figures et génère les légendes avec attribution de source.
                 </p>
                 <Button onClick={() => setShowModal(true)} className="bg-purple-600 hover:bg-purple-700 text-white gap-2 rounded-xl">
                   <Upload className="w-4 h-4" /> Ajouter ma première figure
@@ -427,7 +619,6 @@ export default function FiguresPage() {
         </div>
       </main>
 
-      {/* Modal */}
       <AnimatePresence>
         {showModal && (
           <UploadModal
