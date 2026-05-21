@@ -606,8 +606,8 @@ export default function LandingPage() {
             </div>
             
             <div className="flex flex-wrap gap-x-8 gap-y-4 text-sm text-muted-foreground">
-              <a href="#" className="hover:text-foreground transition-colors">CGU</a>
-              <a href="#" className="hover:text-foreground transition-colors">Politique de confidentialité</a>
+              <a href="/terms" className="hover:text-foreground transition-colors">CGU</a>
+              <a href="/privacy" className="hover:text-foreground transition-colors">Politique de confidentialité</a>
               <a href="#" className="hover:text-foreground transition-colors">Remboursement</a>
             </div>
           </div>

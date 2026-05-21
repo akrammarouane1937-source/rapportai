@@ -1,4 +1,4 @@
-import { eq, and, count } from "drizzle-orm";
+import { eq, and, count, sql } from "drizzle-orm";
 import { db, usersTable, referralsTable, referralRewardsTable } from "@workspace/db";
 import { logger } from "./logger";
 import { sendEmail } from "./email";
@@ -142,7 +142,7 @@ export async function onReportCompleted(
     // Give $10 cashback to referrer
     await db
       .update(usersTable)
-      .set({ referralBalance: db.raw(`referral_balance + ${CASHBACK_AMOUNT}`) as unknown as number })
+      .set({ referralBalance: sql`${usersTable.referralBalance} + ${CASHBACK_AMOUNT}` })
       .where(eq(usersTable.id, referral.referrerId));
 
     await db.insert(referralRewardsTable).values({

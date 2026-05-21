@@ -5,6 +5,7 @@ import { ChatMessage, StepTransitionCard, ThinkingCard } from "@/components/chat
 import { ChatInput } from "@/components/chat-input";
 import { useReportStore } from "@/lib/store";
 import { AnimatePresence } from "framer-motion";
+import { Check } from "lucide-react";
 
 const delay = (ms: number) => new Promise<void>((r) => setTimeout(r, ms));
 
@@ -31,6 +32,8 @@ export default function Step1() {
   const { updateReport } = useReportStore();
   const [phase, setPhase] = useState<Phase>("theme");
   const [thinking, setThinking] = useState<{ title: string; detail: string } | null>(null);
+  const [disclaimerAccepted, setDisclaimerAccepted] = useState(false);
+  const [disclaimerChecked, setDisclaimerChecked] = useState(false);
   const [msgs, setMsgs] = useState<Msg[]>([
     { role: "agent", content: "Bienvenue sur RapportAI 👋 On va construire ton rapport ensemble, étape par étape. Commence par le thème — c'est quoi ton sujet ?" },
   ]);
@@ -100,6 +103,46 @@ export default function Step1() {
           <ChatMessage key={i} role={m.role as "agent" | "user"} content={m.content} />
         ))}
 
+        {/* Disclaimer — shown once before first input */}
+        {!disclaimerAccepted && phase === "theme" && (
+          <div className="mx-10 mb-4 px-4">
+            <div className="rounded-xl border border-gray-200 bg-gray-50 p-4 space-y-3">
+              <p className="text-xs text-gray-600 leading-relaxed">
+                RapportAI génère un <strong>rapport académique complet</strong> à partir des informations que tu fournis.
+                Tu t'engages à vérifier son contenu, à le personnaliser selon ton contexte spécifique,
+                et à y intégrer tes propres analyses avant toute soumission académique.
+              </p>
+              <label className="flex items-start gap-2.5 cursor-pointer group">
+                <button
+                  type="button"
+                  onClick={() => setDisclaimerChecked((v) => !v)}
+                  className={`mt-0.5 w-4 h-4 rounded flex items-center justify-center flex-shrink-0 border transition-colors ${
+                    disclaimerChecked
+                      ? "bg-purple-600 border-purple-600"
+                      : "border-gray-300 bg-white group-hover:border-purple-400"
+                  }`}
+                >
+                  {disclaimerChecked && <Check className="w-2.5 h-2.5 text-white" />}
+                </button>
+                <span className="text-xs text-gray-700">
+                  J'accepte les{" "}
+                  <a href="/terms" target="_blank" className="text-purple-600 hover:underline">Conditions Générales d'Utilisation</a>
+                  {" "}et la{" "}
+                  <a href="/privacy" target="_blank" className="text-purple-600 hover:underline">Politique de Confidentialité</a>.
+                </span>
+              </label>
+              <button
+                onClick={() => { if (disclaimerChecked) setDisclaimerAccepted(true); }}
+                disabled={!disclaimerChecked}
+                className="w-full py-2 rounded-lg text-sm font-semibold transition-all disabled:opacity-40 disabled:cursor-not-allowed"
+                style={{ background: disclaimerChecked ? "#7c3aed" : "#e5e7eb", color: disclaimerChecked ? "#fff" : "#9ca3af" }}
+              >
+                Commencer
+              </button>
+            </div>
+          </div>
+        )}
+
         {/* Thinking step — shown between user reply and agent response */}
         <AnimatePresence>
           {thinking && (
@@ -136,7 +179,7 @@ export default function Step1() {
       <div className="shrink-0 border-t border-border">
         <ChatInput
           onSend={handleSend}
-          disabled={phase === "type" || phase === "done" || !!thinking}
+          disabled={!disclaimerAccepted || phase === "type" || phase === "done" || !!thinking}
           placeholder={
             phase === "theme"   ? "Ton thème de rapport..." :
             phase === "school"  ? "Ton école / université..." :
