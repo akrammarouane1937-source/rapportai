@@ -7,6 +7,8 @@ import { findClaudeBinary } from "./find-claude-binary";
 const HUMANIZE_SECTIONS = new Set([
   "introduction", "partie-i", "partie-ii", "conclusion",
   "resume", "dedicaces", "remerciements", "bibliographie",
+  // revision passes through any section type — treat all as humanizable
+  "section",
 ]);
 
 // Skip humanize for very large texts to avoid timeout (page-by-page will handle those)

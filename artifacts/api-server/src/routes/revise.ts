@@ -5,6 +5,7 @@ import { randomUUID } from "crypto";
 import path from "path";
 import { findClaudeBinary } from "../lib/find-claude-binary";
 import { logRevision, SESSIONS_ROOT } from "../lib/memory";
+import { runInternalHumanize } from "../lib/humanize-util";
 
 const router = Router();
 const REVISE_ROOT = SESSIONS_ROOT.replace("rapportai-sessions", "rapportai-revisions");
@@ -174,6 +175,15 @@ If clarification is needed before proceeding, ask your question directly without
           }
         }
       }
+    }
+
+    // Humanize revised content before finalizing
+    const revisedFile = path.join(workDir, sectionFile);
+    if (existsSync(revisedFile)) {
+      const revisedRaw = readFileSync(revisedFile, "utf-8");
+      res.write(`data: ${JSON.stringify({ phase: "humanizing" })}\n\n`);
+      const revisedHumanized = await runInternalHumanize(revisedRaw, sectionId ?? "introduction");
+      if (revisedHumanized !== revisedRaw) writeFileSync(revisedFile, revisedHumanized, "utf-8");
     }
 
     // Log revision to student memory

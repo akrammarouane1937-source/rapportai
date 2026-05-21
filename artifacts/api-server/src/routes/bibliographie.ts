@@ -1,11 +1,12 @@
 import { Router, type Request, type Response } from "express";
 import { query } from "@anthropic-ai/claude-agent-sdk";
-import { existsSync, readFileSync } from "fs";
+import { existsSync, readFileSync, writeFileSync } from "fs";
 import path from "path";
 import { findClaudeBinary } from "../lib/find-claude-binary";
 import { sessionStore } from "../lib/session-store";
 import type { SDKReportAgent } from "../lib/sdk-agent";
 import { markSectionComplete } from "../lib/memory";
+import { runInternalHumanize } from "../lib/humanize-util";
 
 const router = Router();
 
@@ -220,9 +221,13 @@ Enregistre dans bibliographie.md.${extraContext ? `\n\nContexte supplémentaire 
     const bibFile = path.join(agent.workDir, "bibliographie.md");
     const rawContent = existsSync(bibFile) ? readFileSync(bibFile, "utf-8") : "";
 
+    res.write(`data: ${JSON.stringify({ phase: "humanizing" })}\n\n`);
+    const humanized = await runInternalHumanize(rawContent, "bibliographie");
+    if (humanized !== rawContent) writeFileSync(bibFile, humanized, "utf-8");
+
     markSectionComplete(sessionId, "bibliographie", {
-      word_count: rawContent.split(/\s+/).filter(Boolean).length,
-      key_points: rawContent.slice(0, 300).trim(),
+      word_count: humanized.split(/\s+/).filter(Boolean).length,
+      key_points: humanized.slice(0, 300).trim(),
     });
 
     res.write(`data: ${JSON.stringify({ done: true, sections: agent.getSections() })}\n\n`);
