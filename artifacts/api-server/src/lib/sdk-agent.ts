@@ -182,6 +182,12 @@ export class SDKReportAgent {
       ? `${sectionSystem}\n\n---\n## CONTEXTE ÉTUDIANT\n${baseSystem}${knowledgeBase}`
       : `${baseSystem}${knowledgeBase}`;
 
+    // Heavy sections need Sonnet quality; light sections use Haiku to cut costs ~5x
+    const HEAVY_SECTIONS = new Set(["partie-i", "partie-ii", "introduction", "conclusion"]);
+    const sectionModel = HEAVY_SECTIONS.has(section)
+      ? "claude-sonnet-4-6"
+      : "claude-haiku-4-5-20251001";
+
     for await (const message of query({
       prompt: task,
       options: {
@@ -189,6 +195,7 @@ export class SDKReportAgent {
         maxTurns,
         cwd: this.workDir,
         systemPrompt,
+        model: sectionModel,
         ...(allowedTools ? { allowedTools } : { permissionMode: "acceptEdits" }),
         ...(claudeBinary ? { pathToClaudeCodeExecutable: claudeBinary } : {}),
       },

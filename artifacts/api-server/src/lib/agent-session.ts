@@ -72,7 +72,7 @@ export class AgentSession {
     for (let i = 0; i < MAX_ITERATIONS; i++) {
       const stream = anthropic.messages.stream({
         model: "claude-sonnet-4-6",
-        max_tokens: 8192,
+        max_tokens: 4096,
         system: this.systemPrompt,
         tools: this.tools.length > 0 ? this.tools : undefined,
         messages: this.history,
