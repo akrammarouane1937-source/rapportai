@@ -39,12 +39,13 @@ router.get("/referral/me", async (req: Request, res: Response) => {
     });
 
     res.json({
-      referralCode:  user.referralCode,
-      referralLink:  `https://rapportai.com/signup?ref=${user.referralCode}`,
-      balance:       user.referralBalance,         // cents
-      balanceUsd:    (user.referralBalance / 100).toFixed(2),
-      totalReferrals:    referrals.length,
-      pendingReferrals:  referrals.filter(r => r.status === "pending").length,
+      referralCode:       user.referralCode,
+      referralLink:       `https://rapportai.com/signup?ref=${user.referralCode}`,
+      balance:            user.referralBalance,
+      balanceUsd:         (user.referralBalance / 100).toFixed(2),
+      isFoundingUser:     user.isFoundingUser,
+      totalReferrals:     referrals.length,
+      pendingReferrals:   referrals.filter(r => r.status === "pending").length,
       completedReferrals: referrals.filter(r => r.status === "completed" || r.status === "rewarded").length,
     });
   } catch (err) {

@@ -1,4 +1,4 @@
-import { pgTable, serial, text, integer, timestamp, pgEnum } from "drizzle-orm/pg-core";
+import { pgTable, serial, text, integer, boolean, timestamp, pgEnum } from "drizzle-orm/pg-core";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod/v4";
 
@@ -13,9 +13,10 @@ export const rewardStatusEnum    = pgEnum("reward_status",    ["pending", "paid"
 export const usersTable = pgTable("users", {
   id:               serial("id").primaryKey(),
   clerkId:          text("clerk_id").notNull().unique(),
-  referralCode:     text("referral_code").notNull().unique(),  // e.g. "AHMED-X7K2"
-  referredByCode:   text("referred_by_code"),                  // null if organic
-  referralBalance:  integer("referral_balance").notNull().default(0), // cents, e.g. 1000 = $10
+  referralCode:     text("referral_code").notNull().unique(),
+  referredByCode:   text("referred_by_code"),
+  referralBalance:  integer("referral_balance").notNull().default(0),
+  isFoundingUser:   boolean("is_founding_user").notNull().default(false),
   createdAt:        timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
 });
 

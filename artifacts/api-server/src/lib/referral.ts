@@ -16,6 +16,8 @@ export function generateReferralCode(clerkId: string): string {
 // ─── Upsert user row ──────────────────────────────────────────────────────────
 // Called on every authenticated request if needed — idempotent.
 
+const FOUNDING_LIMIT = 20;
+
 export async function upsertUser(clerkId: string, referredByCode?: string) {
   const existing = await db.query.usersTable.findFirst({
     where: eq(usersTable.clerkId, clerkId),
@@ -23,6 +25,10 @@ export async function upsertUser(clerkId: string, referredByCode?: string) {
   if (existing) return existing;
 
   const referralCode = generateReferralCode(clerkId);
+
+  // First 20 users get founding status — free forever
+  const [{ value: totalUsers }] = await db.select({ value: count() }).from(usersTable);
+  const isFoundingUser = Number(totalUsers) < FOUNDING_LIMIT;
 
   // Find referrer if a code was supplied
   let referrerId: number | null = null;
@@ -39,6 +45,7 @@ export async function upsertUser(clerkId: string, referredByCode?: string) {
       clerkId,
       referralCode,
       referredByCode: referredByCode ?? null,
+      isFoundingUser,
     })
     .returning();
 
@@ -51,7 +58,10 @@ export async function upsertUser(clerkId: string, referredByCode?: string) {
     });
   }
 
-  logger.info({ event: "user_created", clerkId, referralCode, referredByCode }, "New user");
+  logger.info(
+    { event: "user_created", clerkId, referralCode, referredByCode, isFoundingUser },
+    isFoundingUser ? "New FOUNDING user" : "New user",
+  );
   return created;
 }
 

@@ -36,11 +36,11 @@ declare global {
 
 // ─── Middleware: attach plan to every request ─────────────────────────────────
 // During free launch (FREE_LAUNCH=true), all limits are bypassed.
-// Post-launch: reads plan from x-plan-id header (honor system until Clerk metadata
-// is wired — replace header read with clerkClient.users.getUser() at that point).
+// Founding users (x-founding: true) bypass all limits forever.
+// Post-launch: replace header reads with Clerk metadata lookups.
 
 export function attachPlan(req: Request, _res: Response, next: NextFunction) {
-  if (process.env.FREE_LAUNCH === "true") {
+  if (process.env.FREE_LAUNCH === "true" || req.headers["x-founding"] === "true") {
     req.planId        = "pro";
     req.planSections  = Infinity;
     req.planRevisions = Infinity;
@@ -55,11 +55,9 @@ export function attachPlan(req: Request, _res: Response, next: NextFunction) {
 }
 
 // ─── Guard: reject if section limit exceeded ─────────────────────────────────
-// Reads x-sections-generated header (sent by frontend) to check against plan.
-// Post-launch: replace this with a DB/Clerk read for real enforcement.
 
 export function guardSectionLimit(req: Request, res: Response, next: NextFunction) {
-  if (process.env.FREE_LAUNCH === "true") return next();
+  if (process.env.FREE_LAUNCH === "true" || req.headers["x-founding"] === "true") return next();
 
   const generated = parseInt(req.headers["x-sections-generated"] as string ?? "0", 10);
   const limit      = req.planSections;
@@ -80,7 +78,7 @@ export function guardSectionLimit(req: Request, res: Response, next: NextFunctio
 // ─── Guard: reject if revision limit exceeded ─────────────────────────────────
 
 export function guardRevisionLimit(req: Request, res: Response, next: NextFunction) {
-  if (process.env.FREE_LAUNCH === "true") return next();
+  if (process.env.FREE_LAUNCH === "true" || req.headers["x-founding"] === "true") return next();
 
   const revisions = parseInt(req.headers["x-revision-count"] as string ?? "0", 10);
   const limit      = req.planRevisions;
