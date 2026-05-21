@@ -13,7 +13,7 @@ import {
   incrementSessionCount,
   updateReportFields,
 } from "../lib/memory";
-import { guardSectionLimit, guardRevisionLimit } from "../lib/plan-guard";
+import { guardSectionLimit, guardRevisionLimit, guardPayment } from "../lib/plan-guard";
 import { logger } from "../lib/logger";
 
 // ─── Input sanitization + prompt injection prevention ────────────────────────
@@ -347,6 +347,7 @@ router.post("/session/start", (req: Request, res: Response) => {
 
 router.post(
   "/session/:sessionId/generate",
+  guardPayment,
   guardSectionLimit,
   async (req: Request, res: Response) => {
     const { sessionId } = req.params;

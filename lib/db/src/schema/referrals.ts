@@ -5,19 +5,21 @@ import { z } from "zod/v4";
 // ─── Enums ────────────────────────────────────────────────────────────────────
 
 export const referralStatusEnum  = pgEnum("referral_status",  ["pending", "completed", "rewarded"]);
-export const rewardStatusEnum    = pgEnum("reward_status",    ["pending", "paid"]);
+export const rewardStatusEnum    = pgEnum("reward_status",    ["pending", "processing", "paid"]);
 
 // ─── Users (referral fields only — Clerk handles auth) ───────────────────────
 // One row per Clerk user ID. Created on first sign-in.
 
 export const usersTable = pgTable("users", {
-  id:               serial("id").primaryKey(),
-  clerkId:          text("clerk_id").notNull().unique(),
-  referralCode:     text("referral_code").notNull().unique(),
-  referredByCode:   text("referred_by_code"),
-  referralBalance:  integer("referral_balance").notNull().default(0),
-  isFoundingUser:   boolean("is_founding_user").notNull().default(false),
-  createdAt:        timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
+  id:                     serial("id").primaryKey(),
+  clerkId:                text("clerk_id").notNull().unique(),
+  referralCode:           text("referral_code").notNull().unique(),
+  referredByCode:         text("referred_by_code"),
+  referralBalance:        integer("referral_balance").notNull().default(0),
+  referralBalanceFrozen:  integer("referral_balance_frozen").notNull().default(0),
+  isFoundingUser:         boolean("is_founding_user").notNull().default(false),
+  stripeConnectId:        text("stripe_connect_id"),
+  createdAt:              timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
 });
 
 export const insertUserSchema = createInsertSchema(usersTable).omit({ id: true, createdAt: true });
@@ -42,13 +44,15 @@ export type InsertReferral = z.infer<typeof insertReferralSchema>;
 // ─── Referral rewards ─────────────────────────────────────────────────────────
 
 export const referralRewardsTable = pgTable("referral_rewards", {
-  id:        serial("id").primaryKey(),
-  userId:    integer("user_id").notNull().references(() => usersTable.id),
-  amount:    integer("amount").notNull(),   // cents
-  reason:    text("reason").notNull(),      // e.g. "referral_cashback"
-  status:    rewardStatusEnum("status").notNull().default("pending"),
-  createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
-  paidAt:    timestamp("paid_at",    { withTimezone: true }),
+  id:            serial("id").primaryKey(),
+  userId:        integer("user_id").notNull().references(() => usersTable.id),
+  amount:        integer("amount").notNull(),
+  reason:        text("reason").notNull(),
+  method:        text("method"),            // 'bank' | 'paypal' | 'stripe_connect'
+  payoutDetails: text("payout_details"),    // JSON string — encrypted in prod
+  status:        rewardStatusEnum("status").notNull().default("pending"),
+  createdAt:     timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
+  paidAt:        timestamp("paid_at",    { withTimezone: true }),
 });
 
 export const insertRewardSchema = createInsertSchema(referralRewardsTable).omit({ id: true, createdAt: true });

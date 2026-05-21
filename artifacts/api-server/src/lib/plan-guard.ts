@@ -1,4 +1,6 @@
 import type { Request, Response, NextFunction } from "express";
+import { eq } from "drizzle-orm";
+import { db, reportsTable } from "@workspace/db";
 
 // ─── Plan definitions (must mirror frontend userPlan.ts) ─────────────────────
 
@@ -51,6 +53,37 @@ export function attachPlan(req: Request, _res: Response, next: NextFunction) {
   req.planId        = planId;
   req.planSections  = PLAN_LIMITS[planId].sections;
   req.planRevisions = PLAN_LIMITS[planId].revisions;
+  next();
+}
+
+// ─── Guard: reject if report is unpaid ───────────────────────────────────────
+// Skipped during FREE_LAUNCH and for founding users.
+// Reads report_id from route params (:sessionId maps to report id).
+
+export async function guardPayment(req: Request, res: Response, next: NextFunction): Promise<void> {
+  if (process.env.FREE_LAUNCH === "true" || req.headers["x-founding"] === "true") {
+    next(); return;
+  }
+  if (req.planId === "free") { next(); return; } // free plan has no payment gate
+
+  const reportId = req.params.sessionId;
+  if (!reportId) { next(); return; }
+
+  try {
+    const report = await db.query.reportsTable.findFirst({
+      where: eq(reportsTable.id, reportId),
+    });
+    if (!report || report.paymentStatus !== "paid") {
+      res.status(402).json({
+        error:             "payment_required",
+        checkout_required: true,
+        message:           "Complétez le paiement pour générer votre rapport.",
+      });
+      return;
+    }
+  } catch {
+    // DB unavailable — fail open so generation isn't blocked by infra issues
+  }
   next();
 }
 

@@ -55,35 +55,55 @@ router.get("/referral/me", async (req: Request, res: Response) => {
 });
 
 // ─── POST /api/referral/withdraw ──────────────────────────────────────────────
-// User requests a payout. We do NOT pay automatically — logs the request.
-// In production: trigger a Stripe payout or PayPal transfer here.
+// User requests a payout (Option A — manual). We freeze the balance immediately
+// so the user can't spend it twice, then queue the transfer for admin processing.
+// Body: { clerkId, method: "paypal"|"stripe", payoutDetails: "email or account" }
 
 router.post("/referral/withdraw", async (req: Request, res: Response) => {
-  const { clerkId, method, paypalEmail } = req.body as {
-    clerkId?: string;
-    method?: "stripe" | "paypal";
-    paypalEmail?: string;
+  const { clerkId, method, payoutDetails } = req.body as {
+    clerkId?:       string;
+    method?:        "paypal" | "stripe";
+    payoutDetails?: string;
   };
 
   if (!clerkId) { res.status(400).json({ error: "clerkId required" }); return; }
+  if (!method || !["paypal", "stripe"].includes(method)) {
+    res.status(400).json({ error: "method must be 'paypal' or 'stripe'" }); return;
+  }
+  if (!payoutDetails) {
+    res.status(400).json({ error: "payoutDetails required (PayPal email or Stripe account)" }); return;
+  }
 
   try {
     const user = await getUserByClerkId(clerkId);
     if (!user) { res.status(404).json({ error: "User not found" }); return; }
 
-    const MIN_WITHDRAWAL = 1000; // $10 minimum
-    if (user.referralBalance < MIN_WITHDRAWAL) {
+    const MIN_WITHDRAWAL = 1000; // $10 in cents
+    const available = user.referralBalance - (user.referralBalanceFrozen ?? 0);
+
+    if (available < MIN_WITHDRAWAL) {
       res.status(400).json({
-        error:   "insufficient_balance",
-        message: `Minimum withdrawal is $${MIN_WITHDRAWAL / 100}. Your balance: $${(user.referralBalance / 100).toFixed(2)}`,
+        error:     "insufficient_balance",
+        message:   `Minimum withdrawal is $${MIN_WITHDRAWAL / 100}. Available balance: $${(available / 100).toFixed(2)}`,
+        available,
       });
       return;
     }
 
-    // Mark all pending rewards as "paid" (optimistic — real transfer queued manually)
+    // Freeze available balance — keeps the book accurate until we manually transfer
+    await db
+      .update(usersTable)
+      .set({ referralBalanceFrozen: (user.referralBalanceFrozen ?? 0) + available })
+      .where(eq(usersTable.id, user.id));
+
+    // Mark all pending rewards as "processing" and store payout metadata
     await db
       .update(referralRewardsTable)
-      .set({ status: "paid", paidAt: new Date() })
+      .set({
+        status:        "processing" as "processing",
+        method,
+        payoutDetails,
+      })
       .where(
         and(
           eq(referralRewardsTable.userId, user.id),
@@ -91,21 +111,22 @@ router.post("/referral/withdraw", async (req: Request, res: Response) => {
         ),
       );
 
-    // Zero out balance
-    await db
-      .update(usersTable)
-      .set({ referralBalance: 0 })
-      .where(eq(usersTable.id, user.id));
-
-    logger.info(
-      { event: "withdrawal_requested", clerkId, amount: user.referralBalance, method, paypalEmail },
-      `Withdrawal request: $${(user.referralBalance / 100).toFixed(2)}`,
-    );
+    // Admin notification — picked up by ops dashboard or email alert
+    logger.info({
+      event:          "withdrawal_requested",
+      clerk_id:       clerkId,
+      user_id:        user.id,
+      amount_cents:   available,
+      amount_usd:     (available / 100).toFixed(2),
+      method,
+      payout_details: payoutDetails,
+      action_needed:  "MANUAL_TRANSFER_REQUIRED",
+    });
 
     res.json({
       success: true,
-      message: `Withdrawal of $${(user.referralBalance / 100).toFixed(2)} requested. We'll process it within 48h.`,
-      amount:  user.referralBalance,
+      message: `Withdrawal of $${(available / 100).toFixed(2)} requested via ${method}. We'll process it within 48h.`,
+      amount:  available,
     });
   } catch (err) {
     logger.error({ err }, "referral/withdraw error");

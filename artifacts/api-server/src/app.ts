@@ -11,6 +11,7 @@ import {
 import router from "./routes";
 import { logger } from "./lib/logger";
 import { attachPlan } from "./lib/plan-guard";
+import { stripeWebhookHandler } from "./routes/stripe";
 
 const app: Express = express();
 
@@ -58,6 +59,9 @@ app.use(
     },
   }),
 );
+
+// Stripe webhook MUST be before express.json() — needs raw body for signature verification
+app.post("/api/webhooks/stripe", express.raw({ type: "application/json" }), stripeWebhookHandler);
 
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));

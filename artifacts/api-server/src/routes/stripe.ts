@@ -1,99 +1,170 @@
-import { Router, type Request, type Response } from "express";
+import { Router, type Request, type Response, type NextFunction } from "express";
+import express from "express";
 import Stripe from "stripe";
+import { eq } from "drizzle-orm";
+import { db, reportsTable, usersTable } from "@workspace/db";
+import { logger } from "../lib/logger";
 
 const router = Router();
 
-const PLAN_PRICES: Record<string, number> = {
-  essentiel: 14900,
-  pro:       44900,
-  premium:   74900,
+const PRICES: Record<string, { amount: number; label: string }> = {
+  starter: { amount: 3700, label: "RapportAI Starter — 1 rapport" },
+  pro:     { amount: 6700, label: "RapportAI Pro — 1 rapport"     },
 };
 
-const PLAN_NAMES: Record<string, string> = {
-  essentiel: "RapportAI Essentiel",
-  pro:       "RapportAI Pro",
-  premium:   "RapportAI Premium",
-};
-
-function getStripe() {
+function getStripe(): Stripe {
   const key = process.env.STRIPE_SECRET_KEY;
   if (!key) throw new Error("STRIPE_SECRET_KEY not configured");
   return new Stripe(key, { apiVersion: "2026-04-22.dahlia" });
 }
 
-/** POST /api/stripe/create-checkout
- * Body: { planId, successUrl, cancelUrl }
- * Returns: { url }
- */
-router.post("/stripe/create-checkout", async (req: Request, res: Response) => {
-  const { planId, successUrl, cancelUrl } = req.body as {
-    planId: string;
-    successUrl: string;
-    cancelUrl: string;
+// ─── POST /api/payments/checkout ─────────────────────────────────────────────
+// Creates a Stripe Checkout session. Body: { plan, report_id, user_email? }
+
+router.post("/payments/checkout", async (req: Request, res: Response) => {
+  const { plan, report_id, user_email } = req.body as {
+    plan: string;
+    report_id: string;
+    user_email?: string;
   };
 
-  if (!planId || !PLAN_PRICES[planId]) {
-    res.status(400).json({ error: "Invalid planId" });
+  if (!plan || !PRICES[plan]) {
+    res.status(400).json({ error: "Invalid plan. Use 'starter' or 'pro'." });
     return;
   }
-  if (!successUrl || !cancelUrl) {
-    res.status(400).json({ error: "successUrl and cancelUrl are required" });
+  if (!report_id) {
+    res.status(400).json({ error: "report_id is required" });
     return;
   }
+
+  const appUrl = process.env.APP_URL ?? "http://localhost:3000";
 
   try {
-    const stripe = getStripe();
+    const stripe  = getStripe();
+    const price   = PRICES[plan];
+    const clerkId = req.headers["x-clerk-id"] as string | undefined;
+
     const session = await stripe.checkout.sessions.create({
-      mode: "payment",
       payment_method_types: ["card"],
-      line_items: [
-        {
-          price_data: {
-            currency: "mad",
-            unit_amount: PLAN_PRICES[planId],
-            product_data: {
-              name: PLAN_NAMES[planId],
-              description: `Accès complet au plan ${planId} — paiement unique`,
-            },
-          },
-          quantity: 1,
+      mode:                 "payment",
+      line_items: [{
+        price_data: {
+          currency:     "usd",
+          product_data: { name: price.label },
+          unit_amount:  price.amount,
         },
-      ],
-      metadata: { planId },
-      success_url: successUrl,
-      cancel_url: cancelUrl,
+        quantity: 1,
+      }],
+      metadata:      { clerk_id: clerkId ?? "", report_id, plan },
+      success_url:   `${appUrl}/dashboard?payment=success&session_id={CHECKOUT_SESSION_ID}`,
+      cancel_url:    `${appUrl}/pricing?payment=cancelled`,
+      ...(user_email ? { customer_email: user_email } : {}),
     });
 
-    res.json({ url: session.url });
+    logger.info({ event: "checkout_created", report_id, plan, session_id: session.id });
+    res.json({ checkout_url: session.url });
   } catch (err) {
-    const message = err instanceof Error ? err.message : "Stripe error";
-    res.status(500).json({ error: message });
+    const msg = err instanceof Error ? err.message : "Stripe error";
+    logger.error({ event: "checkout_error", report_id, plan, error: msg });
+    res.status(500).json({ error: msg });
   }
 });
 
-/** GET /api/stripe/verify?session_id=xxx
- * Returns: { paid, planId, email }
- */
-router.get("/stripe/verify", async (req: Request, res: Response) => {
-  const sessionId = req.query.session_id as string;
+// ─── POST /api/webhooks/stripe ────────────────────────────────────────────────
+// IMPORTANT: registered BEFORE express.json() in app.ts — raw body required.
+// Verifies Stripe signature, then unlocks the report for generation.
 
-  if (!sessionId) {
-    res.status(400).json({ error: "session_id is required" });
+export function stripeWebhookHandler(req: Request, res: Response, _next: NextFunction): void {
+  const sig = req.headers["stripe-signature"];
+  const secret = process.env.STRIPE_WEBHOOK_SECRET;
+
+  if (!sig || !secret) {
+    res.status(400).json({ error: "Missing signature or webhook secret" });
+    return;
+  }
+
+  let event: Stripe.Event;
+  try {
+    const stripe = getStripe();
+    event = stripe.webhooks.constructEvent(req.body as Buffer, sig, secret);
+  } catch (err) {
+    const msg = err instanceof Error ? err.message : "Invalid signature";
+    logger.error({ event: "webhook_invalid_signature", error: msg });
+    res.status(400).send("Invalid signature");
+    return;
+  }
+
+  // Handle asynchronously — respond immediately to avoid Stripe timeout
+  void handleWebhookEvent(event);
+  res.json({ received: true });
+}
+
+async function handleWebhookEvent(event: Stripe.Event): Promise<void> {
+  if (event.type !== "checkout.session.completed") return;
+
+  const session  = event.data.object as Stripe.Checkout.Session;
+  const { clerk_id, report_id, plan } = session.metadata ?? {};
+
+  if (!report_id) {
+    logger.warn({ event: "webhook_missing_metadata", session_id: session.id });
     return;
   }
 
   try {
-    const stripe = getStripe();
-    const session = await stripe.checkout.sessions.retrieve(sessionId);
+    // Mark report as paid
+    await db
+      .insert(reportsTable)
+      .values({
+        id:              report_id,
+        plan:            plan ?? null,
+        paymentStatus:   "paid",
+        stripeSessionId: session.id,
+        paidAt:          new Date(),
+      })
+      .onConflictDoUpdate({
+        target: reportsTable.id,
+        set: { plan, paymentStatus: "paid", stripeSessionId: session.id, paidAt: new Date() },
+      });
 
-    const paid   = session.payment_status === "paid";
-    const planId = session.metadata?.planId ?? null;
-    const email  = session.customer_details?.email ?? null;
+    // Update user's plan if we have their Clerk ID
+    if (clerk_id) {
+      await db
+        .update(usersTable)
+        .set({ plan } as Partial<typeof usersTable.$inferSelect>)
+        .where(eq(usersTable.clerkId, clerk_id));
+    }
 
-    res.json({ paid, planId, email });
+    logger.info({
+      event:      "payment_completed",
+      report_id,
+      plan,
+      clerk_id,
+      amount:     session.amount_total,
+      session_id: session.id,
+    });
   } catch (err) {
-    const message = err instanceof Error ? err.message : "Stripe error";
-    res.status(500).json({ error: message });
+    logger.error({ event: "webhook_db_error", session_id: session.id, error: String(err) });
+  }
+}
+
+// ─── GET /api/payments/verify?session_id=xxx ─────────────────────────────────
+// Frontend calls this on success_url landing to confirm payment.
+
+router.get("/payments/verify", async (req: Request, res: Response) => {
+  const sessionId = req.query.session_id as string;
+  if (!sessionId) { res.status(400).json({ error: "session_id required" }); return; }
+
+  try {
+    const stripe  = getStripe();
+    const session = await stripe.checkout.sessions.retrieve(sessionId);
+    const paid    = session.payment_status === "paid";
+    const plan    = session.metadata?.plan ?? null;
+    const email   = session.customer_details?.email ?? null;
+
+    res.json({ paid, plan, email, report_id: session.metadata?.report_id ?? null });
+  } catch (err) {
+    const msg = err instanceof Error ? err.message : "Stripe error";
+    res.status(500).json({ error: msg });
   }
 });
 
