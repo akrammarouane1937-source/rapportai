@@ -20,6 +20,7 @@ import {
   AccordionItem,
   AccordionTrigger
 } from "@/components/ui/accordion";
+import PublicNavbar from "@/components/layout/PublicNavbar";
 
 // ─── LAUNCH BANNER CONFIG ─────────────────────────────────────────────────────
 // UPDATE THESE when you launch:
@@ -153,41 +154,7 @@ export default function LandingPage() {
     <div className="min-h-[100dvh] flex flex-col font-sans bg-background selection:bg-primary/20">
       <LaunchBanner />
       {/* 1. NAVBAR */}
-      <header 
-        className={`sticky top-0 z-50 w-full transition-all duration-200 border-b ${
-          isScrolled ? "bg-white/95 backdrop-blur-sm shadow-sm border-border" : "bg-white border-transparent"
-        }`}
-      >
-        <div className="container mx-auto px-4 h-16 flex items-center justify-between">
-          <div className="flex items-center gap-2">
-            <img src="/logo.svg" alt="RapportAI" className="w-8 h-8" />
-            <span className="font-bold font-heading text-xl tracking-tight text-foreground">
-              RapportAI
-            </span>
-          </div>
-          <div className="flex items-center gap-5">
-            <Link href="/about">
-              <span className="hidden md:inline text-sm font-medium text-gray-500 hover:text-gray-900 transition-colors cursor-pointer">À propos</span>
-            </Link>
-            <Link href="/why">
-              <span className="hidden md:inline text-sm font-medium text-gray-500 hover:text-gray-900 transition-colors cursor-pointer">Pourquoi RapportAI</span>
-            </Link>
-            <Link href="/story">
-              <span className="hidden md:inline text-sm font-medium text-gray-500 hover:text-gray-900 transition-colors cursor-pointer">Notre histoire</span>
-            </Link>
-            <Link href="/sign-in">
-              <Button variant="ghost" className="hidden sm:inline-flex text-foreground hover:text-primary hover:bg-primary-light/50">
-                Se connecter
-              </Button>
-            </Link>
-            <Link href="/sign-up">
-              <Button className="bg-primary text-white hover:bg-primary-dark shadow-[0_4px_24px_rgba(124,58,237,0.12)] rounded-full px-6">
-                Commencer gratuitement <ArrowRight className="w-4 h-4 ml-1" />
-              </Button>
-            </Link>
-          </div>
-        </div>
-      </header>
+      <PublicNavbar />
 
       <main className="flex-1">
         {/* 2. HERO */}
@@ -596,15 +563,14 @@ export default function LandingPage() {
             </div>
             
             <div className="flex flex-wrap gap-x-8 gap-y-4 text-sm font-medium text-secondary-foreground">
-              <a href="#" className="hover:text-primary transition-colors">Fonctionnalités</a>
               <a href="#" className="hover:text-primary transition-colors">Blog</a>
-              <a href="#" className="hover:text-primary transition-colors">Contact</a>
+              <a href={`mailto:support@rapportai.io`} className="hover:text-primary transition-colors">Contact</a>
             </div>
-            
+
             <div className="flex flex-wrap gap-x-8 gap-y-4 text-sm text-muted-foreground">
               <Link href="/terms" className="hover:text-foreground transition-colors">CGU</Link>
               <Link href="/privacy" className="hover:text-foreground transition-colors">Politique de confidentialité</Link>
-              <a href="#" className="hover:text-foreground transition-colors">Remboursement</a>
+              <Link href="/terms" className="hover:text-foreground transition-colors">Remboursement</Link>
             </div>
           </div>
           

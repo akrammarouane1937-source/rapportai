@@ -1,29 +1,13 @@
-import { useLocation, Link } from "wouter";
-import { ArrowLeft } from "lucide-react";
+import { Link } from "wouter";
+import PublicNavbar from "@/components/layout/PublicNavbar";
 
 const LAST_UPDATED = "21 mai 2026";
 const SUPPORT_EMAIL = "support@rapportai.io";
 
 export default function PrivacyPage() {
-  const [, navigate] = useLocation();
-
   return (
     <div className="min-h-screen bg-white">
-      {/* Header */}
-      <header className="border-b border-gray-100 sticky top-0 bg-white/95 backdrop-blur z-10">
-        <div className="max-w-3xl mx-auto px-6 py-4 flex items-center gap-4">
-          <button
-            onClick={() => navigate("/")}
-            className="w-8 h-8 rounded-lg flex items-center justify-center text-gray-400 hover:text-gray-600 hover:bg-gray-100 transition-colors"
-          >
-            <ArrowLeft className="w-4 h-4" />
-          </button>
-          <div>
-            <h1 className="text-sm font-bold text-gray-900">Politique de Confidentialité</h1>
-            <p className="text-xs text-gray-400">Dernière mise à jour : {LAST_UPDATED}</p>
-          </div>
-        </div>
-      </header>
+      <PublicNavbar />
 
       <main className="max-w-3xl mx-auto px-6 py-12">
         <div className="prose prose-gray max-w-none">
