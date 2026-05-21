@@ -551,12 +551,19 @@ router.post("/chat", async (req: Request, res: Response) => {
   res.setHeader("Connection", "keep-alive");
   res.flushHeaders();
 
-  const subject = theme         ?? "le sujet du rapport";
-  const ecole   = school        ?? "l'école";
-  const fil     = filiere       ?? "la filière";
-  const type    = reportType    ?? "rapport de fin d'études";
-  const prob    = problematique ?? "";
-  const student = studentName   ?? "l'étudiant(e)";
+  // Sanitize user-supplied strings before injecting into system prompt
+  const chatSanitize = (v: string | undefined, max = 300) =>
+    (v ?? "").trim().slice(0, max).replace(/ignore\s+(all\s+)?previous\s+instructions/gi, "[supprimé]")
+             .replace(/ignore\s+(all\s+)?above\s+instructions/gi, "[supprimé]")
+             .replace(/reveal\s+(your\s+)?(system\s+)?prompt/gi, "[supprimé]")
+             .replace(/you\s+are\s+now\s+/gi, "[supprimé]");
+
+  const subject = chatSanitize(theme,         200) || "le sujet du rapport";
+  const ecole   = chatSanitize(school,        100) || "l'école";
+  const fil     = chatSanitize(filiere,       100) || "la filière";
+  const type    = chatSanitize(reportType,     50) || "rapport de fin d'études";
+  const prob    = chatSanitize(problematique, 600);
+  const student = chatSanitize(studentName,   120) || "l'étudiant(e)";
 
   // Build section preview lines (280 chars each) for the system prompt
   const sectionLines: string[] = [];

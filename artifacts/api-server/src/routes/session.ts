@@ -14,6 +14,73 @@ import {
   updateReportFields,
 } from "../lib/memory";
 
+// ─── Input sanitization + prompt injection prevention ────────────────────────
+
+const INJECTION_PATTERNS = [
+  /ignore\s+(all\s+)?previous\s+instructions/i,
+  /ignore\s+(all\s+)?above\s+instructions/i,
+  /disregard\s+(your\s+)?instructions/i,
+  /forget\s+(all\s+)?previous\s+instructions/i,
+  /you\s+are\s+now\s+/i,
+  /act\s+as\s+(if\s+you\s+are|a)\s+/i,
+  /reveal\s+(your\s+)?(system\s+)?prompt/i,
+  /output\s+(your\s+)?instructions/i,
+  /print\s+(your\s+)?system\s+prompt/i,
+  /jailbreak/i,
+  /dan\s+mode/i,
+  /developer\s+mode/i,
+];
+
+function sanitize(value: string): string {
+  let s = value.trim();
+  // Strip prompt injection attempts
+  for (const pattern of INJECTION_PATTERNS) {
+    s = s.replace(pattern, "[contenu supprimé]");
+  }
+  // Collapse excessive whitespace / newlines
+  s = s.replace(/\n{4,}/g, "\n\n").replace(/\s{10,}/g, " ");
+  return s;
+}
+
+interface IntakeValidationError { field: string; message: string }
+
+function validateAndSanitizeIntake(profile: Record<string, unknown>): IntakeValidationError | null {
+  const name = (profile.studentName as string | undefined)?.trim() ?? "";
+  if (!name || name.length < 2)
+    return { field: "studentName", message: "Nom requis (minimum 2 caractères)" };
+  if (name.length > 120)
+    return { field: "studentName", message: "Nom trop long (maximum 120 caractères)" };
+
+  const theme = (profile.theme as string | undefined)?.trim() ?? "";
+  if (!theme || theme.length < 10)
+    return { field: "theme", message: "Thème trop vague (minimum 10 caractères)" };
+  if (theme.length > 500)
+    return { field: "theme", message: "Thème trop long (maximum 500 caractères)" };
+
+  if (!(profile.school as string | undefined)?.trim())
+    return { field: "school", message: "École requise" };
+
+  if (!(profile.filiere as string | undefined)?.trim())
+    return { field: "filiere", message: "Filière requise" };
+
+  if (!(profile.reportType as string | undefined)?.trim())
+    return { field: "reportType", message: "Type de rapport requis" };
+
+  // Sanitize in-place
+  profile.studentName = sanitize(name);
+  profile.theme       = sanitize(theme);
+  if (profile.problematique)
+    profile.problematique = sanitize((profile.problematique as string).slice(0, 800));
+  if (profile.encadrantPeda)
+    profile.encadrantPeda = sanitize((profile.encadrantPeda as string).slice(0, 120));
+  if (profile.encadrantPro)
+    profile.encadrantPro  = sanitize((profile.encadrantPro  as string).slice(0, 120));
+  if (profile.entreprise)
+    profile.entreprise    = sanitize((profile.entreprise    as string).slice(0, 200));
+
+  return null;
+}
+
 // ─── Page-by-page state tracker ──────────────────────────────────────────────
 // Tracks which page we're currently on per (session, section).
 // Survives the session lifetime; reset explicitly via ?reset=true.
@@ -172,14 +239,9 @@ router.post("/session/start", (req: Request, res: Response) => {
     existingSections?: Record<string, string>;
   };
 
-  if (
-    !profile.studentName?.trim() ||
-    !profile.school?.trim() ||
-    !profile.theme?.trim() ||
-    !profile.filiere?.trim() ||
-    !profile.reportType?.trim()
-  ) {
-    res.status(400).json({ error: "studentName, school, theme, filiere, and reportType are required" });
+  const validationError = validateAndSanitizeIntake(profile as unknown as Record<string, unknown>);
+  if (validationError) {
+    res.status(400).json({ error: validationError.message, field: validationError.field });
     return;
   }
 
