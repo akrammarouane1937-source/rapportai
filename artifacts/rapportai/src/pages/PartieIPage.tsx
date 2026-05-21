@@ -13,6 +13,7 @@ import { Button } from "@/components/ui/button";
 import { Sidebar } from "@/components/layout/Sidebar";
 import { WordPreview } from "@/components/report/WordPreview";
 import { PageCard } from "@/components/report/PageCard";
+import { PaywallModal } from "@/components/report/PaywallModal";
 import { useGenerate, ensureSession } from "@/lib/useGenerate";
 import { usePageMode } from "@/lib/usePageMode";
 import { markdownToHtml } from "@/lib/markdownToHtml";
@@ -20,6 +21,7 @@ import { saveReport, getReport } from "@/lib/reportStore";
 import { ScholarChips } from "@/components/figures/ScholarChips";
 import { FigurePanel } from "@/components/figures/FigurePanel";
 import { API_BASE as BASE_PATH } from "@/lib/apiBase";
+import { getMyPlan } from "@/lib/userPlan";
 
 
 function KeywordChip({ label, onRemove }: { label: string; onRemove: () => void }) {
@@ -46,6 +48,11 @@ type GenerationMode = "full" | "page";
 export default function PartieIPage() {
   const [, setLocation] = useLocation();
   const report = getReport();
+  const myPlan = getMyPlan();
+  const isFree = myPlan.planId === "free";
+  // Free users see the stream cut at ~700 words (~35% of a typical Partie I)
+  const paywallWords = isFree ? 700 : undefined;
+  const [paywallOpen, setPaywallOpen] = useState(false);
   const [generationMode, setGenerationMode] = useState<GenerationMode>("full");
   const [keywords, setKeywords] = useState<string[]>(report.motsCles ?? []);
   const [problematique, setProblematique] = useState(report.problematique ?? "");
@@ -100,6 +107,8 @@ export default function PartieIPage() {
   const { generate, isStreaming: generating, streamingStatus, activityLog, clearActivity } = useGenerate({
     onChunk,
     onDone,
+    onPaywall: isFree ? () => setPaywallOpen(true) : undefined,
+    paywallWords,
   });
 
   // Feature 10 — chat panel
@@ -606,13 +615,17 @@ export default function PartieIPage() {
               />
             )}
             {generationMode === "full" ? (
-              <WordPreview
-                content={previewContent || undefined}
-                rawContent={rawTextRef.current || undefined}
-                sectionTitle="Partie I"
-                wordCount={wordCount}
-                sectionId="partie-i"
-              />
+              <div className="relative h-full">
+                <WordPreview
+                  content={previewContent || undefined}
+                  rawContent={rawTextRef.current || undefined}
+                  sectionTitle="Partie I"
+                  wordCount={wordCount}
+                  sectionId="partie-i"
+                  blurred={paywallOpen}
+                />
+                <PaywallModal open={paywallOpen} />
+              </div>
             ) : (
               <div className="h-full overflow-y-auto bg-[#f9f8ff] p-6">
                 {/* Page cards header */}

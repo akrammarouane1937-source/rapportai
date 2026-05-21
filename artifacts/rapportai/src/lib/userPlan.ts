@@ -10,16 +10,18 @@ export interface UserPlanData {
 }
 
 export interface PlanLimit {
-  sections:  number;
-  revisions: number;
-  label:     string;
-  priceUsd:  number;
+  sections:     number;   // max sections (Infinity = unlimited)
+  revisions:    number;   // max revision calls per session
+  previewRatio: number;   // fraction of content shown (1 = full, 0.35 = 35%)
+  label:        string;
+  priceUsd:     number;
 }
 
 export const PLAN_LIMITS: Record<PlanId, PlanLimit> = {
-  free:    { sections: 3,        revisions: 2,        label: "Gratuit", priceUsd: 0  },
-  starter: { sections: 60,       revisions: 10,       label: "Starter", priceUsd: 37 },
-  pro:     { sections: Infinity, revisions: Infinity, label: "Pro",     priceUsd: 67 },
+  //                sections  revisions  previewRatio  label      price
+  free:    { sections: 1,        revisions: 0,        previewRatio: 0.35, label: "Gratuit", priceUsd: 0  },
+  starter: { sections: 60,       revisions: 20,       previewRatio: 1,    label: "Starter", priceUsd: 37 },
+  pro:     { sections: Infinity, revisions: Infinity, previewRatio: 1,    label: "Pro",     priceUsd: 67 },
 };
 
 export const PLAN_FEATURES: Record<PlanId, string[]> = {
@@ -70,6 +72,14 @@ export function canRevise(planId: PlanId, revisionCount: number): boolean {
 
 export function canUseFeature(feature: string, planId: PlanId): boolean {
   return PLAN_FEATURES[planId].includes(feature);
+}
+
+/** Returns the word index at which to cut off preview content (for free plan) */
+export function previewCutoff(planId: PlanId, content: string): number | null {
+  const ratio = PLAN_LIMITS[planId].previewRatio;
+  if (ratio >= 1) return null; // no cutoff
+  const words = content.split(/\s+/).filter(Boolean);
+  return Math.floor(words.length * ratio);
 }
 
 export function upgradeCost(from: PlanId, to: PlanId): number {
