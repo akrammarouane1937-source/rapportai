@@ -52,10 +52,10 @@ export function PaywallModal({ open }: PaywallModalProps) {
                 <Lock className="w-6 h-6 text-purple-600" />
               </div>
               <h2 className="text-xl font-bold text-gray-900 mb-2" style={{ fontFamily: "'Plus Jakarta Sans', sans-serif" }}>
-                Tu viens de voir la qualité du rapport
+                Ton rapport complet t'attend
               </h2>
               <p className="text-sm text-gray-500">
-                Débloque la génération complète pour obtenir ton rapport académique entier.
+                Passe au plan suivant et génère l'intégralité de ton rapport en quelques minutes.
               </p>
             </div>
 
