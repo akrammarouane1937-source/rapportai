@@ -1,6 +1,6 @@
 import { Router, type Request, type Response } from "express";
 import multer from "multer";
-import Anthropic from "@anthropic-ai/sdk";
+import { anthropic } from "@workspace/integrations-anthropic-ai";
 import { fromBuffer } from "pdf2pic";
 import sharp from "sharp";
 import { logger } from "../lib/logger";
@@ -42,8 +42,7 @@ interface PageDetection {
 }
 
 async function detectFiguresOnPage(pageImageBuffer: Buffer, pageNumber: number): Promise<PageDetection> {
-  const client = new Anthropic();
-  const response = await client.messages.create({
+  const response = await anthropic.messages.create({
     model: "claude-opus-4-7",
     max_tokens: 1000,
     messages: [{
