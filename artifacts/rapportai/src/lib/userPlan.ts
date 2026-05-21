@@ -1,25 +1,31 @@
 const KEY = "rapportai_plan_v1";
 
-export type PlanId = "free" | "essentiel" | "pro" | "premium";
+export type PlanId = "free" | "starter" | "pro";
 
 export interface UserPlanData {
   planId: PlanId;
   revisionCount: number;
+  sectionsGenerated: number;
   purchasedAt?: number;
 }
 
-export const PLAN_LIMITS: Record<PlanId, { pages: number; revisions: number; label: string; price: number }> = {
-  free:      { pages: 5,        revisions: 3,        label: "Gratuit",  price: 0   },
-  essentiel: { pages: 30,       revisions: 10,       label: "Essentiel",price: 149 },
-  pro:       { pages: 60,       revisions: Infinity, label: "Pro",      price: 449 },
-  premium:   { pages: Infinity, revisions: Infinity, label: "Premium",  price: 749 },
+export interface PlanLimit {
+  sections:  number;
+  revisions: number;
+  label:     string;
+  priceUsd:  number;
+}
+
+export const PLAN_LIMITS: Record<PlanId, PlanLimit> = {
+  free:    { sections: 3,        revisions: 2,        label: "Gratuit", priceUsd: 0  },
+  starter: { sections: 60,       revisions: 10,       label: "Starter", priceUsd: 37 },
+  pro:     { sections: Infinity, revisions: Infinity, label: "Pro",     priceUsd: 67 },
 };
 
 export const PLAN_FEATURES: Record<PlanId, string[]> = {
-  free:      [],
-  essentiel: ["pdf", "citations"],
-  pro:       ["pdf", "juryai", "anti-plagiat", "citations", "certificat"],
-  premium:   ["pdf", "juryai", "anti-plagiat", "citations", "certificat", "powerpoint"],
+  free:    [],
+  starter: ["pdf", "anti-plagiat"],
+  pro:     ["pdf", "anti-plagiat", "juryai", "certificat", "powerpoint"],
 };
 
 export function getMyPlan(): UserPlanData {
@@ -27,7 +33,8 @@ export function getMyPlan(): UserPlanData {
     const raw = localStorage.getItem(KEY);
     if (raw) return JSON.parse(raw) as UserPlanData;
   } catch {}
-  return { planId: "pro", revisionCount: 0 };
+  // Default during free launch: pro with no limits
+  return { planId: "pro", revisionCount: 0, sectionsGenerated: 0 };
 }
 
 export function saveMyPlan(patch: Partial<UserPlanData>): void {
@@ -44,20 +51,32 @@ export function incrementRevision(): UserPlanData {
   return next;
 }
 
-/** Returns true when the user's plan allows this feature */
+export function incrementSections(count = 1): UserPlanData {
+  const plan = getMyPlan();
+  const next = { ...plan, sectionsGenerated: (plan.sectionsGenerated ?? 0) + count };
+  saveMyPlan(next);
+  return next;
+}
+
+export function canGenerateSection(planId: PlanId, sectionsGenerated: number): boolean {
+  const limit = PLAN_LIMITS[planId].sections;
+  return limit === Infinity || sectionsGenerated < limit;
+}
+
+export function canRevise(planId: PlanId, revisionCount: number): boolean {
+  const limit = PLAN_LIMITS[planId].revisions;
+  return limit === Infinity || revisionCount < limit;
+}
+
 export function canUseFeature(feature: string, planId: PlanId): boolean {
   return PLAN_FEATURES[planId].includes(feature);
 }
 
-/** Returns the MAD price difference to upgrade to the next plan (e.g. essentiel → pro = 300) */
 export function upgradeCost(from: PlanId, to: PlanId): number {
-  return Math.max(0, PLAN_LIMITS[to].price - PLAN_LIMITS[from].price);
+  return Math.max(0, PLAN_LIMITS[to].priceUsd - PLAN_LIMITS[from].priceUsd);
 }
 
-/** Returns the next recommended plan to suggest */
 export function nextPlan(planId: PlanId): PlanId {
-  if (planId === "free") return "essentiel";
-  if (planId === "essentiel") return "pro";
-  if (planId === "pro") return "premium";
-  return "premium";
+  if (planId === "free") return "starter";
+  return "pro";
 }

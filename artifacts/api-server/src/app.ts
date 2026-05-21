@@ -10,6 +10,7 @@ import {
 } from "./middlewares/clerkProxyMiddleware";
 import router from "./routes";
 import { logger } from "./lib/logger";
+import { attachPlan } from "./lib/plan-guard";
 
 const app: Express = express();
 
@@ -146,6 +147,9 @@ app.use("/api/generate",        rateLimit);
 app.use("/api/chat",            rateLimit);
 app.use("/api/session/start",   rateLimitStrict);
 app.use("/api/session",         rateLimit);  // generate + revise + upload
+
+// Attach plan context to every /api request (bypassed during FREE_LAUNCH)
+app.use("/api", attachPlan);
 
 app.use("/api", router);
 

@@ -13,6 +13,7 @@ import {
   incrementSessionCount,
   updateReportFields,
 } from "../lib/memory";
+import { guardSectionLimit, guardRevisionLimit } from "../lib/plan-guard";
 
 // ─── Input sanitization + prompt injection prevention ────────────────────────
 
@@ -345,6 +346,7 @@ router.post("/session/start", (req: Request, res: Response) => {
 
 router.post(
   "/session/:sessionId/generate",
+  guardSectionLimit,
   async (req: Request, res: Response) => {
     const { sessionId } = req.params;
     const { section, problematique, extraContext, figures } = req.body as {
@@ -532,6 +534,7 @@ router.get("/session/:sessionId/state", (req: Request, res: Response) => {
 
 router.post(
   "/session/:sessionId/revise",
+  guardRevisionLimit,
   async (req: Request, res: Response) => {
     const { sessionId } = req.params;
     const { sectionId, instruction } = req.body as {

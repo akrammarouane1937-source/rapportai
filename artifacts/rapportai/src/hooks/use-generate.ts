@@ -2,6 +2,7 @@ import { useState, useCallback, useRef } from "react";
 import { API_BASE } from "@/lib/apiBase";
 import { useReportStore } from "@/lib/store";
 import { useFileStore } from "@/lib/fileStore";
+import { getMyPlan } from "@/lib/userPlan";
 
 const SESSION_KEY = "rapportai_session";
 const SESSION_TS_KEY = "rapportai_session_ts";
@@ -128,6 +129,12 @@ export function useGenerate() {
         const sessionId = await getOrCreateSession();
 
         const makeRequest = (sid: string) => {
+          const planData = getMyPlan();
+          const planHeaders: Record<string, string> = {
+            "x-plan-id":            planData.planId,
+            "x-sections-generated": String(planData.sectionsGenerated ?? 0),
+            "x-revision-count":     String(planData.revisionCount ?? 0),
+          };
           if (allFiles.length > 0) {
             const form = new FormData();
             form.append("section", section);
@@ -136,13 +143,14 @@ export function useGenerate() {
             for (const file of allFiles) form.append("files", file, file.name);
             return fetch(`${API_BASE}/api/session/${sid}/generate`, {
               method: "POST",
+              headers: planHeaders,
               body: form,
               signal: controller.signal,
             });
           }
           return fetch(`${API_BASE}/api/session/${sid}/generate`, {
             method: "POST",
-            headers: { "Content-Type": "application/json" },
+            headers: { "Content-Type": "application/json", ...planHeaders },
             body: JSON.stringify({ section, ...reportData, extraContext: extraPrompt, figures }),
             signal: controller.signal,
           });
