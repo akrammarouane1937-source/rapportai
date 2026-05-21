@@ -1,6 +1,7 @@
 import { Router, type IRouter } from "express";
 import { HealthCheckResponse } from "@workspace/api-zod";
 import { findClaudeBinary } from "../lib/find-claude-binary";
+import { metrics } from "../lib/metrics";
 import { execSync } from "child_process";
 
 const router: IRouter = Router();
@@ -38,6 +39,16 @@ router.get("/api/diag", (_req, res) => {
     cwd: process.cwd(),
     sessions_dir: process.env.SESSIONS_DIR ?? "/tmp/rapportai-sessions (default)",
   });
+});
+
+// GET /api/metrics — live stats dashboard (protect with internal token in prod)
+router.get("/api/metrics", (req, res) => {
+  const token = process.env.METRICS_TOKEN;
+  if (token && req.headers["x-metrics-token"] !== token) {
+    res.status(401).json({ error: "Unauthorized" });
+    return;
+  }
+  res.json(metrics.getStats());
 });
 
 export default router;

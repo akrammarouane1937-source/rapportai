@@ -99,6 +99,7 @@ function resetPage(sessionId: string, sectionId: string): void {
   pageStateMap.get(sessionId)?.set(sectionId, 0);
 }
 import { runInternalHumanize } from "../lib/humanize-util";
+import { metrics, estimateCost } from "../lib/metrics";
 import { writeFileSync } from "fs";
 import path from "path";
 
@@ -379,6 +380,8 @@ router.post(
     // partialSections accumulates whatever the agent writes to disk — used for
     // partial recovery if the agent hits its turn limit mid-generation
     let partialSections: Record<string, string> = {};
+    const genStart = Date.now();
+    metrics.recordStart();
 
     try {
       const task = agent.buildSectionTask(section, { extraContext, figures });
@@ -464,15 +467,32 @@ router.post(
           partialSections[section] = humanized;
         }
 
+        const finalWords = (partialSections[section] ?? "").split(/\s+/).filter(Boolean).length;
         markSectionComplete(sessionId, section, {
-          word_count: (partialSections[section] ?? "").split(/\s+/).filter(Boolean).length,
+          word_count: finalWords,
           key_points: (partialSections[section] ?? "").slice(0, 300).replace(/#+\s*/g, "").trim(),
+        });
+
+        metrics.record({
+          section,
+          latencyMs:  Date.now() - genStart,
+          success:    true,
+          wordCount:  finalWords,
+          costUsd:    estimateCost(section, finalWords),
         });
 
         res.write(`data: ${JSON.stringify({ done: true, sections: partialSections })}\n\n`);
       }
     } catch (err: unknown) {
       const message = err instanceof Error ? err.message : "Unknown error";
+      metrics.record({
+        section,
+        latencyMs: Date.now() - genStart,
+        success:   false,
+        wordCount: 0,
+        costUsd:   0,
+        error:     message.slice(0, 200),
+      });
       // Turn-limit hit — read disk and return whatever was generated (Replit pattern)
       partialSections = agent.getSections();
       if (message.includes("maximum number of turns") || message.includes("turn limit")) {
