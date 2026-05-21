@@ -108,9 +108,7 @@ function SignInPage() {
         style={{ background: "linear-gradient(135deg, #7c3aed 0%, #5b21b6 100%)" }}>
         <div className="max-w-md text-center">
           <div className="flex items-center justify-center gap-3 mb-8">
-            <div className="w-12 h-12 bg-white/20 rounded-xl flex items-center justify-center">
-              <span className="text-white text-2xl font-bold">R</span>
-            </div>
+            <img src="/logo.svg" alt="RapportAI" className="w-12 h-12" />
             <span className="text-3xl font-bold" style={{ fontFamily: "'Plus Jakarta Sans', sans-serif" }}>
               RapportAI
             </span>
@@ -158,9 +156,7 @@ function SignUpPage() {
         style={{ background: "linear-gradient(135deg, #7c3aed 0%, #5b21b6 100%)" }}>
         <div className="max-w-md text-center">
           <div className="flex items-center justify-center gap-3 mb-8">
-            <div className="w-12 h-12 bg-white/20 rounded-xl flex items-center justify-center">
-              <span className="text-white text-2xl font-bold">R</span>
-            </div>
+            <img src="/logo.svg" alt="RapportAI" className="w-12 h-12" />
             <span className="text-3xl font-bold" style={{ fontFamily: "'Plus Jakarta Sans', sans-serif" }}>
               RapportAI
             </span>
