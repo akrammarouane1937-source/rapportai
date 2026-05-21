@@ -2,8 +2,8 @@ import { useLocation, Link } from "wouter";
 import { ArrowLeft } from "lucide-react";
 
 const LAST_UPDATED = "21 mai 2026";
-const SUPPORT_EMAIL = "support@rapportai.ma";
-const APP_URL = "rapportai.ma";
+const SUPPORT_EMAIL = "support@rapportai.io";
+const APP_URL = "rapportai.io";
 
 export default function TermsPage() {
   const [, navigate] = useLocation();

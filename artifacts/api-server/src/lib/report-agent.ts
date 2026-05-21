@@ -542,7 +542,7 @@ Termine par write_section avec section_id: "resume".`;
           // Fallback: CrossRef (also free, great for DOIs)
           const crUrl = `https://api.crossref.org/works?query=${encodeURIComponent(query)}&rows=${max}&select=title,author,published,DOI,container-title`;
           const crResp = await fetch(crUrl, {
-            headers: { "User-Agent": "RapportAI/1.0 (mailto:support@rapportai.ma)" },
+            headers: { "User-Agent": "RapportAI/1.0 (mailto:support@rapportai.io)" },
             signal: AbortSignal.timeout(8000),
           });
 

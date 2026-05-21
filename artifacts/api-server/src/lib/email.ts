@@ -10,8 +10,8 @@ function getResend(): Resend {
   return new Resend(key);
 }
 
-const FROM = "RapportAI <no-reply@rapportai.ma>";
-const APP_URL = process.env.APP_URL ?? "https://rapportai.ma";
+const FROM = "RapportAI <no-reply@rapportai.io>";
+const APP_URL = process.env.APP_URL ?? "https://rapportai.io";
 
 // ─── Template builders ────────────────────────────────────────────────────────
 

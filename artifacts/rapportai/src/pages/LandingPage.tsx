@@ -708,7 +708,7 @@ function DemoAnimation() {
           <div className="w-3 h-3 rounded-full bg-[#10b981]"></div>
         </div>
         <div className="mx-auto bg-white border border-border rounded-md text-xs text-muted-foreground px-24 py-1.5 flex items-center gap-2">
-          <Sparkles className="w-3 h-3" /> rapportai.ma/app
+          <Sparkles className="w-3 h-3" /> rapportai.io/app
         </div>
       </div>
       

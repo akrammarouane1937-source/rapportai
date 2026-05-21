@@ -2,7 +2,7 @@ import { useLocation, Link } from "wouter";
 import { ArrowLeft } from "lucide-react";
 
 const LAST_UPDATED = "21 mai 2026";
-const SUPPORT_EMAIL = "support@rapportai.ma";
+const SUPPORT_EMAIL = "support@rapportai.io";
 
 export default function PrivacyPage() {
   const [, navigate] = useLocation();
@@ -29,13 +29,13 @@ export default function PrivacyPage() {
         <div className="prose prose-gray max-w-none">
 
           <h1 className="text-3xl font-bold text-gray-900 mb-2">Politique de Confidentialité</h1>
-          <p className="text-gray-500 mb-10">RapportAI — rapportai.ma</p>
+          <p className="text-gray-500 mb-10">RapportAI — rapportai.io</p>
 
           {/* Section 1 */}
           <section className="mb-8">
             <h2 className="text-xl font-bold text-gray-900 mb-3">1. Responsable du traitement</h2>
             <p className="text-gray-700 leading-relaxed">
-              RapportAI, accessible à l'adresse rapportai.ma.<br />
+              RapportAI, accessible à l'adresse rapportai.io.<br />
               Contact :{" "}
               <a href={`mailto:${SUPPORT_EMAIL}`} className="text-purple-600 hover:underline">{SUPPORT_EMAIL}</a>
             </p>
