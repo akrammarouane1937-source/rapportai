@@ -43,12 +43,27 @@
 **Three steps:**
 
 1. **Add env var** — `RESEND_API_KEY=re_...` on Render (free account at resend.com, 3 000 emails/month free)
-2. **Verify domain** — Add rapportai.ma in Resend dashboard → adds 2 DNS records → takes ~10 min
+2. **Verify domain** — Add rapportai.io in Resend dashboard → adds 2 DNS records → takes ~10 min
 3. **Wire frontend signup** — On Clerk sign-in callback, call `POST /api/referral/register` with `{ clerkId, email, name, refCode? }`. The `email` and `name` come from `useUser()` (Clerk). This fires the welcome email automatically.
 
 **Also update export:** When calling `POST /api/session/:id/complete`, pass `{ subject, word_count, sections_count }` in the body to populate the report_ready email content.
 
 **Note:** Password reset is handled by Clerk — no action needed there.
+
+---
+
+## 7. Domain + infrastructure batch (do all at once in ~1 session)
+**When:** Once Anthropic API credits are topped up (~4 days from 2026-05-21).
+
+**Order of operations:**
+1. Top up Anthropic API credits
+2. Buy `rapportai.io` (Namecheap / Gandi)
+3. Connect domain to Clerk — update auth URLs in Clerk dashboard
+4. Connect domain to Resend — verify DNS records → activates `no-reply@rapportai.io`
+5. Start Google Workspace Starter trial → creates `support@rapportai.io` inbox for user replies
+6. Set `APP_URL=https://rapportai.io` on Render
+7. Test full report flow end-to-end (generate → humanize → export)
+8. Share the link publicly
 
 ---
 
