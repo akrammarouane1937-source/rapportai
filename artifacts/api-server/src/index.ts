@@ -7,8 +7,12 @@ async function runMigrations() {
   try {
     const client = await pool.connect();
     await client.query(`
-      CREATE TYPE IF NOT EXISTS referral_status AS ENUM ('pending', 'completed', 'rewarded');
-      CREATE TYPE IF NOT EXISTS reward_status   AS ENUM ('pending', 'processing', 'paid');
+      DO $$ BEGIN
+        CREATE TYPE referral_status AS ENUM ('pending', 'completed', 'rewarded');
+      EXCEPTION WHEN duplicate_object THEN NULL; END $$;
+      DO $$ BEGIN
+        CREATE TYPE reward_status AS ENUM ('pending', 'processing', 'paid');
+      EXCEPTION WHEN duplicate_object THEN NULL; END $$;
 
       CREATE TABLE IF NOT EXISTS users (
         id                      SERIAL PRIMARY KEY,
