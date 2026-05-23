@@ -67,7 +67,7 @@ export function ChatInput({
   return (
     <div
       className={cn("mx-4 mb-4 rounded-xl transition-all", isDragging && "ring-2 ring-violet-500")}
-      style={{ background: "#1e293b", border: "1px solid #334155" }}
+      style={{ background: "#fff", border: "1px solid #e9d5ff" }}
       onDragOver={onDragOver}
       onDragLeave={onDragLeave}
       onDrop={onDrop}
@@ -79,7 +79,7 @@ export function ChatInput({
             <div
               key={idx}
               className="flex items-center gap-1.5 px-2 py-1 rounded-lg text-xs"
-              style={{ background: "#0f172a", color: "#94a3b8", border: "1px solid #334155" }}
+              style={{ background: "#f5f0ff", color: "#7c3aed", border: "1px solid #ede9fe" }}
             >
               <FileText className="w-3 h-3 shrink-0" />
               <span className="max-w-[120px] truncate">{file.name}</span>
@@ -102,8 +102,8 @@ export function ChatInput({
         rows={1}
         className="w-full resize-none px-4 pt-3 pb-1 text-sm bg-transparent outline-none disabled:opacity-40"
         style={{
-          color: "#e2e8f0",
-          caretColor: "#a78bfa",
+          color: "#1e1b4b",
+          caretColor: "#7c3aed",
           height: "auto",
           maxHeight: "120px",
           minHeight: "44px",
@@ -130,9 +130,9 @@ export function ChatInput({
               title={title}
               onClick={() => ref.current?.click()}
               className="p-1.5 rounded-lg transition-colors"
-              style={{ color: "#475569" }}
-              onMouseEnter={(e) => (e.currentTarget.style.color = "#94a3b8")}
-              onMouseLeave={(e) => (e.currentTarget.style.color = "#475569")}
+              style={{ color: "#a78bfa" }}
+              onMouseEnter={(e) => (e.currentTarget.style.color = "#7c3aed")}
+              onMouseLeave={(e) => (e.currentTarget.style.color = "#a78bfa")}
             >
               {icon}
             </button>
@@ -155,8 +155,8 @@ export function ChatInput({
             disabled={!canSend}
             className="w-8 h-8 rounded-lg flex items-center justify-center transition-all disabled:opacity-30"
             style={{
-              background: canSend ? "linear-gradient(135deg,#7c3aed,#a855f7)" : "#1e293b",
-              border: canSend ? "none" : "1px solid #334155",
+              background: canSend ? "linear-gradient(135deg,#7c3aed,#a855f7)" : "#f3f4f6",
+              border: canSend ? "none" : "1px solid #e5e7eb",
             }}
           >
             <ArrowUp className="w-4 h-4 text-white" />
