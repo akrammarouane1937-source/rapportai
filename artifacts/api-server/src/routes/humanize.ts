@@ -19,7 +19,7 @@ interface HumanizeBody {
 // ─── Tools + limits ───────────────────────────────────────────────────────────
 
 const ALLOWED_TOOLS = ["Read", "Write", "Edit", "Grep", "Glob"];
-const MAX_TURNS = 3;
+const MAX_TURNS = 8;
 
 // ─── System prompt — loaded from file (humanize-system.md v2.6.0) ────────────
 
@@ -361,7 +361,7 @@ router.post("/humanize", async (req: Request, res: Response) => {
 
   try {
     for await (const message of query({
-      prompt: `Humanise ce texte pour le rendre indétectable par les outils anti-IA :\n\n${content}`,
+      prompt: `Humanise ce texte pour le rendre indétectable par les outils anti-IA. IMPORTANT : conserve TOUT le contenu, chaque paragraphe, chaque argument, chaque exemple — ne supprime et ne résume rien. Le texte de sortie doit faire au minimum 95% des mots du texte d'entrée.\n\n${content}`,
       options: {
         systemPrompt: SYSTEM_PROMPT,
         maxTurns: MAX_TURNS,
