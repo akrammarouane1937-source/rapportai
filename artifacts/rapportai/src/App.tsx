@@ -102,27 +102,44 @@ const clerkAppearance = {
   },
 };
 
-function AuthLeftPanel() {
+function AuthRightPanel() {
   return (
     <div className="hidden lg:block lg:w-1/2 relative overflow-hidden">
-      {/* Full-cover photo */}
       <img
         src="/auth-photo.jpg"
         alt="Étudiant en bibliothèque"
         className="absolute inset-0 w-full h-full object-cover object-center"
       />
-      {/* Dark overlay */}
-      <div className="absolute inset-0" style={{ background: "linear-gradient(to bottom, rgba(0,0,0,0.18) 0%, rgba(0,0,0,0.55) 100%)" }} />
-      {/* Content */}
-      <div className="relative z-10 flex flex-col justify-end h-full p-12 pb-16">
-        <p className="text-white/80 text-2xl font-light mb-3" style={{ fontFamily: "'Plus Jakarta Sans', sans-serif" }}>
+      <div className="absolute inset-0" style={{ background: "rgba(0,0,0,0.38)" }} />
+      <div className="relative z-10 flex flex-col items-center justify-center h-full text-center px-12">
+        <p className="text-white text-2xl font-light mb-4" style={{ fontFamily: "'Plus Jakarta Sans', sans-serif" }}>
           Les grandes carrières naissent sur
         </p>
-        <div className="flex items-center gap-3">
-          <img src="/logo.svg" alt="RapportAI" className="w-10 h-10" />
-          <span className="text-white text-3xl font-extrabold tracking-tight" style={{ fontFamily: "'Plus Jakarta Sans', sans-serif" }}>
+        <div className="flex items-center gap-3 bg-white/15 backdrop-blur-sm border border-white/25 rounded-2xl px-6 py-3">
+          <img src="/logo.svg" alt="RapportAI" className="w-9 h-9" />
+          <span className="text-white text-2xl font-extrabold tracking-tight" style={{ fontFamily: "'Plus Jakarta Sans', sans-serif" }}>
             RapportAI
           </span>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function AuthFormWrapper({ children }: { children: React.ReactNode }) {
+  return (
+    <div className="w-full lg:w-1/2 flex flex-col min-h-screen bg-white">
+      <div className="px-8 pt-6">
+        <a href={basePath || "/"} className="inline-flex items-center gap-2 group">
+          <img src="/logo.svg" alt="RapportAI" className="w-7 h-7" />
+          <span className="font-bold text-gray-900 text-lg group-hover:text-purple-600 transition-colors" style={{ fontFamily: "'Plus Jakarta Sans', sans-serif" }}>
+            RapportAI
+          </span>
+        </a>
+      </div>
+      <div className="flex-1 flex items-center justify-center p-8">
+        <div className="w-full max-w-md">
+          {children}
         </div>
       </div>
     </div>
@@ -132,17 +149,15 @@ function AuthLeftPanel() {
 function SignInPage() {
   return (
     <div className="flex min-h-screen">
-      <AuthLeftPanel />
-      <div className="w-full lg:w-1/2 flex items-center justify-center p-8 bg-white">
-        <div className="w-full max-w-md">
-          <SignIn
-            routing="path"
-            path={`${basePath}/sign-in`}
-            signUpUrl={`${basePath}/sign-up`}
-            forceRedirectUrl={`${basePath}/dashboard`}
-          />
-        </div>
-      </div>
+      <AuthFormWrapper>
+        <SignIn
+          routing="path"
+          path={`${basePath}/sign-in`}
+          signUpUrl={`${basePath}/sign-up`}
+          forceRedirectUrl={`${basePath}/dashboard`}
+        />
+      </AuthFormWrapper>
+      <AuthRightPanel />
     </div>
   );
 }
@@ -150,17 +165,15 @@ function SignInPage() {
 function SignUpPage() {
   return (
     <div className="flex min-h-screen">
-      <AuthLeftPanel />
-      <div className="w-full lg:w-1/2 flex items-center justify-center p-8 bg-white">
-        <div className="w-full max-w-md">
-          <SignUp
-            routing="path"
-            path={`${basePath}/sign-up`}
-            signInUrl={`${basePath}/sign-in`}
-            forceRedirectUrl={`${basePath}/onboarding`}
-          />
-        </div>
-      </div>
+      <AuthFormWrapper>
+        <SignUp
+          routing="path"
+          path={`${basePath}/sign-up`}
+          signInUrl={`${basePath}/sign-in`}
+          forceRedirectUrl={`${basePath}/onboarding`}
+        />
+      </AuthFormWrapper>
+      <AuthRightPanel />
     </div>
   );
 }
