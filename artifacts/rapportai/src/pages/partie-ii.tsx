@@ -24,7 +24,7 @@ export default function PartieII() {
   const [sourceFiles, setSourceFiles] = useState<File[]>([]);
   const [figureFiles, setFigureFiles] = useState<File[]>([]);
 
-  const titleFromStore = report.partieIITitle || "Partie II — Étude empirique";
+  const titleFromStore = report.partieIITitle || "Partie II : Étude empirique";
   const chaptersFromStore = report.partieIIChapters || 2;
 
   // Context injected by the orchestrator (e.g. Partie I summary for cross-section coherence)
@@ -40,7 +40,7 @@ export default function PartieII() {
           <p className="mt-1 text-muted-foreground text-sm">{chaptersFromStore} chapitre(s) prévu(s). C'est toujours bon ?</p>
           {injectedContext && (
             <p className="mt-2 text-xs text-blue-700 bg-blue-50 rounded-lg px-3 py-2 border border-blue-100">
-              Contexte Partie I chargé — la génération tiendra compte de ta partie théorique pour assurer la cohérence.
+              Contexte Partie I chargé. La génération tiendra compte de ta partie théorique pour assurer la cohérence.
             </p>
           )}
         </div>
@@ -175,9 +175,9 @@ export default function PartieII() {
         {phase === "done" && !isGenerating && (
           <StepTransitionCard
             title="Partie II complétée"
-            subtitle="Dernière étape — la conclusion et l'export."
+            subtitle="Dernière étape : la conclusion et l'export."
             onNext={() => { updateReport({ currentStep: 9 }); setLocation("/rapport/step-9"); }}
-            nextLabel="Étape 9 — Conclusion & Export"
+            nextLabel="Étape 9 : Conclusion & Export"
           />
         )}
         <div ref={bottomRef} />

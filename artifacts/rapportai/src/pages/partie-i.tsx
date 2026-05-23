@@ -24,7 +24,7 @@ export default function PartieI() {
   const [sourceFiles, setSourceFiles] = useState<File[]>([]);
   const [figureFiles, setFigureFiles] = useState<File[]>([]);
 
-  const titleFromStore = report.partieITitle || "Partie I — Cadre théorique";
+  const titleFromStore = report.partieITitle || "Partie I : Cadre théorique";
   const chaptersFromStore = report.partieIChapters || 2;
   const injectedContext = report.pendingContextInjection || "";
 
@@ -38,7 +38,7 @@ export default function PartieI() {
           <p className="mt-1 text-muted-foreground text-sm">{chaptersFromStore} chapitre(s) prévu(s). C'est toujours bon ?</p>
           {injectedContext && (
             <p className="mt-2 text-xs text-blue-700 bg-blue-50 rounded-lg px-3 py-2 border border-blue-100">
-              Contexte chargé — la génération tiendra compte des instructions de ton assistant principal.
+              Contexte chargé. La génération tiendra compte des instructions de ton assistant principal.
             </p>
           )}
         </div>
@@ -80,7 +80,7 @@ export default function PartieI() {
                 <div>
                   <p className="text-sm font-semibold text-amber-800">Sources académiques recommandées</p>
                   <p className="text-xs text-amber-700 mt-1">
-                    Ton encadrant va vérifier tes citations. Avec tes PDFs Google Scholar j'intègre les auteurs exacts, années et DOI — impossible à contester. Sans sources les références seront génériques.
+                    Ton encadrant va vérifier tes citations. Avec tes PDFs Google Scholar j'intègre les auteurs exacts, années et DOI, impossible à contester. Sans sources les références seront génériques.
                   </p>
                 </div>
               </div>
@@ -180,7 +180,7 @@ export default function PartieI() {
         {phase === "done" && !isGenerating && (
           <StepTransitionCard
             title="Partie I complétée"
-            subtitle="On passe au cœur de ta contribution — la Partie II."
+            subtitle="On passe au cœur de ta contribution : la Partie II."
             onNext={() => { updateReport({ currentStep: 8 }); setLocation("/rapport/partie-ii"); }}
             nextLabel="Partie II"
           />

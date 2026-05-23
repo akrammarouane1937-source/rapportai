@@ -274,7 +274,7 @@ export default function PartieIPage() {
           <div className="flex items-center justify-between mb-2">
             <div className="flex items-center gap-3">
               <span className="text-xs font-bold text-purple-600 bg-purple-50 px-2.5 py-1 rounded-full">Étape 7 sur 9</span>
-              <span className="text-xs text-gray-400">Partie I — Contenu principal</span>
+              <span className="text-xs text-gray-400">Partie I : Contenu principal</span>
             </div>
             <div className="flex items-center gap-2">
               {/* Feature 10 — chat toggle */}
@@ -421,7 +421,7 @@ export default function PartieIPage() {
                           className="text-gray-400 hover:text-gray-600 flex-shrink-0"><X className="w-4 h-4" /></button>
                       </div>
                       {uploadStatus === "uploading" && <p className="text-xs text-purple-500">Extraction du texte…</p>}
-                      {uploadStatus === "ready" && <p className="text-xs text-green-600 font-medium">✓ Document prêt — l'IA va le lire</p>}
+                      {uploadStatus === "ready" && <p className="text-xs text-green-600 font-medium">✓ Document prêt. L'IA va le lire.</p>}
                       {uploadStatus === "error" && <p className="text-xs text-red-500">{uploadError}</p>}
                     </div>
                   ) : (
@@ -554,7 +554,7 @@ export default function PartieIPage() {
                       onClick={() => setLocation("/rapport/partie-ii")}
                       className="w-full h-10 rounded-xl font-semibold text-sm flex items-center justify-center gap-2 bg-gray-900 hover:bg-gray-800 text-white transition-all"
                     >
-                      Continuer — Partie II <ArrowRight className="w-3.5 h-3.5" />
+                      Continuer : Partie II <ArrowRight className="w-3.5 h-3.5" />
                     </button>
                   )}
                 </>
@@ -580,7 +580,7 @@ export default function PartieIPage() {
                       }}
                       className="w-full h-10 rounded-xl font-semibold text-sm flex items-center justify-center gap-2 bg-gray-900 hover:bg-gray-800 text-white transition-all"
                     >
-                      Finaliser et continuer — Partie II <ArrowRight className="w-3.5 h-3.5" />
+                      Finaliser et continuer : Partie II <ArrowRight className="w-3.5 h-3.5" />
                     </button>
                   )}
                 </>
@@ -677,7 +677,7 @@ export default function PartieIPage() {
                 {pages.length > 0 && pages.every(p => p.status === "confirmed") && (
                   <div className="mt-4 p-4 bg-green-50 border border-green-200 rounded-2xl">
                     <p className="text-xs font-semibold text-green-700 mb-1">
-                      Section assemblée — {getAssembledContent().split(/\s+/).filter(Boolean).length} mots
+                      Section assemblée : {getAssembledContent().split(/\s+/).filter(Boolean).length} mots
                     </p>
                     <p className="text-xs text-green-600">
                       Toutes les pages sont confirmées. Clique sur "Continuer" pour passer à la Partie II.

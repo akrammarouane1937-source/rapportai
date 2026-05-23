@@ -85,7 +85,7 @@ function LaunchBanner() {
           <span className="text-lg" style={{ animation: "pulse-badge 1.2s ease infinite" }}>🔥</span>
           <div className="text-left">
             <span className="font-black text-sm uppercase tracking-wide">Lancement officiel</span>
-            <span className="mx-2 opacity-50">—</span>
+            <span className="mx-2 opacity-50">·</span>
             <span className="font-bold text-sm">Accès <span className="underline underline-offset-2 decoration-yellow-300">100% gratuit</span> limité</span>
           </div>
         </div>
@@ -175,7 +175,7 @@ export default function LandingPage() {
                 >
                   <span>🔥</span>
                   <span className="uppercase tracking-wide">Offre de lancement</span>
-                  <span className="mx-1 opacity-60">—</span>
+                  <span className="mx-1 opacity-60">·</span>
                   <span className="bg-white text-red-600 rounded-full px-2 py-0.5 text-xs font-black">{slotsLeft} places restantes</span>
                 </motion.div>
               )}
@@ -296,7 +296,7 @@ export default function LandingPage() {
             <FeatureRow 
               tag="RAPPORT COMPLET"
               title="Ton PFE entier rédigé. Pas juste des phrases."
-              para1="Entre ton thème, ta filière et ton école. RapportAI génère chaque section — introduction, cadre théorique, méthodologie, résultats."
+              para1="Entre ton thème, ta filière et ton école. RapportAI génère chaque section : introduction, cadre théorique, méthodologie, résultats."
               para2="Pas une aide à la rédaction. Le rapport complet."
               demo={<Feature1Demo />}
               isReversed={false}
@@ -305,8 +305,8 @@ export default function LandingPage() {
             <FeatureRow 
               tag="ANTI-DÉTECTION"
               title="Moins de 20% de détection IA. Testé."
-              para1="Chaque rapport passe par notre système d'humanisation. Résultat réel : 10.5% de détection IA sur ZeroGPT — bien en dessous du seuil de tout outil."
-              para2="Turnitin, iThenticate, ZeroGPT — testés. Ton rapport passe partout."
+              para1="Chaque rapport passe par notre système d'humanisation. Résultat réel : 10.5% de détection IA sur ZeroGPT, bien en dessous du seuil de tout outil."
+              para2="Turnitin, iThenticate, ZeroGPT : testés. Ton rapport passe partout."
               demo={<Feature2Demo />}
               isReversed={true}
             />
@@ -314,7 +314,7 @@ export default function LandingPage() {
             <FeatureRow 
               tag="ÉCRIT DEPUIS TES DONNÉES"
               title="L'IA écrit depuis tes données, pas depuis Google."
-              para1="Importe tes fichiers Excel ou CSV. RapportAI génère ton analyse à partir de tes vrais résultats — pas des généralités du web."
+              para1="Importe tes fichiers Excel ou CSV. RapportAI génère ton analyse à partir de tes vrais résultats, pas des généralités du web."
               para2="Tes données. Ta méthodologie. Tes conclusions."
               demo={<Feature3Demo />}
               isReversed={false}
@@ -339,13 +339,13 @@ export default function LandingPage() {
               Tu t'inquiètes que ton encadrant détecte l'IA ?<br />RapportAI est là.
             </h2>
             <p className="text-center text-muted-foreground mb-16 max-w-xl mx-auto">
-              Le même rapport. La même IA. La différence c'est notre système d'humanisation — testé sur ZeroGPT.
+              Le même rapport. La même IA. La différence c'est notre système d'humanisation, testé sur ZeroGPT.
             </p>
 
             <div className="grid md:grid-cols-2 gap-6">
               {/* BEFORE */}
               <div className="rounded-2xl border border-red-200 bg-red-50 p-8">
-                <p className="text-xs font-black uppercase tracking-widest text-red-400 mb-6">Avant — ChatGPT / Claude brut</p>
+                <p className="text-xs font-black uppercase tracking-widest text-red-400 mb-6">Avant : ChatGPT / Claude brut</p>
                 <div className="flex flex-col items-center">
                   <div className="relative w-48 h-24 overflow-hidden mb-4">
                     <div className="absolute inset-0 rounded-t-full border-[14px] border-red-200" style={{ borderBottomColor: "transparent" }} />
@@ -359,7 +359,7 @@ export default function LandingPage() {
 
               {/* AFTER */}
               <div className="rounded-2xl border border-green-200 bg-green-50 p-8">
-                <p className="text-xs font-black uppercase tracking-widest text-green-600 mb-6">Après — RapportAI + Humanisation</p>
+                <p className="text-xs font-black uppercase tracking-widest text-green-600 mb-6">Après : RapportAI + Humanisation</p>
                 <div className="flex flex-col items-center">
                   <div className="relative w-48 h-24 overflow-hidden mb-4">
                     <div className="absolute inset-0 rounded-t-full border-[14px] border-green-200" style={{ borderBottomColor: "transparent" }} />
@@ -389,7 +389,7 @@ export default function LandingPage() {
                   {[
                     "Rapport complet prêt à soumettre en 30 minutes",
                     "Compatible avec le canevas de ton école",
-                    "10.5% détection IA — testé ZeroGPT",
+                    "10.5% détection IA, testé ZeroGPT",
                     "Écrit depuis tes données, pas depuis le web",
                     "Export .docx formaté automatiquement",
                     "Prépare ta soutenance avec JuryAI"
@@ -463,7 +463,7 @@ export default function LandingPage() {
               Le jour de ta soutenance, ton encadrant ne sera pas là pour t'aider. Le jury va creuser. Contredire. Tester.
             </p>
             <p className="text-lg text-white/70 mb-10 max-w-2xl mx-auto">
-              JuryAI lit ton rapport et simule exactement ce moment — les vraies questions, le vrai stress. Arrive le jour J en sachant exactement quoi dire.
+              JuryAI lit ton rapport et simule exactement ce moment : les vraies questions, le vrai stress. Arrive le jour J en sachant exactement quoi dire.
             </p>
             
             <Link href="/sign-up">
@@ -483,7 +483,7 @@ export default function LandingPage() {
               {[
                 {
                   q: "Est-ce que Turnitin peut détecter du plagiat dans mon rapport ?",
-                  a: "Non. Chaque rapport est généré uniquement pour toi, à partir de tes données. Aucun contenu n'est partagé entre étudiants. Turnitin, iThenticate, PlagScan — aucun outil ne détectera quoi que ce soit. C'est comme si tu l'avais écrit toi-même."
+                  a: "Non. Chaque rapport est généré uniquement pour toi, à partir de tes données. Aucun contenu n'est partagé entre étudiants. Turnitin, iThenticate, PlagScan : aucun outil ne détectera quoi que ce soit. C'est comme si tu l'avais écrit toi-même."
                 },
                 {
                   q: "Puis-je modifier le rapport après génération ?",
@@ -495,7 +495,7 @@ export default function LandingPage() {
                 },
                 {
                   q: "Puis-je importer mes propres fichiers Excel ou PDF ?",
-                  a: "Oui. Dans l'étape Partie II tu peux importer tes fichiers de données — Excel, CSV, PDF. L'IA analyse tes résultats et rédige ton analyse empirique à partir de tes vraies données, pas des généralités."
+                  a: "Oui. Dans l'étape Partie II tu peux importer tes fichiers de données : Excel, CSV, PDF. L'IA analyse tes résultats et rédige ton analyse empirique à partir de tes vraies données, pas des généralités."
                 }
               ].map((faq, i) => (
                 <AccordionItem key={i} value={`item-${i}`} className="border-border">
@@ -627,7 +627,7 @@ function DemoAnimation() {
   const [step, setStep] = useState(0);
   const [typedText, setTypedText] = useState("");
   
-  const targetText = "Optimisation de portefeuille — EMSI Finance";
+  const targetText = "Optimisation de portefeuille : EMSI Finance";
 
   useEffect(() => {
     let timer: any;

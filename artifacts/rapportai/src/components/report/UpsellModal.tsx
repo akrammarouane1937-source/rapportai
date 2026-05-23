@@ -72,7 +72,7 @@ function getConfig(
           : `Cette fonctionnalité est réservée au plan ${PLAN_LIMITS[to].label}`,
         desc: `Mets à niveau pour déverrouiller cette fonctionnalité et bien d'autres.`,
         benefits: to === "pro"
-          ? ["JuryAI — entraîne-toi à la soutenance", "Anti-plagiat intelligent", "Révisions illimitées", "Certificat Anti-IA"]
+          ? ["JuryAI - entraîne-toi à la soutenance", "Anti-plagiat intelligent", "Révisions illimitées", "Certificat Anti-IA"]
           : ["Pages illimitées", "Slides PowerPoint", "Tout Pro inclus", "Support prioritaire"],
         targetPlan: PLAN_LIMITS[to].label,
         upgradeLabel: `Passer au ${PLAN_LIMITS[to].label}`,
@@ -179,7 +179,7 @@ export function UpsellModal({
                     style={{ boxShadow: "0 4px 20px rgba(124,58,237,0.35)" }}
                   >
                     <Zap className="w-4 h-4" />
-                    {cfg.upgradeLabel} — +{cfg.price} MAD
+                    {cfg.upgradeLabel} (+{cfg.price} MAD)
                   </Button>
                 <button
                   onClick={onClose}

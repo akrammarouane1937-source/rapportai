@@ -245,7 +245,7 @@ export default function Step3Page() {
               className="w-full h-12 bg-purple-600 hover:bg-purple-700 text-white font-bold text-sm rounded-xl flex items-center justify-center gap-2"
               style={{ boxShadow: "0 4px 20px rgba(124,58,237,0.35)" }}
             >
-              Suivant — Résumé & Abstract <ArrowRight className="w-4 h-4" />
+              Suivant : Résumé & Abstract <ArrowRight className="w-4 h-4" />
             </Button>
           </div>
         </div>

@@ -126,15 +126,15 @@ export function buildMemoryContext(memory: StudentMemory): string {
     : "Aucune";
 
   return `
-## MÉMOIRE ÉTUDIANT — CONTEXTE OBLIGATOIRE
+## MÉMOIRE ÉTUDIANT : CONTEXTE OBLIGATOIRE
 
-**Étudiant:** ${i.full_name} | ${i.school} — ${i.filiere} | ${i.academic_year ?? ""}
+**Étudiant:** ${i.full_name} | ${i.school}, ${i.filiere} | ${i.academic_year ?? ""}
 **Rapport:** ${r.title ?? "Titre non défini"} (${r.type})
 **Encadrant:** ${i.supervisor?.name ?? "Non précisé"}
 **Entreprise:** ${r.company?.name ?? "Non précisée"}
 
 **Problématique retenue:**
-${r.problematique ?? "Non définie — à établir dans cette section"}
+${r.problematique ?? "Non définie, à établir dans cette section"}
 
 **Hypothèses:**
 ${hypotheses}
@@ -150,7 +150,7 @@ Méthodologie: ${r.theoretical_framework?.methodology ?? "À définir"}
 **Sections déjà complétées:** ${completed}
 
 **Style de citation:** ${memory.writing_profile.citation_style}
-${r.canevas_uploaded ? `**Canevas uploadé:** ${r.canevas_filename} — LIRE EN PREMIER et respecter sa structure exacte.` : ""}
+${r.canevas_uploaded ? `**Canevas uploadé:** ${r.canevas_filename}. LIRE EN PREMIER et respecter sa structure exacte.` : ""}
 
 ---
 NE JAMAIS contredire la problématique, les hypothèses ou le cadre théorique ci-dessus.

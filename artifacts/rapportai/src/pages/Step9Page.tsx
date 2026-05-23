@@ -304,10 +304,10 @@ export default function Step9Page() {
 
             {/* ── Stats bar ── */}
             <div className="flex gap-3">
-              <StatCard icon={<Hash className="w-4 h-4" />}    value={totalWords > 0 ? totalWords.toLocaleString("fr-FR") : "—"} label="Mots"     color="#7c3aed" />
-              <StatCard icon={<FileText className="w-4 h-4" />} value={totalWords > 0 ? `~${estimatedPages} p.` : "—"}             label="Pages"    color="#0ea5e9" />
-              <StatCard icon={<BookOpen className="w-4 h-4" />} value={bibSrcs.length || "—"}                                       label="Sources"  color="#10b981" />
-              <StatCard icon={<BarChart2 className="w-4 h-4" />} value={figures.length || "—"}                                      label="Figures"  color="#f59e0b" />
+              <StatCard icon={<Hash className="w-4 h-4" />}    value={totalWords > 0 ? totalWords.toLocaleString("fr-FR") : "-"} label="Mots"     color="#7c3aed" />
+              <StatCard icon={<FileText className="w-4 h-4" />} value={totalWords > 0 ? `~${estimatedPages} p.` : "-"}             label="Pages"    color="#0ea5e9" />
+              <StatCard icon={<BookOpen className="w-4 h-4" />} value={bibSrcs.length || "-"}                                       label="Sources"  color="#10b981" />
+              <StatCard icon={<BarChart2 className="w-4 h-4" />} value={figures.length || "-"}                                      label="Figures"  color="#f59e0b" />
             </div>
 
             {/* ── Section checklist ── */}
@@ -339,7 +339,7 @@ export default function Step9Page() {
               <p className="text-xs text-purple-600 leading-relaxed">
                 Claude va lire tes Parties I et II pour générer une conclusion cohérente, synthétiser tes apports, tes limites et tes perspectives.
                 {report.partieI && report.partieII
-                  ? " Les deux parties sont prêtes — la qualité sera maximale."
+                  ? " Les deux parties sont prêtes, la qualité sera maximale."
                   : " Génère tes parties avant la conclusion pour un meilleur résultat."}
               </p>
             </div>
@@ -347,7 +347,7 @@ export default function Step9Page() {
             {/* ── Apports et limites ── */}
             <div>
               <label className="block text-sm font-semibold text-gray-700 mb-2">
-                Apports et limites <span className="text-xs font-normal text-gray-400">(optionnel — l'IA peut générer)</span>
+                Apports et limites <span className="text-xs font-normal text-gray-400">(optionnel, l'IA peut générer)</span>
               </label>
               <textarea
                 value={apports}
@@ -673,7 +673,7 @@ export default function Step9Page() {
                 Dernière étape !
               </h2>
               <p className="text-sm text-gray-400 text-center max-w-xs leading-relaxed mb-8">
-                Clique sur <strong className="text-gray-600">Générer la Conclusion</strong> — Claude va synthétiser tout ton travail en une conclusion académique complète.
+                Clique sur <strong className="text-gray-600">Générer la Conclusion</strong> : Claude va synthétiser tout ton travail en une conclusion académique complète.
               </p>
 
               {/* Mini report stats */}

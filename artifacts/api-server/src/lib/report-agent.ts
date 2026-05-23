@@ -284,11 +284,11 @@ Procède exactement comme suit :
 1. Appelle read_section avec sections: ["${sectionId}"] pour lire le contenu actuel
 2. Identifie précisément les passages à modifier selon l'instruction
 3. Pour chaque modification, appelle edit_section avec le texte exact à remplacer et le texte de remplacement
-   - Ne réécris PAS toute la section — fais uniquement les changements demandés
+   - Ne réécris PAS toute la section. Fais uniquement les changements demandés
    - Si plusieurs passages doivent changer, appelle edit_section plusieurs fois
 
 Règles absolues :
-- Modifications chirurgicales uniquement — ne touche pas à ce qui n'est pas demandé
+- Modifications chirurgicales uniquement. Ne touche pas à ce qui n'est pas demandé
 - Conserve toutes les citations, références et la structure Markdown (##, ###)
 - Français académique formel
 - Si l'instruction est ambiguë ou impossible à appliquer, utilise ask_user pour préciser`;
@@ -309,15 +309,15 @@ Règles absolues :
 
     switch (section) {
       case "partie-i":
-        return `${docPreamble}Appelle ensuite read_section avec sections: ["all"] pour lire tout ce qui est déjà rédigé. Utilise search_academic pour trouver des sources réelles si la bibliothèque est vide. Puis rédige la Partie I du ${p.reportType} intitulé "${p.theme}" (${p.school} — ${p.filiere}, ${p.annee ?? "2024–2025"}).
+        return `${docPreamble}Appelle ensuite read_section avec sections: ["all"] pour lire tout ce qui est déjà rédigé. Utilise search_academic pour trouver des sources réelles si la bibliothèque est vide. Puis rédige la Partie I du ${p.reportType} intitulé "${p.theme}" (${p.school}, ${p.filiere}, ${p.annee ?? "2024–2025"}).
 
-## Chapitre 1 — Cadre théorique et revue de littérature
+## Chapitre 1 : Cadre théorique et revue de littérature
 ### 1.1 Fondements théoriques
 ### 1.2 Revue de la littérature internationale et nationale
 ### 1.3 Contexte marocain et spécificités locales
 ### 1.4 Positionnement théorique de l'étude
 
-## Chapitre 2 — Méthodologie de recherche
+## Chapitre 2 : Méthodologie de recherche
 ### 2.1 Approche et design de recherche
 ### 2.2 Collecte et traitement des données
 ### 2.3 Modèles et outils d'analyse
@@ -331,21 +331,21 @@ EXIGENCES :
 - Minimum 2 500 mots
 - Chaque sous-section : minimum 3 paragraphes de 80–120 mots
 - Références croisées vers les sections précédentes
-- Placeholders figures : [INSÉRER FIGURE N — Titre]
+- Placeholders figures : [INSÉRER FIGURE N : Titre]
 - Si une information clé manque, utilise ask_user avant de continuer
 - Termine par write_section avec section_id: "partie-i"
 - NE T'ARRÊTE PAS avant les 8 sous-sections complètes`;
 
       case "partie-ii":
-        return `${docPreamble}Appelle ensuite read_section avec sections: ["all"]. Utilise search_academic si besoin de sources supplémentaires. Puis rédige la Partie II du ${p.reportType} intitulé "${p.theme}" (${p.school} — ${p.filiere}, ${p.annee ?? "2024–2025"}).
+        return `${docPreamble}Appelle ensuite read_section avec sections: ["all"]. Utilise search_academic si besoin de sources supplémentaires. Puis rédige la Partie II du ${p.reportType} intitulé "${p.theme}" (${p.school}, ${p.filiere}, ${p.annee ?? "2024–2025"}).
 
-## Chapitre 3 — Présentation et analyse des résultats
+## Chapitre 3 : Présentation et analyse des résultats
 ### 3.1 Statistiques descriptives et présentation de l'échantillon
 ### 3.2 Résultats de l'analyse principale
 ### 3.3 Interprétation des résultats et validation des hypothèses
 ### 3.4 Synthèse des findings empiriques
 
-## Chapitre 4 — Discussion, limites et recommandations
+## Chapitre 4 : Discussion, limites et recommandations
 ### 4.1 Discussion des résultats au regard de la littérature
 ### 4.2 Implications théoriques et contributions académiques
 ### 4.3 Implications pratiques et managériales
@@ -359,12 +359,12 @@ EXIGENCES :
 - Minimum 2 500 mots
 - Références croisées directes vers la Partie I
 - Tableaux décrits en texte ("Le tableau 3.1 montre que…")
-- Placeholders figures : [INSÉRER FIGURE N — Titre]
+- Placeholders figures : [INSÉRER FIGURE N : Titre]
 - Termine par write_section avec section_id: "partie-ii"
 - NE T'ARRÊTE PAS avant les 8 sous-sections complètes`;
 
       case "introduction":
-        return `Commence par read_section avec sections: ["all"] pour lire tout ce qui est déjà rédigé. Puis rédige l'Introduction Générale du ${p.reportType} intitulé "${p.theme}" (${p.school} — ${p.filiere}, ${p.annee ?? "2024–2025"}).
+        return `Commence par read_section avec sections: ["all"] pour lire tout ce qui est déjà rédigé. Puis rédige l'Introduction Générale du ${p.reportType} intitulé "${p.theme}" (${p.school}, ${p.filiere}, ${p.annee ?? "2024–2025"}).
 
 ## Introduction Générale
 ### Contexte général
@@ -379,7 +379,7 @@ ${citationBlock}
 Termine par write_section avec section_id: "introduction".`;
 
       case "conclusion":
-        return `Commence par read_section avec sections: ["introduction", "partie-i", "partie-ii"]. Puis rédige la Conclusion Générale du ${p.reportType} intitulé "${p.theme}" (${p.school} — ${p.filiere}).
+        return `Commence par read_section avec sections: ["introduction", "partie-i", "partie-ii"]. Puis rédige la Conclusion Générale du ${p.reportType} intitulé "${p.theme}" (${p.school}, ${p.filiere}).
 
 ## Conclusion Générale
 ### Synthèse des résultats
@@ -394,7 +394,7 @@ ${citationBlock}
 Termine par write_section avec section_id: "conclusion".`;
 
       case "resume":
-        return `Commence par read_section avec sections: ["introduction"]. Puis rédige le Résumé académique (250–300 mots) du ${p.reportType} intitulé "${p.theme}" (${p.school} — ${p.filiere}).
+        return `Commence par read_section avec sections: ["introduction"]. Puis rédige le Résumé académique (250–300 mots) du ${p.reportType} intitulé "${p.theme}" (${p.school}, ${p.filiere}).
 
 Structure : Contexte → Objectifs → Méthodologie → Résultats → Conclusion.
 Problématique : ${prob}
@@ -402,7 +402,7 @@ Termine par les mots-clés. Ne dépasse pas 300 mots.
 Termine par write_section avec section_id: "resume".`;
 
       default:
-        return `Rédige la section "${section}" du ${p.reportType} intitulé "${p.theme}" (${p.school} — ${p.filiere}).`;
+        return `Rédige la section "${section}" du ${p.reportType} intitulé "${p.theme}" (${p.school}, ${p.filiere}).`;
     }
   }
 
@@ -434,7 +434,7 @@ Termine par write_section avec section_id: "resume".`;
         const { section_id, content } = input as { section_id: string; content: string };
         this.sections[section_id] = content;
         const words = content.trim().split(/\s+/).length;
-        return `Section "${section_id}" enregistrée — ${words} mots.`;
+        return `Section "${section_id}" enregistrée : ${words} mots.`;
       }
 
       // ── Edit ───────────────────────────────────────────────────────────────
@@ -653,7 +653,7 @@ Termine par write_section avec section_id: "resume".`;
         }
 
         const MAX = 15_000;
-        const truncated = content.length > MAX ? content.slice(0, MAX) + `\n\n[Tronqué — ${content.length} caractères au total]` : content;
+        const truncated = content.length > MAX ? content.slice(0, MAX) + `\n\n[Tronqué : ${content.length} caractères au total]` : content;
         return `=== Document : ${filename} ===\n\n${truncated}`;
       }
 
@@ -680,7 +680,7 @@ function buildCitationBlock(sources: BibEntry[] | undefined, style: string): str
     .map((s, i) => {
       const journal = s.journal ? `. *${s.journal}*` : "";
       const doi = s.doi ? ` https://doi.org/${s.doi}` : "";
-      return `  ${i + 1}. ${inlineLabel(s)} — ${s.authors} (${s.year}). ${s.title}${journal}${doi}`;
+      return `  ${i + 1}. ${inlineLabel(s)} : ${s.authors} (${s.year}). ${s.title}${journal}${doi}`;
     })
     .join("\n");
 
@@ -692,7 +692,7 @@ function buildSystemPrompt(p: ReportProfile): string {
 
   return `Tu es l'agent de rédaction académique de RapportAI. Tu accompagnes ${p.studentName} tout au long de la rédaction de son ${p.reportType} à ${p.school}.
 
-## Tes outils — utilise-les activement
+## Tes outils : utilise-les activement
 
 **Lecture et écriture du document :**
 - read_section : lis les sections déjà rédigées AVANT d'écrire (obligatoire pour toute section principale)
@@ -704,17 +704,17 @@ function buildSystemPrompt(p: ReportProfile): string {
 - search_content : vérifie qu'un terme ou concept n'a pas déjà été défini ailleurs
 
 **Documents de l'étudiant(e) :**
-- read_document : lis les PDF/Word/TXT uploadés par l'étudiant(e) — utilise cet outil EN PREMIER si des documents ont été fournis, ils contiennent les données réelles du stage/projet
+- read_document : lis les PDF/Word/TXT uploadés par l'étudiant(e). Utilise cet outil EN PREMIER si des documents ont été fournis, ils contiennent les données réelles du stage/projet
 
 **Recherche académique :**
-- search_academic : trouve des articles réels via Semantic Scholar et CrossRef — utilise cet outil pour trouver des citations RÉELLES plutôt que d'en inventer
+- search_academic : trouve des articles réels via Semantic Scholar et CrossRef. Utilise cet outil pour trouver des citations RÉELLES plutôt que d'en inventer
 - fetch_url : récupère le contenu d'une URL ou les métadonnées d'un DOI
 
 **Communication avec l'étudiant(e) :**
-- ask_user : pose une question quand une information essentielle manque — mieux vaut demander que deviner
+- ask_user : pose une question quand une information essentielle manque. Mieux vaut demander que deviner
 
 ## Mémoire de session
-Tu te souviens de tout dans cette conversation : le profil, chaque section rédigée, chaque source trouvée, chaque décision stylistique. Utilise cette mémoire — ne re-demande jamais ce qui a déjà été fourni.
+Tu te souviens de tout dans cette conversation : le profil, chaque section rédigée, chaque source trouvée, chaque décision stylistique. Utilise cette mémoire. Ne re-demande jamais ce qui a déjà été fourni.
 
 ## Profil du rapport
 - Étudiant(e) : ${p.studentName}
@@ -731,6 +731,6 @@ ${p.entreprise ? `- Entreprise : ${p.entreprise}` : ""}
 - 100% spécifique au thème "${p.theme}"
 - Titres Markdown ## et ### obligatoires
 - Anti-plagiat : reformulation personnelle, < 10% similarité
-- Citations réelles via search_academic — jamais inventées
+- Citations réelles via search_academic, jamais inventées
 - Commence directement par le contenu, sans préambule`;
 }

@@ -48,7 +48,7 @@ export default function Step3() {
             title="Dédicaces & Remerciements prêts"
             subtitle="On génère maintenant ton résumé et abstract."
             onNext={() => { updateReport({ currentStep: 4 }); setLocation("/rapport/step-4"); }}
-            nextLabel="Étape 4 — Résumé"
+            nextLabel="Étape 4 : Résumé"
           />
         )}
         <div ref={bottomRef} />

@@ -419,7 +419,7 @@ export function FigurePanel({ defaultPlacement = "Partie II" }: FigurePanelProps
                 {approvedForSection.length > 0 && (
                   <motion.div key="approved" initial={{ opacity: 0 }} animate={{ opacity: 1 }}>
                     <p className="text-xs font-bold text-gray-500 uppercase tracking-wider mb-2">
-                      Figures approuvées — seront insérées dans le .docx
+                      Figures approuvées, seront insérées dans le .docx
                     </p>
                     <div className="space-y-2.5">
                       {approvedForSection.map((fig) => (

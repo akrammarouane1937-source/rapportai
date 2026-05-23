@@ -61,7 +61,7 @@ export function ScholarChips({ keywords, section, theme, filiere }: ScholarChips
         ))}
       </div>
       <p className="text-xs text-gray-400 mt-2.5 leading-relaxed">
-        Pour de meilleurs résultats, importez 2-3 articles PDF dans cette section — Claude les utilisera comme sources directes.
+        Pour de meilleurs résultats, importez 2-3 articles PDF dans cette section. Claude les utilisera comme sources directes.
       </p>
     </div>
   );

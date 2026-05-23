@@ -27,7 +27,7 @@ const NAV = [
 
 const MOCK_REPORTS = [
   {
-    id: "1", title: "Optimisation de portefeuille — EMSI Finance",
+    id: "1", title: "Optimisation de portefeuille : EMSI Finance",
     type: "PFE" as const, school: "EMSI", field: "Finance",
     status: "in_progress" as const, currentStep: 3, completedSteps: [1, 2],
     updatedAt: "Il y a 2 heures", wordCount: 3240,
@@ -39,7 +39,7 @@ const MOCK_REPORTS = [
     updatedAt: "Hier", wordCount: 18650,
   },
   {
-    id: "3", title: "Analyse des risques opérationnels — BCP",
+    id: "3", title: "Analyse des risques opérationnels : BCP",
     type: "Rapport de Stage" as const, school: "ISCAE", field: "Finance",
     status: "draft" as const, currentStep: 1, completedSteps: [] as number[],
     updatedAt: "Il y a 3 jours", wordCount: 0,
@@ -152,7 +152,7 @@ function DashboardView({ setActive }: { setActive: (v: string) => void }) {
           </button>
         </div>
         <ActiveReportCard
-          title="Optimisation de portefeuille — EMSI Finance"
+          title="Optimisation de portefeuille : EMSI Finance"
           type="PFE" currentStep={3} completedSteps={[1, 2]}
           updatedAt="Il y a 2 heures" onContinue={() => setActive("rapports")}
         />
@@ -292,7 +292,7 @@ export default function DemoPage() {
     <div className="flex min-h-screen bg-[#f9f8ff]">
       {/* Demo banner */}
       <div className="fixed top-0 left-0 right-0 z-50 bg-amber-500 text-white text-xs text-center py-1.5 font-medium">
-        Mode aperçu — <button onClick={() => setLocation("/sign-up")} className="underline font-bold">Créer un compte</button> pour accéder à la vraie version
+        Mode aperçu. <button onClick={() => setLocation("/sign-up")} className="underline font-bold">Créer un compte</button> pour accéder à la vraie version
       </div>
 
       <DemoSidebar active={active} setActive={setActive} hovered={hovered} setHovered={setHovered} />

@@ -33,7 +33,7 @@ export function ChatRevision({
     {
       id: "welcome",
       role: "agent",
-      content: `Je peux réviser n'importe quelle partie de ${sectionLabel ?? "cette section"}. Dis-moi ce que tu veux changer — reformuler, raccourcir, approfondir, ajouter une source, changer le ton…`,
+      content: `Je peux réviser n'importe quelle partie de ${sectionLabel ?? "cette section"}. Dis-moi ce que tu veux changer : reformuler, raccourcir, approfondir, ajouter une source, changer le ton…`,
     },
   ]);
   const [input, setInput] = useState("");
@@ -115,7 +115,7 @@ export function ChatRevision({
         setMessages((prev) =>
           prev.map((m) =>
             m.id === agentId
-              ? { ...m, content: "Une erreur s'est produite — réessaie.", streaming: false }
+              ? { ...m, content: "Une erreur s'est produite. Réessaie.", streaming: false }
               : m
           )
         );

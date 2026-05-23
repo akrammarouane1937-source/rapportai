@@ -80,7 +80,7 @@ function CaptionBuilder({
         id:              `fig-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`,
         figureNumber:    nextNumber,
         title:           title.trim(),
-        caption:         `Figure ${nextNumber} — ${title.trim()}\n${formattedSource}`,
+        caption:         `Figure ${nextNumber} : ${title.trim()}\n${formattedSource}`,
         type:            "uploaded",
         placement,
         description:     title.trim(),
@@ -198,7 +198,7 @@ function CaptionBuilder({
       {/* Caption preview */}
       <div className="bg-gray-50 rounded-xl p-3 border border-gray-100">
         <p className="text-xs font-semibold text-gray-500 mb-1">Aperçu de la légende :</p>
-        <p className="text-xs text-gray-800 font-medium">Figure {nextNumber} — {title || "[Titre]"}</p>
+        <p className="text-xs text-gray-800 font-medium">Figure {nextNumber} : {title || "[Titre]"}</p>
         <p className="text-xs text-gray-500 italic">{formattedSource}</p>
       </div>
 
@@ -397,7 +397,7 @@ function UploadModal({ onClose, onAdded, nextNumber }: UploadModalProps) {
                   </div>
                   <div className="text-center">
                     <p className="text-sm font-semibold text-gray-700">Uploade ton document</p>
-                    <p className="text-xs text-gray-400 mt-0.5">PDF, Word (.docx), PowerPoint (.pptx) — max 20 MB</p>
+                    <p className="text-xs text-gray-400 mt-0.5">PDF, Word (.docx), PowerPoint (.pptx), max 20 MB</p>
                     <p className="text-xs text-gray-400 mt-0.5">L'IA extrait toutes les figures avec leurs légendes suggérées</p>
                   </div>
                   <input ref={docRef} type="file" accept=".pdf,.docx,.pptx,application/pdf,application/vnd.openxmlformats-officedocument.wordprocessingml.document,application/vnd.openxmlformats-officedocument.presentationml.presentation"
@@ -424,7 +424,7 @@ function UploadModal({ onClose, onAdded, nextNumber }: UploadModalProps) {
                 <div>
                   <div className="flex items-center justify-between mb-3">
                     <p className="text-xs font-semibold text-gray-500">
-                      Figure {currentIdx + 1} sur {extracted.length} — Page {currentFig.page}
+                      Figure {currentIdx + 1} sur {extracted.length}, page {currentFig.page}
                     </p>
                     <span className="text-xs bg-blue-50 text-blue-700 px-2 py-0.5 rounded-full font-semibold">{currentFig.type}</span>
                   </div>
@@ -432,7 +432,7 @@ function UploadModal({ onClose, onAdded, nextNumber }: UploadModalProps) {
                   <CaptionBuilder
                     preview={currentFig.image_base64}
                     nextNumber={nextNum}
-                    prefillTitle={currentFig.suggested_caption.replace(/^Figure — /, "")}
+                    prefillTitle={currentFig.suggested_caption.replace(/^Figure : /, "").replace(/^Figure — /, "")}
                     prefillSource={currentFig.suggested_source}
                     prefillDocTitle={docTitle}
                     onSave={handleSaveFigure}
@@ -549,7 +549,7 @@ export default function FiguresPage() {
                 <p className="text-gray-500 text-sm mt-0.5">
                   {figures.length === 0
                     ? "Aucune figure ajoutée pour l'instant"
-                    : `${figures.length} figure${figures.length !== 1 ? "s" : ""} — intégrées automatiquement dans le rapport Word avec sources`}
+                    : `${figures.length} figure${figures.length !== 1 ? "s" : ""}, intégrées automatiquement dans le rapport Word avec sources`}
                 </p>
               </div>
               <Button
@@ -574,7 +574,7 @@ export default function FiguresPage() {
                   Aucune figure pour l'instant
                 </h2>
                 <p className="text-gray-500 text-sm max-w-sm mb-6">
-                  Uploade une image directement ou importe un PDF/Word — l'IA extrait toutes les figures et génère les légendes avec attribution de source.
+                  Uploade une image directement ou importe un PDF/Word. L'IA extrait toutes les figures et génère les légendes avec attribution de source.
                 </p>
                 <Button onClick={() => setShowModal(true)} className="bg-purple-600 hover:bg-purple-700 text-white gap-2 rounded-xl">
                   <Upload className="w-4 h-4" /> Ajouter ma première figure
@@ -586,7 +586,7 @@ export default function FiguresPage() {
                   <div className="mb-8">
                     <h2 className="text-sm font-bold text-gray-500 uppercase tracking-wider mb-4 flex items-center gap-2">
                       <span className="w-2 h-2 rounded-full bg-blue-400" />
-                      Partie I — {partieI.length} figure{partieI.length !== 1 ? "s" : ""}
+                      Partie I : {partieI.length} figure{partieI.length !== 1 ? "s" : ""}
                     </h2>
                     <AnimatePresence mode="popLayout">
                       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
@@ -602,7 +602,7 @@ export default function FiguresPage() {
                   <div>
                     <h2 className="text-sm font-bold text-gray-500 uppercase tracking-wider mb-4 flex items-center gap-2">
                       <span className="w-2 h-2 rounded-full bg-orange-400" />
-                      Partie II — {partieII.length} figure{partieII.length !== 1 ? "s" : ""}
+                      Partie II : {partieII.length} figure{partieII.length !== 1 ? "s" : ""}
                     </h2>
                     <AnimatePresence mode="popLayout">
                       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">

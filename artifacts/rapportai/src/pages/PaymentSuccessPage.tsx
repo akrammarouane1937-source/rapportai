@@ -101,7 +101,7 @@ export default function PaymentSuccessPage() {
                   <li>✓ 60 pages générées par IA</li>
                   <li>✓ Export Word + PDF</li>
                   <li>✓ Révisions illimitées</li>
-                  <li>✓ JuryAI — simulation de soutenance</li>
+                  <li>✓ JuryAI : simulation de soutenance</li>
                   <li>✓ Vérification anti-plagiat</li>
                   <li>✓ Certificat Anti-Détection IA</li>
                 </ul>

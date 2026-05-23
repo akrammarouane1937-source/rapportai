@@ -78,7 +78,7 @@ export function resolveSchool(input: string): SchoolInfo & { abbr: string } {
 // Build a string for system prompts
 export function schoolContext(input: string): string {
   const s = resolveSchool(input);
-  const city = s.city ? ` — ${s.city}` : "";
+  const city = s.city ? `, ${s.city}` : "";
   const web = s.website ? ` (${s.website})` : "";
   return s.fullName !== input
     ? `${input} = ${s.fullName}${city}${web}`

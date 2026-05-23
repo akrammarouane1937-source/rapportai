@@ -52,7 +52,7 @@ function detectNav(text: string) {
 const PLACEHOLDERS_NEW = [
   "C'est quoi la différence entre PFE, stage et mémoire ?",
   "Comment RapportAI génère mon rapport exactement ?",
-  "J'ai mon thème — par où je commence ?",
+  "J'ai mon thème, par où je commence ?",
   "Mon école est-elle supportée par RapportAI ?",
   "Combien de temps pour générer un rapport complet ?",
   "Est-ce que je peux modifier ce que l'IA génère ?",
@@ -167,7 +167,7 @@ export default function DashboardPage() {
         },
         {
           label: "Mon rapport est-il cohérent ?",
-          action: () => sendWithText(`Analyse la cohérence globale de mon rapport sur "${theme}" — est-ce que l'intro, le développement et la conclusion se tiennent ?`),
+          action: () => sendWithText(`Analyse la cohérence globale de mon rapport sur "${theme}" : est-ce que l'intro, le développement et la conclusion se tiennent ?`),
         },
         {
           label: "Emmène-moi à l'étape suivante",
@@ -184,7 +184,7 @@ export default function DashboardPage() {
           action: () => sendWithText("Explique-moi exactement comment RapportAI génère mon rapport. C'est quoi les étapes, combien de temps ça prend, et qu'est-ce que je dois faire moi ?"),
         },
         {
-          label: "PFE, stage ou mémoire — c'est quoi la différence ?",
+          label: "PFE, stage ou mémoire : c'est quoi la différence ?",
           action: () => sendWithText("C'est quoi la différence entre un PFE, un rapport de stage et un mémoire ? Lequel me correspond ?"),
         },
         {

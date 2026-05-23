@@ -67,7 +67,7 @@ function buildDocumentContext(ctx: GenerateBody): string {
     .filter(([, v]) => v)
     .map(([k, v]) => `=== ${k} ===\n${v}`);
   return parts.length > 0
-    ? `\n\n## Sections déjà rédigées — utilise-les pour cohérence et références croisées\n\n${parts.join("\n\n---\n\n")}`
+    ? `\n\n## Sections déjà rédigées : utilise-les pour cohérence et références croisées\n\n${parts.join("\n\n---\n\n")}`
     : "";
 }
 
@@ -84,7 +84,7 @@ function buildCitationBlock(sources: BibEntry[] | undefined, style: string): str
     .map((s, i) => {
       const journal = s.journal ? `. *${s.journal}*` : "";
       const doi = s.doi ? ` https://doi.org/${s.doi}` : "";
-      return `  ${i + 1}. ${inlineLabel(s)} — ${s.authors} (${s.year}). ${s.title}${journal}${doi}`;
+      return `  ${i + 1}. ${inlineLabel(s)} : ${s.authors} (${s.year}). ${s.title}${journal}${doi}`;
     })
     .join("\n");
   return `\n## Sources bibliographiques disponibles\n${numbered}`;
@@ -116,20 +116,20 @@ function buildSystemPrompt(ctx: GenerateBody, memory?: StudentMemory): string {
   } catch { /* unknown section */ }
 
   if (!basePrompt) {
-    basePrompt = `Tu es l'agent de rédaction académique de RapportAI. Tu aides ${name} (${school} — ${filiere}) à rédiger son ${type} intitulé "${theme}".
+    basePrompt = `Tu es l'agent de rédaction académique de RapportAI. Tu aides ${name} (${school}, ${filiere}) à rédiger son ${type} intitulé "${theme}".
 
 ## Règles absolues
 - Français académique formel et soutenu uniquement
 - Structure avec titres Markdown ## et ### obligatoires
 - Citations au format ${style} avec auteurs et années
-- Commence directement par le contenu — aucun préambule méta
+- Commence directement par le contenu. Aucun préambule méta
 - Toujours utiliser les sections déjà rédigées pour les références croisées
 - Ne jamais contredire la problématique, les hypothèses ou le cadre théorique établis
 
 ## Originalité
 - Reformule chaque idée avec des mots entièrement différents de la source
 - Varie la structure syntaxique : phrases courtes ET longues, actif ET passif
-- Contexte marocain obligatoire — données HCP, Bank Al-Maghrib, secteur local
+- Contexte marocain obligatoire : données HCP, Bank Al-Maghrib, secteur local
 - Taux de similarité cible : inférieur à 10 %`;
   }
 

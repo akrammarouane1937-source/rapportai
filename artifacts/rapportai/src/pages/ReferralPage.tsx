@@ -98,7 +98,7 @@ export default function ReferralPage() {
                 Parrainage
               </h1>
               <p className="text-gray-500 text-sm mt-0.5">
-                Invite tes amis — gagne 10 $ pour chaque 2 utilisateurs qui complètent leur rapport.
+                Invite tes amis et gagne 10 $ pour chaque 2 utilisateurs qui complètent leur rapport.
               </p>
             </div>
 
@@ -241,7 +241,7 @@ export default function ReferralPage() {
                       </h2>
                       <p className="text-xs text-gray-500 mt-0.5">
                         {canWithdraw
-                          ? `${data.balanceUsd} $ disponibles — minimum 10 $`
+                          ? `${data.balanceUsd} $ disponibles (minimum 10 $)`
                           : `Minimum 10 $ requis (actuellement ${data.balanceUsd} $)`
                         }
                       </p>

@@ -52,7 +52,7 @@ export default function AboutPage() {
             <span style={{ color: "#7c3aed" }}>libérer</span> ton temps
           </h1>
           <p className="text-lg text-gray-500 leading-relaxed max-w-xl mx-auto">
-            RapportAI est né d'un constat simple — écrire un rapport de stage ne devrait pas prendre 3 mois. L'IA peut faire le travail. Toi, tu te concentres sur l'essentiel.
+            RapportAI est né d'un constat simple : écrire un rapport de stage ne devrait pas prendre 3 mois. L'IA peut faire le travail. Toi, tu te concentres sur l'essentiel.
           </p>
         </motion.div>
       </section>
@@ -69,12 +69,12 @@ export default function AboutPage() {
             {
               icon: <Users className="w-6 h-6 text-purple-600" />,
               title: "Pour qui ?",
-              body: "Étudiants en BTS, licence, master ou grande école au Maroc. Que tu sois à l'ENCG, l'ENSA, l'EMSI, l'ISGA ou ailleurs — RapportAI s'adapte à ton école et ton jury.",
+              body: "Étudiants en BTS, licence, master ou grande école au Maroc. Que tu sois à l'ENCG, l'ENSA, l'EMSI, l'ISGA ou ailleurs, RapportAI s'adapte à ton école et ton jury.",
             },
             {
               icon: <Zap className="w-6 h-6 text-purple-600" />,
               title: "Comment ?",
-              body: "Un agent IA spécialisé dans le format académique marocain génère chaque section de ton rapport — introduction, parties théorique & empirique, conclusion, bibliographie.",
+              body: "Un agent IA spécialisé dans le format académique marocain génère chaque section de ton rapport : introduction, parties théorique & empirique, conclusion, bibliographie.",
             },
           ].map((item, i) => (
             <motion.div
@@ -146,7 +146,7 @@ export default function AboutPage() {
           </motion.h2>
           <div className="space-y-4">
             {[
-              { title: "Le temps de l'étudiant a de la valeur.", body: "Passer 3 mois sur un rapport au lieu d'apprendre, de créer ou de travailler — c'est un gaspillage. L'IA peut libérer ce temps." },
+              { title: "Le temps de l'étudiant a de la valeur.", body: "Passer 3 mois sur un rapport au lieu d'apprendre, de créer ou de travailler, c'est un gaspillage. L'IA peut libérer ce temps." },
               { title: "La qualité ne devrait pas dépendre du budget.", body: "Un étudiant sans coach ni famille en entreprise mérite le même rapport qu'un étudiant bien entouré. RapportAI égalise les chances." },
               { title: "L'IA est un outil, pas un raccourci.", body: "RapportAI ne génère pas du texte générique. Il produit un rapport structuré, ancré dans ton projet réel, personnalisé pour ton école et ton jury." },
             ].map((v, i) => (

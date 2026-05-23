@@ -271,7 +271,7 @@ export default function Step1Page() {
               className="bg-purple-600 hover:bg-purple-700 text-white h-11 px-6 rounded-xl font-semibold text-sm flex items-center gap-2 disabled:opacity-40"
               style={{ boxShadow: canContinue ? "0 4px 16px rgba(124,58,237,0.3)" : "none" }}
             >
-              Suivant — Page de garde <ArrowRight className="w-4 h-4" />
+              Suivant : Page de garde <ArrowRight className="w-4 h-4" />
             </Button>
           </div>
         </div>

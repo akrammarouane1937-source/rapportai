@@ -35,7 +35,7 @@ export default function Step1() {
   const [disclaimerAccepted, setDisclaimerAccepted] = useState(false);
   const [disclaimerChecked, setDisclaimerChecked] = useState(false);
   const [msgs, setMsgs] = useState<Msg[]>([
-    { role: "agent", content: "Bienvenue sur RapportAI 👋 On va construire ton rapport ensemble, étape par étape. Commence par le thème — c'est quoi ton sujet ?" },
+    { role: "agent", content: "Bienvenue sur RapportAI 👋 On va construire ton rapport ensemble, étape par étape. Commence par le thème : c'est quoi ton sujet ?" },
   ]);
   const bottomRef = useRef<HTMLDivElement>(null);
 
@@ -171,7 +171,7 @@ export default function Step1() {
             title="Informations générales enregistrées"
             subtitle="On continue avec tes informations personnelles."
             onNext={() => { updateReport({ currentStep: 2 }); setLocation("/rapport/step-2"); }}
-            nextLabel="Étape 2 — Infos personnelles"
+            nextLabel="Étape 2 : Infos personnelles"
           />
         )}
         <div ref={bottomRef} />

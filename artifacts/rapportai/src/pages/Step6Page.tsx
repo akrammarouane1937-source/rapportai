@@ -68,7 +68,7 @@ export default function Step6Page() {
 
   const themeDisplay = report.theme
     ? report.theme.length > 40 ? report.theme.slice(0, 40) + "…" : report.theme
-    : "—";
+    : "-";
 
   return (
     <StepLayout stepId={6} fullHeight>
@@ -106,9 +106,9 @@ export default function Step6Page() {
               <div className="space-y-1.5">
                 {[
                   ["Thème", themeDisplay],
-                  ["École", [report.school, report.filiere].filter(Boolean).join(" · ") || "—"],
-                  ["Type", report.reportType ?? "—"],
-                  ["Mots-clés", report.motsCles?.join(", ") || "—"],
+                  ["École", [report.school, report.filiere].filter(Boolean).join(" · ") || "-"],
+                  ["Type", report.reportType ?? "-"],
+                  ["Mots-clés", report.motsCles?.join(", ") || "-"],
                 ].map(([k, v]) => (
                   <div key={k} className="flex items-start gap-2">
                     <span className="text-xs font-semibold text-purple-400 w-24 flex-shrink-0">{k}</span>
@@ -181,7 +181,7 @@ export default function Step6Page() {
             </Button>
             <Button onClick={() => setLocation("/rapport/partie-i")} variant="ghost"
               className="w-full h-9 text-sm text-gray-500 hover:text-gray-700 flex items-center justify-center gap-1">
-              Suivant — Partie I <ArrowRight className="w-3.5 h-3.5" />
+              Suivant : Partie I <ArrowRight className="w-3.5 h-3.5" />
             </Button>
           </div>
         </div>

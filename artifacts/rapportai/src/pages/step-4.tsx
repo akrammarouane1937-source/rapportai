@@ -45,7 +45,7 @@ export default function Step4() {
             title="Résumé & Abstract prêts"
             subtitle="Je génère maintenant le sommaire de ton rapport."
             onNext={() => { updateReport({ currentStep: 5 }); setLocation("/rapport/step-5"); }}
-            nextLabel="Étape 5 — Sommaire"
+            nextLabel="Étape 5 : Sommaire"
           />
         )}
         <div ref={bottomRef} />

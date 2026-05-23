@@ -56,7 +56,7 @@ function parseRevisionResponse(raw: string): { summary: string; revised: string 
 }
 
 const MOCK_CONTENT = `
-<h2>Chapitre I — Cadre théorique et revue de littérature</h2>
+<h2>Chapitre I - Cadre théorique et revue de littérature</h2>
 
 <h3>1.1 Introduction au cadre théorique</h3>
 
@@ -66,7 +66,7 @@ const MOCK_CONTENT = `
 
 <h3>1.2 La théorie de Markowitz et l'efficience des marchés</h3>
 
-<p>Markowitz (1952) a démontré que pour un niveau de risque donné, il existe un portefeuille qui maximise le rendement espéré — et réciproquement, pour un niveau de rendement donné, il existe un portefeuille qui minimise le risque. L'ensemble de ces portefeuilles constitue ce que l'on appelle la frontière efficiente.</p>
+<p>Markowitz (1952) a démontré que pour un niveau de risque donné, il existe un portefeuille qui maximise le rendement espéré. Réciproquement, pour un niveau de rendement donné, il existe un portefeuille qui minimise le risque. L'ensemble de ces portefeuilles constitue ce que l'on appelle la frontière efficiente.</p>
 
 <p>Cette approche quantitative repose sur trois hypothèses fondamentales : les investisseurs sont rationnels et averses au risque, les marchés sont efficients au sens semi-fort, et les distributions de rendements peuvent être caractérisées par leur espérance et leur variance. Ces hypothèses, bien que simplificatrices, permettent de développer un cadre analytique rigoureux et opérationnel.</p>
 `;
@@ -776,7 +776,7 @@ export function WordPreview({
               {/* Page header */}
               <div className="text-center mb-6 pb-3 border-b border-gray-100">
                 <p className="text-[9pt] text-gray-400" style={{ fontFamily: "Times New Roman, serif" }}>
-                  {report.theme ?? "RapportAI"} — {report.annee ?? "2024–2025"}
+                  {report.theme ?? "RapportAI"} - {report.annee ?? "2024–2025"}
                 </p>
               </div>
 
@@ -796,7 +796,7 @@ export function WordPreview({
               {/* Page number */}
               <div className="text-center mt-10 pt-3 border-t border-gray-100">
                 <p className="text-[9pt] text-gray-400" style={{ fontFamily: "Times New Roman, serif" }}>
-                  — {idx + 1} —
+                  - {idx + 1} -
                 </p>
               </div>
             </div>

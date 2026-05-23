@@ -268,7 +268,7 @@ export function PreviewPanel({ activeSection, content }: PreviewPanelProps) {
       {/* Share URL toast */}
       {shareUrl && (
         <div className="shrink-0 px-4 py-2 text-xs font-mono truncate" style={{ background: "#f0fdf4", borderBottom: "1px solid #bbf7d0", color: "#15803d" }}>
-          {shareUrl} — lien copié ✓
+          {shareUrl} - lien copié ✓
         </div>
       )}
 

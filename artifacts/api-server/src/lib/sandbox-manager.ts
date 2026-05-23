@@ -200,9 +200,9 @@ Type: ${p.reportType} | Thème: "${p.theme}"`;
 }
 
 function buildInstructions(p: ReportProfile): string {
-  return `# RapportAI — ${p.studentName}
+  return `# RapportAI : ${p.studentName}
 Thème: ${p.theme}
-École: ${p.school} — ${p.filiere} — ${p.annee ?? "2024–2025"}
+École: ${p.school}, ${p.filiere}, ${p.annee ?? "2024–2025"}
 Type: ${p.reportType}
 ${p.problematique ? `Problématique: ${p.problematique}` : ""}
 ${p.encadrantPeda ? `Encadrant péda: ${p.encadrantPeda}` : ""}

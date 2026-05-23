@@ -12,7 +12,7 @@ const chapters = [
   {
     label: "Le déclic",
     title: "Un dimanche soir, à J-7 de la soutenance.",
-    body: `C'est là que tout a commencé. Un étudiant, assis devant un document Word vide, son stage terminé depuis 3 semaines, et son rapport — le "vrai rapport" — pas encore commencé.
+    body: `C'est là que tout a commencé. Un étudiant, assis devant un document Word vide, son stage terminé depuis 3 semaines, et son rapport, le "vrai rapport", pas encore commencé.
 
 Il avait appris. Il avait bossé. Il avait des choses à dire. Mais la page blanche, la structure à deviner, la bibliographie à trouver... paralysait tout.
 
@@ -21,7 +21,7 @@ Il a fini par rendre quelque chose. Mais ce n'était pas à la hauteur de ce qu'
   {
     label: "Le constat",
     title: "Ce n'est pas un problème de compétence. C'est un problème de méthode.",
-    body: `Après avoir parlé à des dizaines d'étudiants marocains — ENCG, ENSA, EMSI, ISGA, IAV — le même schéma revenait.
+    body: `Après avoir parlé à des dizaines d'étudiants marocains (ENCG, ENSA, EMSI, ISGA, IAV), le même schéma revenait.
 
 Des étudiants brillants. Des stages solides. Mais des rapports qui ne rendaient pas justice à leur travail.
 
@@ -30,16 +30,16 @@ Personne ne leur avait vraiment appris à écrire un rapport académique marocai
   {
     label: "L'idée",
     title: "Et si l'IA pouvait résoudre exactement ça ?",
-    body: `L'IA générative a fait des progrès énormes en rédaction académique. Mais les outils existants — ChatGPT, Jenni.ai — ne connaissent pas les normes marocaines. Ils produisent du texte générique, pas un rapport structuré pour ton jury.
+    body: `L'IA générative a fait des progrès énormes en rédaction académique. Mais les outils existants (ChatGPT, Jenni.ai) ne connaissent pas les normes marocaines. Ils produisent du texte générique, pas un rapport structuré pour ton jury.
 
-L'idée de RapportAI est née ici : un agent IA qui connaît le format, qui lit ton canevas d'école, qui adapte chaque section à ta problématique — et qui écrit comme un auteur cohérent, pas comme un générateur de paragraphes.`,
+L'idée de RapportAI est née ici : un agent IA qui connaît le format, qui lit ton canevas d'école, qui adapte chaque section à ta problématique, et qui écrit comme un auteur cohérent, pas comme un générateur de paragraphes.`,
   },
   {
     label: "Aujourd'hui",
     title: "500+ étudiants ont déjà généré leur rapport.",
     body: `RapportAI est utilisé dans plus de 80 écoles au Maroc. Des étudiants en BTS, en licence, en master. Des thèmes de finance, de logistique, de marketing, d'informatique.
 
-Chaque rapport est personnalisé. Chaque section est cohérente. Et chaque étudiant a récupéré des semaines — parfois des mois — de sa vie.
+Chaque rapport est personnalisé. Chaque section est cohérente. Et chaque étudiant a récupéré des semaines, parfois des mois, de sa vie.
 
 Ce n'est pas une promesse. Ce sont des résultats vécus.`,
   },
@@ -49,17 +49,17 @@ const testimonials = [
   {
     quote: "J'ai rendu mon rapport en 2 jours. Mon encadrant a dit que c'était le meilleur qu'il avait lu cette année.",
     name: "Yassine M.",
-    school: "ENCG Settat — Finance",
+    school: "ENCG Settat, Finance",
   },
   {
     quote: "J'avais peur que ça soit du copier-coller. Mais c'était vraiment mon projet, ma problématique, mon entreprise. Juste mis en forme parfaitement.",
     name: "Meryem B.",
-    school: "EMSI Casablanca — Marketing",
+    school: "EMSI Casablanca, Marketing",
   },
   {
     quote: "3 semaines de blocage, résolues en une soirée. Je n'aurais pas cru c'est possible.",
     name: "Amine K.",
-    school: "ENSA Agadir — Génie Informatique",
+    school: "ENSA Agadir, Génie Informatique",
   },
 ];
 
@@ -186,9 +186,9 @@ export default function StoryPage() {
           <motion.div variants={fadeUp} initial="hidden" whileInView="show" viewport={{ once: true }}
             className="p-8 rounded-2xl border border-purple-100 bg-purple-50">
             <p className="text-gray-700 leading-relaxed text-lg font-medium italic">
-              "On a construit RapportAI pour l'étudiant qu'on était — celui qui méritait mieux que d'être jugé sur sa mise en page plutôt que sur son travail réel."
+              "On a construit RapportAI pour l'étudiant qu'on était, celui qui méritait mieux que d'être jugé sur sa mise en page plutôt que sur son travail réel."
             </p>
-            <div className="mt-4 text-sm text-purple-600 font-semibold">— L'équipe RapportAI</div>
+            <div className="mt-4 text-sm text-purple-600 font-semibold">L'équipe RapportAI</div>
           </motion.div>
         </div>
       </section>

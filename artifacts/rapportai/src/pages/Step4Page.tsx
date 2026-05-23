@@ -34,7 +34,7 @@ function buildPreviewHtml(
   parts.push(`<p>${abstract || "<em>The abstract will appear here…</em>"}</p>`);
   if (abrevs.length > 0) {
     parts.push(`<h2>Liste des Abréviations</h2>`);
-    abrevs.forEach((a) => parts.push(`<p><strong>${a.abbr}</strong> — ${a.sig}</p>`));
+    abrevs.forEach((a) => parts.push(`<p><strong>${a.abbr}</strong> : ${a.sig}</p>`));
   }
   return parts.join("\n");
 }
@@ -276,7 +276,7 @@ export default function Step4Page() {
                 value={resume}
                 onChange={(e) => setResumeSync(e.target.value)}
                 rows={6}
-                placeholder="Présentez votre travail en français — contexte, méthodologie, résultats principaux, conclusion."
+                placeholder="Présentez votre travail en français : contexte, méthodologie, résultats principaux, conclusion."
                 className="w-full text-sm border border-gray-200 rounded-xl p-3 resize-none focus:outline-none focus:ring-2 focus:ring-purple-300 focus:border-purple-400 placeholder:text-gray-300"
               />
               <button
@@ -319,7 +319,7 @@ export default function Step4Page() {
                 value={abstract}
                 onChange={(e) => setAbstractSync(e.target.value)}
                 rows={6}
-                placeholder="Present your work in English — context, methodology, main results, conclusion."
+                placeholder="Present your work in English: context, methodology, main results, conclusion."
                 className="w-full text-sm border border-gray-200 rounded-xl p-3 resize-none focus:outline-none focus:ring-2 focus:ring-purple-300 focus:border-purple-400 placeholder:text-gray-300"
               />
               <button
@@ -414,7 +414,7 @@ export default function Step4Page() {
               className="w-full h-12 bg-purple-600 hover:bg-purple-700 text-white font-bold text-sm rounded-xl flex items-center justify-center gap-2"
               style={{ boxShadow: "0 4px 20px rgba(124,58,237,0.35)" }}
             >
-              Suivant — Sommaire <ArrowRight className="w-4 h-4" />
+              Suivant : Sommaire <ArrowRight className="w-4 h-4" />
             </Button>
           </div>
         </div>

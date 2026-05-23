@@ -390,7 +390,7 @@ export default function JuryAIPage() {
                 />
               </div>
               <p className="text-xs text-gray-400 mt-1.5">
-                {exchangeCount >= 8 ? "Bilan disponible — continue à pratiquer." : `${8 - exchangeCount} échange(s) avant le bilan`}
+                {exchangeCount >= 8 ? "Bilan disponible. Continue à pratiquer." : `${8 - exchangeCount} échange(s) avant le bilan`}
               </p>
             </div>
           )}

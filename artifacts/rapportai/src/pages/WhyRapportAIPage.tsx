@@ -55,7 +55,7 @@ export default function WhyRapportAIPage() {
             <span className="text-red-500">brise</span> autant d'étudiants ?
           </h1>
           <p className="text-lg text-gray-500 leading-relaxed max-w-xl mx-auto">
-            3 mois. Des dizaines de pages. Un format que personne ne t'a vraiment appris. Et un jury qui juge en 5 minutes. Voici pourquoi — et comment RapportAI change ça.
+            3 mois. Des dizaines de pages. Un format que personne ne t'a vraiment appris. Et un jury qui juge en 5 minutes. Voici pourquoi, et comment RapportAI change ça.
           </p>
         </motion.div>
       </section>
@@ -72,7 +72,7 @@ export default function WhyRapportAIPage() {
               {
                 icon: <Clock className="w-5 h-5 text-red-500" />,
                 title: "Des mois perdus sur la forme",
-                body: "La mise en page, la numérotation, les marges, la table des matières — ça prend des jours. Pour un contenu que le jury lit en quelques minutes.",
+                body: "La mise en page, la numérotation, les marges, la table des matières : ça prend des jours. Pour un contenu que le jury lit en quelques minutes.",
               },
               {
                 icon: <Brain className="w-5 h-5 text-red-500" />,
@@ -161,12 +161,12 @@ export default function WhyRapportAIPage() {
               {
                 icon: <Brain className="w-5 h-5 text-purple-600" />,
                 title: "Il part de TES informations, pas de modèles génériques",
-                body: "Tu décris ton entreprise, ton thème, ta problématique. L'IA génère un rapport personnalisé — pas un copier-coller d'un template vide.",
+                body: "Tu décris ton entreprise, ton thème, ta problématique. L'IA génère un rapport personnalisé, pas un copier-coller d'un template vide.",
               },
               {
                 icon: <FileText className="w-5 h-5 text-purple-600" />,
                 title: "Chaque section est cohérente avec les autres",
-                body: "L'introduction prépare les parties, les parties alimentent la conclusion. RapportAI lit ce qu'il a déjà écrit avant de continuer — comme un vrai auteur.",
+                body: "L'introduction prépare les parties, les parties alimentent la conclusion. RapportAI lit ce qu'il a déjà écrit avant de continuer, comme un vrai auteur.",
               },
             ].map((item, i) => (
               <motion.div key={i} custom={i} variants={fadeUp} initial="hidden" whileInView="show" viewport={{ once: true }}

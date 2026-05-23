@@ -249,11 +249,11 @@ export default function Step2Page() {
             filiere ? new Paragraph({ alignment: AlignmentType.CENTER, spacing: { after: 600 }, children: [new TextRun({ text: filiere, size: 22, font: "Times New Roman" })] }) : null,
             new Paragraph({ alignment: AlignmentType.CENTER, spacing: { after: 200 }, children: [new TextRun({ text: reportType, bold: true, size: 20, font: "Times New Roman" })] }),
             new Paragraph({ alignment: AlignmentType.CENTER, spacing: { after: 800 }, children: [new TextRun({ text: theme || "Titre du rapport", bold: true, size: 24, font: "Times New Roman" })] }),
-            new Paragraph({ alignment: AlignmentType.LEFT, spacing: { after: 200 }, children: [new TextRun({ text: `Réalisé par : ${student || "—"}`, size: 22, font: "Times New Roman" })] }),
+            new Paragraph({ alignment: AlignmentType.LEFT, spacing: { after: 200 }, children: [new TextRun({ text: `Réalisé par : ${student || "-"}`, size: 22, font: "Times New Roman" })] }),
             encPeda ? new Paragraph({ alignment: AlignmentType.LEFT, spacing: { after: 100 }, children: [new TextRun({ text: `Encadrant pédagogique : ${encPeda}`, size: 22, font: "Times New Roman" })] }) : null,
             encPro ? new Paragraph({ alignment: AlignmentType.LEFT, spacing: { after: 100 }, children: [new TextRun({ text: `Encadrant professionnel : ${encPro}`, size: 22, font: "Times New Roman" })] }) : null,
             entreprise ? new Paragraph({ alignment: AlignmentType.LEFT, spacing: { after: 100 }, children: [new TextRun({ text: `Entreprise : ${entreprise}`, size: 22, font: "Times New Roman" })] }) : null,
-            dateDebut || dateFin ? new Paragraph({ alignment: AlignmentType.LEFT, spacing: { after: 100 }, children: [new TextRun({ text: `Période de stage : ${dateDebut ? new Date(dateDebut).toLocaleDateString("fr-FR") : ""} — ${dateFin ? new Date(dateFin).toLocaleDateString("fr-FR") : ""}`, size: 22, font: "Times New Roman" })] }) : null,
+            dateDebut || dateFin ? new Paragraph({ alignment: AlignmentType.LEFT, spacing: { after: 100 }, children: [new TextRun({ text: `Période de stage : ${dateDebut ? new Date(dateDebut).toLocaleDateString("fr-FR") : ""} au ${dateFin ? new Date(dateFin).toLocaleDateString("fr-FR") : ""}`, size: 22, font: "Times New Roman" })] }) : null,
             jury1 || jury2 || jury3 ? new Paragraph({ alignment: AlignmentType.LEFT, spacing: { before: 400, after: 100 }, children: [new TextRun({ text: "Membres du jury :", bold: true, size: 22, font: "Times New Roman" })] }) : null,
             jury1 ? new Paragraph({ alignment: AlignmentType.LEFT, spacing: { after: 60 }, children: [new TextRun({ text: jury1, size: 22, font: "Times New Roman" })] }) : null,
             jury2 ? new Paragraph({ alignment: AlignmentType.LEFT, spacing: { after: 60 }, children: [new TextRun({ text: jury2, size: 22, font: "Times New Roman" })] }) : null,
@@ -398,11 +398,11 @@ export default function Step2Page() {
                 Membres du jury <span className="text-xs font-normal text-gray-400">(optionnel)</span>
               </label>
               <div className="space-y-2">
-                <input value={jury1} onChange={e => setJury1(e.target.value)} placeholder="Pr. Ahmed Chakir — Président"
+                <input value={jury1} onChange={e => setJury1(e.target.value)} placeholder="Pr. Ahmed Chakir, Président"
                   className="w-full text-sm border border-gray-200 rounded-xl px-3 py-2.5 focus:outline-none focus:ring-2 focus:ring-purple-300 focus:border-purple-400 placeholder:text-gray-300" />
-                <input value={jury2} onChange={e => setJury2(e.target.value)} placeholder="Pr. Fatima Zahra Benali — Membre"
+                <input value={jury2} onChange={e => setJury2(e.target.value)} placeholder="Pr. Fatima Zahra Benali, Membre"
                   className="w-full text-sm border border-gray-200 rounded-xl px-3 py-2.5 focus:outline-none focus:ring-2 focus:ring-purple-300 focus:border-purple-400 placeholder:text-gray-300" />
-                <input value={jury3} onChange={e => setJury3(e.target.value)} placeholder="Dr. Hassan Ouali — Membre"
+                <input value={jury3} onChange={e => setJury3(e.target.value)} placeholder="Dr. Hassan Ouali, Membre"
                   className="w-full text-sm border border-gray-200 rounded-xl px-3 py-2.5 focus:outline-none focus:ring-2 focus:ring-purple-300 focus:border-purple-400 placeholder:text-gray-300" />
               </div>
             </div>
@@ -426,7 +426,7 @@ export default function Step2Page() {
                 Modèle Word de votre école <span className="text-xs font-normal text-gray-400">(recommandé)</span>
               </label>
               <p className="text-xs text-gray-400 mb-2">
-                Importez le template de votre école — vos données seront insérées automatiquement dans l'aperçu.
+                Importez le template de votre école : vos données seront insérées automatiquement dans l'aperçu.
                 {!canContinue && <span className="text-orange-400"> (Remplis d'abord les champs * ci-dessus)</span>}
               </p>
               <input ref={templateRef} type="file" accept=".docx,.doc" className="hidden" onChange={handleTemplateUpload} />
@@ -490,7 +490,7 @@ export default function Step2Page() {
                   </button>
                 </div>
               )}
-              {logoNotFound && <p className="text-xs text-orange-500 mt-1">Logo introuvable automatiquement — importe-le manuellement.</p>}
+              {logoNotFound && <p className="text-xs text-orange-500 mt-1">Logo introuvable automatiquement. Importe-le manuellement.</p>}
             </div>
 
             {/* Accent color (used for no-template preview only) */}
@@ -519,7 +519,7 @@ export default function Step2Page() {
             <Button onClick={handleContinue} disabled={!canContinue}
               className="w-full h-12 bg-purple-600 hover:bg-purple-700 text-white font-bold text-sm rounded-xl flex items-center justify-center gap-2 disabled:opacity-40"
               style={{ boxShadow: canContinue ? "0 4px 20px rgba(124,58,237,0.35)" : "none" }}>
-              Suivant — Dédicaces & Remerciements <ArrowRight className="w-4 h-4" />
+              Suivant : Dédicaces & Remerciements <ArrowRight className="w-4 h-4" />
             </Button>
           </div>
         </div>
@@ -579,7 +579,7 @@ export default function Step2Page() {
                       <span className="text-gray-400">Période stage</span>
                       <span className="font-medium text-right">
                         {dateDebut && new Date(dateDebut).toLocaleDateString("fr-MA", { day: "numeric", month: "short", year: "numeric" })}
-                        {dateDebut && dateFin && " — "}
+                        {dateDebut && dateFin && " au "}
                         {dateFin && new Date(dateFin).toLocaleDateString("fr-MA", { day: "numeric", month: "short", year: "numeric" })}
                       </span>
                     </div>

@@ -29,7 +29,7 @@ export default function Step2Page() {
 
   const { messages, send, abort, isThinking, isGenerating, toolCalls, thinkingText } = useConversation({
     step: 2,
-    initialMessage: `Je génère ta page de garde${studentName ? `, ${studentName.split(" ")[0]}` : ""} — ${report.school}, ${report.filiere} (${report.reportType.toUpperCase()}). Il me faut juste quelques infos : qui est ton encadrant pédagogique ?`,
+    initialMessage: `Je génère ta page de garde${studentName ? `, ${studentName.split(" ")[0]}` : ""} pour ${report.school}, ${report.filiere} (${report.reportType.toUpperCase()}). Il me faut juste quelques infos : qui est ton encadrant pédagogique ?`,
     onSectionGenerated: (section, content) => {
       if (section === "page-de-garde") {
         updateReport({ pageDeGarde: content, studentName: studentName || report.studentName });
@@ -58,7 +58,7 @@ export default function Step2Page() {
             title="Page de garde prête"
             subtitle="On passe aux dédicaces et remerciements."
             onNext={() => { updateReport({ currentStep: 3 }); setLocation("/rapport/step-3"); }}
-            nextLabel="Étape 3 — Dédicaces"
+            nextLabel="Étape 3 : Dédicaces"
           />
         )}
         <div ref={bottomRef} />

@@ -13,7 +13,7 @@ export default function PrivacyPage() {
         <div className="prose prose-gray max-w-none">
 
           <h1 className="text-3xl font-bold text-gray-900 mb-2">Politique de Confidentialité</h1>
-          <p className="text-gray-500 mb-10">RapportAI — rapportai.io</p>
+          <p className="text-gray-500 mb-10">RapportAI · rapportai.io</p>
 
           {/* Section 1 */}
           <section className="mb-8">
@@ -41,7 +41,7 @@ export default function PrivacyPage() {
                 <ul className="list-disc list-inside text-gray-700 space-y-1">
                   <li>Informations saisies dans le formulaire (sujet, institution, encadrant, etc.)</li>
                   <li>Contenu généré par les agents IA</li>
-                  <li>Fichiers uploadés (figures, documents) — <strong>supprimés après traitement</strong></li>
+                  <li>Fichiers uploadés (figures, documents), <strong>supprimés après traitement</strong></li>
                 </ul>
               </div>
               <div>
@@ -196,7 +196,7 @@ export default function PrivacyPage() {
             <p className="text-gray-700 mt-4">
               Pour exercer ces droits :{" "}
               <a href={`mailto:${SUPPORT_EMAIL}`} className="text-purple-600 hover:underline">{SUPPORT_EMAIL}</a>
-              {" "}— Délai de réponse : 30 jours maximum.
+              {" "}Délai de réponse : 30 jours maximum.
             </p>
           </section>
 

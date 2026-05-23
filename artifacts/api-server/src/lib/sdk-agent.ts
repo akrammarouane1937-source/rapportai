@@ -176,7 +176,7 @@ export class SDKReportAgent {
     // Combine: section system prompt + student context + knowledge base
     const baseSystem = buildSystemPrompt(this.profile, this.workDir);
     const knowledgeBase = sectionSkills
-      ? `\n\n---\n## KNOWLEDGE BASE — LIS ENTIÈREMENT AVANT D'ÉCRIRE\n${sectionSkills}`
+      ? `\n\n---\n## KNOWLEDGE BASE : LIS ENTIÈREMENT AVANT D'ÉCRIRE\n${sectionSkills}`
       : "";
     const systemPrompt = sectionSystem
       ? `${sectionSystem}\n\n---\n## CONTEXTE ÉTUDIANT\n${baseSystem}${knowledgeBase}`
@@ -307,15 +307,15 @@ export class SDKReportAgent {
       case "partie-i": {
         const figsI = (opts?.figures ?? []).filter(f => f.placement === "Partie I");
         const figNoteI = figsI.length > 0
-          ? `\n\nFigures uploadées par l'étudiant pour la Partie I — intègre-les dans le texte avec "La Figure N montre..." :\n` +
-            figsI.map(f => `- Figure ${f.figureNumber} — "${f.title}" (Source : ${f.source}, Auteur : ${f.author})\n  Légende : ${f.caption}`).join("\n")
+          ? `\n\nFigures uploadées par l'étudiant pour la Partie I. Intègre-les dans le texte avec "La Figure N montre..." :\n` +
+            figsI.map(f => `- Figure ${f.figureNumber} : "${f.title}" (Source : ${f.source}, Auteur : ${f.author})\n  Légende : ${f.caption}`).join("\n")
           : "";
         const contextPacketI = opts?.extraContext
           ? `\n\n## CONTEXTE INJECTÉ PAR L'ORCHESTRATEUR\n${opts.extraContext}\n---\n`
           : "";
         return `${docNote}${contextPacketI}Lis sommaire.md pour extraire la structure exacte de la Partie I (chapitres et sections).
-Génère ensuite la Partie I complète en suivant cette structure — ne modifie aucun titre, n'ajoute aucun chapitre.
-La Partie I est le cadre THÉORIQUE — elle doit poser les fondements conceptuels que la Partie II empirique va tester ou appliquer.
+Génère ensuite la Partie I complète en suivant cette structure. Ne modifie aucun titre, n'ajoute aucun chapitre.
+La Partie I est le cadre THÉORIQUE : elle doit poser les fondements conceptuels que la Partie II empirique va tester ou appliquer.
 Problématique : ${prob} | Style de citation : ${style}${figNoteI}
 Enregistre dans partie-i.md une fois terminé.`;
       }
@@ -323,14 +323,14 @@ Enregistre dans partie-i.md une fois terminé.`;
       case "partie-ii": {
         const figsII = (opts?.figures ?? []).filter(f => f.placement === "Partie II");
         const figNoteII = figsII.length > 0
-          ? `\n\nFigures uploadées par l'étudiant pour la Partie II — intègre-les dans le texte avec "La Figure N montre..." :\n` +
-            figsII.map(f => `- Figure ${f.figureNumber} — "${f.title}" (Source : ${f.source}, Auteur : ${f.author})\n  Légende : ${f.caption}`).join("\n")
+          ? `\n\nFigures uploadées par l'étudiant pour la Partie II. Intègre-les dans le texte avec "La Figure N montre..." :\n` +
+            figsII.map(f => `- Figure ${f.figureNumber} : "${f.title}" (Source : ${f.source}, Auteur : ${f.author})\n  Légende : ${f.caption}`).join("\n")
           : "";
         const contextPacket = opts?.extraContext
           ? `\n\n## CONTEXTE INJECTÉ PAR L'ORCHESTRATEUR\n${opts.extraContext}\n---\n`
           : "";
         return `${docNote}${contextPacket}Lis sommaire.md pour extraire la structure exacte de la Partie II (chapitres et sections).
-Lis aussi partie-i.md — les références croisées vers Partie I sont OBLIGATOIRES. Chaque chapitre de la Partie II doit s'ancrer dans le cadre théorique établi en Partie I.
+Lis aussi partie-i.md. Les références croisées vers Partie I sont OBLIGATOIRES. Chaque chapitre de la Partie II doit s'ancrer dans le cadre théorique établi en Partie I.
 Génère ensuite la Partie II complète en suivant la structure du sommaire.
 Problématique : ${prob} | Style de citation : ${style}${figNoteII}
 Enregistre dans partie-ii.md une fois terminé.`;
@@ -347,7 +347,7 @@ Enregistre dans introduction.md.`;
         const contextPacketConclusion = opts?.extraContext
           ? `\n\n## CONTEXTE INJECTÉ PAR L'ORCHESTRATEUR\n${opts.extraContext}\n---\n`
           : "";
-        return `${docNote}${contextPacketConclusion}Lis introduction.md, partie-i.md, partie-ii.md (OBLIGATOIRE — la conclusion doit synthétiser les deux parties et répondre à la problématique posée en introduction).
+        return `${docNote}${contextPacketConclusion}Lis introduction.md, partie-i.md, partie-ii.md (OBLIGATOIRE : la conclusion doit synthétiser les deux parties et répondre à la problématique posée en introduction).
 Rédige la Conclusion Générale (400–600 mots).
 Structure : Synthèse des apports → Réponse à la problématique → Limites → Perspectives futures.
 Chaque paragraphe doit référencer explicitement une des deux parties.
@@ -367,7 +367,7 @@ Enregistre dans resume.md.`;
         if (!p.entreprise && p.reportType !== "Mémoire") missingFields.push("entreprise d'accueil");
         if (!p.juryMember1) missingFields.push("membres du jury (optionnel)");
 
-        return `CONTEXTE ÉTUDIANT — NE REDEMANDE JAMAIS CES INFOS :
+        return `CONTEXTE ÉTUDIANT (NE REDEMANDE JAMAIS CES INFOS) :
 - Nom : ${p.studentName}
 - École : ${p.school}
 - Filière : ${p.filiere}
@@ -380,7 +380,7 @@ ${p.entreprise ? `- Entreprise d'accueil : ${p.entreprise}` : ""}
 ${p.ville ? `- Ville : ${p.ville}` : ""}
 ${p.juryMember1 ? `- Jury : ${p.juryMember1}${p.juryMember2 ? `, ${p.juryMember2}` : ""}${p.juryMember3 ? `, ${p.juryMember3}` : ""}` : ""}
 
-${missingFields.length > 0 ? `INFOS MANQUANTES — pose ces questions en UN SEUL message avant de générer :\n${missingFields.map(f => `- ${f} ?`).join("\n")}` : "Toutes les infos sont présentes — génère directement la page de garde."}
+${missingFields.length > 0 ? `INFOS MANQUANTES : pose ces questions en UN SEUL message avant de générer :\n${missingFields.map(f => `- ${f} ?`).join("\n")}` : "Toutes les infos sont présentes. Génère directement la page de garde."}
 
 Suis les instructions du skills file (page-de-garde-skills.md) pour choisir PATH A (template) ou PATH B (pas de template).
 Enregistre dans page-de-garde.md.`;
@@ -388,20 +388,20 @@ Enregistre dans page-de-garde.md.`;
 
       case "dedicaces": {
         const dedicacesExtra = opts?.extraContext
-          ? `\n\nDemande spécifique de l'étudiant(e) — respecte-la impérativement, préserve chaque nom mentionné :\n"""\n${opts.extraContext}\n"""`
+          ? `\n\nDemande spécifique de l'étudiant(e), respecte-la impérativement, préserve chaque nom mentionné :\n"""\n${opts.extraContext}\n"""`
           : "";
         return `${docNote}Lis profile.json.${dedicacesExtra}
-IMPORTANT : Ne lis PAS dedicaces.md s'il existe — génère un texte entièrement nouveau from scratch.
+IMPORTANT : Ne lis PAS dedicaces.md s'il existe. Génère un texte entièrement nouveau from scratch.
 Rédige les Dédicaces (8–20 lignes, style lyrique et sobre).
 Utilise Write pour écrire dedicaces.md (écrase tout contenu précédent).`;
       }
 
       case "remerciements": {
         const remExtra = opts?.extraContext
-          ? `\n\nDemande spécifique de l'étudiant(e) — intègre TOUS les noms et éléments mentionnés :\n"""\n${opts.extraContext}\n"""`
+          ? `\n\nDemande spécifique de l'étudiant(e), intègre TOUS les noms et éléments mentionnés :\n"""\n${opts.extraContext}\n"""`
           : "";
         return `${docNote}Lis profile.json pour les noms et titres des encadrants.${remExtra}
-IMPORTANT : Ne lis PAS remerciements.md s'il existe — génère un texte entièrement nouveau from scratch.
+IMPORTANT : Ne lis PAS remerciements.md s'il existe. Génère un texte entièrement nouveau from scratch.
 Rédige les Remerciements (200–350 mots, ton formel et sincère).
 Respecte l'ordre : encadrant pédagogique → encadrant professionnel → école → famille → amis si mentionnés.
 Varie les formules d'ouverture de chaque paragraphe.
@@ -427,7 +427,7 @@ Enregistre dans abbreviations.md.`;
     return `Lis ${sectionId}.md.
 L'étudiant demande : ${instruction}
 
-Applique des modifications chirurgicales uniquement — ne réécris pas toute la section.
+Applique des modifications chirurgicales uniquement. Ne réécris pas toute la section.
 Utilise Edit pour modifier uniquement les passages concernés.
 Conserve la structure Markdown, les citations et les références croisées.
 Sauvegarde les changements dans ${sectionId}.md.`;
@@ -494,16 +494,16 @@ function buildSystemPrompt(p: ReportProfile, workDir?: string): string {
     } catch { /* memory missing — continue without */ }
   }
 
-  return `Tu es l'agent de rédaction académique de RapportAI — une instance Claude Code dédiée au rapport de ${p.studentName} à ${schoolFull}.
+  return `Tu es l'agent de rédaction académique de RapportAI, une instance Claude Code dédiée au rapport de ${p.studentName} à ${schoolFull}.
 
 ## Ton environnement
 Tu travailles dans un dossier dédié à ce rapport. Utilise Glob pour lister tous les fichiers disponibles au démarrage. Les fichiers possibles :
-- \`INSTRUCTIONS.md\` — directives détaillées du rapport — LIS EN PREMIER
-- \`profile.json\` — profil complet de l'étudiant — LIS EN DEUXIÈME
-- \`*.md\` — sections déjà rédigées (partie-i.md, conclusion.md, etc.) — lis avant d'écrire
-- Documents uploadés — PDFs, Word, TXT fournis par l'étudiant
-- \`template-screenshot.png\` — capture visuelle du modèle Word de l'école
-- Fichier \`.docx\` — contenu textuel du template de l'école
+- \`INSTRUCTIONS.md\` : directives détaillées du rapport. LIS EN PREMIER
+- \`profile.json\` : profil complet de l'étudiant. LIS EN DEUXIÈME
+- \`*.md\` : sections déjà rédigées (partie-i.md, conclusion.md, etc.). Lis avant d'écrire
+- Documents uploadés : PDFs, Word, TXT fournis par l'étudiant
+- \`template-screenshot.png\` : capture visuelle du modèle Word de l'école
+- Fichier \`.docx\` : contenu textuel du template de l'école
 
 ## Étapes obligatoires avant toute rédaction
 1. Glob pour lister tous les fichiers du dossier
@@ -513,14 +513,14 @@ Tu travailles dans un dossier dédié à ce rapport. Utilise Glob pour lister to
 5. Si un template ou screenshot existe, le lire pour respecter la mise en page
 
 ## Règles absolues
-- Français académique formel — registre soutenu uniquement
-- Citations RÉELLES uniquement — utilise WebFetch sur Semantic Scholar, CrossRef, ou Google Scholar pour trouver des sources existantes. JAMAIS inventer une citation
+- Français académique formel, registre soutenu uniquement
+- Citations RÉELLES uniquement. Utilise WebFetch sur Semantic Scholar, CrossRef, ou Google Scholar pour trouver des sources existantes. JAMAIS inventer une citation
 - Structure Markdown obligatoire : \`##\` pour les chapitres, \`###\` pour les sections
 - Minimum 2500 mots pour Partie I et Partie II
-- Références croisées entre sections obligatoires — cite ce qui a été écrit dans les autres parties
+- Références croisées entre sections obligatoires. Cite ce qui a été écrit dans les autres parties
 - Style de citation : ${style}
 - Enregistre chaque section terminée avec Write dans son fichier \`.md\`
-- Utilise Edit pour les modifications chirurgicales — ne réécris jamais une section entière pour un petit changement
+- Utilise Edit pour les modifications chirurgicales. Ne réécris jamais une section entière pour un petit changement
 
 ## Profil de l'étudiant
 - Nom : ${p.studentName}
@@ -546,19 +546,19 @@ ${p.juryMember3 ? `- Membre du jury 3 : ${p.juryMember3}` : ""}
 - Ne jamais rédiger une section sans avoir lu les sections existantes
 - Ne jamais ignorer le template ou le canevas de l'école si fourni
 - Ne jamais dépasser le scope de la section demandée
-- Après avoir écrit le fichier avec Write, ne génère AUCUN texte de confirmation, résumé ou commentaire. Ton travail est terminé — arrête-toi immédiatement.
+- Après avoir écrit le fichier avec Write, ne génère AUCUN texte de confirmation, résumé ou commentaire. Ton travail est terminé. Arrête-toi immédiatement.
 - Pour les sections courtes (dédicaces, remerciements, résumé), utilise Write UNE SEULE FOIS avec le contenu complet. N'appelle jamais Write deux fois sur le même fichier.${canevasNote}`;
 }
 
 // ─── Instructions file written to disk ───────────────────────────────────────
 
 function buildInstructions(p: ReportProfile): string {
-  return `# RapportAI — Instructions pour ${p.studentName}
+  return `# RapportAI : Instructions pour ${p.studentName}
 
 ## Rapport
 - Type : ${p.reportType}
 - Thème : ${p.theme}
-- École : ${p.school} — ${p.filiere}
+- École : ${p.school}, ${p.filiere}
 - Année : ${p.annee ?? "2024–2025"}
 ${p.problematique ? `- Problématique : ${p.problematique}` : ""}
 ${p.encadrantPeda ? `- Encadrant pédagogique : ${p.encadrantPeda}` : ""}

@@ -25,7 +25,7 @@ function buildWelcomeEmail(data: {
       <p style="margin:0;font-weight:600;color:#1e40af;">🎉 Vous êtes membre fondateur</p>
       <p style="margin:8px 0 0;color:#1e40af;">
         Vous faites partie des 20 premiers membres de RapportAI.
-        Accès Pro illimité offert à vie — sans conditions.
+        Accès Pro illimité offert à vie, sans conditions.
       </p>
     </div>` : "";
 
@@ -53,7 +53,7 @@ function buildWelcomeEmail(data: {
   </a>
   <hr style="border:none;border-top:1px solid #e5e7eb;margin:32px 0;">
   <div style="background:#fafafa;border-radius:8px;padding:16px;margin-bottom:24px;">
-    <p style="margin:0 0 8px;font-weight:600;font-size:14px;">🎁 Parrainez vos amis — Gagnez 100 DH</p>
+    <p style="margin:0 0 8px;font-weight:600;font-size:14px;">🎁 Parrainez vos amis et gagnez 100 DH</p>
     <p style="margin:0 0 8px;color:#666;font-size:14px;">
       Partagez votre lien. Si 2 amis complètent leur rapport, vous recevez 100 DH de cashback.
     </p>
@@ -63,7 +63,7 @@ function buildWelcomeEmail(data: {
     </p>
   </div>
   <p style="font-size:13px;color:#9ca3af;margin:0;">
-    RapportAI — Votre assistant pour les rapports académiques<br>
+    RapportAI, votre assistant pour les rapports académiques<br>
     Des questions ? Répondez directement à cet email.
   </p>
 </body>
@@ -81,7 +81,7 @@ function buildReportReadyEmail(data: {
   const wordCountFr = data.word_count.toLocaleString("fr-FR");
 
   return {
-    subject: `✅ Votre rapport est prêt — ${data.report_subject}`,
+    subject: `✅ Votre rapport est prêt : ${data.report_subject}`,
     html: `<!DOCTYPE html>
 <html>
 <body style="font-family:'Helvetica Neue',Arial,sans-serif;max-width:600px;margin:0 auto;padding:32px 24px;color:#1a1a1a;">
@@ -113,7 +113,7 @@ function buildReportReadyEmail(data: {
   </div>
   <hr style="border:none;border-top:1px solid #e5e7eb;margin:32px 0;">
   <p style="font-size:13px;color:#9ca3af;margin:0;">
-    RapportAI — Votre assistant pour les rapports académiques<br>
+    RapportAI, votre assistant pour les rapports académiques<br>
     Des questions ? Répondez directement à cet email.
   </p>
 </body>

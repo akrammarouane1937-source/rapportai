@@ -40,7 +40,7 @@ export default function Step6() {
         {stepDone && !isThinking && !isGenerating && (
           <StepTransitionCard
             title="Introduction prête"
-            subtitle="On attaque le cœur du sujet — la Partie I."
+            subtitle="On attaque le cœur du sujet : la Partie I."
             onNext={() => { updateReport({ currentStep: 7 }); setLocation("/rapport/partie-i"); }}
             nextLabel="Partie I"
           />

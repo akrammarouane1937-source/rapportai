@@ -205,7 +205,7 @@ export default function Step5Page() {
                 Plan du rapport
               </h1>
               <p className="text-xs text-gray-400">
-                L'IA génère la structure complète — chapitres, sections, numérotation. Les agents Partie I et II liront ce plan pour s'aligner.
+                L'IA génère la structure complète : chapitres, sections, numérotation. Les agents Partie I et II liront ce plan pour s'aligner.
               </p>
             </div>
             <div className="flex items-center gap-2 flex-shrink-0 ml-4">
@@ -318,14 +318,14 @@ export default function Step5Page() {
       <div className="fixed bottom-0 right-0 bg-white border-t border-gray-100 px-8 py-4 z-30" style={{ left: 60 }}>
         <div className="max-w-3xl mx-auto flex items-center justify-between">
           <span className="text-xs text-gray-400">
-            {sommaireText ? `Plan généré · ${items.length} entrées` : "Plan non généré — vous pouvez continuer sans"}
+            {sommaireText ? `Plan généré · ${items.length} entrées` : "Plan non généré. Vous pouvez continuer sans."}
           </span>
           <Button
             onClick={() => setLocation("/rapport/step-6")}
             className="bg-purple-600 hover:bg-purple-700 text-white h-11 px-6 rounded-xl font-semibold text-sm flex items-center gap-2"
             style={{ boxShadow: "0 4px 16px rgba(124,58,237,0.3)" }}
           >
-            Suivant — Introduction Générale <ArrowRight className="w-4 h-4" />
+            Suivant : Introduction Générale <ArrowRight className="w-4 h-4" />
           </Button>
         </div>
       </div>

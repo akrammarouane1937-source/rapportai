@@ -41,7 +41,7 @@ export default function Step5() {
             title="Sommaire prêt"
             subtitle="On passe à l'introduction générale."
             onNext={() => { updateReport({ currentStep: 6 }); setLocation("/rapport/step-6"); }}
-            nextLabel="Étape 6 — Introduction"
+            nextLabel="Étape 6 : Introduction"
           />
         )}
         <div ref={bottomRef} />

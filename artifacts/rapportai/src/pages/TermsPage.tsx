@@ -17,11 +17,11 @@ export default function TermsPage() {
           <h1 className="text-3xl font-bold text-gray-900 mb-2">
             Conditions Générales d'Utilisation
           </h1>
-          <p className="text-gray-500 mb-10">RapportAI — {APP_URL}</p>
+          <p className="text-gray-500 mb-10">RapportAI · {APP_URL}</p>
 
           {/* Art 1 */}
           <section className="mb-8">
-            <h2 className="text-xl font-bold text-gray-900 mb-3">Article 1 — Objet</h2>
+            <h2 className="text-xl font-bold text-gray-900 mb-3">Article 1 : Objet</h2>
             <p className="text-gray-700 leading-relaxed">
               Les présentes Conditions Générales d'Utilisation (ci-après « CGU ») régissent l'accès et
               l'utilisation de la plateforme RapportAI (ci-après « le Service »), accessible à l'adresse{" "}
@@ -35,7 +35,7 @@ export default function TermsPage() {
 
           {/* Art 2 */}
           <section className="mb-8">
-            <h2 className="text-xl font-bold text-gray-900 mb-3">Article 2 — Description du Service</h2>
+            <h2 className="text-xl font-bold text-gray-900 mb-3">Article 2 : Description du Service</h2>
             <p className="text-gray-700 leading-relaxed">
               RapportAI est un outil de rédaction académique assistée par intelligence artificielle. Il génère
               des <strong>rapports académiques personnalisés</strong> (PFE, Mémoire, Rapport de stage, etc.)
@@ -50,7 +50,7 @@ export default function TermsPage() {
 
           {/* Art 3 */}
           <section className="mb-8">
-            <h2 className="text-xl font-bold text-gray-900 mb-3">Article 3 — Propriété du contenu généré</h2>
+            <h2 className="text-xl font-bold text-gray-900 mb-3">Article 3 : Propriété du contenu généré</h2>
             <div className="space-y-3">
               <p className="text-gray-700 leading-relaxed">
                 <strong>3.1</strong> Le contenu généré par RapportAI à partir des informations que vous fournissez
@@ -71,7 +71,7 @@ export default function TermsPage() {
           <section className="mb-8">
             <div className="bg-amber-50 border border-amber-200 rounded-xl p-6">
               <h2 className="text-xl font-bold text-gray-900 mb-3">
-                Article 4 — Intégrité académique
+                Article 4 : Intégrité académique
               </h2>
               <div className="space-y-3">
                 <p className="text-gray-700 leading-relaxed">
@@ -96,7 +96,7 @@ export default function TermsPage() {
 
           {/* Art 5 */}
           <section className="mb-8">
-            <h2 className="text-xl font-bold text-gray-900 mb-3">Article 5 — Obligations de l'utilisateur</h2>
+            <h2 className="text-xl font-bold text-gray-900 mb-3">Article 5 : Obligations de l'utilisateur</h2>
             <p className="text-gray-700 leading-relaxed mb-3">L'utilisateur s'engage à :</p>
             <div className="space-y-2">
               {[
@@ -115,7 +115,7 @@ export default function TermsPage() {
 
           {/* Art 6 */}
           <section className="mb-8">
-            <h2 className="text-xl font-bold text-gray-900 mb-3">Article 6 — Tarification et paiement</h2>
+            <h2 className="text-xl font-bold text-gray-900 mb-3">Article 6 : Tarification et paiement</h2>
             <div className="space-y-3">
               <p className="text-gray-700 leading-relaxed">
                 <strong>6.1</strong> Les tarifs applicables sont ceux affichés sur la page de tarification
@@ -140,7 +140,7 @@ export default function TermsPage() {
 
           {/* Art 7 */}
           <section className="mb-8">
-            <h2 className="text-xl font-bold text-gray-900 mb-3">Article 7 — Programme de parrainage</h2>
+            <h2 className="text-xl font-bold text-gray-900 mb-3">Article 7 : Programme de parrainage</h2>
             <div className="space-y-3">
               <p className="text-gray-700 leading-relaxed">
                 <strong>7.1</strong> Le programme de parrainage permet aux utilisateurs d'obtenir un cashback
@@ -163,7 +163,7 @@ export default function TermsPage() {
 
           {/* Art 8 */}
           <section className="mb-8">
-            <h2 className="text-xl font-bold text-gray-900 mb-3">Article 8 — Disponibilité et garanties</h2>
+            <h2 className="text-xl font-bold text-gray-900 mb-3">Article 8 : Disponibilité et garanties</h2>
             <div className="space-y-3">
               <p className="text-gray-700 leading-relaxed">
                 <strong>8.1</strong> RapportAI s'efforce de maintenir le Service disponible 24h/24 mais ne
@@ -184,7 +184,7 @@ export default function TermsPage() {
 
           {/* Art 9 */}
           <section className="mb-8">
-            <h2 className="text-xl font-bold text-gray-900 mb-3">Article 9 — Limitation de responsabilité</h2>
+            <h2 className="text-xl font-bold text-gray-900 mb-3">Article 9 : Limitation de responsabilité</h2>
             <p className="text-gray-700 leading-relaxed">
               Dans les limites autorisées par la loi applicable, la responsabilité totale de RapportAI ne
               pourra excéder le montant payé par l'utilisateur pour la transaction concernée.
@@ -197,7 +197,7 @@ export default function TermsPage() {
 
           {/* Art 10 */}
           <section className="mb-8">
-            <h2 className="text-xl font-bold text-gray-900 mb-3">Article 10 — Résiliation</h2>
+            <h2 className="text-xl font-bold text-gray-900 mb-3">Article 10 : Résiliation</h2>
             <p className="text-gray-700 leading-relaxed">
               RapportAI peut suspendre ou résilier l'accès d'un utilisateur en cas de violation des présentes
               CGU, sans préavis et sans remboursement.
@@ -210,7 +210,7 @@ export default function TermsPage() {
 
           {/* Art 11 */}
           <section className="mb-8">
-            <h2 className="text-xl font-bold text-gray-900 mb-3">Article 11 — Droit applicable</h2>
+            <h2 className="text-xl font-bold text-gray-900 mb-3">Article 11 : Droit applicable</h2>
             <p className="text-gray-700 leading-relaxed">
               Les présentes CGU sont régies par le droit marocain. Tout litige sera soumis aux tribunaux
               compétents du Maroc.
@@ -219,7 +219,7 @@ export default function TermsPage() {
 
           {/* Art 12 */}
           <section className="mb-8">
-            <h2 className="text-xl font-bold text-gray-900 mb-3">Article 12 — Contact et modifications</h2>
+            <h2 className="text-xl font-bold text-gray-900 mb-3">Article 12 : Contact et modifications</h2>
             <p className="text-gray-700 leading-relaxed">
               Pour toute question :{" "}
               <a href={`mailto:${SUPPORT_EMAIL}`} className="text-purple-600 hover:underline">{SUPPORT_EMAIL}</a>

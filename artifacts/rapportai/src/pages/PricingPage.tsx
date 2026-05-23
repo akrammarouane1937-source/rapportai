@@ -55,7 +55,7 @@ const PLANS: Plan[] = [
       "Chatbot IA intégré",
       "Vérification anti-plagiat",
       "Certificat Anti-Détection IA",
-      "JuryAI — Simulation de soutenance",
+      "JuryAI : Simulation de soutenance",
       "Slides PowerPoint",
     ],
     locked: [],
