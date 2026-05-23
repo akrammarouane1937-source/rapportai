@@ -57,10 +57,10 @@ async function humanizeChunk(
 
   try {
     for await (const message of query({
-      prompt: `Applique les 36 patterns de transformation (incluant les patterns français 30-36 et le BURSTINESS CHECKLIST) sur ce texte académique (section: ${sectionType}). Trois passes obligatoires : draft → self-audit → final. Retourne UNIQUEMENT le texte final humanisé, même structure Markdown, aucune explication :\n\n${chunk}`,
+      prompt: `Humanise ce texte académique (section: ${sectionType}) en appliquant les patterns de transformation pour éliminer les marqueurs d'écriture IA. RÈGLE ABSOLUE : conserve 100% du contenu, chaque paragraphe, chaque argument — ne supprime, ne résume et ne condenses rien. Le texte de sortie doit faire au minimum 95% des mots du texte d'entrée. Retourne UNIQUEMENT le texte humanisé complet, même structure Markdown, aucun commentaire :\n\n${chunk}`,
       options: {
         systemPrompt: SYSTEM_PROMPT,
-        maxTurns: 2,
+        maxTurns: 3,
         allowedTools: [],
         ...(claudeBinary ? { pathToClaudeCodeExecutable: claudeBinary } : {}),
       },
