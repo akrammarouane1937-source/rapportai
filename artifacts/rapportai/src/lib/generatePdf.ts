@@ -26,7 +26,7 @@ function section(title: string, content: string, color = "#7c3aed"): string {
 }
 
 export function generatePdf(report: ReportData): void {
-  const w = window.open("", "_blank", "width=900,height=700");
+  const w = window.open("", "_blank");
   if (!w) { alert("Autorisez les pop-ups pour télécharger le PDF."); return; }
 
   const bibHtml = (report.bibliographie ?? [])
@@ -80,12 +80,6 @@ export function generatePdf(report: ReportData): void {
 </head>
 <body>
 
-<!-- Print toolbar -->
-<div class="no-print" style="position:fixed;top:0;left:0;right:0;z-index:999;background:#7c3aed;color:#fff;padding:10px 20px;display:flex;align-items:center;justify-content:space-between;font-family:sans-serif;font-size:13px">
-  <span style="font-weight:700">RapportAI — Aperçu PDF</span>
-  <button onclick="window.print()" style="background:#fff;color:#7c3aed;border:none;padding:7px 20px;border-radius:999px;font-weight:700;cursor:pointer;font-size:13px">⬇ Enregistrer en PDF</button>
-</div>
-<div class="no-print" style="height:45px"></div>
 
 <!-- Cover page -->
 <div class="cover">
@@ -104,7 +98,7 @@ export function generatePdf(report: ReportData): void {
     <div class="cover-keywords">
       ${(report.motsCles ?? []).map((k) => `<span class="kw">${k}</span>`).join("")}
     </div>` : ""}
-  <div class="cover-footer">Généré avec RapportAI · rapportai.replit.app</div>
+  <div class="cover-footer">Généré avec RapportAI · rapportai.io</div>
 </div>
 
 <!-- Body sections -->
@@ -120,10 +114,7 @@ ${bibHtml ? `<div class="section"><div class="section-title" style="color:#6b728
 <div class="watermark">Généré avec RapportAI — ${new Date().toLocaleDateString("fr-MA", { day:"2-digit", month:"long", year:"numeric" })}</div>
 
 <script>
-  // Give fonts a moment to load before printing if triggered by URL param
-  if(window.location.search.includes('autoprint')){
-    window.addEventListener('load',()=>setTimeout(()=>window.print(),800));
-  }
+  window.addEventListener('load', () => setTimeout(() => { window.print(); window.close(); }, 900));
 </script>
 </body>
 </html>`;
