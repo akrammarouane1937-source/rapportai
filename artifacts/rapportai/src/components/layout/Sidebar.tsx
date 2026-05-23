@@ -4,7 +4,7 @@ import { useOptionalUser as useUser, useOptionalClerk as useClerk } from "@/lib/
 import {
   Home, LayoutGrid, ListChecks, ImageIcon, BookOpen,
   MessageSquare, Settings, LogOut, Search, Plus,
-  FileInput, GraduationCap, BookMarked, ChevronDown, Zap, Gift,
+  FileInput, GraduationCap, BookMarked, ChevronDown, Zap, FileText,
 } from "lucide-react";
 import { UpsellModal } from "@/components/report/UpsellModal";
 import { getMyPlan, canUseFeature, PLAN_LIMITS } from "@/lib/userPlan";
@@ -15,9 +15,8 @@ const NAV_ITEMS = [
   { icon: LayoutGrid,    label: "Mon Rapport",         path: "/rapports",           proFeature: "" },
   { icon: ListChecks,    label: "Sections terminées",  path: "/sections-terminees", proFeature: "" },
   { icon: ImageIcon,     label: "Figures",             path: "/figures",            proFeature: "" },
-  { icon: BookOpen,      label: "Bibliothèque",        path: "/bibliotheque",       proFeature: "citations" },
+  { icon: BookOpen,      label: "Bibliothèque",        path: "/bibliotheque",       proFeature: "" },
   { icon: MessageSquare, label: "JuryAI",              path: "/juryai",             proFeature: "juryai" },
-  { icon: Gift,          label: "Parrainage",           path: "/referral",           proFeature: "" },
   { icon: Settings,      label: "Paramètres",          path: "/parametres",         proFeature: "" },
 ];
 
@@ -149,7 +148,8 @@ export function Sidebar() {
         </div>
 
         {/* Nav items */}
-        <nav className="flex-1 overflow-y-auto py-2 px-2 space-y-0.5 min-h-0">
+        <nav className="flex-1 overflow-y-auto py-2 px-2 space-y-0.5 min-h-0 flex flex-col">
+          <div className="space-y-0.5">
           {NAV_ITEMS.map((item) => {
             const active = isActive(item.path);
             const locked = !!(item.proFeature && !canUseFeature(item.proFeature, plan.planId));
@@ -180,6 +180,31 @@ export function Sidebar() {
               </button>
             );
           })}
+          </div>
+
+          {/* Active report card — appears once user has started a report */}
+          {hasReport && (
+            <div className="mt-auto pt-2">
+              <div className="mx-0.5 mb-1">
+                <p className="text-[10px] font-semibold text-gray-400 uppercase tracking-wider px-2 mb-1">En cours</p>
+                <button
+                  onClick={() => setLocation("/rapports")}
+                  className="w-full flex items-start gap-2 px-2.5 py-2 rounded-lg hover:bg-purple-50 transition-colors text-left group"
+                  style={{ border: "1px solid #ede9fe" }}
+                >
+                  <FileText className="w-3.5 h-3.5 text-purple-400 flex-shrink-0 mt-0.5" />
+                  <div className="min-w-0 flex-1">
+                    <p className="text-xs font-medium text-gray-700 truncate group-hover:text-purple-700">
+                      {report.theme ?? "Mon rapport"}
+                    </p>
+                    <p className="text-[10px] text-gray-400 mt-0.5">
+                      {sectionsWithContent} section{sectionsWithContent !== 1 ? "s" : ""} générée{sectionsWithContent !== 1 ? "s" : ""}
+                    </p>
+                  </div>
+                </button>
+              </div>
+            </div>
+          )}
         </nav>
 
         {/* Bottom section */}

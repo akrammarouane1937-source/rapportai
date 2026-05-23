@@ -18,7 +18,6 @@ const APP_URL = process.env.APP_URL ?? "https://rapportai.io";
 function buildWelcomeEmail(data: {
   name:             string;
   is_founding_user: boolean;
-  referral_code:    string;
 }): { subject: string; html: string } {
   const foundingBlock = data.is_founding_user ? `
     <div style="background:#f0f7ff;border-left:4px solid #2563eb;padding:16px;margin:24px 0;border-radius:4px;">
@@ -52,16 +51,6 @@ function buildWelcomeEmail(data: {
     Créer mon premier rapport
   </a>
   <hr style="border:none;border-top:1px solid #e5e7eb;margin:32px 0;">
-  <div style="background:#fafafa;border-radius:8px;padding:16px;margin-bottom:24px;">
-    <p style="margin:0 0 8px;font-weight:600;font-size:14px;">🎁 Parrainez vos amis et gagnez 100 DH</p>
-    <p style="margin:0 0 8px;color:#666;font-size:14px;">
-      Partagez votre lien. Si 2 amis complètent leur rapport, vous recevez 100 DH de cashback.
-    </p>
-    <p style="margin:0;font-size:13px;color:#888;">
-      Votre lien : <a href="${APP_URL}/signup?ref=${data.referral_code}"
-                     style="color:#2563eb;">${APP_URL}/signup?ref=${data.referral_code}</a>
-    </p>
-  </div>
   <p style="font-size:13px;color:#9ca3af;margin:0;">
     RapportAI, votre assistant pour les rapports académiques<br>
     Des questions ? Répondez directement à cet email.
@@ -126,7 +115,7 @@ function buildReportReadyEmail(data: {
 type EmailTemplate = "welcome" | "report_ready";
 
 type EmailData = {
-  welcome:      Parameters<typeof buildWelcomeEmail>[0];
+  welcome:      { name: string; is_founding_user: boolean };
   report_ready: Parameters<typeof buildReportReadyEmail>[0];
 };
 

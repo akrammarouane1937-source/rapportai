@@ -75,7 +75,6 @@ export async function upsertUser(
     void sendEmail(email, "welcome", {
       name:             name || email.split("@")[0],
       is_founding_user: isFoundingUser,
-      referral_code:    referralCode,
     });
   }
 

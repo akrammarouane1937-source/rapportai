@@ -315,9 +315,6 @@ function ClerkProviderWithRoutes() {
             <Route path="/parametres">
               <ProtectedRoute component={ParametresPage} />
             </Route>
-            <Route path="/referral">
-              <ProtectedRoute component={ReferralPage} />
-            </Route>
             <Route path="/figures">
               <ProtectedRoute component={FiguresPage} />
             </Route>
