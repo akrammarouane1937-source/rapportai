@@ -798,11 +798,16 @@ export async function generateDocx(data: Report): Promise<Blob> {
           ...buildPartieII(data),
           ...buildFiguresSection("Partie II"),
           ...buildConclusion(data),
-          ...buildBibliographie(data),
-          ...buildTableDesFigures(),
-          ...buildListeDesTableaux(),
-          ...buildAnnexes(data),
-          ...buildTableDesMatieres(),  // always last
+          // Back-matter in user-defined order (draggable in Mon Rapport)
+          ...(data.sectionOrder?.length ? data.sectionOrder : ["bibliographie", "tableDesFigures", "listeDesTableaux", "annexes", "tableDesMatieres"])
+            .flatMap((id) => {
+              if (id === "bibliographie")    return buildBibliographie(data);
+              if (id === "tableDesFigures")  return buildTableDesFigures();
+              if (id === "listeDesTableaux") return buildListeDesTableaux();
+              if (id === "annexes")          return buildAnnexes(data);
+              if (id === "tableDesMatieres") return buildTableDesMatieres();
+              return [];
+            }),
         ],
       },
     ],

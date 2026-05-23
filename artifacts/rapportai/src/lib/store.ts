@@ -61,6 +61,9 @@ export interface Report {
   problematique: string;
   sectionSummaries: Record<string, string>;
 
+  // Section order — back-matter only (draggable in Mon Rapport)
+  sectionOrder: string[];
+
   // Meta
   currentStep: number;
   checkpoints: Record<string, string>;
@@ -109,6 +112,8 @@ export const initialReportState: Report = {
 
   problematique: "",
   sectionSummaries: {},
+
+  sectionOrder: ["bibliographie", "tableDesFigures", "listeDesTableaux", "annexes", "tableDesMatieres"],
 
   currentStep: 1,
   checkpoints: {},
