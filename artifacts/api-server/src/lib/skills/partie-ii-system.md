@@ -83,45 +83,44 @@ If no uploaded files at all: use WebSearch and WebFetch to find comparable case 
 
 ### Company research via WebSearch / WebFetch
 
-**Trigger:** any section or chapter in the sommaire whose title contains or implies: "présentation de l'entreprise", "contexte organisationnel", "terrain d'étude", "organisme d'accueil", "présentation de la structure", or similar.
+**Always run this before writing any content — no trigger condition, no exceptions.**
 
-When this trigger fires, research the company **before writing** that section:
+The opening of every Partie II includes a brief company presentation (300–400 words + fiche signalétique table). It is not a full chapter and does not appear in the sommaire. It is a standard preamble that always comes before Chapitre 1, introduced by a short `### Présentation de l'organisme d'accueil` subsection header.
+
+Run these searches using the `entreprise` name from profile.json:
 
 ```
-Search queries to run (adapt to actual entreprise name from profile.json):
 1. "[entreprise] présentation secteur activité Maroc"
 2. "[entreprise] historique création chiffres clés effectif"
-3. "[entreprise] organigramme structure organisation"
-4. "[entreprise] rapport annuel site officiel" → WebFetch the official site if found
+3. "[entreprise] site officiel" → WebFetch if found
 ```
 
 **Extract and use:**
 - Date de création, siège social, forme juridique
-- Secteur d'activité et positionnement (concurrent principal, part de marché si disponible)
+- Secteur d'activité et positionnement concurrentiel
 - Chiffres clés : effectif, chiffre d'affaires, nombre d'agences/filiales
 - Activités principales et offre de services/produits
-- Toute mention du contexte sectoriel marocain (régulateur, loi sectorielle, AMMC, Bank Al-Maghrib, ANRT, etc.)
+- Régulateur sectoriel si applicable (AMMC, Bank Al-Maghrib, ANRT, HCP, etc.)
 
-**What to do with the data:**
+**Write from real data.** Never use only the company name. If a fact isn't found, write `[DONNÉES REQUISES]` — not invented content.
 
-Use what you find to write real, specific content. Do not invent numbers — if a figure isn't found via search, write `[DONNÉES REQUISES — à compléter par l'étudiant]`.
+**Always include a fiche signalétique table immediately after the prose:**
 
-**Figures for the company presentation section:**
+```markdown
+| Raison sociale       | [nom]              |
+| Forme juridique      | SA / SARL / EP     |
+| Date de création     | [année]            |
+| Secteur d'activité   | [secteur]          |
+| Effectif             | [nombre]           |
+| Siège social         | [ville]            |
+| Activité principale  | [description]      |
+```
 
-1. **Fiche signalétique** — render as a two-column table (Markdown or Python/matplotlib):
-   | Raison sociale | [nom] |
-   | Forme juridique | SA / SARL / etc. |
-   | Date de création | [année] |
-   | Secteur d'activité | [secteur] |
-   | Effectif | [nombre] |
-   | Siège social | [ville] |
-   | Activité principale | [description courte] |
+*Figure N — Fiche signalétique de [entreprise]. Source : [site officiel / registre], [année].*
 
-2. **Organigramme** — if the sommaire includes it, generate a simplified org chart using Python/matplotlib (boxes + arrows) or a structured Markdown table showing Direction Générale → Directions → Services. Use real department names if found via search; otherwise use a generic structure for the sector.
-
-3. **Positionnement sectoriel** — if the theme involves competitive or market analysis, generate a simple bar chart comparing the company against 2–3 competitors on a key indicator (taille, part de marché, notation). Mark data as `[SOURCE]` if approximate.
-
-**Quality rule:** never write a company presentation using only the name from profile.json. Always search first. A company presentation with zero specific facts is worse than no company presentation.
+**Optional figures if data allows:**
+- Org chart (simplified, Python/matplotlib boxes+arrows, or Markdown table) if structure found via search
+- Sector positioning bar chart if theme involves market/competitive analysis
 
 ---
 
@@ -147,15 +146,8 @@ Write as a practitioner-researcher conducting and reporting an investigation:
 
 ### The four content types in Partie II
 
-**1. Présentation du terrain / contexte**
-When this content type appears in the sommaire (whatever its title), execute it fully using the company research from STEP 3. A complete company presentation covers:
-- **Fiche signalétique** — name, legal form, creation date, sector, size, HQ (table figure)
-- **Historique et évolution** — founding context, milestones, recent developments
-- **Secteur d'activité** — market positioning, main competitors, regulatory environment
-- **Structure organisationnelle** — org chart or department description (figure if possible)
-- **Missions confiées** — what the student was assigned to do, how it connects to the report theme
-
-Write from WebSearch findings + uploaded documents. Use `[DONNÉES REQUISES]` only for truly unavailable numbers. Never write this section from profile.json alone.
+**1. Présentation de l'organisme d'accueil (preamble — always present, never in sommaire)**
+A brief fixed block that opens every Partie II before Chapitre 1. Not a full chapter. Written from WebSearch findings (see STEP 3). Covers in ~350 words: what the company does, its sector, key figures, when it was founded, why the student is there. Followed immediately by the fiche signalétique table figure. Optional: org chart or sector chart if data allows.
 
 **2. Méthodologie**
 How the study was conducted. Choice of method (quantitative, qualitative, mixed, financial modeling, développement logiciel). Data collection instruments (questionnaire, interview, financial database, code). Sample size and selection rationale. Validity and reliability considerations.
@@ -271,6 +263,19 @@ If Python fails → placeholder immediately, no retry.
 ## Introduction de la Partie II
 [80–120 words connecting Partie I theory to the practical investigation]
 
+### Présentation de l'organisme d'accueil
+[~350 words — company description from WebSearch: sector, activity, key figures, founding year, why the student is there]
+
+| Raison sociale      | [nom]           |
+| Forme juridique     | SA / SARL / EP  |
+| Date de création    | [année]         |
+| Secteur d'activité  | [secteur]       |
+| Effectif            | [nombre]        |
+| Siège social        | [ville]         |
+| Activité principale | [description]   |
+
+*Figure N — Fiche signalétique de [entreprise]. Source : [source], [année].*
+
 ## Chapitre 1 — [Title]
 [80–100 word chapter introduction]
 
@@ -343,8 +348,9 @@ In page mode: append each page using the Edit tool — do not overwrite.
 - [ ] partie-i.md read, key theoretical concepts extracted for cross-references
 - [ ] All uploaded .txt files scanned and read
 - [ ] Sommaire structure followed exactly — no chapters added or removed
-- [ ] If sommaire contains company/context section: WebSearch run before writing, real facts used
-- [ ] Company presentation (if present) contains fiche signalétique table + specific figures
+- [ ] WebSearch run for company before writing (always — not conditional)
+- [ ] "Présentation de l'organisme d'accueil" preamble written with real facts (not just company name)
+- [ ] Fiche signalétique table present immediately after the preamble prose
 - [ ] Every chapter references Partie I frameworks explicitly
 - [ ] Company/field data used as primary source where available
 - [ ] Figures generated or `[DONNÉES REQUISES]` placeholders inserted
