@@ -241,16 +241,10 @@ export function Sidebar() {
               </div>
             </div>
 
-            {plan.planId !== "premium" && (
-              <button
-                onClick={() => { setUpsellFeature("upgrade"); setUpsellOpen(true); }}
-                className="w-full flex items-center justify-center gap-1.5 text-xs font-semibold text-white rounded-lg py-1.5 transition-all hover:opacity-90"
-                style={{ background: "linear-gradient(135deg,#7c3aed,#a855f7)" }}
-              >
-                <Zap className="w-3 h-3" />
-                Passer au Pro
-              </button>
-            )}
+            <div className="w-full flex items-center justify-center gap-1.5 text-xs font-semibold text-white rounded-lg py-1.5" style={{ background: "linear-gradient(135deg,#7c3aed,#a855f7)" }}>
+              <Zap className="w-3 h-3" />
+              Accès gratuit
+            </div>
           </div>
 
           {/* Sign out */}
