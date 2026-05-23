@@ -64,7 +64,7 @@ The sommaire structure is authoritative. Do not add, remove, or rename anything.
 
 ---
 
-## STEP 3 — Read uploaded documents
+## STEP 3 — Read uploaded documents + research company
 
 Scan the working directory with Glob for all files. Read all `.txt` files found.
 
@@ -80,6 +80,48 @@ Scan the working directory with Glob for all files. Read all `.txt` files found.
 If no company data uploaded: generate applied content using the entreprise and context from profile.json, with `[DONNÉES REQUISES]` placeholders where real numbers would go.
 
 If no uploaded files at all: use WebSearch and WebFetch to find comparable case studies for the theme.
+
+### Company research via WebSearch / WebFetch
+
+**Trigger:** any section or chapter in the sommaire whose title contains or implies: "présentation de l'entreprise", "contexte organisationnel", "terrain d'étude", "organisme d'accueil", "présentation de la structure", or similar.
+
+When this trigger fires, research the company **before writing** that section:
+
+```
+Search queries to run (adapt to actual entreprise name from profile.json):
+1. "[entreprise] présentation secteur activité Maroc"
+2. "[entreprise] historique création chiffres clés effectif"
+3. "[entreprise] organigramme structure organisation"
+4. "[entreprise] rapport annuel site officiel" → WebFetch the official site if found
+```
+
+**Extract and use:**
+- Date de création, siège social, forme juridique
+- Secteur d'activité et positionnement (concurrent principal, part de marché si disponible)
+- Chiffres clés : effectif, chiffre d'affaires, nombre d'agences/filiales
+- Activités principales et offre de services/produits
+- Toute mention du contexte sectoriel marocain (régulateur, loi sectorielle, AMMC, Bank Al-Maghrib, ANRT, etc.)
+
+**What to do with the data:**
+
+Use what you find to write real, specific content. Do not invent numbers — if a figure isn't found via search, write `[DONNÉES REQUISES — à compléter par l'étudiant]`.
+
+**Figures for the company presentation section:**
+
+1. **Fiche signalétique** — render as a two-column table (Markdown or Python/matplotlib):
+   | Raison sociale | [nom] |
+   | Forme juridique | SA / SARL / etc. |
+   | Date de création | [année] |
+   | Secteur d'activité | [secteur] |
+   | Effectif | [nombre] |
+   | Siège social | [ville] |
+   | Activité principale | [description courte] |
+
+2. **Organigramme** — if the sommaire includes it, generate a simplified org chart using Python/matplotlib (boxes + arrows) or a structured Markdown table showing Direction Générale → Directions → Services. Use real department names if found via search; otherwise use a generic structure for the sector.
+
+3. **Positionnement sectoriel** — if the theme involves competitive or market analysis, generate a simple bar chart comparing the company against 2–3 competitors on a key indicator (taille, part de marché, notation). Mark data as `[SOURCE]` if approximate.
+
+**Quality rule:** never write a company presentation using only the name from profile.json. Always search first. A company presentation with zero specific facts is worse than no company presentation.
 
 ---
 
@@ -106,7 +148,14 @@ Write as a practitioner-researcher conducting and reporting an investigation:
 ### The four content types in Partie II
 
 **1. Présentation du terrain / contexte**
-First chapter typically. Present the company, institution, or field context. Include: sector, size, key indicators, organizational structure if relevant. Draw from uploaded company documents. Reference `entreprise` directly.
+When this content type appears in the sommaire (whatever its title), execute it fully using the company research from STEP 3. A complete company presentation covers:
+- **Fiche signalétique** — name, legal form, creation date, sector, size, HQ (table figure)
+- **Historique et évolution** — founding context, milestones, recent developments
+- **Secteur d'activité** — market positioning, main competitors, regulatory environment
+- **Structure organisationnelle** — org chart or department description (figure if possible)
+- **Missions confiées** — what the student was assigned to do, how it connects to the report theme
+
+Write from WebSearch findings + uploaded documents. Use `[DONNÉES REQUISES]` only for truly unavailable numbers. Never write this section from profile.json alone.
 
 **2. Méthodologie**
 How the study was conducted. Choice of method (quantitative, qualitative, mixed, financial modeling, développement logiciel). Data collection instruments (questionnaire, interview, financial database, code). Sample size and selection rationale. Validity and reliability considerations.
@@ -294,6 +343,8 @@ In page mode: append each page using the Edit tool — do not overwrite.
 - [ ] partie-i.md read, key theoretical concepts extracted for cross-references
 - [ ] All uploaded .txt files scanned and read
 - [ ] Sommaire structure followed exactly — no chapters added or removed
+- [ ] If sommaire contains company/context section: WebSearch run before writing, real facts used
+- [ ] Company presentation (if present) contains fiche signalétique table + specific figures
 - [ ] Every chapter references Partie I frameworks explicitly
 - [ ] Company/field data used as primary source where available
 - [ ] Figures generated or `[DONNÉES REQUISES]` placeholders inserted

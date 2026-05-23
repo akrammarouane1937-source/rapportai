@@ -69,7 +69,7 @@ Do not re-explain theory — reference and apply.
 
 | Type | Typical placement | Focus |
 |---|---|---|
-| Présentation du terrain | Chapter 1 | Company/context, sector, key indicators |
+| Présentation du terrain | Per sommaire | Company researched via WebSearch/WebFetch — fiche signalétique, historique, secteur, structure org, missions. Figures mandatory. Structure driven by sommaire, not forced. |
 | Méthodologie | Chapter 1–2 | Method choice, instruments, sample, validity |
 | Résultats et analyse | Chapter 2–3 | Findings + visualization + interpretation |
 | Discussion | Final chapter | Hypothesis testing, implications, comparison with Partie I |
