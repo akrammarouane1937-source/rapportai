@@ -79,7 +79,7 @@ export function PreviewPanel({ activeSection, content }: PreviewPanelProps) {
     }
   };
 
-  const handlePdf = () => generatePdf(report as any);
+  const handlePdf = () => void generatePdf(report as any);
 
   const handleCopy = async () => {
     const currentText = SECTIONS.find(s => s.id === activeSection);

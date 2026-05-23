@@ -580,7 +580,7 @@ export default function Step9Page() {
                     apports:      apports || undefined,
                     perspectives: perspectives || undefined,
                   });
-                  generatePdf(getReport());
+                  void generatePdf(getReport());
                 }}
                 className="flex-1 h-14 rounded-xl font-black text-sm flex items-center justify-center gap-2 transition-all relative overflow-hidden"
                 style={{

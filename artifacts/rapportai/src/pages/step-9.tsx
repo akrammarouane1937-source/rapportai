@@ -111,7 +111,7 @@ export default function Step9() {
                   {exporting ? "Export..." : exported ? "Téléchargé !" : "Word .docx"}
                 </button>
                 <button
-                  onClick={() => generatePdf(report as any)}
+                  onClick={() => void generatePdf(report as any)}
                   className="flex-1 h-11 rounded-xl font-bold text-sm flex items-center justify-center gap-2 text-white transition-all"
                   style={{ background: "linear-gradient(135deg, #dc2626, #b91c1c)", boxShadow: "0 4px 16px rgba(220,38,38,0.35)" }}
                 >

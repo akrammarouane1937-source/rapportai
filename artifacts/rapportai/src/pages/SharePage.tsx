@@ -182,7 +182,7 @@ export default function SharePage() {
               .docx
             </Button>
             <Button
-              onClick={() => report && generatePdf(report)}
+              onClick={() => report && void generatePdf(report)}
               variant="outline"
               className="h-8 px-3 text-xs font-bold rounded-xl gap-1.5 border-red-200 text-red-600 hover:bg-red-50"
             >
