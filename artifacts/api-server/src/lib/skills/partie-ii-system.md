@@ -83,11 +83,14 @@ If no uploaded files at all: use WebSearch and WebFetch to find comparable case 
 
 ### Company research via WebSearch / WebFetch
 
-**Always run this before writing any content — no trigger condition, no exceptions.**
+Every school structures its sommaire differently. The company/host organization presentation can appear anywhere in Partie II — as a dedicated chapter, as Section 1 of the first chapter, or with a different title entirely. The sommaire is authoritative; the agent never adds or moves sections.
 
-The opening of every Partie II includes a brief company presentation (300–400 words + fiche signalétique table). It is not a full chapter and does not appear in the sommaire. It is a standard preamble that always comes before Chapitre 1, introduced by a short `### Présentation de l'organisme d'accueil` subsection header.
+**Trigger:** when writing any section whose title contains or strongly implies company/host context:
+- "L'organisme d'accueil", "Présentation de l'entreprise", "Présentation de la structure"
+- "Contexte organisationnel", "Terrain d'étude", "Présentation du cas"
+- Or any section that is clearly the first substantive section of Partie II and the theme involves a named company
 
-Run these searches using the `entreprise` name from profile.json:
+When triggered, **run these searches before writing that section:**
 
 ```
 1. "[entreprise] présentation secteur activité Maroc"
@@ -102,9 +105,9 @@ Run these searches using the `entreprise` name from profile.json:
 - Activités principales et offre de services/produits
 - Régulateur sectoriel si applicable (AMMC, Bank Al-Maghrib, ANRT, HCP, etc.)
 
-**Write from real data.** Never use only the company name. If a fact isn't found, write `[DONNÉES REQUISES]` — not invented content.
+**Write from real data only.** Never fill the section with only the company name and generic phrases. If a specific fact is not found via search, write `[DONNÉES REQUISES — à compléter par l'étudiant]`.
 
-**Always include a fiche signalétique table immediately after the prose:**
+**Always include a fiche signalétique table within this section:**
 
 ```markdown
 | Raison sociale       | [nom]              |
@@ -118,9 +121,9 @@ Run these searches using the `entreprise` name from profile.json:
 
 *Figure N — Fiche signalétique de [entreprise]. Source : [site officiel / registre], [année].*
 
-**Optional figures if data allows:**
-- Org chart (simplified, Python/matplotlib boxes+arrows, or Markdown table) if structure found via search
-- Sector positioning bar chart if theme involves market/competitive analysis
+**Optional additional figures if data allows:**
+- Org chart (Python/matplotlib boxes+arrows or structured Markdown table) if org structure found via search
+- Sector positioning chart if theme involves market/competitive analysis
 
 ---
 
@@ -263,19 +266,6 @@ If Python fails → placeholder immediately, no retry.
 ## Introduction de la Partie II
 [80–120 words connecting Partie I theory to the practical investigation]
 
-### Présentation de l'organisme d'accueil
-[~350 words — company description from WebSearch: sector, activity, key figures, founding year, why the student is there]
-
-| Raison sociale      | [nom]           |
-| Forme juridique     | SA / SARL / EP  |
-| Date de création    | [année]         |
-| Secteur d'activité  | [secteur]       |
-| Effectif            | [nombre]        |
-| Siège social        | [ville]         |
-| Activité principale | [description]   |
-
-*Figure N — Fiche signalétique de [entreprise]. Source : [source], [année].*
-
 ## Chapitre 1 — [Title]
 [80–100 word chapter introduction]
 
@@ -348,9 +338,8 @@ In page mode: append each page using the Edit tool — do not overwrite.
 - [ ] partie-i.md read, key theoretical concepts extracted for cross-references
 - [ ] All uploaded .txt files scanned and read
 - [ ] Sommaire structure followed exactly — no chapters added or removed
-- [ ] WebSearch run for company before writing (always — not conditional)
-- [ ] "Présentation de l'organisme d'accueil" preamble written with real facts (not just company name)
-- [ ] Fiche signalétique table present immediately after the preamble prose
+- [ ] If sommaire contains a company/host section: WebSearch run before writing it, real facts used
+- [ ] Company section (when present) contains fiche signalétique table + specific figures
 - [ ] Every chapter references Partie I frameworks explicitly
 - [ ] Company/field data used as primary source where available
 - [ ] Figures generated or `[DONNÉES REQUISES]` placeholders inserted
