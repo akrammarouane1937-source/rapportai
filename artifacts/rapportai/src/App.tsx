@@ -102,40 +102,37 @@ const clerkAppearance = {
   },
 };
 
+function AuthLeftPanel() {
+  return (
+    <div className="hidden lg:block lg:w-1/2 relative overflow-hidden">
+      {/* Full-cover photo */}
+      <img
+        src="/auth-photo.jpg"
+        alt="Étudiant en bibliothèque"
+        className="absolute inset-0 w-full h-full object-cover object-center"
+      />
+      {/* Dark overlay */}
+      <div className="absolute inset-0" style={{ background: "linear-gradient(to bottom, rgba(0,0,0,0.18) 0%, rgba(0,0,0,0.55) 100%)" }} />
+      {/* Content */}
+      <div className="relative z-10 flex flex-col justify-end h-full p-12 pb-16">
+        <p className="text-white/80 text-2xl font-light mb-3" style={{ fontFamily: "'Plus Jakarta Sans', sans-serif" }}>
+          Les grandes carrières naissent sur
+        </p>
+        <div className="flex items-center gap-3">
+          <img src="/logo.svg" alt="RapportAI" className="w-10 h-10" />
+          <span className="text-white text-3xl font-extrabold tracking-tight" style={{ fontFamily: "'Plus Jakarta Sans', sans-serif" }}>
+            RapportAI
+          </span>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 function SignInPage() {
   return (
     <div className="flex min-h-screen">
-      <div className="hidden lg:flex lg:w-1/2 flex-col items-center justify-center p-12 text-white"
-        style={{ background: "linear-gradient(135deg, #7c3aed 0%, #5b21b6 100%)" }}>
-        <div className="max-w-md text-center">
-          <div className="flex items-center justify-center gap-3 mb-8">
-            <img src="/logo.svg" alt="RapportAI" className="w-12 h-12" />
-            <span className="text-3xl font-bold" style={{ fontFamily: "'Plus Jakarta Sans', sans-serif" }}>
-              RapportAI
-            </span>
-          </div>
-          <h2 className="text-3xl font-bold mb-4 leading-tight" style={{ fontFamily: "'Plus Jakarta Sans', sans-serif" }}>
-            Le premier outil IA pour les rapports académiques marocains
-          </h2>
-          <p className="text-purple-200 text-lg">
-            3 mois de rédaction. 30 minutes avec RapportAI.
-          </p>
-          <div className="mt-10 grid grid-cols-3 gap-4 text-center">
-            <div className="bg-white/10 rounded-xl p-4">
-              <div className="text-2xl font-bold">30 min</div>
-              <div className="text-purple-200 text-xs mt-1">Génération</div>
-            </div>
-            <div className="bg-white/10 rounded-xl p-4">
-              <div className="text-2xl font-bold">80+</div>
-              <div className="text-purple-200 text-xs mt-1">Écoles</div>
-            </div>
-            <div className="bg-white/10 rounded-xl p-4">
-              <div className="text-2xl font-bold">100%</div>
-              <div className="text-purple-200 text-xs mt-1">Original</div>
-            </div>
-          </div>
-        </div>
-      </div>
+      <AuthLeftPanel />
       <div className="w-full lg:w-1/2 flex items-center justify-center p-8 bg-white">
         <div className="w-full max-w-md">
           <SignIn
@@ -153,46 +150,7 @@ function SignInPage() {
 function SignUpPage() {
   return (
     <div className="flex min-h-screen">
-      <div className="hidden lg:flex lg:w-1/2 flex-col items-center justify-center p-12 text-white"
-        style={{ background: "linear-gradient(135deg, #7c3aed 0%, #5b21b6 100%)" }}>
-        <div className="max-w-md text-center">
-          <div className="flex items-center justify-center gap-3 mb-8">
-            <img src="/logo.svg" alt="RapportAI" className="w-12 h-12" />
-            <span className="text-3xl font-bold" style={{ fontFamily: "'Plus Jakarta Sans', sans-serif" }}>
-              RapportAI
-            </span>
-          </div>
-          <h2 className="text-3xl font-bold mb-4 leading-tight" style={{ fontFamily: "'Plus Jakarta Sans', sans-serif" }}>
-            Le premier outil IA pour les rapports académiques marocains
-          </h2>
-          <p className="text-purple-200 text-lg">
-            3 mois de rédaction. 30 minutes avec RapportAI.
-          </p>
-          <div className="mt-10 space-y-3">
-            <div className="flex items-center gap-3 bg-white/10 rounded-xl p-4 text-left">
-              <div className="w-8 h-8 bg-white/20 rounded-full flex items-center justify-center text-sm font-bold flex-shrink-0">1</div>
-              <div>
-                <div className="font-semibold text-sm">Décris ton projet</div>
-                <div className="text-purple-200 text-xs">Thème, école, filière — 2 minutes</div>
-              </div>
-            </div>
-            <div className="flex items-center gap-3 bg-white/10 rounded-xl p-4 text-left">
-              <div className="w-8 h-8 bg-white/20 rounded-full flex items-center justify-center text-sm font-bold flex-shrink-0">2</div>
-              <div>
-                <div className="font-semibold text-sm">L'IA génère ton rapport</div>
-                <div className="text-purple-200 text-xs">Chaque section rédigée pour toi</div>
-              </div>
-            </div>
-            <div className="flex items-center gap-3 bg-white/10 rounded-xl p-4 text-left">
-              <div className="w-8 h-8 bg-white/20 rounded-full flex items-center justify-center text-sm font-bold flex-shrink-0">3</div>
-              <div>
-                <div className="font-semibold text-sm">Télécharge et soumets</div>
-                <div className="text-purple-200 text-xs">Ton .docx prêt à imprimer</div>
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
+      <AuthLeftPanel />
       <div className="w-full lg:w-1/2 flex items-center justify-center p-8 bg-white">
         <div className="w-full max-w-md">
           <SignUp
