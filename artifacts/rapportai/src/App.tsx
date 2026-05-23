@@ -21,6 +21,7 @@ import Step2Page from "@/pages/step-2";
 import Step3Page from "@/pages/step-3";
 import PartieIPage from "@/pages/partie-i";
 import PartieIIPage from "@/pages/partie-ii";
+import AnnexesPage from "@/pages/AnnexesPage";
 import JuryAIPage from "@/pages/JuryAIPage";
 import BibliothequeePage from "@/pages/BibliothequeePage";
 import SharePage from "@/pages/SharePage";
@@ -297,6 +298,9 @@ function ClerkProviderWithRoutes() {
             <Route path="/rapport/partie-ii">
               <ProtectedRoute component={PartieIIPage} />
             </Route>
+            <Route path="/rapport/annexes">
+              <ProtectedRoute component={AnnexesPage} />
+            </Route>
             <Route path="/juryai">
               <ProtectedRoute component={JuryAIPage} />
             </Route>
@@ -312,6 +316,7 @@ function ClerkProviderWithRoutes() {
             <Route path="/demo/step-9" component={Step9Page} />
             <Route path="/demo/partie-i" component={PartieIPage} />
             <Route path="/demo/partie-ii" component={PartieIIPage} />
+          <Route path="/demo/annexes" component={AnnexesPage} />
             <Route path="/parametres">
               <ProtectedRoute component={ParametresPage} />
             </Route>
@@ -356,6 +361,7 @@ function NoAuthApp() {
           <Route path="/rapport/step-9" component={Step9Page} />
           <Route path="/rapport/partie-i" component={PartieIPage} />
           <Route path="/rapport/partie-ii" component={PartieIIPage} />
+          <Route path="/rapport/annexes" component={AnnexesPage} />
           <Route path="/juryai" component={JuryAIPage} />
           <Route path="/bibliotheque" component={BibliothequeePage} />
           <Route path="/parametres" component={ParametresPage} />

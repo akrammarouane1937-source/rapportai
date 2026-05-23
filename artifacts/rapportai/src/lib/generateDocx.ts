@@ -643,15 +643,40 @@ function buildListeDesTableaux(): Paragraph[] {
   ];
 }
 
+const ANNEXE_LETTERS = "ABCDEFGHIJKLMNOPQRSTUVWXYZ";
+
 function buildAnnexes(d: Report): Paragraph[] {
-  const content = d.annexes?.trim();
-  return [
-    heading1("Annexes"),
-    emptyLine(),
-    ...(content
-      ? markdownToParas(content)
-      : [bodyPara("(Insérez ici vos annexes : questionnaires, tableaux de données, captures d'écran, etc.)")]),
-  ];
+  const items = d.annexeItems ?? [];
+  const legacy = d.annexes?.trim();
+
+  if (items.length === 0 && !legacy) return [];
+
+  const paras: Paragraph[] = [heading1("Annexes"), emptyLine()];
+
+  if (items.length > 0) {
+    items.forEach((item, i) => {
+      const letter = ANNEXE_LETTERS[i] ?? String(i + 1);
+      const title = item.title?.trim() || `Annexe ${letter}`;
+      paras.push(
+        new Paragraph({
+          text: `Annexe ${letter} — ${title}`,
+          heading: HeadingLevel.HEADING_2,
+          spacing: { before: 360, after: 180 },
+          keepNext: true,
+        }),
+      );
+      if (item.content?.trim()) {
+        paras.push(...markdownToParas(item.content));
+      } else {
+        paras.push(bodyPara("(Contenu à insérer)"));
+      }
+      paras.push(emptyLine());
+    });
+  } else if (legacy) {
+    paras.push(...markdownToParas(legacy));
+  }
+
+  return paras;
 }
 
 // Table des Matières — LAST PAGE — real Word TOC field with page numbers + hyperlinks.

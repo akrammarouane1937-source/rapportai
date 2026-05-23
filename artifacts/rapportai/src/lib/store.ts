@@ -6,6 +6,11 @@ export interface Abreviation {
   sig: string;
 }
 
+export interface AnnexeItem {
+  title: string;
+  content: string;
+}
+
 export interface UploadedFile {
   name: string;
   sectionId: string;
@@ -50,6 +55,7 @@ export interface Report {
   conclusion: string;
   bibliographie: string;
   annexes: string;
+  annexeItems: AnnexeItem[];
 
   // Report intelligence
   problematique: string;
@@ -99,6 +105,7 @@ export const initialReportState: Report = {
   conclusion: "",
   bibliographie: "",
   annexes: "",
+  annexeItems: [],
 
   problematique: "",
   sectionSummaries: {},

@@ -214,6 +214,35 @@ export async function generatePdf(report: ReportData): Promise<void> {
     renderContent(content);
   }
 
+  // ── Annexes ───────────────────────────────────────────────────────────────
+
+  const annexeItems = (report as unknown as { annexeItems?: Array<{ title: string; content: string }> }).annexeItems ?? [];
+  const LETTERS = "ABCDEFGHIJKLMNOPQRSTUVWXYZ";
+
+  for (let i = 0; i < annexeItems.length; i++) {
+    const item = annexeItems[i];
+    const letter = LETTERS[i] ?? String(i + 1);
+    const title = item.title?.trim() || `Annexe ${letter}`;
+
+    newPage();
+    const annexeColor: [number, number, number] = [107, 114, 128];
+    tocEntries.push({ title: `Annexe ${letter} — ${title}`, level: 1, page: curPage() });
+
+    doc.setFillColor(107, 114, 128);
+    doc.rect(marginL, y, usableW, 0.5, "F");
+    y += 5;
+
+    doc.setFont("helvetica", "bold");
+    doc.setFontSize(13);
+    doc.setTextColor(annexeColor[0], annexeColor[1], annexeColor[2]);
+    doc.text(`ANNEXE ${letter} — ${title.toUpperCase()}`, marginL, y);
+    y += 9;
+
+    if (item.content?.trim()) {
+      renderContent(item.content);
+    }
+  }
+
   // ── Table des Matières ────────────────────────────────────────────────────
 
   newPage();
