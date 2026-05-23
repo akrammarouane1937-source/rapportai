@@ -32,6 +32,7 @@ import WhyRapportAIPage from "@/pages/WhyRapportAIPage";
 import StoryPage from "@/pages/StoryPage";
 import TermsPage from "@/pages/TermsPage";
 import PrivacyPage from "@/pages/PrivacyPage";
+import ReferralPage from "@/pages/ReferralPage";
 import NotFound from "@/pages/not-found";
 
 const queryClient = new QueryClient();
@@ -343,6 +344,9 @@ function ClerkProviderWithRoutes() {
             <Route path="/parametres">
               <ProtectedRoute component={ParametresPage} />
             </Route>
+            <Route path="/referral">
+              <ProtectedRoute component={ReferralPage} />
+            </Route>
             <Route path="/figures">
               <ProtectedRoute component={FiguresPage} />
             </Route>
@@ -387,6 +391,7 @@ function NoAuthApp() {
           <Route path="/juryai" component={JuryAIPage} />
           <Route path="/bibliotheque" component={BibliothequeePage} />
           <Route path="/parametres" component={ParametresPage} />
+          <Route path="/referral" component={ReferralPage} />
           <Route path="/figures" component={FiguresPage} />
           <Route path="/share/:id" component={SharePage} />
           <Route path="/payment/success" component={PaymentSuccessPage} />

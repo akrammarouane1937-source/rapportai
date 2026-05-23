@@ -45,7 +45,7 @@ router.get("/referral/me", async (req: Request, res: Response) => {
 
     res.json({
       referralCode:       user.referralCode,
-      referralLink:       `https://rapportai.com/signup?ref=${user.referralCode}`,
+      referralLink:       `https://rapportai.io/sign-up?ref=${user.referralCode}`,
       balance:            user.referralBalance,
       balanceUsd:         (user.referralBalance / 100).toFixed(2),
       isFoundingUser:     user.isFoundingUser,
