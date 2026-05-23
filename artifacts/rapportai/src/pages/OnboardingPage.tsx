@@ -2,6 +2,7 @@ import { useState } from "react";
 import { useLocation } from "wouter";
 import { useOptionalUser as useUser } from "@/lib/useOptionalClerk";
 import { saveReport } from "@/lib/reportStore";
+import { API_BASE } from "@/lib/apiBase";
 import { motion, AnimatePresence } from "framer-motion";
 import { ChevronRight, ChevronLeft, GraduationCap, BookOpen, Building2, CheckCircle2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -67,6 +68,21 @@ export default function OnboardingPage() {
       filiere:     data.field      || undefined,
       studentName: data.firstName  || user?.firstName || undefined,
     });
+
+    if (user?.id) {
+      const refCode = new URLSearchParams(window.location.search).get("ref") ?? undefined;
+      void fetch(`${API_BASE}/api/referral/register`, {
+        method:  "POST",
+        headers: { "Content-Type": "application/json" },
+        body:    JSON.stringify({
+          clerkId: user.id,
+          email:   user.primaryEmailAddress?.emailAddress,
+          name:    user.firstName ? `${user.firstName} ${user.lastName ?? ""}`.trim() : undefined,
+          refCode,
+        }),
+      });
+    }
+
     setLocation("/dashboard");
   };
 
