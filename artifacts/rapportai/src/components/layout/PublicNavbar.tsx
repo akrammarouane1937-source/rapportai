@@ -14,7 +14,7 @@ export default function PublicNavbar() {
 
   return (
     <header className="sticky top-0 z-50 w-full bg-white/95 backdrop-blur-sm border-b border-gray-100 shadow-sm">
-      <div className="container mx-auto px-4 h-16 grid grid-cols-3 items-center">
+      <div className="container mx-auto px-4 h-16 flex items-center justify-between gap-4">
 
         {/* Left — Logo */}
         <Link href="/" onClick={handleLogo}>
@@ -25,7 +25,7 @@ export default function PublicNavbar() {
         </Link>
 
         {/* Center — Nav links */}
-        <div className="hidden md:flex items-center justify-center gap-6">
+        <div className="hidden md:flex items-center justify-center gap-6 flex-1">
           <Link href="/about">
             <span className="text-sm font-medium text-gray-500 hover:text-gray-900 transition-colors cursor-pointer">À propos</span>
           </Link>
@@ -38,7 +38,7 @@ export default function PublicNavbar() {
         </div>
 
         {/* Right — Auth */}
-        <div className="flex items-center justify-end gap-3">
+        <div className="flex items-center justify-end gap-3 flex-shrink-0">
           <Link href="/sign-in">
             <Button variant="ghost" className="hidden sm:inline-flex text-gray-700 hover:text-purple-600">
               Se connecter
