@@ -28,6 +28,7 @@ import partieIRouter from "./partie-i";
 import partieIIRouter from "./partie-ii";
 import conclusionRouter from "./conclusion";
 import bibliographieRouter from "./bibliographie";
+import annexesRouter from "./annexes";
 
 const router: IRouter = Router();
 
@@ -60,5 +61,6 @@ router.use(partieIRouter);
 router.use(partieIIRouter);
 router.use(conclusionRouter);
 router.use(bibliographieRouter);
+router.use(annexesRouter);
 
 export default router;

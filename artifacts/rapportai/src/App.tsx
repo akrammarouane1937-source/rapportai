@@ -1,4 +1,6 @@
 import { useEffect, useRef } from "react";
+import { Analytics } from "@vercel/analytics/react";
+import { SpeedInsights } from "@vercel/speed-insights/react";
 import { ClerkProvider, SignIn, SignUp, Show, useClerk } from "@clerk/react";
 import { publishableKeyFromHost } from "@clerk/react/internal";
 import { shadcn } from "@clerk/themes";
@@ -386,6 +388,8 @@ function App() {
   return (
     <WouterRouter base={basePath}>
       {clerkPubKey ? <ClerkProviderWithRoutes /> : <NoAuthApp />}
+      <Analytics />
+      <SpeedInsights />
     </WouterRouter>
   );
 }

@@ -76,6 +76,8 @@
     "zod": "catalog:"
   },
   "dependencies": {
+    "@vercel/analytics": "^1.5.0",
+    "@vercel/speed-insights": "^1.2.0",
     "@clerk/react": "^6.4.7",
     "@clerk/themes": "^2.4.57",
     "chart.js": "^4.5.1",

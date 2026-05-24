@@ -1,35 +1,36 @@
-import { useState, useCallback, useRef, useEffect } from "react";
+import { useState, useCallback, useRef, useEffect, createElement, type ReactNode } from "react";
 import { API_BASE } from "@/lib/apiBase";
 import { useGenerate } from "./use-generate";
 import { useReportStore } from "@/lib/store";
+import { GeneratedCard } from "@/components/chat-panel";
 
 export interface ConvMsg {
   id: string;
   role: "agent" | "user";
-  content: string;
+  content: string | ReactNode;
 }
 
 interface UseConversationOpts {
   step: number;
   initialMessage: string;
-  /** If set, this message is auto-sent on mount (e.g. step-5 auto-generates) */
   autoSend?: string;
   onSectionGenerated: (section: string, content: string) => void;
   onStepComplete: () => void;
 }
 
-const SECTION_LABELS: Record<string, string> = {
-  "page-de-garde": "la page de garde",
-  dedicaces: "les dédicaces",
-  remerciements: "les remerciements",
-  resume: "le résumé",
-  abstract: "l'abstract",
-  sommaire: "le sommaire",
-  introduction: "l'introduction",
-  "partie-i": "la Partie I",
-  "partie-ii": "la Partie II",
-  conclusion: "la conclusion",
-  abbreviations: "les abréviations",
+export const SECTION_LABELS: Record<string, string> = {
+  "page-de-garde": "Page de garde",
+  dedicaces:       "Dédicaces",
+  remerciements:   "Remerciements",
+  resume:          "Résumé",
+  abstract:        "Abstract",
+  sommaire:        "Sommaire",
+  introduction:    "Introduction",
+  "partie-i":      "Partie I",
+  "partie-ii":     "Partie II",
+  conclusion:      "Conclusion",
+  bibliographie:   "Bibliographie",
+  abbreviations:   "Abréviations",
 };
 
 let msgIdCounter = 0;
@@ -54,28 +55,20 @@ export function useConversation({
 
   const { generate, abort: abortGen, isGenerating, toolCalls, thinkingText } = useGenerate();
 
-  // Build the API messages array (agent → assistant, user → user)
   const toApiMessages = (msgs: ConvMsg[]) =>
     msgs
-      .filter((m) => m.content.trim())
-      .map((m) => ({ role: m.role === "agent" ? "assistant" : "user", content: m.content }));
+      .filter((m) => typeof m.content === "string" && m.content.trim())
+      .map((m) => ({ role: m.role === "agent" ? "assistant" : "user", content: m.content as string }));
 
   const send = useCallback(
     async (text: string, _opts?: { silent?: boolean }) => {
       if (isThinking || isGenerating) return;
 
       const userMsg: ConvMsg = { id: newId(), role: "user", content: text };
-      // For silent/auto sends (like step-5 autoStart), don't push a user bubble
       const isSilent = _opts?.silent;
 
-      setMessages((prev) => {
-        const next = isSilent ? prev : [...prev, userMsg];
-        return next;
-      });
-
-      const currentMessages = isSilent
-        ? messages
-        : [...messages, userMsg];
+      setMessages((prev) => isSilent ? prev : [...prev, userMsg]);
+      const currentMessages = isSilent ? messages : [...messages, userMsg];
 
       setIsThinking(true);
       abortRef.current?.abort();
@@ -155,35 +148,40 @@ export function useConversation({
         setIsThinking(false);
       }
 
-      // Execute actions sequentially after stream completes
+      // Execute actions after stream completes
       for (const action of pendingActions) {
         if (action.type === "generate_section") {
           const section = action.section as string;
           const context = action.context as string;
           const label = SECTION_LABELS[section] ?? section;
 
-          setMessages((prev) => [
-            ...prev,
-            { id: newId(), role: "agent", content: `Je génère ${label}...` },
-          ]);
-
-          const result = await generate(section, report as any, context);
+          // No "Je génère..." announcement — tool call cards are the live indicator
+          const result = await generate(section, report as Parameters<typeof generate>[1], context);
 
           if (result) {
             setGeneratedSections((prev) => [...prev, section]);
             onSectionGenerated(section, result);
+
+            const wordCount = result.split(/\s+/).filter(Boolean).length;
+            const snippet = result
+              .replace(/^#+\s*/gm, "")
+              .replace(/\*\*/g, "")
+              .trim()
+              .slice(0, 300);
+
+            // Show a compact GeneratedCard instead of plain "Généré ✓"
             setMessages((prev) => [
               ...prev,
               {
                 id: newId(),
                 role: "agent",
-                content: `${label.charAt(0).toUpperCase() + label.slice(1)} ${section === "abbreviations" ? "extraites" : "généré" + (["dedicaces", "remerciements"].includes(section) ? "es" : "")} ✓`,
+                content: createElement(GeneratedCard, { label, wordCount, snippet }),
               },
             ]);
           } else {
             setMessages((prev) => [
               ...prev,
-              { id: newId(), role: "agent", content: `❌ Génération échouée pour ${label}. Réessaie.` },
+              { id: newId(), role: "agent", content: `❌ La génération de **${label}** a échoué. Réessaie ou reformule ta demande.` },
             ]);
           }
         }
@@ -200,7 +198,6 @@ export function useConversation({
     [messages, isThinking, isGenerating, step, report, generatedSections, generate, onSectionGenerated, onStepComplete]
   );
 
-  // Auto-send on mount (for steps that generate immediately)
   useEffect(() => {
     if (autoSend && !autoSentRef.current) {
       autoSentRef.current = true;

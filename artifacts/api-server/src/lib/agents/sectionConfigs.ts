@@ -101,6 +101,14 @@ export const SECTION_CONFIGS: Record<string, SectionConfig> = {
     allowedTools: ["Read", "Write", "Glob"],
     description:  "Extraction des abréviations et sigles",
   },
+
+  annexes: {
+    skillsFile:   "annexes-skills.md",
+    maxTurns:     6,
+    dependencies: ["generation_context.md", "introduction.md", "partie-ii.md"],
+    allowedTools: ["Read", "Write", "Edit", "Glob", "Grep"],
+    description:  "Génération des annexes (questionnaires, données, code, etc.)",
+  },
 };
 
 export function getSectionConfig(section: string): SectionConfig {

@@ -1,6 +1,47 @@
 import { useState, type ReactNode } from "react";
 import { motion } from "framer-motion";
-import { Sparkles, ChevronRight, CheckCircle2, BrainCircuit, Loader2, BookOpen, PenLine, Pencil, Globe, FolderSearch, Terminal, Search } from "lucide-react";
+import ReactMarkdown from "react-markdown";
+import remarkGfm from "remark-gfm";
+import {
+  Sparkles, ChevronRight, CheckCircle2, BrainCircuit,
+  Loader2, BookOpen, PenLine, Pencil, Globe, FolderSearch,
+  Terminal, Search, FileText, Eye,
+} from "lucide-react";
+
+// ─── Markdown renderer used for agent messages ───────────────────────────────
+
+function AgentMarkdown({ content }: { content: string }) {
+  return (
+    <ReactMarkdown
+      remarkPlugins={[remarkGfm]}
+      components={{
+        p: ({ children }) => <p className="mb-1.5 last:mb-0">{children}</p>,
+        strong: ({ children }) => <strong className="font-semibold text-violet-900">{children}</strong>,
+        em: ({ children }) => <em className="italic text-violet-800">{children}</em>,
+        ul: ({ children }) => <ul className="list-disc ml-4 mb-1.5 space-y-0.5">{children}</ul>,
+        ol: ({ children }) => <ol className="list-decimal ml-4 mb-1.5 space-y-0.5">{children}</ol>,
+        li: ({ children }) => <li className="text-sm">{children}</li>,
+        h1: ({ children }) => <p className="font-bold text-sm mb-1">{children}</p>,
+        h2: ({ children }) => <p className="font-semibold text-sm mb-1">{children}</p>,
+        h3: ({ children }) => <p className="font-medium text-sm mb-0.5">{children}</p>,
+        code: ({ children }) => (
+          <code className="px-1 py-0.5 rounded text-xs font-mono" style={{ background: "#ede9fe", color: "#5b21b6" }}>
+            {children}
+          </code>
+        ),
+        blockquote: ({ children }) => (
+          <blockquote className="border-l-2 border-violet-300 pl-3 italic text-violet-700 my-1">
+            {children}
+          </blockquote>
+        ),
+      }}
+    >
+      {content}
+    </ReactMarkdown>
+  );
+}
+
+// ─── ChatMessage ─────────────────────────────────────────────────────────────
 
 export function ChatMessage({
   role,
@@ -8,7 +49,7 @@ export function ChatMessage({
   isTyping = false,
 }: {
   role: "agent" | "user";
-  content: React.ReactNode;
+  content: ReactNode;
   isTyping?: boolean;
 }) {
   if (role === "user") {
@@ -45,7 +86,7 @@ export function ChatMessage({
         className="flex-1 min-w-0 rounded-2xl rounded-tl-sm px-4 py-2.5 text-sm"
         style={{ background: "#f5f0ff", color: "#1e1b4b", lineHeight: "1.6", border: "1px solid #ede9fe" }}
       >
-        {content}
+        {typeof content === "string" ? <AgentMarkdown content={content} /> : content}
         {isTyping && (
           <span className="inline-flex gap-1 ml-2 align-middle">
             <span className="w-1.5 h-1.5 rounded-full bg-violet-400 animate-bounce" style={{ animationDelay: "0ms" }} />
@@ -57,6 +98,67 @@ export function ChatMessage({
     </motion.div>
   );
 }
+
+// ─── GeneratedCard ────────────────────────────────────────────────────────────
+// Shown after a section finishes generating — compact preview in the chat.
+
+export function GeneratedCard({
+  label,
+  wordCount,
+  snippet,
+}: {
+  label: string;
+  wordCount: number;
+  snippet: string;
+}) {
+  const [expanded, setExpanded] = useState(false);
+
+  return (
+    <motion.div
+      initial={{ opacity: 0, y: 6 }}
+      animate={{ opacity: 1, y: 0 }}
+      className="flex gap-3 mb-3 px-4"
+    >
+      <div
+        className="shrink-0 w-7 h-7 rounded-full flex items-center justify-center mt-0.5"
+        style={{ background: "linear-gradient(135deg,#059669,#10b981)" }}
+      >
+        <CheckCircle2 className="w-3.5 h-3.5 text-white" />
+      </div>
+
+      <div
+        className="flex-1 min-w-0 rounded-2xl rounded-tl-sm overflow-hidden"
+        style={{ border: "1px solid #d1fae5", background: "#f0fdf4" }}
+      >
+        <div className="flex items-center justify-between px-4 py-2.5 gap-3">
+          <div className="flex items-center gap-2 min-w-0">
+            <FileText className="w-3.5 h-3.5 text-emerald-600 shrink-0" />
+            <span className="text-sm font-semibold text-emerald-900 truncate">{label}</span>
+            <span className="text-xs text-emerald-600 shrink-0">{wordCount} mots</span>
+          </div>
+          <button
+            onClick={() => setExpanded((v) => !v)}
+            className="shrink-0 flex items-center gap-1 text-xs font-medium text-emerald-700 hover:text-emerald-900 transition-colors"
+          >
+            <Eye className="w-3 h-3" />
+            {expanded ? "Masquer" : "Aperçu"}
+          </button>
+        </div>
+
+        {expanded && snippet && (
+          <div
+            className="px-4 pb-3 pt-0 text-xs leading-relaxed border-t"
+            style={{ borderColor: "#bbf7d0", color: "#065f46" }}
+          >
+            <p className="line-clamp-4">{snippet}</p>
+          </div>
+        )}
+      </div>
+    </motion.div>
+  );
+}
+
+// ─── ToolCallCard ─────────────────────────────────────────────────────────────
 
 const TOOL_CONFIG: Record<string, { icon: ReactNode; color: string }> = {
   "Lecture du rapport":   { icon: <BookOpen className="h-3.5 w-3.5" />,    color: "#7c3aed" },
@@ -122,13 +224,15 @@ export function ToolCallCard({ name, detail, status, done }: { name: string; det
   );
 }
 
+// ─── ThinkingCard ─────────────────────────────────────────────────────────────
+
 export function ThinkingCard({ text, streaming, title, detail }: {
   text?: string;
   streaming?: boolean;
   title?: string;
   detail?: string;
 }) {
-  const [open, setOpen] = useState(true);
+  const [open, setOpen] = useState(false);
   const displayText = text ?? (detail ?? title ?? "");
 
   return (
@@ -149,11 +253,7 @@ export function ThinkingCard({ text, streaming, title, detail }: {
             </span>
           )}
         </span>
-        {open ? (
-          <ChevronRight className="h-3.5 w-3.5 shrink-0 rotate-90 transition-transform" />
-        ) : (
-          <ChevronRight className="h-3.5 w-3.5 shrink-0 transition-transform" />
-        )}
+        <ChevronRight className={`h-3.5 w-3.5 shrink-0 transition-transform ${open ? "rotate-90" : ""}`} />
       </button>
       {open && displayText && (
         <div className="px-3 pb-3 pt-1">
@@ -165,6 +265,8 @@ export function ThinkingCard({ text, streaming, title, detail }: {
     </div>
   );
 }
+
+// ─── StepTransitionCard ───────────────────────────────────────────────────────
 
 export function StepTransitionCard({
   title,

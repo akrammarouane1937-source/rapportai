@@ -48,10 +48,11 @@ interface IntakeValidationError { field: string; message: string }
 
 function validateAndSanitizeIntake(profile: Record<string, unknown>): IntakeValidationError | null {
   const name = (profile.studentName as string | undefined)?.trim() ?? "";
-  if (!name || name.length < 2)
-    return { field: "studentName", message: "Nom requis (minimum 2 caractères)" };
-  if (name.length > 120)
+  // studentName is collected progressively — allow empty at session start
+  if (name && name.length > 120)
     return { field: "studentName", message: "Nom trop long (maximum 120 caractères)" };
+  // Provide a safe default so downstream agents always have a non-empty name
+  if (!name) profile.studentName = "Étudiant";
 
   const theme = (profile.theme as string | undefined)?.trim() ?? "";
   if (!theme || theme.length < 10)

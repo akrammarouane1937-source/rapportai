@@ -166,6 +166,15 @@ function DragRow({ id, label, fixed, onOpen }: { id: string; label: string; fixe
 
 // ─── Main page ────────────────────────────────────────────────────────────────
 
+type FilterTab = "all" | "completed" | "in_progress" | "not_started";
+
+const FILTER_TABS: { id: FilterTab; label: string }[] = [
+  { id: "all",         label: "Toutes" },
+  { id: "completed",   label: "Complétées" },
+  { id: "in_progress", label: "En cours" },
+  { id: "not_started", label: "Non commencées" },
+];
+
 interface RapportsPageProps {
   completedOnly?: boolean;
 }
@@ -175,6 +184,7 @@ export default function RapportsPage({ completedOnly = false }: RapportsPageProp
   const [, navigate] = useLocation();
   const [search, setSearch] = useState("");
   const [reorderMode, setReorderMode] = useState(false);
+  const [activeFilter, setActiveFilter] = useState<FilterTab>(completedOnly ? "completed" : "all");
 
   const reportData = report as Record<string, string>;
   const sectionOrder: string[] = report.sectionOrder?.length ? report.sectionOrder : DEFAULT_ORDER;
@@ -187,11 +197,12 @@ export default function RapportsPage({ completedOnly = false }: RapportsPageProp
 
   const allSections = [...FIXED_SECTIONS, ...backMatterSections];
 
-  const filteredSections = completedOnly
-    ? allSections.filter((s) => s.field && getStatus(reportData[s.field]) === "completed")
-    : search
-    ? allSections.filter((s) => s.label.toLowerCase().includes(search.toLowerCase()))
-    : allSections;
+  const filteredSections = allSections.filter((s) => {
+    const status = s.field ? getStatus(reportData[s.field]) : "not_started";
+    const matchesFilter = activeFilter === "all" || status === activeFilter;
+    const matchesSearch = !search || s.label.toLowerCase().includes(search.toLowerCase());
+    return matchesFilter && matchesSearch;
+  });
 
   const completedCount = allSections.filter((s) => s.field && getStatus(reportData[s.field]) === "completed").length;
 
@@ -281,18 +292,50 @@ export default function RapportsPage({ completedOnly = false }: RapportsPageProp
               </div>
             ) : (
               <>
-                {/* Search */}
+                {/* Search + Filters */}
                 {!completedOnly && (
-                  <div className="flex items-center gap-3 mb-6">
-                    <div className="relative">
-                      <Search className="w-3.5 h-3.5 text-gray-400 absolute left-3 top-1/2 -translate-y-1/2" />
-                      <input
-                        placeholder="Rechercher une section..."
-                        value={search}
-                        onChange={(e) => setSearch(e.target.value)}
-                        className="pl-8 pr-3 py-1.5 text-sm bg-white border border-gray-200 rounded-lg outline-none focus:border-purple-400 transition-colors"
-                        style={{ width: 220 }}
-                      />
+                  <div className="flex flex-col gap-3 mb-6">
+                    <div className="flex items-center gap-3">
+                      <div className="relative">
+                        <Search className="w-3.5 h-3.5 text-gray-400 absolute left-3 top-1/2 -translate-y-1/2" />
+                        <input
+                          placeholder="Rechercher une section..."
+                          value={search}
+                          onChange={(e) => setSearch(e.target.value)}
+                          className="pl-8 pr-3 py-1.5 text-sm bg-white border border-gray-200 rounded-lg outline-none focus:border-purple-400 transition-colors"
+                          style={{ width: 220 }}
+                        />
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      {FILTER_TABS.map((tab) => {
+                        const isActive = activeFilter === tab.id;
+                        const count = tab.id === "all"
+                          ? allSections.length
+                          : allSections.filter((s) => {
+                              const st = s.field ? getStatus(reportData[s.field]) : "not_started";
+                              return st === tab.id;
+                            }).length;
+                        return (
+                          <button
+                            key={tab.id}
+                            onClick={() => setActiveFilter(tab.id)}
+                            className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-all"
+                            style={{
+                              background: isActive ? (tab.id === "completed" ? "#f0fdf4" : tab.id === "in_progress" ? "#eff6ff" : tab.id === "not_started" ? "#f9fafb" : "#f5f0ff") : "#fff",
+                              color: isActive ? (tab.id === "completed" ? "#15803d" : tab.id === "in_progress" ? "#1d4ed8" : tab.id === "not_started" ? "#6b7280" : "#7c3aed") : "#9ca3af",
+                              border: `1px solid ${isActive ? (tab.id === "completed" ? "#bbf7d0" : tab.id === "in_progress" ? "#bfdbfe" : tab.id === "not_started" ? "#e5e7eb" : "#e9d5ff") : "#f3f4f6"}`,
+                              boxShadow: isActive ? "0 1px 3px rgba(0,0,0,0.06)" : "none",
+                            }}
+                          >
+                            {tab.id !== "all" && (
+                              <span className="w-1.5 h-1.5 rounded-full flex-shrink-0" style={{ background: tab.id === "completed" ? "#22c55e" : tab.id === "in_progress" ? "#3b82f6" : "#d1d5db" }} />
+                            )}
+                            {tab.label}
+                            <span className="text-[10px] opacity-60 font-normal ml-0.5">({count})</span>
+                          </button>
+                        );
+                      })}
                     </div>
                   </div>
                 )}
