@@ -119,9 +119,64 @@ export function PreviewPanel({ activeSection, content }: PreviewPanelProps) {
       ? content
       : (report as unknown as Record<string, string>)[field] || "";
 
-    const pages = splitIntoPages(text);
-    if (pages.length === 0) continue;
+    if (!text.trim()) continue;
 
+    // ── Cover page gets its own dedicated layout ──────────────────────────────
+    if (id === "page-de-garde") {
+      allPageCards.push(
+        <div
+          key="page-de-garde"
+          data-section="page-de-garde"
+          className="bg-white relative flex flex-col"
+          style={{
+            width: "21cm",
+            maxWidth: "100%",
+            minHeight: "29.7cm",
+            boxShadow: "0 2px 12px rgba(0,0,0,0.15)",
+            marginBottom: "0.6cm",
+            fontFamily: "Times New Roman, Times, serif",
+            fontSize: "12pt",
+            lineHeight: "1.6",
+            color: "#111",
+            padding: "2cm 2.5cm",
+          }}
+        >
+          {/* Top accent bar */}
+          <div style={{ height: 4, background: "linear-gradient(90deg,#7c3aed,#a855f7)", borderRadius: 2, marginBottom: "1.2cm" }} />
+
+          <div
+            className="flex-1 flex flex-col items-center"
+            style={{ textAlign: "center" }}
+          >
+            <div
+              className="cover-page-content w-full"
+              style={{
+                ["--cover-h1-size" as string]: "16pt",
+                ["--cover-h2-size" as string]: "13pt",
+              }}
+            >
+              <style>{`
+                .cover-page-content h1 { font-size: 16pt; font-weight: 700; margin: 0.4cm 0; letter-spacing: -0.01em; }
+                .cover-page-content h2 { font-size: 13pt; font-weight: 600; margin: 0.3cm 0; }
+                .cover-page-content h3 { font-size: 12pt; font-weight: 600; margin: 0.25cm 0; }
+                .cover-page-content p  { margin: 0.2cm 0; }
+                .cover-page-content hr { border: none; border-top: 1px solid #d1d5db; margin: 0.5cm auto; width: 60%; }
+                .cover-page-content strong { font-weight: 700; }
+                .cover-page-content em { font-style: italic; }
+              `}</style>
+              <ReactMarkdown remarkPlugins={[remarkGfm]}>{text}</ReactMarkdown>
+            </div>
+          </div>
+
+          {/* Bottom accent bar */}
+          <div style={{ height: 4, background: "linear-gradient(90deg,#7c3aed,#a855f7)", borderRadius: 2, marginTop: "1.2cm" }} />
+        </div>
+      );
+      continue;
+    }
+
+    // ── All other sections: standard paginated cards ──────────────────────────
+    const pages = splitIntoPages(text);
     for (let pageIdx = 0; pageIdx < pages.length; pageIdx++) {
       const pageText = pages[pageIdx];
       const pn = pageNumber++;

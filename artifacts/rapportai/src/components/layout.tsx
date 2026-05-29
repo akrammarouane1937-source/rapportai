@@ -1,7 +1,8 @@
 import { ReactNode, useEffect, useRef, useState } from "react";
-import { Link } from "wouter";
+import { Link, useLocation } from "wouter";
 import { Sparkles, Check, Loader2 } from "lucide-react";
 import { useReportStore } from "@/lib/store";
+import { useReportSync } from "@/hooks/use-report-sync";
 
 interface LayoutProps {
   children: ReactNode;
@@ -10,9 +11,18 @@ interface LayoutProps {
   stepNumber?: number;
 }
 
-// Flashes "Enregistrement…" → "Enregistré" whenever the report changes. Data is
-// persisted to localStorage on every change (Zustand persist); this just makes
-// that visible so students trust their work is saved.
+const STEPS = [
+  { n: 1, label: "Info",       path: "/rapport/step-1" },
+  { n: 2, label: "Garde",      path: "/rapport/step-2" },
+  { n: 3, label: "Dédicaces",  path: "/rapport/step-3" },
+  { n: 4, label: "Résumé",     path: "/rapport/step-4" },
+  { n: 5, label: "Sommaire",   path: "/rapport/step-5" },
+  { n: 6, label: "Intro",      path: "/rapport/step-6" },
+  { n: 7, label: "Partie I",   path: "/rapport/partie-i" },
+  { n: 8, label: "Partie II",  path: "/rapport/partie-ii" },
+  { n: 9, label: "Conclusion", path: "/rapport/step-9" },
+];
+
 function SaveIndicator() {
   const report = useReportStore((s) => s.report);
   const [status, setStatus] = useState<"idle" | "saving" | "saved">("idle");
@@ -37,7 +47,51 @@ function SaveIndicator() {
   );
 }
 
+function StepNav({ currentStepNumber }: { currentStepNumber?: number }) {
+  const [location] = useLocation();
+  const maxStep = useReportStore((s) => s.report.currentStep);
+
+  return (
+    <div className="flex items-center gap-0.5">
+      {STEPS.map(({ n, label, path }) => {
+        const isActive = currentStepNumber === n || location === path;
+        const isReachable = n <= maxStep;
+        const isDone = isReachable && !isActive;
+
+        const inner = (
+          <span
+            key={n}
+            title={label}
+            className="flex items-center justify-center rounded-full text-[10px] font-semibold transition-colors select-none"
+            style={{
+              width: 22,
+              height: 22,
+              background: isActive
+                ? "linear-gradient(135deg,#7c3aed,#a855f7)"
+                : isDone
+                ? "#ede9fe"
+                : "#f3f4f6",
+              color: isActive ? "#fff" : isDone ? "#7c3aed" : "#c4c4c4",
+              cursor: isReachable ? "pointer" : "default",
+            }}
+          >
+            {isDone ? <Check style={{ width: 10, height: 10 }} /> : n}
+          </span>
+        );
+
+        return isReachable ? (
+          <Link key={n} href={path}>{inner}</Link>
+        ) : (
+          <span key={n}>{inner}</span>
+        );
+      })}
+    </div>
+  );
+}
+
 export function Layout({ children, previewPanel, stepName, stepNumber }: LayoutProps) {
+  useReportSync();
+
   return (
     <div className="h-screen overflow-hidden flex flex-col bg-background">
       {/* Header */}
@@ -53,12 +107,11 @@ export function Layout({ children, previewPanel, stepName, stepNumber }: LayoutP
 
         <div className="flex items-center gap-3">
           <SaveIndicator />
+          <StepNav currentStepNumber={stepNumber} />
           {stepName && (
-            <div className="flex items-center gap-2 text-xs text-muted-foreground">
-              <span>Étape {stepNumber}/9</span>
-              <span className="opacity-40">·</span>
-              <span>{stepName}</span>
-            </div>
+            <span className="hidden lg:inline text-xs text-muted-foreground opacity-60 pl-1">
+              {stepName}
+            </span>
           )}
         </div>
       </header>
@@ -71,7 +124,7 @@ export function Layout({ children, previewPanel, stepName, stepNumber }: LayoutP
           {children}
         </div>
 
-        {/* Right — Document preview (always light — simulates paper) */}
+        {/* Right — Document preview */}
         {previewPanel && (
           <div className="hidden md:flex flex-col flex-1 min-h-0" style={{ background: "#f1f5f9" }}>
             {previewPanel}
