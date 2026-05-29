@@ -250,7 +250,7 @@ export default function DashboardPage() {
           reportType:      report.reportType || rawReport.reportType,
           school:          report.school || rawReport.school,
           filiere:         report.filiere || rawReport.filiere,
-          studentName:     report.studentName || rawReport.studentName,
+          studentName:     user?.firstName || report.studentName || rawReport.studentName,
           problematique:   report.problematique || undefined,
           sections,
           sectionSummaries: report.sectionSummaries ?? {},
