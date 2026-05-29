@@ -149,7 +149,7 @@ function Bubble({ msg, studentName }: { msg: ChatMessage; studentName: string })
         className="flex justify-end gap-3 mb-5"
       >
         <div className="max-w-[72%]">
-          <div className="rounded-2xl rounded-tr-sm px-4 py-3 text-sm leading-relaxed" style={{ background: "#18181b", color: "#fff" }}>
+          <div className="rounded-2xl rounded-tr-sm px-4 py-3 text-sm leading-relaxed" style={{ background: "#7c3aed", color: "#fff" }}>
             {msg.content}
           </div>
           <p className="text-xs text-gray-400 mt-1 text-right">{studentName}</p>

@@ -424,7 +424,7 @@ export default function DashboardPage() {
                       ) : (
                         <div
                           className="px-4 py-2.5 rounded-2xl rounded-tr-sm text-sm leading-relaxed text-white"
-                          style={{ background: "#18181b" }}
+                          style={{ background: "linear-gradient(135deg,#7c3aed,#a855f7)", boxShadow: "0 2px 8px rgba(124,58,237,0.22)" }}
                         >
                           {msg.text}
                         </div>

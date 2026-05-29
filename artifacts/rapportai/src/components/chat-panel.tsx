@@ -61,7 +61,7 @@ export function ChatMessage({
       >
         <div
           className="max-w-[80%] rounded-2xl rounded-tr-sm px-4 py-2.5 text-sm"
-          style={{ background: "#18181b", color: "#fff", lineHeight: "1.55" }}
+          style={{ background: "#7c3aed", color: "#fff", lineHeight: "1.55" }}
         >
           {content}
         </div>
