@@ -98,7 +98,7 @@ export default function PartieII() {
         files.forEach((f) => push({ role: "agent", content: <UploadCard file={f} status="ready" /> }));
         push({
           role: "agent",
-          content: "Fichiers reçus ✅ Tu veux uploader des figures ou graphiques ? (ou 'non')",
+          content: "Fichiers reçus. Tu veux uploader des figures ou graphiques ? (ou 'non')",
         });
       } else {
         push(
@@ -126,7 +126,7 @@ export default function PartieII() {
         .map((f) => ({ figureNumber: f.figureNumber, title: f.title, source: f.source ?? "", author: f.author ?? "", caption: f.caption, placement: f.placement }));
       const partieII = await generate("partie-ii", report, injectedContext || undefined, allFiles.length > 0 ? allFiles : undefined, figuresForII.length > 0 ? figuresForII : undefined);
       if (!partieII) {
-        push({ role: "agent", content: "❌ Génération échouée. Vérifie ta connexion et réessaie." });
+        push({ role: "agent", content: "Génération échouée. Vérifie ta connexion et réessaie." });
         setPhase("figures");
         return;
       }
@@ -136,7 +136,7 @@ export default function PartieII() {
         role: "agent",
         content: (
           <div>
-            <p>Partie II complète ✅</p>
+            <p>Partie II complète</p>
             <div className="mt-2 p-3 rounded-lg bg-muted text-sm">
               <span className="font-semibold">{wc.toLocaleString("fr-FR")} mots</span>
               {" · "}
@@ -153,9 +153,9 @@ export default function PartieII() {
       const partieII = await generate("partie-ii", report, t);
       if (partieII) {
         updateReport({ partieII });
-        push({ role: "agent", content: "Partie II mise à jour ✅" });
+        push({ role: "agent", content: "Partie II mise à jour." });
       } else {
-        push({ role: "agent", content: "❌ Révision échouée. Réessaie." });
+        push({ role: "agent", content: "Révision échouée. Réessaie." });
       }
     }
   };
@@ -170,7 +170,7 @@ export default function PartieII() {
         {msgs.map((m, i) => <ChatMessage key={i} role={m.role} content={m.content} />)}
         <AgentSteps toolCalls={toolCalls} thinkingText={thinkingText} isGenerating={isGenerating} />
         {isGenerating && <ChatMessage role="agent" content="Recherche et rédaction en cours..." isTyping />}
-        {error && <ChatMessage role="agent" content={`❌ Erreur : ${error}. Réessaie.`} />}
+        {error && <ChatMessage role="agent" content={`Erreur : ${error}. Réessaie.`} />}
         {phase === "done" && !isGenerating && (
           <StepTransitionCard
             title="Partie II complétée"

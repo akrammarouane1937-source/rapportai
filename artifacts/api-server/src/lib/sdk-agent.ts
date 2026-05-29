@@ -371,11 +371,9 @@ Enregistre dans resume.md.`;
       }
 
       case "page-de-garde": {
-        const missingFields: string[] = [];
-        if (!p.encadrantPeda) missingFields.push("encadrant pédagogique");
-        if (!p.encadrantPro && p.reportType !== "Mémoire") missingFields.push("encadrant professionnel");
-        if (!p.entreprise && p.reportType !== "Mémoire") missingFields.push("entreprise d'accueil");
-        if (!p.juryMember1) missingFields.push("membres du jury (optionnel)");
+        const contextBlock = opts?.extraContext
+          ? `\n\nCONTEXTE DE LA CONVERSATION (extrais les infos manquantes ici — noms, jury, entreprise) :\n"""\n${opts.extraContext}\n"""`
+          : "";
 
         return `CONTEXTE ÉTUDIANT (NE REDEMANDE JAMAIS CES INFOS) :
 - Nom : ${p.studentName}
@@ -389,8 +387,11 @@ ${p.encadrantPro ? `- Encadrant professionnel : ${p.encadrantPro}` : ""}
 ${p.entreprise ? `- Entreprise d'accueil : ${p.entreprise}` : ""}
 ${p.ville ? `- Ville : ${p.ville}` : ""}
 ${p.juryMember1 ? `- Jury : ${p.juryMember1}${p.juryMember2 ? `, ${p.juryMember2}` : ""}${p.juryMember3 ? `, ${p.juryMember3}` : ""}` : ""}
+${contextBlock}
 
-${missingFields.length > 0 ? `INFOS MANQUANTES : pose ces questions en UN SEUL message avant de générer :\n${missingFields.map(f => `- ${f} ?`).join("\n")}` : "Toutes les infos sont présentes. Génère directement la page de garde."}
+RÈGLE ABSOLUE : Tu es un agent batch, PAS interactif. Tu ne poses AUCUNE question.
+Si des infos semblent manquantes dans le profil, cherche-les dans le contexte de conversation ci-dessus.
+Si elles n'y sont pas non plus, génère quand même la page de garde avec ce que tu as — laisse les champs absent vides proprement (ne mets pas de placeholder).
 
 Suis les instructions du skills file (page-de-garde-skills.md) pour choisir PATH A (template) ou PATH B (pas de template).
 Enregistre dans page-de-garde.md.`;

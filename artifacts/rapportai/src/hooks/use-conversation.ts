@@ -168,7 +168,7 @@ export function useConversation({
             : /50\d|timeout|timed out/i.test(raw)
               ? "**Le serveur a mis trop de temps à répondre.** Il se réveille peut-être après une période d'inactivité — patiente quelques secondes puis réessaie."
               : `**Un problème est survenu.** ${raw}\n\nRéessaie dans un instant.`;
-        setMessages((prev) => [...prev, { id: newId(), role: "agent", content: `⚠️ ${friendly}` }]);
+        setMessages((prev) => [...prev, { id: newId(), role: "agent", content: friendly }]);
         setIsThinking(false);
         return;
       } finally {
@@ -210,7 +210,7 @@ export function useConversation({
             generationFailed = true;
             setMessages((prev) => [
               ...prev,
-              { id: newId(), role: "agent", content: `⚠️ **La génération de ${label} n'a pas abouti.** C'est souvent dû à une section longue ou au serveur. Dis-moi simplement "réessaie" — ou donne-moi une précision (problématique, angle) et je relance.` },
+              { id: newId(), role: "agent", content: `**La génération de ${label} n'a pas abouti.** C'est souvent dû à une section longue ou au serveur. Dis-moi simplement "réessaie" — ou donne-moi une précision (problématique, angle) et je relance.` },
             ]);
           }
         }

@@ -17,18 +17,18 @@ export interface ToolCall {
 }
 
 const TOOL_LABELS: Record<string, string> = {
-  Read: "📖 Lecture du rapport",
-  WebSearch: "🔍 Recherche académique",
-  WebFetch: "🔍 Recherche de sources",
-  Write: "✍️ Rédaction en cours",
-  Edit: "✏️ Révision en cours",
-  Glob: "📂 Analyse des fichiers",
-  Bash: "⚙️ Traitement",
+  Read: "Lecture du rapport",
+  WebSearch: "Recherche académique",
+  WebFetch: "Recherche de sources",
+  Write: "Rédaction en cours",
+  Edit: "Révision en cours",
+  Glob: "Analyse des fichiers",
+  Bash: "Traitement",
 };
 
 function getToolLabel(name: string): string {
-  if (name?.startsWith("pdf:")) return `📄 Lecture de ${name.slice(4)}`;
-  if (name?.startsWith("image:")) return `🖼️ Analyse figure`;
+  if (name?.startsWith("pdf:")) return `Lecture de ${name.slice(4)}`;
+  if (name?.startsWith("image:")) return `Analyse figure`;
   return TOOL_LABELS[name] || name;
 }
 
@@ -150,7 +150,7 @@ export function useGenerate() {
             const form = new FormData();
             form.append("section", section);
             form.append("reportData", JSON.stringify(reportData));
-            if (extraPrompt) form.append("prompt", extraPrompt);
+            if (extraPrompt) form.append("extraContext", extraPrompt);
             form.append("formatting", JSON.stringify(formatting));
             // Include figures even when files are present — drop them and agents lose figure context
             if (figures && figures.length > 0) form.append("figures", JSON.stringify(figures));
@@ -227,13 +227,13 @@ export function useGenerate() {
                 const id = `retry-${Date.now()}`;
                 setToolCalls((prev) => [
                   ...prev.map((t) => ({ ...t, done: true })),
-                  { id, name: `🔄 Amélioration en cours${attempt ? ` (${attempt}/2)` : ""}`, detail, done: false },
+                  { id, name: `Amélioration en cours${attempt ? ` (${attempt}/2)` : ""}`, detail, done: false },
                 ]);
               } else if (phase === "humanizing") {
                 const id = `humanize-${Date.now()}`;
                 setToolCalls((prev) => [
                   ...prev.map((t) => ({ ...t, done: true })),
-                  { id, name: "✨ Humanisation du style académique", done: false },
+                  { id, name: "Humanisation du style académique", done: false },
                 ]);
               }
             }

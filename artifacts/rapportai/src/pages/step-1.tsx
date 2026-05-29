@@ -45,27 +45,27 @@ const toApiMsgs = (list: Msg[]) =>
 
 const schoolReaction = (school: string): string => {
   const s = school.toUpperCase();
-  if (s.includes("EMSI")) return `EMSI, super 👍 Et ta filière ?`;
-  if (s.includes("ENCG")) return `ENCG, parfait 👍 Et ta filière ?`;
-  if (s.includes("ENSA")) return `ENSA, ok 👍 Et ta filière ?`;
-  if (s.includes("ENSIAS")) return `ENSIAS, bonne école 👍 Et ta filière ?`;
-  if (s.includes("UIR")) return `UIR, top 👍 Et ta filière ?`;
-  if (s.includes("ISCAE")) return `ISCAE, nickel 👍 Et ta filière ?`;
-  if (s.includes("HEM")) return `HEM, classe 👍 Et ta filière ?`;
-  return `${school}, ok 👍 Et ta filière ?`;
+  if (s.includes("EMSI")) return `EMSI, super. Et ta filière ?`;
+  if (s.includes("ENCG")) return `ENCG, parfait. Et ta filière ?`;
+  if (s.includes("ENSA")) return `ENSA, ok. Et ta filière ?`;
+  if (s.includes("ENSIAS")) return `ENSIAS, bonne école. Et ta filière ?`;
+  if (s.includes("UIR")) return `UIR, top. Et ta filière ?`;
+  if (s.includes("ISCAE")) return `ISCAE, nickel. Et ta filière ?`;
+  if (s.includes("HEM")) return `HEM, classe. Et ta filière ?`;
+  return `${school}, ok. Et ta filière ?`;
 };
 
 const filiereReaction = (filiere: string): string => {
   const f = filiere.toLowerCase();
-  if (f.includes("finance") || f.includes("compta")) return `Finance — bon choix 💰 Quel type de rapport ?`;
-  if (f.includes("info") || f.includes("dev") || f.includes("génie")) return `Génie info, parfait 💻 Quel type de rapport ?`;
-  if (f.includes("market")) return `Marketing — intéressant 📊 Quel type de rapport ?`;
-  if (f.includes("manage")) return `Management, ok 👍 Quel type de rapport ?`;
-  return `${filiere}, noté ✅ Quel type de rapport ?`;
+  if (f.includes("finance") || f.includes("compta")) return `Finance — bon choix. Quel type de rapport ?`;
+  if (f.includes("info") || f.includes("dev") || f.includes("génie")) return `Génie info, parfait. Quel type de rapport ?`;
+  if (f.includes("market")) return `Marketing — intéressant. Quel type de rapport ?`;
+  if (f.includes("manage")) return `Management, ok. Quel type de rapport ?`;
+  return `${filiere}, noté. Quel type de rapport ?`;
 };
 
 const STEP1_KEY = "rapportai_chat_step1";
-const WELCOME = "Bienvenue sur RapportAI 👋 On va construire ton rapport ensemble, étape par étape. Commence par le thème : c'est quoi ton sujet ?";
+const WELCOME = "Bienvenue sur RapportAI. On va construire ton rapport ensemble, étape par étape. Commence par le thème : c'est quoi ton sujet ?";
 
 export default function Step1() {
   const [, setLocation] = useLocation();
@@ -150,7 +150,7 @@ export default function Step1() {
     setTyping(false);
     push({
       role: "agent",
-      content: acc.trim() || "Bonne question 🙂 J'ai juste besoin de cette info pour personnaliser ton rapport — tu peux me répondre ?",
+      content: acc.trim() || "Bonne question. J'ai juste besoin de cette info pour personnaliser ton rapport — tu peux me répondre ?",
     });
   };
 
@@ -183,7 +183,7 @@ export default function Step1() {
       if (isSkip(trimmed)) {
         // User wants to skip — don't save a bad value, leave filière blank
         push({ role: "user", content: trimmed });
-        await reply("Pas de problème, on peut laisser ça 👌 Quel type de rapport ?", "type", 420);
+        await reply("Pas de problème, on peut laisser ça. Quel type de rapport ?", "type", 420);
       } else {
         updateReport({ filiere: trimmed });
         push({ role: "user", content: trimmed });
@@ -193,7 +193,7 @@ export default function Step1() {
     } else if (phase === "annee") {
       updateReport({ academicYear: trimmed });
       push({ role: "user", content: trimmed });
-      await reply("Parfait, toutes les infos sont là ✅", "done", 400);
+      await reply("Parfait, toutes les infos sont là.", "done", 400);
     }
   };
 
@@ -202,9 +202,9 @@ export default function Step1() {
     updateReport({ reportType: value, currentStep: 1 });
     push({ role: "user", content: label });
     const reaction =
-      value === "PFE"      ? `PFE — on va faire quelque chose de solide 💪 Année académique ? (ex: 2025-2026)` :
-      value === "stage"    ? `Rapport de stage, ok 👍 Année académique ? (ex: 2025-2026)` :
-                             `Mémoire — beau projet 📚 Année académique ? (ex: 2025-2026)`;
+      value === "PFE"      ? `PFE — on va faire quelque chose de solide. Année académique ? (ex: 2025-2026)` :
+      value === "stage"    ? `Rapport de stage, ok. Année académique ? (ex: 2025-2026)` :
+                             `Mémoire — beau projet. Année académique ? (ex: 2025-2026)`;
     await reply(reaction, "annee", 460);
   };
 
