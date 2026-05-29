@@ -149,7 +149,7 @@ function Bubble({ msg, studentName }: { msg: ChatMessage; studentName: string })
         className="flex justify-end gap-3 mb-5"
       >
         <div className="max-w-[72%]">
-          <div className="bg-purple-600 text-white rounded-2xl rounded-tr-sm px-4 py-3 text-sm leading-relaxed shadow-sm">
+          <div className="rounded-2xl rounded-tr-sm px-4 py-3 text-sm leading-relaxed" style={{ background: "#18181b", color: "#fff" }}>
             {msg.content}
           </div>
           <p className="text-xs text-gray-400 mt-1 text-right">{studentName}</p>
@@ -174,7 +174,7 @@ function Bubble({ msg, studentName }: { msg: ChatMessage; studentName: string })
         {msg.speaker && (
           <p className="text-xs font-semibold text-gray-500 mb-1">{msg.speaker}</p>
         )}
-        <div className="bg-white border border-gray-100 rounded-2xl rounded-tl-sm px-4 py-3 text-sm text-gray-800 leading-relaxed shadow-sm">
+        <div className="px-1 py-0.5 text-sm text-gray-800 leading-relaxed">
           {msg.content}
           {msg.streaming && (
             <span className="inline-flex gap-0.5 ml-1.5 align-middle">

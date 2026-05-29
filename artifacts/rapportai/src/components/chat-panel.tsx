@@ -57,11 +57,11 @@ export function ChatMessage({
       <motion.div
         initial={{ opacity: 0, y: 6 }}
         animate={{ opacity: 1, y: 0 }}
-        className="flex justify-end mb-3 px-4"
+        className="flex justify-end mb-4 px-4"
       >
         <div
           className="max-w-[80%] rounded-2xl rounded-tr-sm px-4 py-2.5 text-sm"
-          style={{ background: "#7c3aed", color: "#fff", lineHeight: "1.55" }}
+          style={{ background: "#18181b", color: "#fff", lineHeight: "1.55" }}
         >
           {content}
         </div>
@@ -73,25 +73,17 @@ export function ChatMessage({
     <motion.div
       initial={{ opacity: 0, y: 6 }}
       animate={{ opacity: 1, y: 0 }}
-      className="flex gap-3 mb-3 px-4"
+      className="flex gap-3 mb-5 px-4"
     >
-      <div
-        className="shrink-0 w-7 h-7 rounded-full flex items-center justify-center mt-0.5"
-        style={{ background: "linear-gradient(135deg,#7c3aed,#a855f7)" }}
-      >
-        <Sparkles className="w-3.5 h-3.5 text-white" />
-      </div>
+      <img src="/logo.png" alt="RapportAI" className="shrink-0 w-6 h-6 mt-0.5 object-contain" />
 
-      <div
-        className="flex-1 min-w-0 rounded-2xl rounded-tl-sm px-4 py-2.5 text-sm"
-        style={{ background: "#f5f0ff", color: "#1e1b4b", lineHeight: "1.6", border: "1px solid #ede9fe" }}
-      >
+      <div className="flex-1 min-w-0 text-sm" style={{ color: "#111827", lineHeight: "1.7" }}>
         {typeof content === "string" ? <AgentMarkdown content={content} /> : content}
         {isTyping && (
-          <span className="flex items-center gap-1.5 py-0.5">
-            <span className="w-2 h-2 rounded-full bg-violet-400 animate-bounce" style={{ animationDelay: "0ms" }} />
-            <span className="w-2 h-2 rounded-full bg-violet-400 animate-bounce" style={{ animationDelay: "140ms" }} />
-            <span className="w-2 h-2 rounded-full bg-violet-400 animate-bounce" style={{ animationDelay: "280ms" }} />
+          <span className="flex items-center gap-1.5 py-1">
+            <span className="w-1.5 h-1.5 rounded-full bg-gray-400 animate-bounce" style={{ animationDelay: "0ms" }} />
+            <span className="w-1.5 h-1.5 rounded-full bg-gray-400 animate-bounce" style={{ animationDelay: "140ms" }} />
+            <span className="w-1.5 h-1.5 rounded-full bg-gray-400 animate-bounce" style={{ animationDelay: "280ms" }} />
           </span>
         )}
       </div>

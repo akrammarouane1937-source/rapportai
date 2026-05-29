@@ -91,7 +91,7 @@ export function Sidebar() {
           style={{ height: 56, borderBottom: "1px solid #f3f4f6" }}
         >
           <div className="flex items-center gap-2">
-            <img src="/logo.svg" alt="RapportAI" className="w-7 h-7 flex-shrink-0" />
+            <img src="/logo.png" alt="RapportAI" className="w-7 h-7 flex-shrink-0 object-contain" />
             <span
               className="font-bold text-gray-900 text-sm"
               style={{ fontFamily: "'Plus Jakarta Sans', sans-serif" }}

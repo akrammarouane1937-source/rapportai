@@ -1,7 +1,7 @@
 import { useState, useRef, useEffect } from "react";
 import { useSessionRecover } from "@/hooks/use-session-recover";
 import { motion, AnimatePresence } from "framer-motion";
-import { Send, Loader2, Sparkles, ArrowRight, ChevronDown } from "lucide-react";
+import { Send, Loader2, ArrowRight, ChevronDown } from "lucide-react";
 import { useLocation } from "wouter";
 import { useOptionalUser as useUser } from "@/lib/useOptionalClerk";
 import { Sidebar, SidebarSpacer } from "@/components/layout/Sidebar";
@@ -411,32 +411,24 @@ export default function DashboardPage() {
                     className={`flex ${msg.role === "user" ? "justify-end" : "justify-start"}`}
                   >
                     <div className={msg.role === "user" ? "max-w-[78%]" : "w-full"}>
-                      {msg.role === "assistant" && (
-                        <div className="flex items-center gap-2 mb-2">
-                          <div className="w-5 h-5 rounded-md flex items-center justify-center"
-                            style={{ background: "linear-gradient(135deg,#7c3aed,#a855f7)" }}>
-                            <Sparkles className="w-2.5 h-2.5 text-white" />
+                      {msg.role === "assistant" ? (
+                        <div className="flex gap-3">
+                          <img src="/logo.png" alt="RapportAI" className="shrink-0 w-6 h-6 mt-0.5 object-contain" />
+                          <div className="flex-1 min-w-0 text-sm text-gray-800 leading-relaxed">
+                            {msg.streaming && !msg.text
+                              ? <span className="flex items-center gap-1.5 text-gray-400"><Loader2 className="w-3.5 h-3.5 animate-spin" />En train d'écrire…</span>
+                              : <ReactMarkdown remarkPlugins={[remarkGfm]} className="prose prose-sm max-w-none prose-p:my-1 prose-headings:font-semibold">{msg.text}</ReactMarkdown>
+                            }
                           </div>
-                          <span className="text-xs font-semibold text-gray-400">RapportAI</span>
+                        </div>
+                      ) : (
+                        <div
+                          className="px-4 py-2.5 rounded-2xl rounded-tr-sm text-sm leading-relaxed text-white"
+                          style={{ background: "#18181b" }}
+                        >
+                          {msg.text}
                         </div>
                       )}
-                      <div
-                        className={`px-4 py-3 rounded-2xl text-sm leading-relaxed ${
-                          msg.role === "user"
-                            ? "text-white rounded-tr-sm"
-                            : "bg-white text-gray-800 rounded-tl-sm border border-gray-100"
-                        }`}
-                        style={msg.role === "user"
-                          ? { background: "linear-gradient(135deg,#7c3aed,#a855f7)", boxShadow: "0 2px 8px rgba(124,58,237,0.22)" }
-                          : { boxShadow: "0 1px 4px rgba(0,0,0,0.05)" }
-                        }
-                      >
-                        {msg.role === "assistant" ? (
-                          msg.streaming && !msg.text
-                            ? <span className="flex items-center gap-1.5 text-gray-400"><Loader2 className="w-3.5 h-3.5 animate-spin" />En train d'écrire…</span>
-                            : <ReactMarkdown remarkPlugins={[remarkGfm]} className="prose prose-sm max-w-none prose-p:my-1 prose-headings:font-semibold">{msg.text}</ReactMarkdown>
-                        ) : msg.text}
-                      </div>
                       {msg.role === "assistant" && !msg.streaming && msg.navAction && (
                         <motion.button
                           initial={{ opacity: 0, y: 4 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.2 }}

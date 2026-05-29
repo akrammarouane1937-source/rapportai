@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect } from "react";
-import { MessageSquare, X, Send, Sparkles, Loader2 } from "lucide-react";
+import { MessageSquare, X, Send, Loader2 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { getReport } from "@/lib/reportStore";
 
@@ -133,48 +133,51 @@ export function FloatingChat() {
           >
             <div
               className="flex items-center justify-between px-4 py-3.5 border-b border-gray-100"
-              style={{ background: "linear-gradient(135deg, #7c3aed 0%, #5b21b6 100%)" }}
+              style={{ background: "#fff" }}
             >
               <div className="flex items-center gap-2.5">
-                <div className="w-7 h-7 bg-white/20 rounded-full flex items-center justify-center">
-                  <Sparkles className="w-3.5 h-3.5 text-white" />
-                </div>
+                <img src="/logo.png" alt="RapportAI" className="w-7 h-7 object-contain" />
                 <div>
-                  <div className="text-white text-sm font-semibold leading-none" style={{ fontFamily: "'Plus Jakarta Sans', sans-serif" }}>
+                  <div className="text-gray-900 text-sm font-semibold leading-none" style={{ fontFamily: "'Plus Jakarta Sans', sans-serif" }}>
                     Assistant IA
                   </div>
-                  <div className="text-purple-200 text-xs mt-0.5">Pose-moi n'importe quelle question</div>
+                  <div className="text-gray-400 text-xs mt-0.5">Pose-moi n'importe quelle question</div>
                 </div>
               </div>
               <button
                 data-testid="button-close-chat"
                 onClick={() => setOpen(false)}
-                className="w-7 h-7 rounded-full bg-white/10 hover:bg-white/20 flex items-center justify-center transition-colors"
+                className="w-7 h-7 rounded-full bg-gray-100 hover:bg-gray-200 flex items-center justify-center transition-colors"
               >
-                <X className="w-3.5 h-3.5 text-white" />
+                <X className="w-3.5 h-3.5 text-gray-500" />
               </button>
             </div>
 
-            <div className="h-64 overflow-y-auto p-4 space-y-3 bg-gray-50/50">
+            <div className="h-64 overflow-y-auto p-4 space-y-4 bg-white">
               {messages.map((msg) => (
-                <div key={msg.id} className={`flex ${msg.role === "user" ? "justify-end" : "justify-start"}`}>
-                  <div
-                    className={`max-w-[85%] px-3.5 py-2.5 rounded-2xl text-xs leading-relaxed
-                      ${msg.role === "assistant"
-                        ? "bg-white text-gray-700 border border-gray-100 rounded-tl-sm"
-                        : "bg-purple-600 text-white rounded-tr-sm"
-                      }`}
-                    style={{ boxShadow: "0 1px 2px rgba(0,0,0,0.05)" }}
-                  >
-                    {msg.text || (
-                      msg.streaming && (
-                        <span className="flex items-center gap-1">
-                          <Loader2 className="w-3 h-3 animate-spin" />
-                          <span className="text-gray-400">En train d'écrire…</span>
-                        </span>
-                      )
-                    )}
-                  </div>
+                <div key={msg.id} className={`flex ${msg.role === "user" ? "justify-end" : "justify-start gap-2.5"}`}>
+                  {msg.role === "assistant" && (
+                    <img src="/logo.png" alt="RapportAI" className="w-5 h-5 object-contain shrink-0 mt-0.5" />
+                  )}
+                  {msg.role === "assistant" ? (
+                    <div className="flex-1 text-xs text-gray-800 leading-relaxed">
+                      {msg.text || (
+                        msg.streaming && (
+                          <span className="flex items-center gap-1 text-gray-400">
+                            <Loader2 className="w-3 h-3 animate-spin" />
+                            En train d'écrire…
+                          </span>
+                        )
+                      )}
+                    </div>
+                  ) : (
+                    <div
+                      className="max-w-[85%] px-3.5 py-2 rounded-2xl rounded-tr-sm text-xs leading-relaxed text-white"
+                      style={{ background: "#18181b" }}
+                    >
+                      {msg.text}
+                    </div>
+                  )}
                 </div>
               ))}
               <div ref={bottomRef} />
