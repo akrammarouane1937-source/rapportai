@@ -11,6 +11,15 @@
     },
     {
       "path": "./lib/api-zod"
+    },
+    {
+      "path": "./lib/integrations-anthropic-ai"
+    },
+    {
+      "path": "./artifacts/api-server"
+    },
+    {
+      "path": "./artifacts/rapportai"
     }
   ]
 }

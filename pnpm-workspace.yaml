@@ -33,6 +33,19 @@ minimumReleaseAgeExclude:
   # this setting guards against does not apply to our own packages.
   - '@replit/*'
   - stripe-replit-sync
+  # Anthropic Agent SDK + CLI binary — actively updated, trusted publisher
+  - '@anthropic-ai/sdk'
+  - '@anthropic-ai/claude-agent-sdk'
+  - '@anthropic-ai/claude-code'
+  # Vercel Sandbox — same vendor as our deployment
+  - '@vercel/sandbox'
+  # docx-preview — Word document renderer for browser
+  - 'docx-preview'
+  # html2canvas — browser screenshot for template layout capture
+  - 'html2canvas'
+  # Vercel observability packages — trusted publisher, same vendor as deployment
+  - '@vercel/analytics'
+  - '@vercel/speed-insights'
 
 packages:
   - artifacts/*
@@ -70,6 +83,8 @@ autoInstallPeers: false
 
 onlyBuiltDependencies:
   - '@swc/core'
+  - '@anthropic-ai/claude-agent-sdk'
+  - '@anthropic-ai/claude-code'
   - esbuild
   - msw
   - unrs-resolver

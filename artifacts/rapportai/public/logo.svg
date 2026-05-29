@@ -1,0 +1,10 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 80 96">
+  <!-- Document body -->
+  <path d="M10,0 Q5,0 5,5 L5,91 Q5,96 10,96 L70,96 Q75,96 75,91 L75,20 L55,20 L55,0 Z" fill="#5b21b6"/>
+  <!-- Fold triangle -->
+  <path d="M55,0 L75,20 L55,20 Z" fill="#7c3aed"/>
+  <!-- Text lines -->
+  <rect x="18" y="44" width="44" height="7" rx="3.5" fill="white"/>
+  <rect x="18" y="57" width="44" height="7" rx="3.5" fill="white"/>
+  <rect x="18" y="70" width="44" height="7" rx="3.5" fill="white"/>
+</svg>

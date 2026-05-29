@@ -1,0 +1,26 @@
+kind = "design"
+previewPath = "/"
+title = "RapportAI"
+version = "1.0.0"
+id = "rapportai-frontend"
+
+[[services]]
+localPort = 8082
+name = "RapportAI Frontend"
+paths = ["/"]
+
+[services.development]
+run = "pnpm --filter @workspace/rapportai run dev"
+
+[services.production.build]
+args = ["pnpm", "--filter", "@workspace/rapportai", "run", "build"]
+
+[services.production.build.env]
+NODE_ENV = "production"
+
+[services.production.run]
+args = ["pnpm", "--filter", "@workspace/rapportai", "run", "serve"]
+
+[services.production.run.env]
+PORT = "8082"
+NODE_ENV = "production"

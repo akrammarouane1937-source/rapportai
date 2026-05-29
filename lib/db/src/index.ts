@@ -4,13 +4,9 @@ import * as schema from "./schema";
 
 const { Pool } = pg;
 
-if (!process.env.DATABASE_URL) {
-  throw new Error(
-    "DATABASE_URL must be set. Did you forget to provision a database?",
-  );
-}
-
-export const pool = new Pool({ connectionString: process.env.DATABASE_URL });
+// Database is optional for core report-generation. Share/stripe routes will
+// return 500 when DATABASE_URL is absent, but the server starts normally.
+export const pool = new Pool({ connectionString: process.env.DATABASE_URL ?? "postgresql://localhost/rapportai" });
 export const db = drizzle(pool, { schema });
 
 export * from "./schema";
