@@ -176,6 +176,7 @@ export function useConversation({
       }
 
       // Execute actions after stream completes
+      let generationFailed = false;
       for (const action of pendingActions) {
         if (action.type === "generate_section") {
           const section = action.section as string;
@@ -206,6 +207,7 @@ export function useConversation({
               },
             ]);
           } else {
+            generationFailed = true;
             setMessages((prev) => [
               ...prev,
               { id: newId(), role: "agent", content: `⚠️ **La génération de ${label} n'a pas abouti.** C'est souvent dû à une section longue ou au serveur. Dis-moi simplement "réessaie" — ou donne-moi une précision (problématique, angle) et je relance.` },
@@ -213,7 +215,9 @@ export function useConversation({
           }
         }
 
-        if (action.type === "step_complete" && !stepCompleteRef.current) {
+        // Only advance the step if all generate_section actions succeeded.
+        // If any generation failed, block step_complete so the user knows to retry.
+        if (action.type === "step_complete" && !stepCompleteRef.current && !generationFailed) {
           stepCompleteRef.current = true;
           const msg = (action.message as string) || "Étape terminée ✓";
           setMessages((prev) => [...prev, { id: newId(), role: "agent", content: msg }]);
