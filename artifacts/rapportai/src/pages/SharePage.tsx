@@ -94,7 +94,7 @@ export default function SharePage() {
     if (!report || exporting) return;
     setExporting(true);
     try {
-      const blob = await generateDocx(report);
+      const blob = await generateDocx(report as any);
       const theme = report.theme?.slice(0, 40).replace(/\s+/g, "-").replace(/[^a-z0-9-]/gi, "") || "rapport";
       downloadBlob(blob, `RapportAI-${theme}.docx`);
     } catch (e) {

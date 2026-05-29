@@ -49,7 +49,7 @@ export default function Step5() {
         <ChatInput
           isGenerating={isThinking || isGenerating}
           onAbort={abort}
-          onSend={send}
+          onSend={(text) => send(text)}
           disabled={isThinking || isGenerating}
           placeholder="Demander une modification du sommaire..."
         />

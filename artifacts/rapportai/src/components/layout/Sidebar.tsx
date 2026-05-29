@@ -70,10 +70,10 @@ export function Sidebar() {
 
   const hasReport      = !!(report.theme || report.school);
   const pagesUsed      = sectionsWithContent;
-  const pagesLimit     = limits.pages === Infinity ? "∞" : limits.pages;
+  const pagesLimit     = limits.sections === Infinity ? "∞" : limits.sections;
   const revisionsUsed  = plan.revisionCount;
   const revisionsLimit = limits.revisions === Infinity ? "∞" : limits.revisions;
-  const pagesPct       = limits.pages === Infinity ? 0 : Math.min(100, (pagesUsed / (limits.pages as number)) * 100);
+  const pagesPct       = limits.sections === Infinity ? 0 : Math.min(100, (pagesUsed / (limits.sections as number)) * 100);
   const revPct         = limits.revisions === Infinity ? 0 : Math.min(100, (revisionsUsed / (limits.revisions as number)) * 100);
 
   const isActive = (path: string) =>

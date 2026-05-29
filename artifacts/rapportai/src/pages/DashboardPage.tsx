@@ -349,7 +349,7 @@ export default function DashboardPage() {
     { label: "Partie I",          field: "partieI",      path: "/rapport/partie-i" },
     { label: "Partie II",         field: "partieII",     path: "/rapport/partie-ii"},
     { label: "Conclusion",        field: "conclusion",   path: "/rapport/step-9"   },
-  ].filter((s) => !!(report as Record<string, string>)[s.field]).slice(0, 3);
+  ].filter((s) => !!(report as unknown as Record<string, string>)[s.field]).slice(0, 3);
 
   const workspaceName = user?.emailAddresses?.[0]?.emailAddress?.split("@")[0]
     || user?.firstName
@@ -564,7 +564,7 @@ export default function DashboardPage() {
                           style={{ transform: "scale(0.18)", transformOrigin: "top left", width: "556%",
                             padding: "10px", fontFamily: "Times New Roman, serif", fontSize: "11pt",
                             lineHeight: "1.5", color: "#111", whiteSpace: "pre-wrap" }}>
-                          {((report as Record<string, string>)[s.field] || "").slice(0, 600)}
+                          {((report as unknown as Record<string, string>)[s.field] || "").slice(0, 600)}
                         </div>
                       </div>
                     </div>

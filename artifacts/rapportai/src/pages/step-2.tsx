@@ -66,7 +66,7 @@ export default function Step2Page() {
         <ChatInput
           isGenerating={isThinking || isGenerating}
           onAbort={abort}
-          onSend={send}
+          onSend={(text) => send(text)}
           disabled={isThinking || isGenerating}
           placeholder="Réponds naturellement..."
         />

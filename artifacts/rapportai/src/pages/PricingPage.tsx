@@ -70,7 +70,7 @@ export default function PricingPage() {
   const currentPlan = getMyPlan();
 
   const canUpgrade = (planId: PlanId) => {
-    const order: PlanId[] = ["free", "essentiel", "pro", "premium"];
+    const order: PlanId[] = ["free", "starter", "pro"];
     return order.indexOf(planId) > order.indexOf(currentPlan.planId);
   };
 

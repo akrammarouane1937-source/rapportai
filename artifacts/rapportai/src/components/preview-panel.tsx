@@ -64,7 +64,7 @@ export function PreviewPanel({ activeSection, content }: PreviewPanelProps) {
   }, [activeSection]);
 
   // Total words across all generated sections
-  const allText = SECTIONS.map(({ field }) => (report as Record<string, string>)[field] || "").join(" ");
+  const allText = SECTIONS.map(({ field }) => (report as unknown as Record<string, string>)[field] || "").join(" ");
   const totalWords = allText.trim() ? allText.trim().split(/\s+/).filter(Boolean).length : 0;
   const totalPages = Math.max(1, Math.round(totalWords / 420));
 
@@ -84,7 +84,7 @@ export function PreviewPanel({ activeSection, content }: PreviewPanelProps) {
 
   const handleCopy = async () => {
     const currentText = SECTIONS.find(s => s.id === activeSection);
-    const text = (currentText && (report as Record<string, string>)[currentText.field]) || content || "";
+    const text = (currentText && (report as unknown as Record<string, string>)[currentText.field]) || content || "";
     if (!text) return;
     await navigator.clipboard.writeText(text);
     setCopied(true);
@@ -117,7 +117,7 @@ export function PreviewPanel({ activeSection, content }: PreviewPanelProps) {
   for (const { id, field } of SECTIONS) {
     const text = id === activeSection && content
       ? content
-      : (report as Record<string, string>)[field] || "";
+      : (report as unknown as Record<string, string>)[field] || "";
 
     const pages = splitIntoPages(text);
     if (pages.length === 0) continue;
@@ -294,13 +294,13 @@ export function PreviewPanel({ activeSection, content }: PreviewPanelProps) {
             <p className="text-xs text-gray-500 -mb-1">
               Modifie le texte de chaque section. Les changements sont sauvegardés automatiquement et repris dans l'export Word/PDF.
             </p>
-            {SECTIONS.filter(({ field }) => ((report as Record<string, string>)[field] || "").trim()).map(({ id, field, label }) => (
+            {SECTIONS.filter(({ field }) => ((report as unknown as Record<string, string>)[field] || "").trim()).map(({ id, field, label }) => (
               <div key={id} data-section={id} className="bg-white rounded-xl border border-gray-200 overflow-hidden">
                 <div className="px-4 py-2 text-xs font-semibold text-gray-600 border-b border-gray-100 bg-gray-50">
                   {label}
                 </div>
                 <textarea
-                  value={(report as Record<string, string>)[field] || ""}
+                  value={(report as unknown as Record<string, string>)[field] || ""}
                   onChange={(e) => updateReport({ [field]: e.target.value } as Partial<typeof report>)}
                   spellCheck
                   className="w-full px-4 py-3 text-sm leading-relaxed resize-y focus:outline-none"
@@ -308,7 +308,7 @@ export function PreviewPanel({ activeSection, content }: PreviewPanelProps) {
                 />
               </div>
             ))}
-            {SECTIONS.every(({ field }) => !((report as Record<string, string>)[field] || "").trim()) && (
+            {SECTIONS.every(({ field }) => !((report as unknown as Record<string, string>)[field] || "").trim()) && (
               <div className="text-center text-sm text-gray-400 italic py-10">
                 Aucun contenu à modifier pour l'instant — génère d'abord une section.
               </div>

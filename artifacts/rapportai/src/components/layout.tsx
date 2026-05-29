@@ -17,7 +17,7 @@ function SaveIndicator() {
   const report = useReportStore((s) => s.report);
   const [status, setStatus] = useState<"idle" | "saving" | "saved">("idle");
   const first = useRef(true);
-  const timer = useRef<ReturnType<typeof setTimeout>>();
+  const timer = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
 
   useEffect(() => {
     if (first.current) { first.current = false; return; }

@@ -56,7 +56,7 @@ export default function Step3() {
         <ChatInput
           isGenerating={isThinking || isGenerating}
           onAbort={abort}
-          onSend={send}
+          onSend={(text) => send(text)}
           disabled={isThinking || isGenerating}
           placeholder="Réponds naturellement..."
         />

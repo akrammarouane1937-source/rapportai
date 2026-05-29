@@ -186,7 +186,7 @@ export default function RapportsPage({ completedOnly = false }: RapportsPageProp
   const [reorderMode, setReorderMode] = useState(false);
   const [activeFilter, setActiveFilter] = useState<FilterTab>(completedOnly ? "completed" : "all");
 
-  const reportData = report as Record<string, string>;
+  const reportData = report as unknown as Record<string, string>;
   const sectionOrder: string[] = report.sectionOrder?.length ? report.sectionOrder : DEFAULT_ORDER;
 
   // Build back-matter sections in current order

@@ -254,7 +254,7 @@ export default function Step9Page() {
         tableaux:     tableaux.length > 0 ? tableaux : undefined,
       });
       const data = getReport();
-      const blob = await generateDocx(data);
+      const blob = await generateDocx(data as any);
       const theme = data.theme?.slice(0, 40).replace(/\s+/g, "-").replace(/[^a-z0-9\-]/gi, "") || "rapport";
       downloadBlob(blob, `RapportAI-${theme}.docx`);
       setExported(true);

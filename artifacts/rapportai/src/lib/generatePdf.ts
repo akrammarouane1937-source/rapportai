@@ -55,13 +55,13 @@ export async function generatePdf(report: ReportData): Promise<void> {
   y += 8;
 
   doc.setFontSize(10.5);
-  const metaLines: [string, string][] = [
+  const metaLines = [
     ["Préparé par", report.studentName ?? ""],
     ["Encadrant pédagogique", report.encadrantPeda ?? ""],
     ["Encadrant professionnel", report.encadrantPro ?? ""],
     ["Entreprise", report.entreprise ?? ""],
     ["Année universitaire", report.annee ?? ""],
-  ].filter(([, v]) => v);
+  ].filter(([, v]) => v) as [string, string][];
 
   for (const [label, value] of metaLines) {
     doc.setFont("helvetica", "normal");

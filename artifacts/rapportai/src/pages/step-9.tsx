@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect } from "react";
-import { useReportStore } from "@/lib/store";
+import { useReportStore, type Report } from "@/lib/store";
 import { useConversation } from "@/hooks/use-conversation";
 import { Layout } from "@/components/layout";
 import { ChatMessage, AgentSteps } from "@/components/chat-panel";
@@ -10,7 +10,7 @@ import { generateDocx, downloadBlob } from "@/lib/generateDocx";
 import { generatePdf } from "@/lib/generatePdf";
 import { API_BASE } from "@/lib/apiBase";
 
-function totalWords(r: ReturnType<typeof useReportStore>["report"]) {
+function totalWords(r: Report) {
   return [r.dedicaces, r.remerciements, r.resumeFr, r.abstractEn, r.introduction, r.partieI, r.partieII, r.conclusion]
     .join(" ").split(/\s+/).filter(Boolean).length;
 }
@@ -137,7 +137,7 @@ export default function Step9() {
         <ChatInput
           isGenerating={isThinking || isGenerating}
           onAbort={abort}
-          onSend={send}
+          onSend={(text) => send(text)}
           disabled={isThinking || isGenerating}
           placeholder={exportDone ? "Demander une modification..." : "Réponds naturellement..."}
         />

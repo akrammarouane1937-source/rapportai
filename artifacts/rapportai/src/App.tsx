@@ -356,7 +356,7 @@ function NoAuthApp() {
           <Route path="/sign-up/*?"><Redirect to="/onboarding" /></Route>
           <Route path="/onboarding" component={OnboardingPage} />
           <Route path="/dashboard" component={DashboardPage} />
-          <Route path="/rapports" component={RapportsPage} />
+          <Route path="/rapports">{() => <RapportsPage />}</Route>
           <Route path="/sections-terminees" component={SectionsTermineesPage} />
           <Route path="/demo" component={DemoPage} />
           <Route path="/rapport/step-1" component={Step1Page} />

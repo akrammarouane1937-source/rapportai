@@ -3,7 +3,7 @@ import { Paperclip, Image, FileText, ArrowUp, Square, X } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 interface ChatInputProps {
-  onSend: (text: string, files?: File[]) => void;
+  onSend: (text: string, files?: File[]) => void | Promise<void>;
   onAbort?: () => void;
   isGenerating?: boolean;
   disabled?: boolean;

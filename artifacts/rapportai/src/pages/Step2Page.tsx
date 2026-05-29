@@ -259,7 +259,7 @@ export default function Step2Page() {
             jury2 ? new Paragraph({ alignment: AlignmentType.LEFT, spacing: { after: 60 }, children: [new TextRun({ text: jury2, size: 22, font: "Times New Roman" })] }) : null,
             jury3 ? new Paragraph({ alignment: AlignmentType.LEFT, spacing: { after: 60 }, children: [new TextRun({ text: jury3, size: 22, font: "Times New Roman" })] }) : null,
             new Paragraph({ alignment: AlignmentType.CENTER, spacing: { before: 600 }, children: [new TextRun({ text: `${ville || ""}   ${annee}`, size: 22, font: "Times New Roman" })] }),
-          ].filter(Boolean) as Paragraph[],
+          ].filter(Boolean) as InstanceType<typeof Paragraph>[],
         }],
       });
       const blob = await Packer.toBlob(doc);
