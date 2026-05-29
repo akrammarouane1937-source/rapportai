@@ -284,6 +284,19 @@ Retourne UNIQUEMENT la question, sans préambule.`;
 Situe le sujet dans le contexte marocain, justifie la pertinence, mentionne l'approche.
 60 à 90 mots maximum. Retourne UNIQUEMENT le texte.`;
 
+    case "page-de-garde":
+      return `Génère la page de garde académique marocaine pour ce rapport.
+Profil étudiant :
+- Nom : ${student}
+- École : ${school}
+- Filière : ${filiere}
+- Type : ${type}
+- Thème : "${theme}"
+- Année académique : ${annee}
+- Encadrant pédagogique : ${encPeda}${encPro !== "l'encadrant professionnel" ? `\n- Encadrant professionnel : ${encPro}` : ""}${entreprise !== "l'entreprise d'accueil" ? `\n- Entreprise d'accueil : ${entreprise}` : ""}
+Suis exactement le skills file pour la structure et les chemins de génération (PATH A ou PATH B).
+Enregistre le résultat final dans page-de-garde.md.`;
+
     default:
       return `Génère du contenu académique formel pour un ${type} sur le thème "${theme}" (${school} — ${filiere}).
 ${ctx.extraContext ?? ""}`;
@@ -365,6 +378,15 @@ router.post("/generate", async (req: Request, res: Response) => {
             res.write(`data: ${JSON.stringify({ tool_call: block.name })}\n\n`);
           }
         }
+      }
+    }
+
+    // If the agent wrote to a file but produced no text output (e.g. page-de-garde
+    // writes page-de-garde.md and stops immediately), fall back to reading that file.
+    if (!fullOutput.trim() && workDir) {
+      const sectionFile = path.join(workDir, `${body.section}.md`);
+      if (existsSync(sectionFile)) {
+        fullOutput = readFileSync(sectionFile, "utf-8");
       }
     }
 
