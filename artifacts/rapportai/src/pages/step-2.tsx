@@ -7,6 +7,8 @@ import { ChatInput } from "@/components/chat-input";
 import { useReportStore } from "@/lib/store";
 import { useConversation } from "@/hooks/use-conversation";
 import { useOptionalUser as useUser } from "@/lib/useOptionalClerk";
+import { useFileStore } from "@/lib/fileStore";
+import { Paperclip, X, FileText } from "lucide-react";
 
 function capitalizeName(name: string): string {
   return name
@@ -14,6 +16,69 @@ function capitalizeName(name: string): string {
     .split(" ")
     .map((w) => w.charAt(0).toUpperCase() + w.slice(1))
     .join(" ");
+}
+
+function TemplateUpload() {
+  const { files, addFiles, clearAll } = useFileStore();
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const templateFile = files.find((f) => f.name.startsWith("canevas-"));
+
+  const handleFile = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    // Remove any previous template first
+    clearAll();
+    // Prefix with "canevas-" so the API marks it as a school template
+    const renamed = new File([file], `canevas-${file.name}`, { type: file.type });
+    addFiles([renamed]);
+    e.target.value = "";
+  };
+
+  const handleRemove = () => {
+    clearAll();
+  };
+
+  return (
+    <div
+      className="flex items-center gap-2 px-3 py-2 border-t border-border"
+      style={{ background: templateFile ? "#f0fdf4" : "transparent" }}
+    >
+      <input
+        ref={fileInputRef}
+        type="file"
+        accept=".docx,.doc,.pdf"
+        className="hidden"
+        onChange={handleFile}
+      />
+
+      {templateFile ? (
+        <>
+          <FileText className="w-3.5 h-3.5 shrink-0" style={{ color: "#16a34a" }} />
+          <span className="text-xs flex-1 truncate" style={{ color: "#15803d" }}>
+            Modèle chargé : {templateFile.name.replace(/^canevas-/, "")}
+          </span>
+          <button
+            onClick={handleRemove}
+            className="shrink-0"
+            style={{ color: "#9ca3af" }}
+            title="Retirer le modèle"
+          >
+            <X className="w-3.5 h-3.5" />
+          </button>
+        </>
+      ) : (
+        <button
+          onClick={() => fileInputRef.current?.click()}
+          className="flex items-center gap-1.5 text-xs"
+          style={{ color: "#7c3aed" }}
+          title="Joindre le modèle Word de votre école (optionnel)"
+        >
+          <Paperclip className="w-3.5 h-3.5" />
+          Joindre le modèle de votre école (optionnel)
+        </button>
+      )}
+    </div>
+  );
 }
 
 export default function Step2Page() {
@@ -62,14 +127,17 @@ export default function Step2Page() {
         )}
         <div ref={bottomRef} />
       </div>
-      <div className="shrink-0 border-t border-border">
-        <ChatInput
-          isGenerating={isThinking || isGenerating}
-          onAbort={abort}
-          onSend={(text) => send(text)}
-          disabled={isThinking || isGenerating}
-          placeholder="Réponds naturellement..."
-        />
+      <div className="shrink-0">
+        <TemplateUpload />
+        <div className="border-t border-border">
+          <ChatInput
+            isGenerating={isThinking || isGenerating}
+            onAbort={abort}
+            onSend={(text) => send(text)}
+            disabled={isThinking || isGenerating}
+            placeholder="Réponds naturellement..."
+          />
+        </div>
       </div>
     </Layout>
   );
