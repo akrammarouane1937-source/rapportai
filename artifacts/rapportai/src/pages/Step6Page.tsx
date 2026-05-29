@@ -2,7 +2,6 @@ import { useState, useRef, useCallback } from "react";
 import { motion } from "framer-motion";
 import { useLocation } from "wouter";
 import { Sparkles, Loader2, ArrowRight, Edit2, MessageSquare, RotateCcw } from "lucide-react";
-import { AgentActivityFeed } from "@/components/report/AgentActivityFeed";
 import { ChatRevision } from "@/components/report/ChatRevision";
 import { useCheckpoint } from "@/lib/useCheckpoint";
 import { Button } from "@/components/ui/button";
@@ -188,9 +187,6 @@ export default function Step6Page() {
 
         {/* RIGHT — Word preview */}
         <div className="flex-1 relative overflow-hidden">
-          {(generating || (activityLog.length > 0 && !feedDismissed)) && (
-            <AgentActivityFeed items={activityLog} isActive={generating} wordCount={streamedWordCount} sectionLabel="l'Introduction" onDismiss={() => setFeedDismissed(true)} />
-          )}
           {showChat && !generating && (
             <ChatRevision sectionId="introduction" sectionLabel="Introduction" onContentUpdated={(c) => { rawTextRef.current = c; setStreamedContent(markdownToHtml(c)); setStreamedWordCount(c.split(/\s+/).filter(Boolean).length); saveReport({ introduction: c }); }} onClose={() => setShowChat(false)} />
           )}

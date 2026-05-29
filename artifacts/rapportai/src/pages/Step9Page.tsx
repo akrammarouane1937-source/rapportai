@@ -7,7 +7,6 @@ import {
   BarChart2, Hash, ArrowRight, Share2, Link2, Check, Lock, Wand2, Table2,
   MessageSquare, RotateCcw,
 } from "lucide-react";
-import { AgentActivityFeed } from "@/components/report/AgentActivityFeed";
 import { ChatRevision } from "@/components/report/ChatRevision";
 import { useCheckpoint } from "@/lib/useCheckpoint";
 import { Button } from "@/components/ui/button";
@@ -648,9 +647,6 @@ export default function Step9Page() {
 
         {/* ── RIGHT PANEL ───────────────────────────────────────────────── */}
         <div className="flex-1 relative overflow-hidden">
-          {(generating || (activityLog.length > 0 && !feedDismissed)) && (
-            <AgentActivityFeed items={activityLog} isActive={generating} wordCount={streamedWordCount} sectionLabel="la Conclusion" onDismiss={() => setFeedDismissed(true)} />
-          )}
           {showChat && !generating && (
             <ChatRevision sectionId="conclusion" sectionLabel="Conclusion" onContentUpdated={(c) => { rawTextRef.current = c; setStreamedContent(markdownToHtml(c)); setStreamedWordCount(c.split(/\s+/).filter(Boolean).length); saveReport({ conclusion: c }); }} onClose={() => setShowChat(false)} />
           )}

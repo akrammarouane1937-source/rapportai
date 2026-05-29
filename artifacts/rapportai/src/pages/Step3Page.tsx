@@ -2,7 +2,6 @@ import { useState, useRef, useCallback } from "react";
 import { motion } from "framer-motion";
 import { useLocation } from "wouter";
 import { Sparkles, ArrowRight, Loader2, Heart, Star, MessageSquare, RotateCcw } from "lucide-react";
-import { AgentActivityFeed } from "@/components/report/AgentActivityFeed";
 import { ChatRevision } from "@/components/report/ChatRevision";
 import { useCheckpoint } from "@/lib/useCheckpoint";
 import { Button } from "@/components/ui/button";
@@ -252,9 +251,6 @@ export default function Step3Page() {
 
         {/* RIGHT — Word preview 62% */}
         <div className="flex-1 relative overflow-hidden">
-          {(isGenerating || (activeLog.length > 0 && !feedDismissed)) && (
-            <AgentActivityFeed items={activeLog} isActive={isGenerating} sectionLabel="les Dédicaces" onDismiss={() => setFeedDismissed(true)} />
-          )}
           {showChat && !isGenerating && (
             <ChatRevision sectionId="dedicaces" sectionLabel="Dédicaces & Remerciements" onContentUpdated={(c) => { const remIdx = c.search(/\n\s*(?:##\s*)?remerciements?\s*\n/i); if (remIdx !== -1) { const ded = c.slice(0, remIdx).replace(/^(?:##\s*)?d[eé]dicaces?\s*\n*/i, "").trim(); const rem = c.slice(remIdx).replace(/^\s*(?:##\s*)?remerciements?\s*\n*/i, "").trim(); setDedicaces(ded); setRemerciements(rem); saveReport({ dedicaces: ded || undefined, remerciements: rem || undefined }); } else { setDedicaces(c.trim()); saveReport({ dedicaces: c.trim() || undefined }); } }} onClose={() => setShowChat(false)} />
           )}

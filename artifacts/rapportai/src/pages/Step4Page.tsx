@@ -2,7 +2,6 @@ import { useState, useRef, useCallback } from "react";
 import { motion } from "framer-motion";
 import { useLocation } from "wouter";
 import { Sparkles, X, Plus, ArrowRight, MessageSquare, RotateCcw } from "lucide-react";
-import { AgentActivityFeed } from "@/components/report/AgentActivityFeed";
 import { ChatRevision } from "@/components/report/ChatRevision";
 import { useCheckpoint } from "@/lib/useCheckpoint";
 import { Button } from "@/components/ui/button";
@@ -421,9 +420,6 @@ export default function Step4Page() {
 
         {/* RIGHT — Word preview 62% */}
         <div className="flex-1 relative overflow-hidden">
-          {(isGenerating || (activeLog.length > 0 && !feedDismissed)) && (
-            <AgentActivityFeed items={activeLog} isActive={isGenerating} sectionLabel="le Résumé" onDismiss={() => setFeedDismissed(true)} />
-          )}
           {showChat && !isGenerating && (
             <ChatRevision sectionId="resume" sectionLabel="Résumé" onContentUpdated={(c) => { setResumeSync(c); saveReport({ resume: c }); }} onClose={() => setShowChat(false)} />
           )}

@@ -6,7 +6,6 @@ import {
   Loader2, GripVertical, Wand2, ArrowRight,
   Layers, FileText, MessageSquare, RotateCcw,
 } from "lucide-react";
-import { AgentActivityFeed } from "@/components/report/AgentActivityFeed";
 import { ChatRevision } from "@/components/report/ChatRevision";
 import { useCheckpoint } from "@/lib/useCheckpoint";
 import { Button } from "@/components/ui/button";
@@ -591,16 +590,6 @@ export default function PartieIPage() {
 
           {/* RIGHT — Word preview (full mode) or Page cards (page mode) */}
           <div className="flex-1 relative overflow-hidden">
-            {/* Feature 9 — Live activity feed overlay */}
-            {generationMode === "full" && (generating || (activityLog.length > 0 && !feedDismissed)) && (
-              <AgentActivityFeed
-                items={activityLog}
-                isActive={generating}
-                wordCount={wordCount}
-                sectionLabel="la Partie I"
-                onDismiss={() => setFeedDismissed(true)}
-              />
-            )}
             {/* Feature 10 — Chat revision overlay */}
             {showChat && !generating && (
               <ChatRevision

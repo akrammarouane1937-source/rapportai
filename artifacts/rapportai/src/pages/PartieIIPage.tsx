@@ -6,7 +6,6 @@ import {
   Loader2, GripVertical, Wand2, ArrowRight,
   Layers, FileText, Upload, MessageSquare, RotateCcw,
 } from "lucide-react";
-import { AgentActivityFeed } from "@/components/report/AgentActivityFeed";
 import { ChatRevision } from "@/components/report/ChatRevision";
 import { useCheckpoint } from "@/lib/useCheckpoint";
 import { Button } from "@/components/ui/button";
@@ -548,9 +547,6 @@ export default function PartieIIPage() {
 
           {/* RIGHT — Word preview (full mode) or Page cards (page mode) */}
           <div className="flex-1 relative overflow-hidden">
-            {generationMode === "full" && (generating || (activityLog.length > 0 && !feedDismissed)) && (
-              <AgentActivityFeed items={activityLog} isActive={generating} wordCount={wordCount} sectionLabel="la Partie II" onDismiss={() => setFeedDismissed(true)} />
-            )}
             {showChat && !generating && (
               <ChatRevision sectionId="partie-ii" sectionLabel="Partie II" onContentUpdated={(c) => { rawTextRef.current = c; setPreviewContent(markdownToHtml(c)); setWordCount(c.split(/\s+/).filter(Boolean).length); saveReport({ partieII: c }); }} onClose={() => setShowChat(false)} />
             )}

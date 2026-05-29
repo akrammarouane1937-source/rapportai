@@ -1,5 +1,27 @@
 import { useRef, useState, useCallback } from "react";
-import { type ActivityItem, getActivityMeta } from "@/components/report/AgentActivityFeed";
+type ActivityItem = {
+  id: string;
+  tool: string;
+  label: string;
+  icon: string;
+  ts: number;
+};
+
+const ACTIVITY_TOOL_META: Record<string, { label: string; icon: string; bg: string; text: string }> = {
+  Read:      { label: "Lecture des fichiers du rapport",  icon: "📖", bg: "bg-blue-50",    text: "text-blue-700"   },
+  Write:     { label: "Rédaction en cours",               icon: "✍️", bg: "bg-purple-50",  text: "text-purple-700" },
+  Edit:      { label: "Révision chirurgicale",            icon: "✏️", bg: "bg-indigo-50",  text: "text-indigo-700" },
+  Glob:      { label: "Exploration de la structure",      icon: "🔍", bg: "bg-gray-100",   text: "text-gray-600"   },
+  WebFetch:  { label: "Recherche de sources académiques", icon: "🌐", bg: "bg-emerald-50", text: "text-emerald-700" },
+  WebSearch: { label: "Recherche bibliographique",        icon: "🔎", bg: "bg-teal-50",    text: "text-teal-700"   },
+  Bash:      { label: "Traitement des données",           icon: "⚙️", bg: "bg-orange-50",  text: "text-orange-700" },
+  Grep:      { label: "Analyse du contenu existant",      icon: "📊", bg: "bg-rose-50",    text: "text-rose-700"   },
+};
+
+function getActivityMeta(tool: string) {
+  return ACTIVITY_TOOL_META[tool] ?? { label: tool, icon: "⚡", bg: "bg-gray-100", text: "text-gray-600" };
+}
+
 import { getReport, saveReport } from "@/lib/reportStore";
 import { getBibSources } from "@/lib/bibliothequeStore";
 import { API_BASE as BASE_PATH } from "@/lib/apiBase";
