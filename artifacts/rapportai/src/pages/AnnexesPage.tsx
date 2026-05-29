@@ -3,7 +3,7 @@ import { useLocation } from "wouter";
 import { useReportStore } from "@/lib/store";
 import { useGenerate } from "@/hooks/use-generate";
 import { Layout } from "@/components/layout";
-import { ChatMessage, ToolCallCard, ThinkingCard } from "@/components/chat-panel";
+import { ChatMessage, AgentSteps } from "@/components/chat-panel";
 import { ChatInput } from "@/components/chat-input";
 import { Plus, Trash2, ChevronLeft, ChevronRight, CheckCircle2 } from "lucide-react";
 import type { AnnexeItem } from "@/lib/store";
@@ -97,10 +97,7 @@ export default function AnnexesPage() {
           {messages.map((m) => (
             <ChatMessage key={m.id} role={m.role} content={m.content} />
           ))}
-          {thinkingText && <ThinkingCard text={thinkingText} streaming={isGenerating} />}
-          {toolCalls.map((tc) => (
-            <ToolCallCard key={tc.id} name={tc.name} detail={tc.detail} done={tc.done} />
-          ))}
+          <AgentSteps toolCalls={toolCalls} thinkingText={thinkingText} isGenerating={isGenerating} />
           {isGenerating && streamingMsgIdRef.current === null && (
             <ChatMessage role="agent" content="" isTyping />
           )}

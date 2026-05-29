@@ -1,7 +1,7 @@
 import { useState, useRef, useEffect } from "react";
 import { useLocation } from "wouter";
 import { Layout } from "@/components/layout";
-import { ChatMessage, ToolCallCard, StepTransitionCard, ThinkingCard } from "@/components/chat-panel";
+import { ChatMessage, AgentSteps, StepTransitionCard } from "@/components/chat-panel";
 import { PreviewPanel } from "@/components/preview-panel";
 import { ChatInput } from "@/components/chat-input";
 import { UploadCard } from "@/components/upload-card";
@@ -173,8 +173,7 @@ export default function PartieI() {
     >
       <div className="flex-1 overflow-y-auto py-4 px-2 md:py-5 md:px-3">
         {msgs.map((m, i) => <ChatMessage key={i} role={m.role} content={m.content} />)}
-        {thinkingText && <ThinkingCard text={thinkingText} streaming={isGenerating} />}
-        {toolCalls.map((tc, i) => <ToolCallCard key={tc.id} name={tc.name} detail={tc.detail} done={tc.done} />)}
+        <AgentSteps toolCalls={toolCalls} thinkingText={thinkingText} isGenerating={isGenerating} />
         {isGenerating && <ChatMessage role="agent" content="Recherche et rédaction en cours..." isTyping />}
         {error && <ChatMessage role="agent" content={`❌ Erreur : ${error}. Réessaie.`} />}
         {phase === "done" && !isGenerating && (

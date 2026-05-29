@@ -32,6 +32,14 @@ function getToolLabel(name: string): string {
   return TOOL_LABELS[name] || name;
 }
 
+function cleanDetail(detail: string | undefined): string | undefined {
+  if (!detail) return undefined;
+  const basename = detail.split(/[/\\]/).pop() ?? detail;
+  const cleaned = basename.replace(/['"]/g, "").trim();
+  if (!cleaned) return undefined;
+  return cleaned.length > 40 ? cleaned.slice(0, 40) + "…" : cleaned;
+}
+
 async function getOrCreateSession(): Promise<string> {
   const stored = localStorage.getItem(SESSION_KEY);
   const ts = localStorage.getItem(SESSION_TS_KEY);
@@ -113,7 +121,7 @@ export function useGenerate() {
 
       setIsGenerating(true);
       setStreamedContent("");
-      setToolCalls([]);
+      setToolCalls([{ id: "init-placeholder", name: "⚙️ Initialisation…", done: false }]);
       setThinkingText("");
       setError(null);
 
@@ -235,9 +243,10 @@ export function useGenerate() {
                 ? data.tool_call
                 : ((data.tool_call as Record<string, unknown>).name as string ?? "");
               const label = getToolLabel(rawName);
-              const detail = typeof data.tool_call === "object"
+              const rawDetail = typeof data.tool_call === "object"
                 ? ((data.tool_call as Record<string, unknown>).detail as string | undefined)
                 : undefined;
+              const detail = cleanDetail(rawDetail);
               // Unique ID per tool call (Replit pattern — fixes React key issues)
               const id = `${rawName}-${Date.now()}`;
               setToolCalls((prev) => [

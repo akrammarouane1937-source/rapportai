@@ -339,7 +339,9 @@ export function AgentSteps({
 
   const doneCount = toolCalls.filter((t) => t.done).length;
   const label = isGenerating
-    ? "RapportAI travaille…"
+    ? doneCount > 0
+      ? `RapportAI travaille… (${doneCount} étape${doneCount > 1 ? "s" : ""})`
+      : "RapportAI travaille…"
     : `${toolCalls.length} étape${toolCalls.length > 1 ? "s" : ""} terminée${toolCalls.length > 1 ? "s" : ""}`;
 
   return (
