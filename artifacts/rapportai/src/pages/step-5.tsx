@@ -15,7 +15,6 @@ export default function Step5() {
 
   const { messages, send, abort, isThinking, isGenerating, toolCalls, thinkingText } = useConversation({
     step: 5,
-    initialMessage: "Je génère le plan de ton rapport, une seconde...",
     autoSend: "Génère le sommaire maintenant.",
     onSectionGenerated: (section, content) => {
       if (section === "sommaire") updateReport({ sommaire: content });

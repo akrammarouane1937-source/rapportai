@@ -18,7 +18,7 @@ export default function Step3() {
 
   const { messages, send, abort, isThinking, isGenerating, toolCalls, thinkingText } = useConversation({
     step: 3,
-    initialMessage: `${report.studentName ? `Bien joué ${report.studentName.split(" ")[0]}, ` : ""}la page de garde est faite. Maintenant les dédicaces — à qui tu veux dédier ton rapport ? Famille, amis, prof... ou dis-moi juste "peu importe" et je gère.`,
+    autoSend: "Démarre.",
     onSectionGenerated: (section, content) => {
       if (section === "dedicaces") updateReport({ dedicaces: content });
       if (section === "remerciements") updateReport({ remerciements: content });

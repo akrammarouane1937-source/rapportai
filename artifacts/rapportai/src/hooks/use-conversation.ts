@@ -12,7 +12,7 @@ export interface ConvMsg {
 
 interface UseConversationOpts {
   step: number;
-  initialMessage: string;
+  initialMessage?: string;
   autoSend?: string;
   onSectionGenerated: (section: string, content: string) => void;
   onStepComplete: () => void;
@@ -57,7 +57,10 @@ export function useConversation({
         if (Array.isArray(parsed) && parsed.length > 0) return parsed;
       }
     } catch { /* corrupt/unavailable — fall through to fresh */ }
-    return [{ id: newId(), role: "agent", content: initialMessage }];
+    // When autoSend is set, start with no message — the AI generates its own opening.
+    // When no autoSend, show the static initialMessage immediately.
+    if (autoSend) return [];
+    return initialMessage ? [{ id: newId(), role: "agent", content: initialMessage }] : [];
   });
 
   useEffect(() => {

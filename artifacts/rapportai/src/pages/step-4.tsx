@@ -15,7 +15,7 @@ export default function Step4() {
 
   const { messages, send, abort, isThinking, isGenerating, toolCalls, thinkingText } = useConversation({
     step: 4,
-    initialMessage: `Résumé et abstract maintenant — j'ai tout ce qu'il me faut dans ton profil. Tu as des mots-clés spécifiques à mettre en avant ? Sinon dis "non" et je pars directement.`,
+    autoSend: "Démarre.",
     onSectionGenerated: (section, content) => {
       if (section === "resume") updateReport({ resumeFr: content });
       if (section === "abstract") updateReport({ abstractEn: content });

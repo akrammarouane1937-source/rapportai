@@ -15,9 +15,7 @@ export default function Step6() {
 
   const { messages, send, abort, isThinking, isGenerating, toolCalls, thinkingText } = useConversation({
     step: 6,
-    initialMessage: report.sommaire
-      ? `Le plan est bon. Pour l'introduction — y'a un contexte, une problématique ou un angle particulier que tu veux mettre en avant ? Sinon je pars de ce qu'on a.`
-      : `On attaque l'introduction. Tu veux mettre en avant un contexte particulier, ou je pars directement de ton thème ?`,
+    autoSend: "Démarre.",
     onSectionGenerated: (section, content) => {
       if (section === "introduction") updateReport({ introduction: content });
     },

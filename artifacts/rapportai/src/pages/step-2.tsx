@@ -29,7 +29,7 @@ export default function Step2Page() {
 
   const { messages, send, abort, isThinking, isGenerating, toolCalls, thinkingText } = useConversation({
     step: 2,
-    initialMessage: `${studentName ? `Salut ${studentName.split(" ")[0]}` : "Salut"} — on attaque la page de garde. Pour ${report.school}, filière ${report.filiere}, ${report.reportType.toUpperCase()}. Dis-moi juste le nom de ton encadrant pédagogique et je m'occupe du reste.`,
+    autoSend: "Démarre.",
     onSectionGenerated: (section, content) => {
       if (section === "page-de-garde") {
         updateReport({ pageDeGarde: content, studentName: studentName || report.studentName });

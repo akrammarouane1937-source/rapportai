@@ -33,7 +33,7 @@ export default function Step9() {
 
   const { messages, send, abort, isThinking, isGenerating, toolCalls, thinkingText } = useConversation({
     step: 9,
-    initialMessage: `Dernière étape 🎯 Ton rapport est presque complet.${wordSummary}\n\nTu veux mentionner des apports ou limites spécifiques ? (ou tape "génère" pour que l'IA s'en charge)`,
+    autoSend: "Démarre.",
     onSectionGenerated: (section, content) => {
       if (section === "conclusion") updateReport({ conclusion: content });
       if (section === "bibliographie") updateReport({ bibliographie: content });
