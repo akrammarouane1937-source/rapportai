@@ -18,7 +18,6 @@ export default function Step4() {
     autoSend: "Démarre.",
     onSectionGenerated: (section, content) => {
       if (section === "resume") updateReport({ resumeFr: content });
-      if (section === "abstract") updateReport({ abstractEn: content });
     },
     onStepComplete: () => setStepDone(true),
   });
@@ -27,9 +26,7 @@ export default function Step4() {
     bottomRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages, toolCalls, isThinking, isGenerating]);
 
-  const previewContent =
-    (report.resumeFr ? `## Résumé\n\n${report.resumeFr}\n\n` : "") +
-    (report.abstractEn ? `## Abstract\n\n${report.abstractEn}` : "");
+  const previewContent = report.resumeFr ?? "";
 
   return (
     <Layout stepName="Résumé & Abstract" stepNumber={4}

@@ -248,10 +248,23 @@ Problématique résolue : ${prob}${studentCtx}
 400 à 600 mots. Synthétise les apports théoriques et pratiques. Références croisées vers les deux parties. Perspectives pour le Maroc.`;
 
     case "resume":
-      return `Rédige le Résumé académique (250–300 mots) du ${type} intitulé "${theme}" (${school} — ${filiere}).
+      return `Rédige la page Résumé & Abstract du ${type} intitulé "${theme}" (${school} — ${filiere}).
+
+## Résumé
+Un seul paragraphe, 150–300 mots, registre académique français.
 Structure : Contexte → Objectifs → Méthodologie → Résultats → Conclusion.
-Problématique : ${prob} | Style : ${style}${studentCtx}
-Termine par : Mots-clés : ${kw || "À définir"}`;
+Problématique : ${prob}
+Termine par : **Mots-clés :** ${kw || "À définir"}
+
+## Abstract
+Un seul paragraphe, 150–300 mots, registre académique anglais.
+Rédigé indépendamment — pas une traduction du résumé. Mêmes informations, formulation originale.
+Termine par : **Keywords:** ${kw || "To be defined"}
+
+${studentCtx ? `Contexte étudiant : ${studentCtx}` : ""}
+Style : ${style}
+
+Renvoie uniquement les deux blocs Markdown séparés par une ligne vide, sans préambule ni explication.`;
 
     case "dedicaces":
       return `Rédige une page de Dédicaces pour le ${type} de ${student} (${school}).

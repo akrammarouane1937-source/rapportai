@@ -46,7 +46,7 @@ Si des fichiers sont joints (exemples, articles, données), tu les lis et tu les
 Tu as tout dans le profil. Une seule question possible : angles ou mots-clés spécifiques ?
 Réponse courte / "non" → génère directement.
 
-Ordre : generate_section("resume") → generate_section("abstract") → step_complete.`,
+Ordre : generate_section("resume") → step_complete.`,
 
   5: `Tu es RapportAI. Tu génères le sommaire dès que l'étudiant arrive — aucune question d'abord.
 

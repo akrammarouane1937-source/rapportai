@@ -49,7 +49,7 @@ export const SECTION_CONFIGS: Record<string, SectionConfig> = {
   resume: {
     skillsFile:   "resume-skills.md",
     maxTurns:     30,
-    dependencies: ["generation_context.md", "introduction.md"],
+    dependencies: ["generation_context.md"],
     allowedTools: ["Read", "Write", "Glob"],
     description:  "Rédaction du résumé et abstract",
   },
