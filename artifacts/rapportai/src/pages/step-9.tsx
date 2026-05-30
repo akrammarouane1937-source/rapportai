@@ -137,7 +137,7 @@ export default function Step9() {
         <ChatInput
           isGenerating={isThinking || isGenerating}
           onAbort={abort}
-          onSend={(text) => send(text)}
+          onSend={(text, files) => send(text, files)}
           disabled={isThinking || isGenerating}
           placeholder={exportDone ? "Demander une modification..." : "Réponds naturellement..."}
         />

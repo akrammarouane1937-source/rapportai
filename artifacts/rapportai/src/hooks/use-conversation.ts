@@ -4,17 +4,26 @@ import { useGenerate } from "./use-generate";
 import { useReportStore } from "@/lib/store";
 import { GeneratedCard } from "@/components/chat-panel";
 
+// ─── Types ────────────────────────────────────────────────────────────────────
+
 export interface ConvMsg {
   id: string;
   role: "agent" | "user";
   content: string | ReactNode;
 }
 
-export interface TemplateFile {
-  name: string;
-  data?: string;      // base64 for PDF; omitted for DOCX
-  mimeType?: string;
-}
+type TextBlock     = { type: "text"; text: string };
+type ImageBlock    = { type: "image"; source: { type: "base64"; media_type: string; data: string } };
+type DocumentBlock =
+  | { type: "document"; source: { type: "base64"; media_type: string; data: string }; title?: string }
+  | { type: "document"; source: { type: "text"; data: string }; title?: string };
+
+export type ContentBlock = TextBlock | ImageBlock | DocumentBlock;
+
+export type ApiMessage = {
+  role: "user" | "assistant";
+  content: string | ContentBlock[];
+};
 
 interface UseConversationOpts {
   step: number;
@@ -22,7 +31,6 @@ interface UseConversationOpts {
   autoSend?: string;
   onSectionGenerated: (section: string, content: string) => void;
   onStepComplete: () => void;
-  templateFile?: TemplateFile;
 }
 
 export const SECTION_LABELS: Record<string, string> = {
@@ -40,6 +48,64 @@ export const SECTION_LABELS: Record<string, string> = {
   abbreviations:   "Abréviations",
 };
 
+// ─── File processing helpers ──────────────────────────────────────────────────
+
+async function readAsBase64(file: File): Promise<string> {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => {
+      const result = reader.result as string;
+      resolve(result.split(",")[1] ?? "");
+    };
+    reader.onerror = reject;
+    reader.readAsDataURL(file);
+  });
+}
+
+async function processFiles(files: File[]): Promise<ContentBlock[]> {
+  const blocks: ContentBlock[] = [];
+
+  for (const file of files) {
+    if (file.type === "application/pdf") {
+      const data = await readAsBase64(file);
+      blocks.push({
+        type: "document",
+        source: { type: "base64", media_type: "application/pdf", data },
+        title: file.name,
+      });
+    } else if (file.type.startsWith("image/")) {
+      const data = await readAsBase64(file);
+      blocks.push({
+        type: "image",
+        source: { type: "base64", media_type: file.type, data },
+      });
+    } else if (
+      file.type === "text/plain" ||
+      file.type === "text/markdown" ||
+      file.type === "text/csv" ||
+      file.name.endsWith(".txt") ||
+      file.name.endsWith(".md")
+    ) {
+      const text = await file.text();
+      blocks.push({
+        type: "document",
+        source: { type: "text", data: text },
+        title: file.name,
+      });
+    } else {
+      // DOCX / unknown — inform the agent without crashing
+      blocks.push({
+        type: "text",
+        text: `[Fichier joint: "${file.name}" — format non lisible directement. Pour que je puisse m'en servir, convertis-le en PDF ou colle son contenu ici.]`,
+      });
+    }
+  }
+
+  return blocks;
+}
+
+// ─── Hook ─────────────────────────────────────────────────────────────────────
+
 let msgIdCounter = 0;
 const newId = () => String(++msgIdCounter);
 
@@ -49,13 +115,9 @@ export function useConversation({
   autoSend,
   onSectionGenerated,
   onStepComplete,
-  templateFile,
 }: UseConversationOpts) {
   const { report } = useReportStore();
 
-  // Persist the conversation per step so a page refresh doesn't wipe it.
-  // Only string-content messages are serializable; GeneratedCard (ReactNode)
-  // messages are derived from report data and re-shown via the preview panel.
   const STORAGE_KEY = `rapportai_chat_step${step}`;
   const [messages, setMessages] = useState<ConvMsg[]>(() => {
     try {
@@ -64,9 +126,7 @@ export function useConversation({
         const parsed = JSON.parse(raw) as ConvMsg[];
         if (Array.isArray(parsed) && parsed.length > 0) return parsed;
       }
-    } catch { /* corrupt/unavailable — fall through to fresh */ }
-    // When autoSend is set, start with no message — the AI generates its own opening.
-    // When no autoSend, show the static initialMessage immediately.
+    } catch { /* corrupt — fall through */ }
     if (autoSend) return [];
     return initialMessage ? [{ id: newId(), role: "agent", content: initialMessage }] : [];
   });
@@ -77,8 +137,9 @@ export function useConversation({
         .filter((m) => typeof m.content === "string")
         .map((m) => ({ id: m.id, role: m.role, content: m.content as string }));
       localStorage.setItem(STORAGE_KEY, JSON.stringify(serializable));
-    } catch { /* quota/unavailable — non-fatal */ }
+    } catch { /* quota/unavailable */ }
   }, [messages, STORAGE_KEY]);
+
   const [isThinking, setIsThinking] = useState(false);
   const [generatedSections, setGeneratedSections] = useState<string[]>([]);
   const stepCompleteRef = useRef(false);
@@ -87,20 +148,31 @@ export function useConversation({
 
   const { generate, abort: abortGen, isGenerating, toolCalls, thinkingText } = useGenerate();
 
-  const toApiMessages = (msgs: ConvMsg[]) =>
+  /** Convert stored messages to the plain API format (text-only; files are sent only once). */
+  const toApiMessages = (msgs: ConvMsg[]): ApiMessage[] =>
     msgs
-      .filter((m) => typeof m.content === "string" && m.content.trim())
-      .map((m) => ({ role: m.role === "agent" ? "assistant" : "user", content: m.content as string }));
+      .filter((m) => typeof m.content === "string" && (m.content as string).trim())
+      .map((m) => ({
+        role: m.role === "agent" ? "assistant" : "user",
+        content: m.content as string,
+      }));
 
   const send = useCallback(
-    async (text: string, _opts?: { silent?: boolean }) => {
+    async (text: string, files?: File[], _opts?: { silent?: boolean }) => {
       if (isThinking || isGenerating) return;
 
-      const userMsg: ConvMsg = { id: newId(), role: "user", content: text };
       const isSilent = _opts?.silent;
+      const trimmed  = text.trim();
 
+      // Build what to store as the user message (text-only — no binary)
+      const fileLabel = files?.length
+        ? files.map((f) => `[${f.name}]`).join(" ")
+        : "";
+      const storedContent = [trimmed, fileLabel].filter(Boolean).join(" ") || "(fichier)";
+
+      const userMsg: ConvMsg = { id: newId(), role: "user", content: storedContent };
       setMessages((prev) => isSilent ? prev : [...prev, userMsg]);
-      const currentMessages = isSilent ? messages : [...messages, userMsg];
+      const historyForApi = isSilent ? messages : [...messages, userMsg];
 
       setIsThinking(true);
       abortRef.current?.abort();
@@ -114,15 +186,34 @@ export function useConversation({
       let hasStartedStreaming = false;
 
       try {
+        // Process attached files into content blocks
+        const fileBlocks = files?.length ? await processFiles(files) : [];
+
+        // Current user message for the API: may include file content blocks
+        const currentApiContent: string | ContentBlock[] =
+          fileBlocks.length > 0
+            ? [
+                ...(trimmed ? [{ type: "text" as const, text: trimmed }] : []),
+                ...fileBlocks,
+              ]
+            : trimmed;
+
+        // Full messages for the API call:
+        // - Previous turns: text-only from history
+        // - Current turn:   text + file content blocks (sent once, not stored)
+        const apiMessages: ApiMessage[] = [
+          ...toApiMessages(isSilent ? messages.slice(0, -0) : messages),
+          { role: "user", content: currentApiContent },
+        ];
+
         const res = await fetch(`${API_BASE}/api/converse`, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
-            messages: toApiMessages(currentMessages),
+            messages: apiMessages,
             step,
             profile: report,
             generatedSections,
-            templateFile,
           }),
           signal: ctrl.signal,
         });
@@ -186,7 +277,7 @@ export function useConversation({
           /failed to fetch|networkerror|load failed/i.test(raw)
             ? "**Connexion interrompue.** Ta connexion a coupé un instant. Vérifie ton réseau et renvoie ton message."
             : /50\d|timeout|timed out/i.test(raw)
-              ? "**Le serveur a mis trop de temps à répondre.** Il se réveille peut-être après une période d'inactivité — patiente quelques secondes puis réessaie."
+              ? "**Le serveur a mis trop de temps à répondre.** Il se réveille peut-être — patiente quelques secondes puis réessaie."
               : `**Un problème est survenu.** ${raw}\n\nRéessaie dans un instant.`;
         setMessages((prev) => [...prev, { id: newId(), role: "agent", content: friendly }]);
         setIsThinking(false);
@@ -195,7 +286,7 @@ export function useConversation({
         setIsThinking(false);
       }
 
-      // Process server-generated section content first (bypasses SDK entirely)
+      // Process server-generated section content first (bypasses SDK)
       for (const { section, content } of pendingSectionContents) {
         setGeneratedSections((prev) => [...prev, section]);
         onSectionGenerated(section, content);
@@ -213,7 +304,7 @@ export function useConversation({
       }
       const serverHandledSections = new Set(pendingSectionContents.map((sc) => sc.section));
 
-      // Execute actions after stream completes
+      // Execute SDK-based actions after stream completes
       let generationFailed = false;
       for (const action of pendingActions) {
         if (action.type === "generate_section") {
@@ -221,49 +312,34 @@ export function useConversation({
           const context = action.context as string;
           const label = SECTION_LABELS[section] ?? section;
 
-          // Skip sections already generated server-side (e.g. page-de-garde)
           if (serverHandledSections.has(section)) {
             setGeneratedSections((prev) => prev.includes(section) ? prev : [...prev, section]);
             continue;
           }
 
-          // No "Je génère..." announcement — tool call cards are the live indicator
           const result = await generate(section, report as Parameters<typeof generate>[1], context);
 
           if (result) {
             setGeneratedSections((prev) => [...prev, section]);
             onSectionGenerated(section, result);
-
             const wordCount = result.split(/\s+/).filter(Boolean).length;
-            const snippet = result
-              .replace(/^#+\s*/gm, "")
-              .replace(/\*\*/g, "")
-              .trim()
-              .slice(0, 300);
-
-            // Show a compact GeneratedCard instead of plain "Généré ✓"
+            const snippet = result.replace(/^#+\s*/gm, "").replace(/\*\*/g, "").trim().slice(0, 300);
             setMessages((prev) => [
               ...prev,
-              {
-                id: newId(),
-                role: "agent",
-                content: createElement(GeneratedCard, { label, wordCount, snippet }),
-              },
+              { id: newId(), role: "agent", content: createElement(GeneratedCard, { label, wordCount, snippet }) },
             ]);
           } else {
             generationFailed = true;
             setMessages((prev) => [
               ...prev,
-              { id: newId(), role: "agent", content: `**La génération de ${label} n'a pas abouti.** C'est souvent dû à une section longue ou au serveur. Dis-moi simplement "réessaie" — ou donne-moi une précision (problématique, angle) et je relance.` },
+              { id: newId(), role: "agent", content: `**La génération de ${label} n'a pas abouti.** Dis-moi "réessaie" et je relance.` },
             ]);
           }
         }
 
-        // Only advance the step if all generate_section actions succeeded.
-        // If any generation failed, block step_complete so the user knows to retry.
         if (action.type === "step_complete" && !stepCompleteRef.current && !generationFailed) {
           stepCompleteRef.current = true;
-          const msg = (action.message as string) || "Étape terminée ✓";
+          const msg = (action.message as string) || "Étape terminée";
           setMessages((prev) => [...prev, { id: newId(), role: "agent", content: msg }]);
           onStepComplete();
         }
@@ -274,11 +350,9 @@ export function useConversation({
   );
 
   useEffect(() => {
-    // Only auto-send on a fresh conversation. If messages were restored from a
-    // refresh (length > 1), the section was already generated — don't redo it.
     if (autoSend && !autoSentRef.current && messages.length <= 1) {
       autoSentRef.current = true;
-      send(autoSend, { silent: true });
+      send(autoSend, undefined, { silent: true });
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
@@ -289,14 +363,5 @@ export function useConversation({
     setIsThinking(false);
   }, [abortGen]);
 
-  return {
-    messages,
-    send,
-    abort,
-    isThinking,
-    isGenerating,
-    toolCalls,
-    thinkingText,
-    generatedSections,
-  };
+  return { messages, send, abort, isThinking, isGenerating, toolCalls, thinkingText, generatedSections };
 }

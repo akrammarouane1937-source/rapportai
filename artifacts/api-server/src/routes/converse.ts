@@ -7,182 +7,123 @@ const ANTHROPIC_API = "https://api.anthropic.com/v1/messages";
 // ─── Step-specific system prompts ────────────────────────────────────────────
 
 const STEP_SYSTEMS: Record<number, string> = {
-  1: `Tu es RapportAI, l'assistant chaleureux qui aide l'étudiant à démarrer son rapport. À cette étape on collecte des infos de base (thème, école, filière, type de rapport, année).
-
-L'étudiant vient de poser une QUESTION ou de dire quelque chose qui n'est PAS une réponse directe à la question en cours (visible dans l'historique). Réponds-lui vraiment :
-- Réponds à sa question de façon courte, naturelle et utile (1 à 3 phrases). Sois humain, pas robotique.
-- Puis réinvite-le gentiment à répondre à la question en cours.
-- N'utilise AUCUN outil, ne génère aucune section. Tu ne fais que discuter.
-- INTERDIT : emojis, symboles Unicode (⚠️ ✅ 👋 😊 🎯 etc.). Texte brut uniquement.`,
-
-  2: `Tu es RapportAI — un ami qui connaît les rapports académiques marocains par cœur. Tu parles comme quelqu'un de vrai, pas comme un chatbot.
+  2: `Tu es RapportAI — un ami qui connaît les rapports académiques marocains par coeur. Tu parles comme quelqu'un de vrai, pas comme un chatbot.
 
 Mission : page de garde. Tu as le profil. Il te manque : encadrant pédagogique (obligatoire), encadrant pro + entreprise si PFE/Stage, jury si mentionné.
+
+Si l'étudiant joint un fichier (PDF ou image) de son modèle de page de garde, tu le LIS VRAIMENT et tu prends note de la structure, mise en page, sections présentes — et tu l'utilises directement dans l'argument "context" de generate_section.
 
 Comment tu te comportes :
 - Tu RÉAGIS à ce que dit l'étudiant. "C'est FIKRI" → "Ah FIKRI, parfait." Jamais juste "noté".
 - Une seule info manquante à la fois. Pas de liste de questions.
 - L'étudiant donne tout d'un coup → tu captures tout, tu ne re-demandes pas.
-- Tu as l'encadrant pédago → tu génères IMMÉDIATEMENT. Pas de "parfait, je génère" — tu génères et c'est tout.
+- Tu as l'encadrant pédago → tu génères IMMÉDIATEMENT. Pas de "parfait, je génère" — tu génères.
 - "génère", "vas-y", "peu importe", "je sais pas", "laisse tomber" → génère avec ce que tu as.
 - Tu ne demandes JAMAIS de confirmation avant de générer.
-- Si l'étudiant a joint un modèle de page de garde (indiqué dans le profil "Modèle fourni") → utilise-le comme référence de mise en page dans l'argument "context" de generate_section.
 
-Action : generate_section("page-de-garde") avec context = tout ce qui a été dit. Puis step_complete.`,
+Action : generate_section("page-de-garde") avec context = tout ce qui a été dit + description du template si fourni. Puis step_complete.`,
 
-  3: `Tu es RapportAI. Les dédicaces, c'est personnel — tu traites ça avec chaleur, pas comme une case à cocher.
+  3: `Tu es RapportAI. Les dédicaces, c'est personnel — tu traites ça avec chaleur.
 
-Ce que tu fais : une question simple et humaine sur qui ils veulent remercier. Puis tu réagis à leur réponse comme un vrai ami.
+Si l'étudiant joint des fichiers (exemples de dédicaces d'anciens rapports etc.), tu les lis et tu t'en inspires.
 
-Ensuite tu génères directement — pas de validation, pas de "je génère maintenant", tu génères.
+Une question simple sur qui ils veulent remercier. Réagis à leur réponse comme un ami.
+Génère directement — pas de validation. "peu importe" / "laisse l'IA" → génère immédiatement.
 
-Si c'est vague, court, ou "peu importe" / "laisse l'IA" → génère immédiatement, tu as le profil.
-
-Ordre : generate_section("dedicaces") → generate_section("remerciements") → step_complete avec un mot sympa.`,
+Ordre : generate_section("dedicaces") → generate_section("remerciements") → step_complete.`,
 
   4: `Tu es RapportAI. Résumé français et abstract anglais.
 
-Tu as tout dans le profil — thème, école, type de rapport. Pas besoin de redemander.
-Une seule question possible : des mots-clés ou angles spécifiques à mettre en avant ?
-Réponse courte / "non" / "pas de préférence" → génère directement sans commenter.
+Si des fichiers sont joints (exemples, articles, données), tu les lis et tu les intègres.
 
-IMPORTANT — context riche : dans l'argument "context" de generate_section, inclus TOUJOURS la problématique (telle que formulée par l'étudiant si connue), les objectifs, et les concepts/mots-clés clés. C'est ce qui rend le résumé spécifique et non générique.
+Tu as tout dans le profil. Une seule question possible : angles ou mots-clés spécifiques ?
+Réponse courte / "non" → génère directement.
 
 Ordre : generate_section("resume") → generate_section("abstract") → step_complete.`,
 
   5: `Tu es RapportAI. Tu génères le sommaire dès que l'étudiant arrive — aucune question d'abord.
 
-Après génération : une phrase courte genre "Voilà le plan — ça te convient ou tu veux ajuster quelque chose ?"
-L'étudiant est satisfait / dit "ok" / "c'est bon" → step_complete.
-Il veut changer quelque chose → tu régénères avec ses modifications, puis tu repose la question une fois.`,
+Si des fichiers sont joints (plan existant, syllabus), tu les lis et tu les utilises.
+
+Après génération : "Voilà le plan — tu veux changer quelque chose ?"
+Satisfait / "ok" → step_complete. Changement → régénère.`,
 
   6: `Tu es RapportAI. Introduction générale.
 
-C'est l'étape clé pour rendre tout le rapport spécifique. Tu veux capturer trois choses, en UNE seule question naturelle (pas un formulaire) :
-- la problématique (la question centrale de recherche),
-- 2-3 objectifs,
-- les concepts ou angles précis à traiter.
+Si des fichiers sont joints (articles, données de stage, cahier des charges), tu les lis et tu les intègres dans le context de generate_section.
 
-Exemple de question : "Pour bien cadrer ton intro : c'est quoi ta problématique exacte, et les 2-3 objectifs que tu vises ?"
-Si l'étudiant répond vague / "peu importe" / "je sais pas" → propose une problématique et des objectifs PLAUSIBLES tirés de son thème, dis-les en une phrase, puis génère.
+Une seule question naturelle : problématique + objectifs + concepts clés ?
+Vague / "peu importe" → propose une problématique tirée du thème, puis génère.
 
-IMPORTANT — context riche : dans l'argument "context" de generate_section, inclus TOUJOURS, mot pour mot, la problématique retenue + les objectifs + les concepts clés. C'est exactement ce qui empêche un contenu générique. Ne génère JAMAIS avec un context vide.
+generate_section("introduction") → step_complete.`,
 
-Réagis en une phrase à ce que dit l'étudiant, puis : generate_section("introduction") → step_complete.`,
+  9: `Tu es RapportAI. Conclusion, bibliographie, abréviations. L'étudiant est presque au bout.
 
-  9: `Tu es RapportAI. Dernière étape — conclusion, bibliographie, abréviations. L'étudiant est presque au bout.
+Si des fichiers sont joints (sources, références), tu les intègres dans la bibliographie.
 
-Ton ton est encourageant mais direct. Une question : quels sont les apports principaux de son travail, et les limites s'il en voit ?
-Réagis à sa réponse en une phrase. Si les perspectives sont pas mentionnées, pose-les rapidement.
-"génère tout" / "peu importe" / toute réponse vague → génère immédiatement.
+Question courte sur les apports principaux et les limites. Vague → génère immédiatement.
 
-Ordre strict : generate_section("conclusion") → generate_section("bibliographie") → generate_section("abbreviations") → step_complete avec un message de félicitations sincère et court.`,
+Ordre : generate_section("conclusion") → generate_section("bibliographie") → generate_section("abbreviations") → step_complete avec un message de félicitations sincère et court.`,
 };
 
 const TOOLS = [
   {
     name: "generate_section",
-    description: "Déclenche la génération d'une section du rapport. Inclus dans 'context' TOUS les noms, préférences et détails mentionnés par l'étudiant.",
+    description: "Déclenche la génération d'une section du rapport. Inclus dans 'context' TOUS les noms, préférences, fichiers fournis et détails mentionnés.",
     input_schema: {
       type: "object" as const,
       properties: {
-        section: {
-          type: "string",
-          description: "ID de la section: page-de-garde | dedicaces | remerciements | resume | abstract | sommaire | introduction | conclusion | bibliographie | abbreviations",
-        },
-        context: {
-          type: "string",
-          description: "Instructions complètes pour l'agent de génération. Liste tous les noms de personnes, demandes spécifiques, et contraintes mentionnées par l'étudiant.",
-        },
+        section: { type: "string", description: "ID: page-de-garde | dedicaces | remerciements | resume | abstract | sommaire | introduction | conclusion | bibliographie | abbreviations" },
+        context: { type: "string", description: "Instructions complètes incluant noms, demandes spécifiques, structure du template si fourni." },
       },
       required: ["section", "context"],
     },
   },
   {
     name: "step_complete",
-    description: "Appelle ceci quand toutes les sections requises pour cette étape ont été générées et que l'étudiant est satisfait.",
+    description: "Appelle ceci quand toutes les sections requises ont été générées.",
     input_schema: {
       type: "object" as const,
       properties: {
-        message: { type: "string", description: "Message de confirmation affiché à l'étudiant (texte brut, sans emojis)" },
+        message: { type: "string", description: "Message de confirmation (texte brut, sans emojis)" },
       },
       required: ["message"],
     },
   },
 ];
 
-// ─── Fallback page de garde (pure string interpolation — always works) ────────
+// ─── Fallback page de garde (guaranteed non-empty) ────────────────────────────
 
-function buildFallbackPageDeGarde(
-  profile: Record<string, string>,
-  templateName?: string,
-): string {
-  const theme    = profile.theme        || "Rapport Académique";
-  const type     = profile.reportType   || "Rapport";
-  const name     = profile.studentName  || "";
-  const school   = profile.school       || "";
-  const filiere  = profile.filiere      || "";
-  const year     = profile.academicYear || "";
-  const encPeda  = profile.encadrantPeda || "";
-  const encPro   = profile.encadrantPro  || "";
-  const entreprise = profile.entreprise || "";
-  const jury1    = profile.juryMember1  || "";
-  const jury2    = profile.juryMember2  || "";
-  const debut    = profile.dateDebutStage || "";
-  const fin      = profile.dateFinStage   || "";
-
+function buildFallbackPageDeGarde(profile: Record<string, string>): string {
   const lines: string[] = [];
-
-  lines.push(`# ${theme}`);
+  lines.push(`# ${profile.theme || "Rapport Académique"}`);
   lines.push("");
-  lines.push(`**${type}**`);
-  lines.push("");
-  lines.push("---");
-  lines.push("");
-
-  if (name)   lines.push(`**Présenté par :** ${name}`);
-  if (filiere) lines.push(`**Filière :** ${filiere}`);
-  if (school)  lines.push(`**École :** ${school}`);
-
+  lines.push(`**${profile.reportType || "Rapport"}**`);
   lines.push("");
   lines.push("---");
   lines.push("");
-
-  if (encPeda) lines.push(`**Encadrant pédagogique :** ${encPeda}`);
-  if (encPro) {
-    const lieu = entreprise ? ` — ${entreprise}` : "";
-    lines.push(`**Encadrant professionnel :** ${encPro}${lieu}`);
-  }
-  if (jury1 || jury2) {
-    lines.push(`**Jury :** ${[jury1, jury2].filter(Boolean).join(", ")}`);
-  }
-
-  if (debut || fin) {
-    const periode = [debut, fin].filter(Boolean).join(" – ");
-    lines.push(`**Période de stage :** ${periode}`);
-  }
-
+  if (profile.studentName)   lines.push(`**Présenté par :** ${profile.studentName}`);
+  if (profile.filiere)       lines.push(`**Filière :** ${profile.filiere}`);
+  if (profile.school)        lines.push(`**École :** ${profile.school}`);
   lines.push("");
   lines.push("---");
   lines.push("");
-
-  if (year) lines.push(`**Année universitaire :** ${year}`);
-  if (templateName) lines.push(`*(Modèle : ${templateName})*`);
-
-  return lines.filter((_, i, arr) => {
-    // Collapse triple blank lines
-    if (arr[i] === "" && arr[i - 1] === "" && arr[i - 2] === "") return false;
-    return true;
-  }).join("\n");
+  if (profile.encadrantPeda) lines.push(`**Encadrant pédagogique :** ${profile.encadrantPeda}`);
+  if (profile.encadrantPro)  lines.push(`**Encadrant professionnel :** ${profile.encadrantPro}${profile.entreprise ? ` — ${profile.entreprise}` : ""}`);
+  if (profile.juryMember1 || profile.juryMember2) {
+    lines.push(`**Jury :** ${[profile.juryMember1, profile.juryMember2].filter(Boolean).join(", ")}`);
+  }
+  lines.push("");
+  lines.push("---");
+  lines.push("");
+  if (profile.academicYear)  lines.push(`**Année universitaire :** ${profile.academicYear}`);
+  return lines.join("\n");
 }
-
-// ─── Server-side page de garde generation ────────────────────────────────────
 
 async function generatePageDeGarde(
   profile: Record<string, string>,
   context: string,
   apiKey: string,
-  templateFile?: { name: string; data?: string; mimeType?: string },
 ): Promise<string> {
   const profileLines = [
     profile.studentName    && `- Nom : ${profile.studentName}`,
@@ -194,51 +135,25 @@ async function generatePageDeGarde(
     profile.encadrantPeda  && `- Encadrant pédagogique : ${profile.encadrantPeda}`,
     profile.encadrantPro   && `- Encadrant professionnel : ${profile.encadrantPro}`,
     profile.entreprise     && `- Entreprise : ${profile.entreprise}`,
-    profile.ville          && `- Ville : ${profile.ville}`,
     profile.dateDebutStage && `- Début de stage : ${profile.dateDebutStage}`,
     profile.dateFinStage   && `- Fin de stage : ${profile.dateFinStage}`,
     profile.juryMember1    && `- Jury 1 : ${profile.juryMember1}`,
     profile.juryMember2    && `- Jury 2 : ${profile.juryMember2}`,
   ].filter(Boolean).join("\n");
 
-  const templateNote = templateFile?.name
-    ? `\nMODÈLE FOURNI PAR L'ÉTUDIANT : "${templateFile.name}" — respecte la structure de mise en page de ce modèle.`
-    : "";
+  const prompt = `Tu es un expert en rédaction de rapports académiques marocains. Génère la PAGE DE GARDE complète en Markdown.
 
-  const textPrompt = `Tu es un expert en rédaction de rapports académiques marocains (PFE, stage, mémoire). Génère la PAGE DE GARDE complète en Markdown.${templateNote}
-
-PROFIL ÉTUDIANT :
+PROFIL :
 ${profileLines}
 
-CONTEXTE CONVERSATION (noms et préférences supplémentaires) :
+CONTEXTE / INSTRUCTIONS SUPPLÉMENTAIRES :
 ${context}
 
-INSTRUCTIONS :
-- Structure professionnelle d'une page de garde marocaine
-- Thème/titre du rapport bien mis en avant (# titre)
-- Mention du type de rapport, de l'école, de la filière
-- Encadrants clairement indiqués avec leur titre (Prof., Dr., M., Mme)
-- Jury si présent
-- Présenté par [nom étudiant]
-- Année universitaire / période de stage
-- Séparateurs (---) pour aérer visuellement
-- Format Markdown uniquement, pas d'emojis, pas de commentaires, pas d'introduction
+RÈGLES :
+- Structure professionnelle (thème mis en avant, école, filière, encadrants, jury si présent, année)
+- Séparateurs (---) pour aérer
+- Markdown uniquement, pas d'emojis, pas de commentaires
 - Retourne UNIQUEMENT le contenu de la page de garde`;
-
-  // Build Anthropic message — include PDF template as document if available
-  type ContentBlock =
-    | { type: "text"; text: string }
-    | { type: "document"; source: { type: "base64"; media_type: string; data: string } };
-
-  const userContent: ContentBlock[] = [];
-
-  if (templateFile?.data && templateFile.mimeType === "application/pdf") {
-    userContent.push({
-      type: "document",
-      source: { type: "base64", media_type: "application/pdf", data: templateFile.data },
-    });
-  }
-  userContent.push({ type: "text", text: textPrompt });
 
   try {
     const res = await fetch(ANTHROPIC_API, {
@@ -251,70 +166,55 @@ INSTRUCTIONS :
       body: JSON.stringify({
         model: "claude-haiku-4-5",
         max_tokens: 1200,
-        messages: [{ role: "user", content: userContent.length === 1 ? textPrompt : userContent }],
+        messages: [{ role: "user", content: prompt }],
       }),
     });
-
-    if (!res.ok) {
-      return buildFallbackPageDeGarde(profile, templateFile?.name);
-    }
-
+    if (!res.ok) return buildFallbackPageDeGarde(profile);
     const data = await res.json() as { content: Array<{ type: string; text?: string }> };
-    const generated = data.content
-      .filter((b) => b.type === "text")
-      .map((b) => b.text ?? "")
-      .join("")
-      .trim();
-
-    // Always return something — fallback to profile interpolation if AI returned empty
-    return generated || buildFallbackPageDeGarde(profile, templateFile?.name);
+    const generated = data.content.filter((b) => b.type === "text").map((b) => b.text ?? "").join("").trim();
+    return generated || buildFallbackPageDeGarde(profile);
   } catch {
-    return buildFallbackPageDeGarde(profile, templateFile?.name);
+    return buildFallbackPageDeGarde(profile);
   }
 }
+
+// ─── Message types ────────────────────────────────────────────────────────────
+
+type ContentBlock =
+  | { type: "text"; text: string }
+  | { type: "image"; source: { type: "base64"; media_type: string; data: string } }
+  | { type: "document"; source: { type: "base64"; media_type: string; data: string }; title?: string }
+  | { type: "document"; source: { type: "text"; data: string }; title?: string };
+
+type ApiMessage = {
+  role: "user" | "assistant";
+  content: string | ContentBlock[];
+};
 
 // ─── POST /api/converse ───────────────────────────────────────────────────────
 
 router.post("/converse", async (req: Request, res: Response) => {
-  const {
-    messages,
-    step,
-    profile = {},
-    generatedSections = [],
-    templateFile,
-  } = req.body as {
-    messages: { role: "user" | "assistant"; content: string }[];
+  const { messages, step, profile = {}, generatedSections = [] } = req.body as {
+    messages: ApiMessage[];
     step: number;
     profile: Record<string, string>;
     generatedSections: string[];
-    templateFile?: { name: string; data?: string; mimeType?: string };
   };
 
-  // Keep context bounded: preserve the first 4 turns (often contain key details
-  // like names and preferences) + the most recent turns. Profile is in the system
-  // prompt so generic small-talk is safe to drop — but keep key data turns.
-  const compressMessages = (msgs: typeof messages) => {
+  const apiKey = process.env.ANTHROPIC_API_KEY;
+  if (!apiKey) { res.status(500).json({ error: "ANTHROPIC_API_KEY not configured" }); return; }
+
+  // Keep context bounded: first 4 turns (key data) + last 16
+  const compressMessages = (msgs: ApiMessage[]) => {
     if (!Array.isArray(msgs) || msgs.length <= 20) return msgs;
     const head = msgs.slice(0, 4);
     const tail = msgs.slice(-16);
     const headSet = new Set(head);
-    const merged = [...head, ...tail.filter((m) => !headSet.has(m))];
-    return merged;
+    return [...head, ...tail.filter((m) => !headSet.has(m))];
   };
   const convoMessages = compressMessages(messages);
 
-  const apiKey = process.env.ANTHROPIC_API_KEY;
-  if (!apiKey) {
-    res.status(500).json({ error: "ANTHROPIC_API_KEY not configured" });
-    return;
-  }
-
   const stepSystem = STEP_SYSTEMS[step] ?? "Tu es l'assistant de RapportAI. Aide l'étudiant en français.";
-
-  // Build the profile section — include template indicator if one was provided
-  const templateLine = templateFile?.name
-    ? `- Modèle fourni : ${templateFile.name}`
-    : "";
 
   const system = `${stepSystem}
 
@@ -333,20 +233,18 @@ ${(profile as Record<string, string>).dateDebutStage ? `- Début stage : ${(prof
 ${(profile as Record<string, string>).dateFinStage ? `- Fin stage : ${(profile as Record<string, string>).dateFinStage}` : ""}
 ${(profile as Record<string, string>).juryMember1 ? `- Jury 1 : ${(profile as Record<string, string>).juryMember1}` : ""}
 ${(profile as Record<string, string>).juryMember2 ? `- Jury 2 : ${(profile as Record<string, string>).juryMember2}` : ""}
-${(profile as Record<string, string>).problematique ? `- Problématique : ${(profile as Record<string, string>).problematique}` : ""}
-${templateLine}
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
 RÈGLES ABSOLUES :
 1. Les informations du profil ci-dessus sont DÉJÀ CONNUES. Ne demande JAMAIS quelque chose qui est déjà dans le profil.
-2. Après generate_section(), appelle IMMÉDIATEMENT step_complete() dans la même réponse — ne t'arrête pas entre les deux.
-3. Si l'étudiant dit "génère", "vas-y", "c'est bon", "peu importe", "ok", "oui" ou toute variante → génère MAINTENANT sans poser de questions.
-4. Si l'étudiant pose une QUESTION plutôt que de répondre, réponds-y brièvement et naturellement, puis continue.
-5. INTERDIT ABSOLU : emojis et symboles Unicode décoratifs (⚠️ ✅ 👋 😊 🎯 🔍 📝 etc.) — ni dans tes réponses texte, ni dans le message de step_complete. Texte brut uniquement.
+2. Si l'étudiant joint un fichier (PDF, image) → lis-le vraiment et utilise-le.
+3. Après generate_section(), appelle IMMÉDIATEMENT step_complete() dans la même réponse.
+4. "génère", "vas-y", "ok", "peu importe" ou toute variante → génère MAINTENANT sans poser de questions.
+5. INTERDIT ABSOLU : emojis et symboles Unicode décoratifs — texte brut uniquement.
 
-Sections déjà générées cette étape : ${generatedSections.length > 0 ? generatedSections.join(", ") : "aucune"}
+Sections déjà générées : ${generatedSections.length > 0 ? generatedSections.join(", ") : "aucune"}
 
-IMPORTANT : Réponds toujours en français. Sois naturel et humain, pas robotique.`;
+Réponds toujours en français. Sois naturel et humain.`;
 
   res.setHeader("Content-Type", "text/event-stream");
   res.setHeader("Cache-Control", "no-cache");
@@ -429,13 +327,11 @@ IMPORTANT : Réponds toujours en français. Sois naturel et humain, pas robotiqu
           try { toolInput = JSON.parse(currentToolInput); } catch { /* malformed */ }
 
           if (currentToolName === "generate_section" && toolInput.section === "page-de-garde") {
-            // Generate page de garde directly on the server — no SDK binary needed
-            // Always returns something (fallback to profile interpolation if AI fails)
+            // Generate page de garde server-side — always returns non-empty content
             const content = await generatePageDeGarde(
               profile,
               (toolInput.context as string) ?? "",
               apiKey,
-              templateFile,
             );
             res.write(`data: ${JSON.stringify({ section_content: { section: "page-de-garde", content } })}\n\n`);
           } else {
