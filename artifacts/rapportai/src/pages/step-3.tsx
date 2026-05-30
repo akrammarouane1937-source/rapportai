@@ -36,7 +36,7 @@ export default function Step3() {
 
   return (
     <Layout stepName="Dédicaces & Remerciements" stepNumber={3}
-      previewPanel={<PreviewPanel activeSection="dedicaces" content={previewContent} />}
+      previewPanel={<PreviewPanel activeSection="dedicaces" content={previewContent} maxStep={3} />}
     >
       <div className="flex-1 overflow-y-auto py-4 px-2 md:py-5 md:px-3">
         {messages.map((m) => <ChatMessage key={m.id} role={m.role} content={m.content} />)}

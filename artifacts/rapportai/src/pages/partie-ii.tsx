@@ -164,7 +164,7 @@ export default function PartieII() {
     <Layout
       stepName="Partie II"
       stepNumber={8}
-      previewPanel={<PreviewPanel activeSection="partie-ii" content={report.partieII || streamedContent} />}
+      previewPanel={<PreviewPanel activeSection="partie-ii" content={report.partieII || streamedContent} maxStep={8} />}
     >
       <div className="flex-1 overflow-y-auto py-4 px-2 md:py-5 md:px-3">
         {msgs.map((m, i) => <ChatMessage key={i} role={m.role} content={m.content} />)}

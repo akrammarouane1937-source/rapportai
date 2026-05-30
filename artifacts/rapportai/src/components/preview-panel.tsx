@@ -11,6 +11,7 @@ import type { Components } from "react-markdown";
 interface PreviewPanelProps {
   activeSection: string;
   content?: string;
+  maxStep?: number;
 }
 
 const SECTIONS = [
@@ -25,6 +26,20 @@ const SECTIONS = [
   { id: "partie-ii",     field: "partieII",      label: "Partie II" },
   { id: "conclusion",    field: "conclusion",    label: "Conclusion" },
 ];
+
+// Which step first produces each section. Used to filter sections in the preview.
+const SECTION_STEPS: Record<string, number> = {
+  "page-de-garde": 2,
+  "dedicaces":     3,
+  "remerciements": 3,
+  "resume":        4,
+  "abstract":      4,
+  "sommaire":      5,
+  "introduction":  6,
+  "partie-i":      7,
+  "partie-ii":     8,
+  "conclusion":    9,
+};
 
 // Custom components for the cover page — no inline <style> tag, no broken images
 const coverComponents: Components = {
@@ -85,7 +100,7 @@ function splitIntoPages(text: string, wordsPerPage = 420): string[] {
   return pages.length ? pages : [];
 }
 
-export function PreviewPanel({ activeSection, content }: PreviewPanelProps) {
+export function PreviewPanel({ activeSection, content, maxStep }: PreviewPanelProps) {
   const { report, updateReport } = useReportStore();
   const [fullscreen, setFullscreen] = useState(false);
   const [editMode, setEditMode] = useState(false);
@@ -178,6 +193,9 @@ export function PreviewPanel({ activeSection, content }: PreviewPanelProps) {
   const allPageCards: React.ReactNode[] = [];
 
   for (const { id, field, label } of SECTIONS) {
+    // When maxStep is provided, skip sections that belong to future steps
+    if (maxStep !== undefined && (SECTION_STEPS[id] ?? 99) > maxStep) continue;
+
     const text = id === activeSection && content
       ? content
       : (report as unknown as Record<string, string>)[field] || "";
