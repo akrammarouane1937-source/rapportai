@@ -10,26 +10,72 @@ import { useGenerate } from "@/hooks/use-generate";
 import { useFileStore } from "@/lib/fileStore";
 import { getApprovedFigures } from "@/lib/figureStore";
 import { motion } from "framer-motion";
-import { AlertTriangle } from "lucide-react";
+import { AlertTriangle, ArrowLeft } from "lucide-react";
 
-type Phase = "confirm" | "sources" | "figures" | "generating" | "done";
-type Msg = { role: "agent" | "user"; content: React.ReactNode };
+type Phase = "blocked" | "confirm" | "sources" | "figures" | "generating" | "done";
+
+// Stable message IDs — never use array index as React key
+let msgCounter = 0;
+function nextId() { return `msg-${++msgCounter}`; }
+
+type Msg = { id: string; role: "agent" | "user"; content: React.ReactNode };
+
+type ApprovedFigure = ReturnType<typeof getApprovedFigures>[number];
 
 export default function PartieI() {
   const [, setLocation] = useLocation();
   const { report, updateReport } = useReportStore();
   const { generate, abort, isGenerating, toolCalls, streamedContent, thinkingText, error } = useGenerate();
   const addFiles = useFileStore((s) => s.addFiles);
-  const [phase, setPhase] = useState<Phase>("confirm");
-  const [sourceFiles, setSourceFiles] = useState<File[]>([]);
-  const [figureFiles, setFigureFiles] = useState<File[]>([]);
 
   const titleFromStore = report.partieITitle || "Partie I : Cadre théorique";
   const chaptersFromStore = report.partieIChapters || 2;
   const injectedContext = report.pendingContextInjection || "";
+  const hasSommaire = Boolean(report.sommaire?.trim());
 
-  const [msgs, setMsgs] = useState<Msg[]>([
-    {
+  // Persist uploaded files and approved figures in refs so revision calls
+  // always have the same context as the original generation call
+  const sourceFilesRef = useRef<File[]>([]);
+  const figureFilesRef = useRef<File[]>([]);
+  const approvedFiguresRef = useRef<ApprovedFigure[]>([]);
+
+  // Mirror state for UI display (sourceFiles count badge etc.)
+  const [sourceFiles, setSourceFiles] = useState<File[]>([]);
+  const [figureFiles, setFigureFiles] = useState<File[]>([]);
+
+  const initialPhase: Phase = hasSommaire ? "confirm" : "blocked";
+
+  const makeInitialMsg = (): Msg => {
+    if (!hasSommaire) {
+      return {
+        id: nextId(),
+        role: "agent",
+        content: (
+          <div>
+            <div className="flex items-start gap-2 p-3 rounded-lg bg-amber-50 border border-amber-200 mb-3">
+              <AlertTriangle className="w-4 h-4 text-amber-600 flex-shrink-0 mt-0.5" />
+              <div>
+                <p className="text-sm font-semibold text-amber-800">Sommaire manquant</p>
+                <p className="text-xs text-amber-700 mt-1">
+                  La Partie I nécessite un sommaire pour suivre la structure de ton rapport.
+                  Génère d'abord ton sommaire à l'étape 5.
+                </p>
+              </div>
+            </div>
+            <button
+              onClick={() => setLocation("/rapport/step-5")}
+              className="flex items-center gap-2 text-sm font-semibold text-violet-700 hover:text-violet-900 transition-colors"
+            >
+              <ArrowLeft className="w-4 h-4" />
+              Retourner à l'Étape 5 — Sommaire
+            </button>
+          </div>
+        ),
+      };
+    }
+
+    return {
+      id: nextId(),
       role: "agent",
       content: (
         <div>
@@ -43,8 +89,11 @@ export default function PartieI() {
           )}
         </div>
       ),
-    },
-  ]);
+    };
+  };
+
+  const [phase, setPhase] = useState<Phase>(initialPhase);
+  const [msgs, setMsgs] = useState<Msg[]>([makeInitialMsg()]);
   const bottomRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -54,24 +103,26 @@ export default function PartieI() {
   const push = (...m: Msg[]) => setMsgs((p) => [...p, ...m]);
 
   const handleSend = async (text: string, files?: File[]) => {
+    if (phase === "blocked") return;
+
     const t = text.trim();
     const skip = /^(non|passer|\/|-)$/i.test(t) || (!t && (!files || files.length === 0));
     const ok = /^(oui|ok|yes|ouais|yep|c'est bon|ça marche|d'acc)/i.test(t);
 
     if (phase === "confirm") {
       if (!ok && t && !skip) {
-        // User is editing the title
         const newTitle = t;
         updateReport({ partieITitle: newTitle });
         push(
-          { role: "user", content: t },
-          { role: "agent", content: `Titre mis à jour : "${newTitle}". C'est bon maintenant ?` }
+          { id: nextId(), role: "user", content: t },
+          { id: nextId(), role: "agent", content: `Titre mis à jour : "${newTitle}". C'est bon maintenant ?` }
         );
         return;
       }
       push(
-        { role: "user", content: t || "Oui" },
+        { id: nextId(), role: "user", content: t || "Oui" },
         {
+          id: nextId(),
           role: "agent",
           content: (
             <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }}>
@@ -90,13 +141,16 @@ export default function PartieI() {
         }
       );
       setPhase("sources");
+
     } else if (phase === "sources") {
       if (files && files.length > 0) {
+        sourceFilesRef.current = files;
         setSourceFiles(files);
         addFiles(files);
-        push({ role: "user", content: `${files.length} source(s) uploadée(s)` });
-        files.forEach((f) => push({ role: "agent", content: <UploadCard file={f} status="ready" /> }));
+        push({ id: nextId(), role: "user", content: `${files.length} source(s) uploadée(s)` });
+        files.forEach((f) => push({ id: nextId(), role: "agent", content: <UploadCard file={f} status="ready" /> }));
         push({
+          id: nextId(),
           role: "agent",
           content: (
             <span>
@@ -107,36 +161,60 @@ export default function PartieI() {
         });
       } else {
         push(
-          { role: "user", content: "Non, continuer sans sources" },
-          { role: "agent", content: "Tu veux uploader des figures ou graphiques ? (ou 'non')" }
+          { id: nextId(), role: "user", content: "Non, continuer sans sources" },
+          { id: nextId(), role: "agent", content: "Tu veux uploader des figures ou graphiques ? (ou 'non')" }
         );
       }
       setPhase("figures");
+
     } else if (phase === "figures") {
       if (files && files.length > 0) {
+        figureFilesRef.current = files;
         setFigureFiles(files);
         addFiles(files);
-        push({ role: "user", content: `${files.length} figure(s) uploadée(s)` });
-        files.forEach((f) => push({ role: "agent", content: <UploadCard file={f} status="ready" /> }));
+        push({ id: nextId(), role: "user", content: `${files.length} figure(s) uploadée(s)` });
+        files.forEach((f) => push({ id: nextId(), role: "agent", content: <UploadCard file={f} status="ready" /> }));
       } else {
-        push({ role: "user", content: skip ? "Non" : t });
+        push({ id: nextId(), role: "user", content: skip ? "Non" : t });
       }
-      push({ role: "agent", content: "Parfait, je génère la Partie I..." });
+
+      // Snapshot approved figures at generation time — persisted in ref for revisions
+      approvedFiguresRef.current = getApprovedFigures().filter((f) => f.placement === "Partie I");
+
+      push({ id: nextId(), role: "agent", content: "Parfait, je génère la Partie I..." });
       setPhase("generating");
       if (injectedContext) updateReport({ pendingContextInjection: "" });
-      const allFiles = [...sourceFiles, ...figureFiles, ...(files || [])];
-      const figuresForI = getApprovedFigures()
-        .filter((f) => f.placement === "Partie I")
-        .map((f) => ({ figureNumber: f.figureNumber, title: f.title, source: f.source ?? "", author: f.author ?? "", caption: f.caption, placement: f.placement }));
-      const partieI = await generate("partie-i", report, injectedContext || undefined, allFiles.length > 0 ? allFiles : undefined, figuresForI.length > 0 ? figuresForI : undefined);
+
+      const allFiles = [...sourceFilesRef.current, ...figureFilesRef.current, ...(files || [])];
+      const figuresForI = approvedFiguresRef.current.map((f) => ({
+        figureNumber: f.figureNumber,
+        title: f.title,
+        source: f.source ?? "",
+        author: f.author ?? "",
+        caption: f.caption,
+        placement: f.placement,
+      }));
+
+      const partieI = await generate(
+        "partie-i",
+        report,
+        injectedContext || undefined,
+        allFiles.length > 0 ? allFiles : undefined,
+        figuresForI.length > 0 ? figuresForI : undefined
+      );
+
       if (!partieI) {
-        push({ role: "agent", content: "Génération échouée. Vérifie ta connexion et réessaie." });
-        setPhase("figures");
+        push({ id: nextId(), role: "agent", content: "Génération échouée. Réessaie." });
+        // If files were already staged, go to done so retry doesn't force re-upload
+        const hadFiles = allFiles.length > 0 || figuresForI.length > 0;
+        setPhase(hadFiles ? "done" : "figures");
         return;
       }
+
       updateReport({ partieI });
       const wc = partieI.split(/\s+/).filter(Boolean).length;
       push({
+        id: nextId(),
         role: "agent",
         content: (
           <div>
@@ -145,22 +223,42 @@ export default function PartieI() {
               <span className="font-semibold">{wc.toLocaleString("fr-FR")} mots</span>
               {" · "}
               <span>{chaptersFromStore} chapitres</span>
-              {sourceFiles.length > 0 && <span>{" · "}{sourceFiles.length} source(s)</span>}
-              {figureFiles.length > 0 && <span>{" · "}{figureFiles.length} figure(s)</span>}
+              {sourceFilesRef.current.length > 0 && <span>{" · "}{sourceFilesRef.current.length} source(s)</span>}
+              {figureFilesRef.current.length > 0 && <span>{" · "}{figureFilesRef.current.length} figure(s)</span>}
             </div>
           </div>
         ),
       });
       setPhase("done");
+
     } else if (phase === "done") {
-      push({ role: "user", content: t });
-      push({ role: "agent", content: "Je révise la Partie I..." });
-      const partieI = await generate("partie-i", report, t);
+      push({ id: nextId(), role: "user", content: t });
+      push({ id: nextId(), role: "agent", content: "Je révise la Partie I..." });
+
+      // Re-send the same files and figures used during initial generation
+      const allFiles = [...sourceFilesRef.current, ...figureFilesRef.current];
+      const figuresForI = approvedFiguresRef.current.map((f) => ({
+        figureNumber: f.figureNumber,
+        title: f.title,
+        source: f.source ?? "",
+        author: f.author ?? "",
+        caption: f.caption,
+        placement: f.placement,
+      }));
+
+      const partieI = await generate(
+        "partie-i",
+        report,
+        t,
+        allFiles.length > 0 ? allFiles : undefined,
+        figuresForI.length > 0 ? figuresForI : undefined
+      );
+
       if (partieI) {
         updateReport({ partieI });
-        push({ role: "agent", content: "Partie I mise à jour." });
+        push({ id: nextId(), role: "agent", content: "Partie I mise à jour." });
       } else {
-        push({ role: "agent", content: "Révision échouée. Réessaie." });
+        push({ id: nextId(), role: "agent", content: "Révision échouée. Réessaie." });
       }
     }
   };
@@ -172,7 +270,7 @@ export default function PartieI() {
       previewPanel={<PreviewPanel activeSection="partie-i" content={report.partieI || streamedContent} />}
     >
       <div className="flex-1 overflow-y-auto py-4 px-2 md:py-5 md:px-3">
-        {msgs.map((m, i) => <ChatMessage key={i} role={m.role} content={m.content} />)}
+        {msgs.map((m) => <ChatMessage key={m.id} role={m.role} content={m.content} />)}
         <AgentSteps toolCalls={toolCalls} thinkingText={thinkingText} isGenerating={isGenerating} />
         {isGenerating && <ChatMessage role="agent" content="Recherche et rédaction en cours..." isTyping />}
         {error && <ChatMessage role="agent" content={`Erreur : ${error}. Réessaie.`} />}
@@ -187,14 +285,17 @@ export default function PartieI() {
         <div ref={bottomRef} />
       </div>
       <div className="shrink-0 border-t border-border">
-        <ChatInput isGenerating={isGenerating} onAbort={abort}
+        <ChatInput
+          isGenerating={isGenerating}
+          onAbort={abort}
           onSend={handleSend}
-          disabled={isGenerating || phase === "generating"}
+          disabled={isGenerating || phase === "generating" || phase === "blocked"}
           placeholder={
-            phase === "confirm" ? "Oui / modifier le titre..." :
-            phase === "sources" ? "Uploader les sources PDF ou 'non'..." :
-            phase === "figures" ? "Uploader figures ou 'non'..." :
-            phase === "done" ? "Demander une modification..." : ""
+            phase === "blocked"   ? "Génère d'abord le sommaire à l'étape 5..." :
+            phase === "confirm"   ? "Oui / modifier le titre..." :
+            phase === "sources"   ? "Uploader les sources PDF ou 'non'..." :
+            phase === "figures"   ? "Uploader figures ou 'non'..." :
+            phase === "done"      ? "Demander une modification..." : ""
           }
         />
       </div>
