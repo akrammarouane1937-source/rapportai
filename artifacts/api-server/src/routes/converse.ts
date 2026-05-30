@@ -116,6 +116,22 @@ function extractImageBlocks(messages: ApiMessage[]): ImageBlock[] {
   return images;
 }
 
+// Extract the raw text from any uploaded DOCX/document block (used as template base)
+function extractTemplateText(messages: ApiMessage[]): string {
+  for (const msg of messages) {
+    if (!Array.isArray(msg.content)) continue;
+    for (const block of msg.content) {
+      if (block.type === "document") {
+        const src = (block as { type: string; source: { type: string; data?: string } }).source;
+        if (src.type === "text" && src.data && src.data.trim().length > 20) {
+          return src.data.trim();
+        }
+      }
+    }
+  }
+  return "";
+}
+
 // ─── Fallback page de garde (guaranteed non-empty) ────────────────────────────
 
 function buildFallbackPageDeGarde(profile: Record<string, string>): string {
@@ -149,6 +165,7 @@ async function generatePageDeGarde(
   context: string,
   apiKey: string,
   templateImages?: ImageBlock[],
+  templateText?: string,
 ): Promise<string> {
   const profileLines = [
     profile.studentName    && `- Nom : ${profile.studentName}`,
@@ -159,34 +176,64 @@ async function generatePageDeGarde(
     profile.academicYear   && `- Année académique : ${profile.academicYear}`,
     profile.encadrantPeda  && `- Encadrant pédagogique : ${profile.encadrantPeda}`,
     profile.encadrantPro   && `- Encadrant professionnel : ${profile.encadrantPro}`,
-    profile.entreprise     && `- Entreprise : ${profile.entreprise}`,
-    profile.dateDebutStage && `- Début de stage : ${profile.dateDebutStage}`,
-    profile.dateFinStage   && `- Fin de stage : ${profile.dateFinStage}`,
+    profile.entreprise     && `- Entreprise / lieu de stage : ${profile.entreprise}`,
+    profile.dateDebutStage && `- Date début de stage : ${profile.dateDebutStage}`,
+    profile.dateFinStage   && `- Date fin de stage : ${profile.dateFinStage}`,
     profile.juryMember1    && `- Jury 1 : ${profile.juryMember1}`,
     profile.juryMember2    && `- Jury 2 : ${profile.juryMember2}`,
   ].filter(Boolean).join("\n");
 
   const hasImages = templateImages && templateImages.length > 0;
+  const hasTemplate = templateText && templateText.trim().length > 20;
 
-  const prompt = `Tu es un expert en rédaction de rapports académiques marocains. Génère la PAGE DE GARDE complète en Markdown.
+  // ── Prompt strategy ──────────────────────────────────────────────────────────
+  // If we have the template text: fill-in-the-blanks mode (preserves exact structure)
+  // If we only have images or nothing: generate from scratch (fallback)
+  const prompt = hasTemplate
+    ? `Tu es un assistant de rédaction de rapports académiques marocains.
+
+L'étudiant a fourni son TEMPLATE EXACT de page de garde ci-dessous.
+Ta tâche : REMPLIR les blancs (les "…", "Mme/M.", dates vides, etc.) avec les informations du profil.
+NE CHANGE RIEN à la structure, aux titres, à l'ordre des champs.
+Retourne le template complété en Markdown, mot pour mot sauf les champs remplis.
+Pas d'emojis, pas de commentaires, pas de balises Markdown supplémentaires.
+
+TEMPLATE :
+${templateText}
+
+INFORMATIONS À REMPLIR (utilise EXACTEMENT ces valeurs) :
+${profileLines}
+
+CONTEXTE SUPPLÉMENTAIRE (informations collectées en chat) :
+${context}
+
+IMPORTANT :
+- "INTITULÉ DU PFE" ou "Titre" → remplace par : ${profile.theme || ""}
+- "Réalisé par : Mme/M. …" → remplace par : ${profile.studentName || ""}
+- "Encadrant pédagogique : …" → remplace par : ${profile.encadrantPeda || ""}
+- "Encadrant professionnel : …" → remplace par : ${profile.encadrantPro || ""}
+- "Lieu de stage : …" → remplace par : ${profile.entreprise || ""}
+- Les membres de jury mentionnés → garde-les, ajoute ceux du contexte si précisés
+- Dates et année universitaire → utilise celles du profil si disponibles
+- Les champs sans valeur connue → laisse "…" tel quel`
+    : `Tu es un expert en rédaction de rapports académiques marocains. Génère la PAGE DE GARDE complète en Markdown.
 ${hasImages ? `
-TEMPLATE VISUEL : Les images ci-dessus sont les logos/éléments graphiques extraits du template DOCX de l'étudiant.
-Analyse-les pour comprendre : le logo de l'école (position, style), les couleurs dominantes, la structure générale.
-Reproduis fidèlement la STRUCTURE du template (ordre des éléments, séparateurs, hiérarchie) dans ta génération.
+TEMPLATE VISUEL : Les images jointes sont les logos/éléments extraits du template DOCX.
+Reproduis fidèlement la structure (ordre des éléments, séparateurs, hiérarchie).
 ` : ""}
 PROFIL :
 ${profileLines}
 
-CONTEXTE / INSTRUCTIONS SUPPLÉMENTAIRES :
+CONTEXTE :
 ${context}
 
 RÈGLES :
-- Structure professionnelle (thème mis en avant, école, filière, encadrants, jury si présent, année)
+- Structure professionnelle (thème, école, filière, encadrants, jury si présent, année)
 - Séparateurs (---) pour aérer
-- Markdown uniquement, pas d'emojis, pas de commentaires
+- Markdown uniquement, pas d'emojis
 - Retourne UNIQUEMENT le contenu de la page de garde`;
 
-  // Build user message: images first (so Claude sees template before the text prompt), then text
+  // Build user message: images first so Claude sees template visuals, then text
   type UserContentBlock =
     | { type: "image"; source: { type: "base64"; media_type: string; data: string } }
     | { type: "text"; text: string };
@@ -368,13 +415,15 @@ Réponds toujours en français. Sois naturel et humain.`;
           try { toolInput = JSON.parse(currentToolInput); } catch { /* malformed */ }
 
           if (currentToolName === "generate_section" && toolInput.section === "page-de-garde") {
-            // Generate page de garde server-side — pass template logos so Claude sees them
+            // Generate page de garde: pass template images + raw text so Claude fills in blanks
             const templateImages = extractImageBlocks(convoMessages);
+            const templateText   = extractTemplateText(convoMessages);
             const content = await generatePageDeGarde(
               profile,
               (toolInput.context as string) ?? "",
               apiKey,
               templateImages,
+              templateText,
             );
             res.write(`data: ${JSON.stringify({ section_content: { section: "page-de-garde", content } })}\n\n`);
           } else {
