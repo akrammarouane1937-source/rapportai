@@ -98,66 +98,40 @@ async function processFiles(files: File[]): Promise<ContentBlock[]> {
       file.type === "application/vnd.openxmlformats-officedocument.wordprocessingml.document" ||
       file.type === "application/msword"
     ) {
-      // Render DOCX visually → screenshot → send as image so Claude sees layout,
-      // colors, logo placement exactly. Also send extracted text for field names.
+      // Extract images (logos, decorations) directly from DOCX + raw text.
+      // Sending the actual embedded images is far more reliable than html2canvas.
       try {
-        const mammoth = await import("mammoth") as unknown as {
+        type MammothImage = { contentType: string; read: (enc: string) => Promise<string> };
+        type MammothApi = {
           convertToHtml: (opts: { arrayBuffer: ArrayBuffer; convertImage: unknown }) => Promise<{ value: string }>;
           extractRawText: (opts: { arrayBuffer: ArrayBuffer }) => Promise<{ value: string }>;
-          images: { imgElement: (fn: (img: { contentType: string; read: (enc: string) => Promise<string> }) => Promise<{ src: string }>) => unknown };
+          images: { inline: (fn: (img: MammothImage) => Promise<Record<string, never>>) => unknown };
         };
+        const mammoth = await import("mammoth") as unknown as MammothApi;
         const arrayBuffer = await file.arrayBuffer();
 
-        // Build HTML with embedded images (logos, decorations)
-        const htmlResult = await mammoth.convertToHtml({
+        // Collect all embedded images (logos, headers, decorations)
+        const extractedImages: Array<{ contentType: string; data: string }> = [];
+        await mammoth.convertToHtml({
           arrayBuffer,
-          convertImage: mammoth.images.imgElement(async (image) => {
+          convertImage: mammoth.images.inline(async (image) => {
             const data = await image.read("base64");
-            return { src: `data:${image.contentType};base64,${data}` };
+            extractedImages.push({ contentType: image.contentType, data });
+            return {};
           }),
         });
 
-        // Render in an off-screen div and screenshot with html2canvas
-        const container = document.createElement("div");
-        container.style.cssText =
-          "position:fixed;left:-9999px;top:0;width:700px;" +
-          "background:#fff;padding:40px 56px;font-family:'Times New Roman',serif;" +
-          "font-size:13px;line-height:1.5;color:#000;";
-        container.innerHTML = htmlResult.value;
-        document.body.appendChild(container);
-
-        // Wait for all embedded images (logos, etc.) to load before screenshotting
-        const imgs = Array.from(container.querySelectorAll("img"));
-        if (imgs.length > 0) {
-          await Promise.all(imgs.map(img =>
-            img.complete
-              ? Promise.resolve()
-              : new Promise<void>(res => { img.onload = () => res(); img.onerror = () => res(); })
-          ));
+        // Send each extracted image as a separate image block (max 3 to limit payload)
+        for (const img of extractedImages.slice(0, 3)) {
+          const supported = ["image/jpeg", "image/png", "image/gif", "image/webp"];
+          const mediaType = supported.includes(img.contentType) ? img.contentType : "image/png";
+          blocks.push({
+            type: "image",
+            source: { type: "base64", media_type: mediaType, data: img.data },
+          });
         }
 
-        const h2c = await import("html2canvas");
-        const canvas = await h2c.default(container, { scale: 1.0, useCORS: true, allowTaint: true, logging: false });
-        document.body.removeChild(container);
-
-        // Resize to max 900px wide to keep base64 payload small (~60-120KB)
-        const MAX_W = 900;
-        let finalCanvas = canvas;
-        if (canvas.width > MAX_W) {
-          const ratio = MAX_W / canvas.width;
-          const resized = document.createElement("canvas");
-          resized.width = MAX_W;
-          resized.height = Math.round(canvas.height * ratio);
-          resized.getContext("2d")?.drawImage(canvas, 0, 0, resized.width, resized.height);
-          finalCanvas = resized;
-        }
-        const jpeg = finalCanvas.toDataURL("image/jpeg", 0.72).split(",")[1];
-        blocks.push({
-          type: "image",
-          source: { type: "base64", media_type: "image/jpeg", data: jpeg },
-        });
-
-        // Also include extracted text so Claude can read exact field values
+        // Also send the full text so Claude can read field values
         const textResult = await mammoth.extractRawText({ arrayBuffer });
         if (textResult.value.trim()) {
           blocks.push({
@@ -167,7 +141,7 @@ async function processFiles(files: File[]): Promise<ContentBlock[]> {
           });
         }
       } catch {
-        // Fallback: text-only if screenshot fails
+        // Fallback: text-only
         try {
           const mammoth = await import("mammoth") as unknown as {
             extractRawText: (opts: { arrayBuffer: ArrayBuffer }) => Promise<{ value: string }>;
