@@ -10,7 +10,7 @@ import { useGenerate } from "@/hooks/use-generate";
 import { useFileStore } from "@/lib/fileStore";
 import { getApprovedFigures } from "@/lib/figureStore";
 import { motion } from "framer-motion";
-import { AlertTriangle, ArrowLeft } from "lucide-react";
+import { AlertTriangle, ArrowLeft, RefreshCw } from "lucide-react";
 
 type Phase = "blocked" | "confirm" | "sources" | "figures" | "generating" | "retry" | "done";
 
@@ -20,7 +20,7 @@ function nextId() { return `msg-${++msgCounter}`; }
 
 type Msg = { id: string; role: "agent" | "user"; content: React.ReactNode };
 
-type ApprovedFigure = ReturnType<typeof getApprovedFigures>[number];
+type FigureInput = { figureNumber: number; title: string; source: string; author: string; caption: string; placement: string };
 
 export default function PartieI() {
   const [, setLocation] = useLocation();
@@ -33,21 +33,23 @@ export default function PartieI() {
   const injectedContext = report.pendingContextInjection || "";
   const hasSommaire = Boolean(report.sommaire?.trim());
 
-  // Persist uploaded files and approved figures in refs so revision calls
-  // always have the same context as the original generation call
+  // Persist uploaded files and approved figures in refs so revision and retry
+  // calls always carry the same context as the original generation
   const sourceFilesRef = useRef<File[]>([]);
   const figureFilesRef = useRef<File[]>([]);
-  const approvedFiguresRef = useRef<ApprovedFigure[]>([]);
+  const approvedFiguresRef = useRef<FigureInput[]>([]);
 
-  // Mirror state for UI display (sourceFiles count badge etc.)
+  // Retry function stored in ref so inline button never captures stale closure
+  const retryFnRef = useRef<(() => Promise<void>) | null>(null);
+
+  // Mirror refs in state only for UI badge counts
   const [sourceFiles, setSourceFiles] = useState<File[]>([]);
   const [figureFiles, setFigureFiles] = useState<File[]>([]);
 
-  const initialPhase: Phase = hasSommaire ? "confirm" : "blocked";
-
-  const makeInitialMsg = (): Msg => {
+  const [phase, setPhase] = useState<Phase>(hasSommaire ? "confirm" : "blocked");
+  const [msgs, setMsgs] = useState<Msg[]>(() => {
     if (!hasSommaire) {
-      return {
+      return [{
         id: nextId(),
         role: "agent",
         content: (
@@ -57,8 +59,7 @@ export default function PartieI() {
               <div>
                 <p className="text-sm font-semibold text-amber-800">Sommaire manquant</p>
                 <p className="text-xs text-amber-700 mt-1">
-                  La Partie I nécessite un sommaire pour suivre la structure de ton rapport.
-                  Génère d'abord ton sommaire à l'étape 5.
+                  La Partie I suit la structure de ton sommaire. Génère d'abord le sommaire à l'étape 5.
                 </p>
               </div>
             </div>
@@ -71,10 +72,9 @@ export default function PartieI() {
             </button>
           </div>
         ),
-      };
+      }];
     }
-
-    return {
+    return [{
       id: nextId(),
       role: "agent",
       content: (
@@ -89,11 +89,9 @@ export default function PartieI() {
           )}
         </div>
       ),
-    };
-  };
+    }];
+  });
 
-  const [phase, setPhase] = useState<Phase>(initialPhase);
-  const [msgs, setMsgs] = useState<Msg[]>([makeInitialMsg()]);
   const bottomRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -102,8 +100,70 @@ export default function PartieI() {
 
   const push = (...m: Msg[]) => setMsgs((p) => [...p, ...m]);
 
+  // ── Core generation runner — used by figures phase and retry ────────────────
+  const runGeneration = async (extraContext?: string) => {
+    const allFiles = [...sourceFilesRef.current, ...figureFilesRef.current];
+    const figuresForI = approvedFiguresRef.current;
+
+    const partieI = await generate(
+      "partie-i",
+      report,
+      extraContext || undefined,
+      allFiles.length > 0 ? allFiles : undefined,
+      figuresForI.length > 0 ? figuresForI : undefined
+    );
+
+    if (!partieI) {
+      // Wire up retry function before pushing the message so the button can call it
+      retryFnRef.current = async () => {
+        push({ id: nextId(), role: "agent", content: "Je relance la génération..." });
+        setPhase("generating");
+        await runGeneration(extraContext);
+      };
+
+      push({
+        id: nextId(),
+        role: "agent",
+        content: (
+          <div>
+            <p className="text-sm text-red-700 mb-2">Génération échouée.</p>
+            <button
+              onClick={() => retryFnRef.current?.()}
+              className="flex items-center gap-2 text-sm font-semibold text-violet-700 hover:text-violet-900 border border-violet-200 rounded-lg px-3 py-1.5 bg-violet-50 transition-colors"
+            >
+              <RefreshCw className="w-3.5 h-3.5" />
+              Réessayer
+            </button>
+          </div>
+        ),
+      });
+      setPhase("retry");
+      return;
+    }
+
+    updateReport({ partieI });
+    const wc = partieI.split(/\s+/).filter(Boolean).length;
+    push({
+      id: nextId(),
+      role: "agent",
+      content: (
+        <div>
+          <p>Partie I complète</p>
+          <div className="mt-2 p-3 rounded-lg bg-muted text-sm">
+            <span className="font-semibold">{wc.toLocaleString("fr-FR")} mots</span>
+            {" · "}
+            <span>{chaptersFromStore} chapitres</span>
+            {sourceFilesRef.current.length > 0 && <span>{" · "}{sourceFilesRef.current.length} source(s)</span>}
+            {figureFilesRef.current.length > 0 && <span>{" · "}{figureFilesRef.current.length} figure(s)</span>}
+          </div>
+        </div>
+      ),
+    });
+    setPhase("done");
+  };
+
   const handleSend = async (text: string, files?: File[]) => {
-    if (phase === "blocked") return;
+    if (phase === "blocked" || phase === "generating") return;
 
     const t = text.trim();
     const skip = /^(non|passer|\/|-)$/i.test(t) || (!t && (!files || files.length === 0));
@@ -111,11 +171,10 @@ export default function PartieI() {
 
     if (phase === "confirm") {
       if (!ok && t && !skip) {
-        const newTitle = t;
-        updateReport({ partieITitle: newTitle });
+        updateReport({ partieITitle: t });
         push(
           { id: nextId(), role: "user", content: t },
-          { id: nextId(), role: "agent", content: `Titre mis à jour : "${newTitle}". C'est bon maintenant ?` }
+          { id: nextId(), role: "agent", content: `Titre mis à jour : "${t}". C'est bon maintenant ?` }
         );
         return;
       }
@@ -169,7 +228,7 @@ export default function PartieI() {
 
     } else if (phase === "figures") {
       if (files && files.length > 0) {
-        figureFilesRef.current = files;
+        figureFilesRef.current = files; // set ref first — runGeneration reads from ref only
         setFigureFiles(files);
         addFiles(files);
         push({ id: nextId(), role: "user", content: `${files.length} figure(s) uploadée(s)` });
@@ -178,122 +237,31 @@ export default function PartieI() {
         push({ id: nextId(), role: "user", content: skip ? "Non" : t });
       }
 
-      // Snapshot approved figures at generation time — persisted in ref for revisions
-      approvedFiguresRef.current = getApprovedFigures().filter((f) => f.placement === "Partie I");
+      // Snapshot approved figures once — persisted in ref for retry/revision
+      approvedFiguresRef.current = getApprovedFigures()
+        .filter((f) => f.placement === "Partie I")
+        .map((f) => ({ figureNumber: f.figureNumber, title: f.title, source: f.source ?? "", author: f.author ?? "", caption: f.caption, placement: f.placement }));
 
       push({ id: nextId(), role: "agent", content: "Parfait, je génère la Partie I..." });
       setPhase("generating");
       if (injectedContext) updateReport({ pendingContextInjection: "" });
 
-      const allFiles = [...sourceFilesRef.current, ...figureFilesRef.current, ...(files || [])];
-      const figuresForI = approvedFiguresRef.current.map((f) => ({
-        figureNumber: f.figureNumber,
-        title: f.title,
-        source: f.source ?? "",
-        author: f.author ?? "",
-        caption: f.caption,
-        placement: f.placement,
-      }));
-
-      const partieI = await generate(
-        "partie-i",
-        report,
-        injectedContext || undefined,
-        allFiles.length > 0 ? allFiles : undefined,
-        figuresForI.length > 0 ? figuresForI : undefined
-      );
-
-      if (!partieI) {
-        push({ id: nextId(), role: "agent", content: "Génération échouée. Appuie sur Envoyer pour réessayer sans tout re-uploader." });
-        // retry phase: files are already staged in refs — user just presses send again
-        const hadFiles = allFiles.length > 0 || figuresForI.length > 0;
-        setPhase(hadFiles ? "retry" : "figures");
-        return;
-      }
-
-      updateReport({ partieI });
-      const wc = partieI.split(/\s+/).filter(Boolean).length;
-      push({
-        id: nextId(),
-        role: "agent",
-        content: (
-          <div>
-            <p>Partie I complète</p>
-            <div className="mt-2 p-3 rounded-lg bg-muted text-sm">
-              <span className="font-semibold">{wc.toLocaleString("fr-FR")} mots</span>
-              {" · "}
-              <span>{chaptersFromStore} chapitres</span>
-              {sourceFilesRef.current.length > 0 && <span>{" · "}{sourceFilesRef.current.length} source(s)</span>}
-              {figureFilesRef.current.length > 0 && <span>{" · "}{figureFilesRef.current.length} figure(s)</span>}
-            </div>
-          </div>
-        ),
-      });
-      setPhase("done");
+      await runGeneration(injectedContext || undefined);
 
     } else if (phase === "retry") {
-      // Re-run generation with the same files and figures already stored in refs
+      // User typed something to manually retry — same as button but with optional context
+      push({ id: nextId(), role: "user", content: t || "Réessayer" });
       push({ id: nextId(), role: "agent", content: "Je relance la génération..." });
       setPhase("generating");
-
-      const allFiles = [...sourceFilesRef.current, ...figureFilesRef.current];
-      const figuresForI = approvedFiguresRef.current.map((f) => ({
-        figureNumber: f.figureNumber,
-        title: f.title,
-        source: f.source ?? "",
-        author: f.author ?? "",
-        caption: f.caption,
-        placement: f.placement,
-      }));
-
-      const partieI = await generate(
-        "partie-i",
-        report,
-        injectedContext || undefined,
-        allFiles.length > 0 ? allFiles : undefined,
-        figuresForI.length > 0 ? figuresForI : undefined
-      );
-
-      if (!partieI) {
-        push({ id: nextId(), role: "agent", content: "Génération échouée à nouveau. Appuie sur Envoyer pour réessayer." });
-        setPhase("retry");
-        return;
-      }
-
-      updateReport({ partieI });
-      const wc = partieI.split(/\s+/).filter(Boolean).length;
-      push({
-        id: nextId(),
-        role: "agent",
-        content: (
-          <div>
-            <p>Partie I complète</p>
-            <div className="mt-2 p-3 rounded-lg bg-muted text-sm">
-              <span className="font-semibold">{wc.toLocaleString("fr-FR")} mots</span>
-              {" · "}
-              <span>{chaptersFromStore} chapitres</span>
-              {sourceFilesRef.current.length > 0 && <span>{" · "}{sourceFilesRef.current.length} source(s)</span>}
-              {figureFilesRef.current.length > 0 && <span>{" · "}{figureFilesRef.current.length} figure(s)</span>}
-            </div>
-          </div>
-        ),
-      });
-      setPhase("done");
+      await runGeneration(injectedContext || undefined);
 
     } else if (phase === "done") {
       push({ id: nextId(), role: "user", content: t });
       push({ id: nextId(), role: "agent", content: "Je révise la Partie I..." });
 
-      // Re-send the same files and figures used during initial generation
+      // Re-send the same files and figures from the original generation
       const allFiles = [...sourceFilesRef.current, ...figureFilesRef.current];
-      const figuresForI = approvedFiguresRef.current.map((f) => ({
-        figureNumber: f.figureNumber,
-        title: f.title,
-        source: f.source ?? "",
-        author: f.author ?? "",
-        caption: f.caption,
-        placement: f.placement,
-      }));
+      const figuresForI = approvedFiguresRef.current;
 
       const partieI = await generate(
         "partie-i",
@@ -344,7 +312,7 @@ export default function PartieI() {
             phase === "confirm"   ? "Oui / modifier le titre..." :
             phase === "sources"   ? "Uploader les sources PDF ou 'non'..." :
             phase === "figures"   ? "Uploader figures ou 'non'..." :
-            phase === "retry"     ? "Appuie sur Envoyer pour relancer..." :
+            phase === "retry"     ? "Ou tape ici pour relancer avec contexte..." :
             phase === "done"      ? "Demander une modification..." : ""
           }
         />
