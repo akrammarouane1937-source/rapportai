@@ -55,6 +55,8 @@ app.use(
       if (!ALLOWED_ORIGINS) return cb(null, true); // local dev
       if (!origin) return cb(null, true);           // server-to-server / curl
       if (ALLOWED_ORIGINS.includes(origin)) return cb(null, true);
+      // Replit's shared proxy routes requests through localhost internally
+      if (/^https?:\/\/localhost(:\d+)?$/.test(origin)) return cb(null, true);
       cb(new Error(`CORS: origin ${origin} not allowed`));
     },
   }),

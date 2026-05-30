@@ -102,6 +102,7 @@ export function useConversation({
       let streamingId = newId();
       let streamingText = "";
       const pendingActions: Array<Record<string, unknown>> = [];
+      const pendingSectionContents: Array<{ section: string; content: string }> = [];
       let hasStartedStreaming = false;
 
       try {
@@ -157,6 +158,13 @@ export function useConversation({
             if (data.action) {
               pendingActions.push(data.action as Record<string, unknown>);
             }
+
+            if (data.section_content) {
+              const sc = data.section_content as { section: string; content: string };
+              if (sc.section && sc.content) {
+                pendingSectionContents.push(sc);
+              }
+            }
           }
         }
       } catch (err) {
@@ -178,6 +186,24 @@ export function useConversation({
         setIsThinking(false);
       }
 
+      // Process server-generated section content first (bypasses SDK entirely)
+      for (const { section, content } of pendingSectionContents) {
+        setGeneratedSections((prev) => [...prev, section]);
+        onSectionGenerated(section, content);
+        const label = SECTION_LABELS[section] ?? section;
+        const wordCount = content.split(/\s+/).filter(Boolean).length;
+        const snippet = content
+          .replace(/^#+\s*/gm, "")
+          .replace(/\*\*/g, "")
+          .trim()
+          .slice(0, 300);
+        setMessages((prev) => [
+          ...prev,
+          { id: newId(), role: "agent", content: createElement(GeneratedCard, { label, wordCount, snippet }) },
+        ]);
+      }
+      const serverHandledSections = new Set(pendingSectionContents.map((sc) => sc.section));
+
       // Execute actions after stream completes
       let generationFailed = false;
       for (const action of pendingActions) {
@@ -185,6 +211,12 @@ export function useConversation({
           const section = action.section as string;
           const context = action.context as string;
           const label = SECTION_LABELS[section] ?? section;
+
+          // Skip sections already generated server-side (e.g. page-de-garde)
+          if (serverHandledSections.has(section)) {
+            setGeneratedSections((prev) => prev.includes(section) ? prev : [...prev, section]);
+            continue;
+          }
 
           // No "Je génère..." announcement — tool call cards are the live indicator
           const result = await generate(section, report as Parameters<typeof generate>[1], context);

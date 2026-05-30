@@ -8,6 +8,7 @@ interface ChatInputProps {
   isGenerating?: boolean;
   disabled?: boolean;
   placeholder?: string;
+  templateSlot?: React.ReactNode;
 }
 
 export function ChatInput({
@@ -16,6 +17,7 @@ export function ChatInput({
   isGenerating = false,
   disabled = false,
   placeholder = "Écrire un message...",
+  templateSlot,
 }: ChatInputProps) {
   const [text, setText] = useState("");
   const [attachedFiles, setAttachedFiles] = useState<File[]>([]);
@@ -114,6 +116,12 @@ export function ChatInput({
       {/* Bottom toolbar */}
       <div className="flex items-center justify-between px-3 pb-3 mt-1">
         <div className="flex items-center gap-0.5">
+          {templateSlot && (
+            <>
+              {templateSlot}
+              <div className="w-px h-4 mx-1" style={{ background: "#e9d5ff" }} />
+            </>
+          )}
           {/* Hidden inputs */}
           <input ref={anyFileRef} type="file" multiple className="hidden" onChange={(e) => e.target.files && addFiles(e.target.files)} />
           <input ref={imageRef} type="file" multiple accept="image/*" className="hidden" onChange={(e) => e.target.files && addFiles(e.target.files)} />

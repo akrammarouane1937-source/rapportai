@@ -13,9 +13,9 @@ L'étudiant vient de poser une QUESTION ou de dire quelque chose qui n'est PAS u
 - Réponds à sa question de façon courte, naturelle et utile (1 à 3 phrases). Sois humain, pas robotique.
 - Puis réinvite-le gentiment à répondre à la question en cours.
 - N'utilise AUCUN outil, ne génère aucune section. Tu ne fais que discuter.
-- Pas d'emojis.`,
+- INTERDIT : emojis, symboles Unicode (⚠️ ✅ 👋 😊 🎯 etc.). Texte brut uniquement.`,
 
-  2: `Tu es RapportAI — un ami qui connaît les rapports académiques marocains par cœur. Tu parles comme quelqu'un de vrai, pas comme un chatbot. Pas d'emojis.
+  2: `Tu es RapportAI — un ami qui connaît les rapports académiques marocains par cœur. Tu parles comme quelqu'un de vrai, pas comme un chatbot.
 
 Mission : page de garde. Tu as le profil. Il te manque : encadrant pédagogique (obligatoire), encadrant pro + entreprise si PFE/Stage, jury si mentionné.
 
@@ -29,7 +29,7 @@ Comment tu te comportes :
 
 Action : generate_section("page-de-garde") avec context = tout ce qui a été dit. Puis step_complete.`,
 
-  3: `Tu es RapportAI. Les dédicaces, c'est personnel — tu traites ça avec chaleur, pas comme une case à cocher. Pas d'emojis.
+  3: `Tu es RapportAI. Les dédicaces, c'est personnel — tu traites ça avec chaleur, pas comme une case à cocher.
 
 Ce que tu fais : une question simple et humaine sur qui ils veulent remercier. Puis tu réagis à leur réponse comme un vrai ami.
 
@@ -39,7 +39,7 @@ Si c'est vague, court, ou "peu importe" / "laisse l'IA" → génère immédiatem
 
 Ordre : generate_section("dedicaces") → generate_section("remerciements") → step_complete avec un mot sympa.`,
 
-  4: `Tu es RapportAI. Résumé français et abstract anglais. Pas d'emojis.
+  4: `Tu es RapportAI. Résumé français et abstract anglais.
 
 Tu as tout dans le profil — thème, école, type de rapport. Pas besoin de redemander.
 Une seule question possible : des mots-clés ou angles spécifiques à mettre en avant ?
@@ -49,13 +49,13 @@ IMPORTANT — context riche : dans l'argument "context" de generate_section, inc
 
 Ordre : generate_section("resume") → generate_section("abstract") → step_complete.`,
 
-  5: `Tu es RapportAI. Tu génères le sommaire dès que l'étudiant arrive — aucune question d'abord. Pas d'emojis.
+  5: `Tu es RapportAI. Tu génères le sommaire dès que l'étudiant arrive — aucune question d'abord.
 
 Après génération : une phrase courte genre "Voilà le plan — ça te convient ou tu veux ajuster quelque chose ?"
 L'étudiant est satisfait / dit "ok" / "c'est bon" → step_complete.
 Il veut changer quelque chose → tu régénères avec ses modifications, puis tu repose la question une fois.`,
 
-  6: `Tu es RapportAI. Introduction générale. Pas d'emojis.
+  6: `Tu es RapportAI. Introduction générale.
 
 C'est l'étape clé pour rendre tout le rapport spécifique. Tu veux capturer trois choses, en UNE seule question naturelle (pas un formulaire) :
 - la problématique (la question centrale de recherche),
@@ -69,7 +69,7 @@ IMPORTANT — context riche : dans l'argument "context" de generate_section, inc
 
 Réagis en une phrase à ce que dit l'étudiant, puis : generate_section("introduction") → step_complete.`,
 
-  9: `Tu es RapportAI. Dernière étape — conclusion, bibliographie, abréviations. L'étudiant est presque au bout. Pas d'emojis.
+  9: `Tu es RapportAI. Dernière étape — conclusion, bibliographie, abréviations. L'étudiant est presque au bout.
 
 Ton ton est encourageant mais direct. Une question : quels sont les apports principaux de son travail, et les limites s'il en voit ?
 Réagis à sa réponse en une phrase. Si les perspectives sont pas mentionnées, pose-les rapidement.
@@ -103,12 +103,85 @@ const TOOLS = [
     input_schema: {
       type: "object" as const,
       properties: {
-        message: { type: "string", description: "Message de confirmation affiché à l'étudiant" },
+        message: { type: "string", description: "Message de confirmation affiché à l'étudiant (texte brut, sans emojis)" },
       },
       required: ["message"],
     },
   },
 ];
+
+// ─── Server-side page de garde generation (no SDK required) ──────────────────
+
+async function generatePageDeGarde(
+  profile: Record<string, string>,
+  context: string,
+  apiKey: string,
+): Promise<string> {
+  const profileLines = [
+    profile.studentName    && `- Nom : ${profile.studentName}`,
+    profile.school         && `- École : ${profile.school}`,
+    profile.filiere        && `- Filière : ${profile.filiere}`,
+    profile.reportType     && `- Type : ${profile.reportType}`,
+    profile.theme          && `- Thème : ${profile.theme}`,
+    profile.academicYear   && `- Année académique : ${profile.academicYear}`,
+    profile.encadrantPeda  && `- Encadrant pédagogique : ${profile.encadrantPeda}`,
+    profile.encadrantPro   && `- Encadrant professionnel : ${profile.encadrantPro}`,
+    profile.entreprise     && `- Entreprise : ${profile.entreprise}`,
+    profile.ville          && `- Ville : ${profile.ville}`,
+    profile.dateDebutStage && `- Début de stage : ${profile.dateDebutStage}`,
+    profile.dateFinStage   && `- Fin de stage : ${profile.dateFinStage}`,
+    profile.juryMember1    && `- Jury 1 : ${profile.juryMember1}`,
+    profile.juryMember2    && `- Jury 2 : ${profile.juryMember2}`,
+    profile.problematique  && `- Problématique : ${profile.problematique}`,
+  ].filter(Boolean).join("\n");
+
+  const prompt = `Tu es un expert en rédaction de rapports académiques marocains (PFE, stage, mémoire). Génère la PAGE DE GARDE complète en Markdown.
+
+PROFIL ÉTUDIANT :
+${profileLines}
+
+CONTEXTE CONVERSATION (noms et préférences supplémentaires) :
+${context}
+
+INSTRUCTIONS :
+- Structure professionnelle d'une page de garde marocaine
+- Thème/titre du rapport bien mis en avant (# titre)
+- Mention du type de rapport, de l'école, de la filière
+- Encadrants clairement indiqués avec leur titre (Prof., Dr., M., Mme)
+- Jury si présent
+- Présenté par [nom étudiant]
+- Année universitaire / période de stage
+- Séparateurs (---) pour aérer visuellement
+- Format Markdown uniquement, pas d'emojis, pas de commentaires, pas d'introduction
+- Retourne UNIQUEMENT le contenu de la page de garde`;
+
+  try {
+    const res = await fetch(ANTHROPIC_API, {
+      method: "POST",
+      headers: {
+        "anthropic-version": "2023-06-01",
+        "x-api-key": apiKey,
+        "content-type": "application/json",
+      },
+      body: JSON.stringify({
+        model: "claude-haiku-4-5",
+        max_tokens: 1000,
+        messages: [{ role: "user", content: prompt }],
+      }),
+    });
+
+    if (!res.ok) return "";
+
+    const data = await res.json() as { content: Array<{ type: string; text?: string }> };
+    return data.content
+      .filter((b) => b.type === "text")
+      .map((b) => b.text ?? "")
+      .join("")
+      .trim();
+  } catch {
+    return "";
+  }
+}
 
 // ─── POST /api/converse ───────────────────────────────────────────────────────
 
@@ -171,6 +244,7 @@ RÈGLES ABSOLUES :
 2. Après generate_section(), appelle IMMÉDIATEMENT step_complete() dans la même réponse — ne t'arrête pas entre les deux.
 3. Si l'étudiant dit "génère", "vas-y", "c'est bon", "peu importe", "ok", "oui" ou toute variante → génère MAINTENANT sans poser de questions.
 4. Si l'étudiant pose une QUESTION plutôt que de répondre, réponds-y brièvement et naturellement, puis continue.
+5. INTERDIT ABSOLU : emojis et symboles Unicode décoratifs (⚠️ ✅ 👋 😊 🎯 🔍 📝 etc.) — ni dans tes réponses texte, ni dans le message de step_complete. Texte brut uniquement.
 
 Sections déjà générées cette étape : ${generatedSections.length > 0 ? generatedSections.join(", ") : "aucune"}
 
@@ -255,7 +329,22 @@ IMPORTANT : Réponds toujours en français. Sois naturel et humain, pas robotiqu
           inToolUse = false;
           let toolInput: Record<string, unknown> = {};
           try { toolInput = JSON.parse(currentToolInput); } catch { /* malformed */ }
-          res.write(`data: ${JSON.stringify({ action: { type: currentToolName, ...toolInput } })}\n\n`);
+
+          if (currentToolName === "generate_section" && toolInput.section === "page-de-garde") {
+            // Generate page de garde directly on the server — no SDK binary needed
+            const content = await generatePageDeGarde(
+              profile,
+              (toolInput.context as string) ?? "",
+              apiKey,
+            );
+            if (content) {
+              res.write(`data: ${JSON.stringify({ section_content: { section: "page-de-garde", content } })}\n\n`);
+            }
+            // Don't forward this as an action — frontend would try the broken SDK path
+          } else {
+            res.write(`data: ${JSON.stringify({ action: { type: currentToolName, ...toolInput } })}\n\n`);
+          }
+
           currentToolName = "";
           currentToolInput = "";
         }
