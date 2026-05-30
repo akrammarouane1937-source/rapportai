@@ -9,13 +9,21 @@ import { Check } from "lucide-react";
 
 const delay = (ms: number) => new Promise<void>((r) => setTimeout(r, ms));
 
-type Phase = "theme" | "school" | "filiere" | "type" | "annee" | "done";
+type Phase = "theme" | "school" | "filiere" | "type" | "annee" | "color" | "done";
 type Msg = { role: "agent" | "user"; content: string | React.ReactNode };
 
 const TYPE_OPTIONS: Array<{ label: string; value: "PFE" | "stage" | "memoire" }> = [
   { label: "PFE", value: "PFE" },
   { label: "Stage", value: "stage" },
   { label: "Mémoire", value: "memoire" },
+];
+
+const COLOR_OPTIONS: Array<{ label: string; value: string; hex: string }> = [
+  { label: "Bleu marine", value: "bleu marine (#1e3a5f)", hex: "#1e3a5f" },
+  { label: "Bordeaux", value: "bordeaux (#8b1a2e)", hex: "#8b1a2e" },
+  { label: "Vert foncé", value: "vert foncé (#1a4a2e)", hex: "#1a4a2e" },
+  { label: "Gris anthracite", value: "gris anthracite (#2d3748)", hex: "#2d3748" },
+  { label: "Doré", value: "doré (#7b5c2a)", hex: "#7b5c2a" },
 ];
 
 const SKIP_PHRASES = ["passer", "skip", "peu importe", "je sais pas", "sais pas", "laisse tomber", "aucune", "non", "pas de", "rien"];
@@ -193,8 +201,15 @@ export default function Step1() {
     } else if (phase === "annee") {
       updateReport({ academicYear: trimmed });
       push({ role: "user", content: trimmed });
-      await reply("Parfait, toutes les infos sont là.", "done", 400);
+      await reply("Parfait. Dernière chose — quelle couleur pour ton rapport ?", "color", 400);
     }
+  };
+
+  const handleColorSelect = async (color: { label: string; value: string; hex: string }) => {
+    if (phase !== "color" || typing) return;
+    updateReport({ reportColor: color.value });
+    push({ role: "user", content: color.label });
+    await reply("Toutes les infos sont là. On commence !", "done", 400);
   };
 
   const handleTypeSelect = async (value: "PFE" | "stage" | "memoire", label: string) => {
@@ -273,6 +288,26 @@ export default function Step1() {
           </div>
         )}
 
+        {/* Color picker */}
+        {phase === "color" && !typing && (
+          <div className="flex gap-3 flex-wrap ml-10 mb-4 px-4">
+            {COLOR_OPTIONS.map((c) => (
+              <button
+                key={c.hex}
+                onClick={() => handleColorSelect(c)}
+                title={c.label}
+                className="flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-medium transition-all border border-gray-200 hover:border-gray-400 bg-white"
+              >
+                <span
+                  className="w-4 h-4 rounded-full flex-shrink-0"
+                  style={{ background: c.hex }}
+                />
+                {c.label}
+              </button>
+            ))}
+          </div>
+        )}
+
         {phase === "done" && !typing && (
           <StepTransitionCard
             title="Informations générales enregistrées"
@@ -286,7 +321,7 @@ export default function Step1() {
       <div className="shrink-0 border-t border-border">
         <ChatInput
           onSend={handleSend}
-          disabled={!disclaimerAccepted || phase === "type" || phase === "done" || typing}
+          disabled={!disclaimerAccepted || phase === "type" || phase === "color" || phase === "done" || typing}
           placeholder={
             phase === "theme"   ? "Ton thème de rapport..." :
             phase === "school"  ? "Ton école / université..." :

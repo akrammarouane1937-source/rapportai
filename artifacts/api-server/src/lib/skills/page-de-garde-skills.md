@@ -62,15 +62,21 @@ Steps:
    - Element order (logo positions, title placement, separators, typography)
    - All fields present and their exact labels
    - Borders, decorative elements, spacing style
+   - **Color palette** — note the EXACT colors used (header bars, separators, title text). These are the ONLY colors to use in output.
 3. If `template-text.txt` exists → `Read` it to extract:
    - Exact placeholder names and their positions
    - Field labels word-for-word
-4. Reproduce the EXACT SAME structure as the template — same order, same separators, same labels
+4. Reproduce the EXACT SAME structure as the template — same order, same separators, same labels, **same colors**
 5. Fill ALL placeholders with real student data from the profile
-6. Logos are already embedded in the template — do NOT search for external logos
-7. `Write` page-de-garde.md with the reproduced and filled content
+6. **LOGOS**: Only include a logo if it is VISUALLY PRESENT in the template screenshot or explicitly mentioned in template-text.txt. NEVER invent or assume a logo exists. If no logo is visible → no logo in output.
+7. Do NOT search for external logos — logos are already embedded in the template if they exist
+8. `Write` page-de-garde.md with the reproduced and filled content
 
-**Critical rule for PATH A:** The output must be structurally identical to the template. Do NOT reorder fields, add new sections, or remove existing ones. The student's school verified this exact format — any structural change will be rejected.
+**Critical rules for PATH A:**
+- The output must be structurally identical to the template. Do NOT reorder fields, add new sections, or remove existing ones.
+- Use the template's colors ONLY — never substitute your own color choices (no purple, no blue, no other default).
+- Only include a logo if it is actually visible in the template. Do NOT write "Le logo [école] est présent" if no logo was visible.
+- The student's school verified this exact format — any structural change will be rejected.
 
 ### PATH B — No template
 
@@ -100,13 +106,16 @@ Steps:
 
 ## Standard Cover Page Structure (PATH B)
 
+**Color rule for PATH B:** Use the `reportColor` value provided in the task prompt (e.g. "bleu marine (#1e3a5f)"). Apply this color to: section header bars, separator lines, and title text. If no `reportColor` is provided, default to bleu marine (#1e3a5f). NEVER use purple (#7c3aed) or any other arbitrary color.
+
 ```
 <!-- logos: logo-ecole.png, logo-entreprise.png -->
+<!-- color: [reportColor from prompt] -->
 
 [LOGO ÉCOLE — gauche]                    [LOGO ENTREPRISE — droite]
                                           (ou vide si Mémoire/non fourni)
 
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━  ← color: reportColor
 
 [TYPE RAPPORT EN MAJUSCULES]
 Pour l'obtention du diplôme de [FILIÈRE]
@@ -114,7 +123,7 @@ Pour l'obtention du diplôme de [FILIÈRE]
 Thème :
 « [TITRE DU RAPPORT] »
 
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━  ← color: reportColor
 
 Réalisé par : [NOM ÉTUDIANT]
 
@@ -136,6 +145,7 @@ Rules for structure:
 - Filière on the line below school name
 - Omit any field that is empty — no blank labels
 - If no company logo → school logo centered at top
+- **LOGOS**: Only include logos found via WebSearch. NEVER write "logo présent" or include a logo placeholder if none was downloaded successfully.
 
 ---
 

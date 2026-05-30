@@ -23,6 +23,7 @@ export interface Report {
   filiere: string;
   reportType: "PFE" | "stage" | "memoire";
   academicYear: string;
+  reportColor: string;
 
   // Step 2
   studentName: string;
@@ -78,6 +79,7 @@ export const initialReportState: Report = {
   filiere: "",
   reportType: "PFE",
   academicYear: "",
+  reportColor: "",
 
   studentName: "",
   encadrantPeda: "",

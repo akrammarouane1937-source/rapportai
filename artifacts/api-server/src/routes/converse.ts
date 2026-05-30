@@ -147,6 +147,7 @@ router.post("/converse", async (req: Request, res: Response) => {
 - Type de rapport : ${profile.reportType ?? ""}
 - Thème : ${profile.theme ?? ""}
 - Année académique : ${(profile as Record<string, string>).academicYear ?? ""}
+${(profile as Record<string, string>).reportColor ? `- Couleur choisie pour le rapport : ${(profile as Record<string, string>).reportColor}` : ""}
 ${profile.encadrantPeda ? `- Encadrant pédagogique : ${profile.encadrantPeda}` : ""}
 ${profile.encadrantPro ? `- Encadrant professionnel : ${profile.encadrantPro}` : ""}
 ${profile.entreprise ? `- Entreprise / lieu de stage : ${profile.entreprise}` : ""}
