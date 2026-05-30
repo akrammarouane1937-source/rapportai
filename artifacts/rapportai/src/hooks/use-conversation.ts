@@ -92,8 +92,27 @@ async function processFiles(files: File[]): Promise<ContentBlock[]> {
         source: { type: "text", data: text },
         title: file.name,
       });
-    } else {
-      // DOCX / unknown — skip silently (UI already warns the user before send)
+    } else if (
+      file.name.endsWith(".docx") ||
+      file.name.endsWith(".doc") ||
+      file.type === "application/vnd.openxmlformats-officedocument.wordprocessingml.document" ||
+      file.type === "application/msword"
+    ) {
+      // Extract raw text from Word documents using mammoth
+      try {
+        const mammoth = await import("mammoth");
+        const arrayBuffer = await file.arrayBuffer();
+        const result = await (mammoth as unknown as { extractRawText: (opts: { arrayBuffer: ArrayBuffer }) => Promise<{ value: string }> }).extractRawText({ arrayBuffer });
+        if (result.value.trim()) {
+          blocks.push({
+            type: "document",
+            source: { type: "text", data: result.value },
+            title: file.name,
+          });
+        }
+      } catch {
+        // skip silently if extraction fails
+      }
     }
   }
 

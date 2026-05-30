@@ -1,6 +1,11 @@
-import { useRef, useState, useCallback } from "react";
-import { Paperclip, Image, FileText, ArrowUp, Square, X } from "lucide-react";
+import { useRef, useState, useCallback, useEffect } from "react";
+import { Plus, X, ArrowUp, Square } from "lucide-react";
 import { cn } from "@/lib/utils";
+
+interface AttachedItem {
+  file: File;
+  previewUrl?: string;
+}
 
 interface ChatInputProps {
   onSend: (text: string, files?: File[]) => void | Promise<void>;
@@ -9,6 +14,38 @@ interface ChatInputProps {
   disabled?: boolean;
   placeholder?: string;
   templateSlot?: React.ReactNode;
+}
+
+function FileTypeIcon({ file }: { file: File }) {
+  const ext = file.name.split(".").pop()?.toLowerCase() ?? "";
+  if (ext === "docx" || ext === "doc") {
+    return (
+      <div
+        className="w-10 h-10 rounded-lg flex items-center justify-center text-white font-bold shrink-0"
+        style={{ background: "#2B579A", fontSize: 15, fontFamily: "Georgia, serif" }}
+      >
+        W
+      </div>
+    );
+  }
+  if (ext === "pdf") {
+    return (
+      <div
+        className="w-10 h-10 rounded-lg flex items-center justify-center text-white font-bold shrink-0"
+        style={{ background: "#E74C3C", fontSize: 11 }}
+      >
+        PDF
+      </div>
+    );
+  }
+  return (
+    <div
+      className="w-10 h-10 rounded-lg flex items-center justify-center text-white font-bold shrink-0"
+      style={{ background: "#6b7280", fontSize: 10 }}
+    >
+      FILE
+    </div>
+  );
 }
 
 export function ChatInput({
@@ -20,37 +57,47 @@ export function ChatInput({
   templateSlot,
 }: ChatInputProps) {
   const [text, setText] = useState("");
-  const [attachedFiles, setAttachedFiles] = useState<File[]>([]);
+  const [items, setItems] = useState<AttachedItem[]>([]);
   const [isDragging, setIsDragging] = useState(false);
-  const [docxWarning, setDocxWarning] = useState(false);
 
-  const anyFileRef = useRef<HTMLInputElement>(null);
-  const imageRef = useRef<HTMLInputElement>(null);
-  const docRef = useRef<HTMLInputElement>(null);
+  const fileRef = useRef<HTMLInputElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
 
   const addFiles = useCallback((incoming: FileList | File[]) => {
     const arr = Array.from(incoming);
-    const docx = arr.filter((f) => f.name.endsWith(".docx") || f.name.endsWith(".doc"));
-    const valid = arr.filter((f) => !f.name.endsWith(".docx") && !f.name.endsWith(".doc"));
-    if (docx.length > 0) {
-      setDocxWarning(true);
-      setTimeout(() => setDocxWarning(false), 4000);
-    }
-    if (valid.length === 0) return;
-    setAttachedFiles((prev) => {
-      const names = new Set(prev.map((f) => f.name));
-      return [...prev, ...valid.filter((f) => !names.has(f.name))];
+    setItems((prev) => {
+      const names = new Set(prev.map((i) => i.file.name));
+      const newItems: AttachedItem[] = arr
+        .filter((f) => !names.has(f.name))
+        .map((f) => ({
+          file: f,
+          previewUrl: f.type.startsWith("image/") ? URL.createObjectURL(f) : undefined,
+        }));
+      return [...prev, ...newItems];
     });
   }, []);
 
-  const removeFile = (idx: number) => setAttachedFiles((prev) => prev.filter((_, i) => i !== idx));
+  const removeItem = (idx: number) => {
+    setItems((prev) => {
+      const item = prev[idx];
+      if (item?.previewUrl) URL.revokeObjectURL(item.previewUrl);
+      return prev.filter((_, i) => i !== idx);
+    });
+  };
+
+  useEffect(() => {
+    return () => {
+      items.forEach((i) => { if (i.previewUrl) URL.revokeObjectURL(i.previewUrl); });
+    };
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   const handleSend = () => {
-    if (!text.trim() && attachedFiles.length === 0) return;
-    onSend(text.trim(), attachedFiles.length > 0 ? attachedFiles : undefined);
+    if (!text.trim() && items.length === 0) return;
+    const files = items.map((i) => i.file);
+    onSend(text.trim(), files.length > 0 ? files : undefined);
     setText("");
-    setAttachedFiles([]);
+    items.forEach((i) => { if (i.previewUrl) URL.revokeObjectURL(i.previewUrl); });
+    setItems([]);
     if (textareaRef.current) textareaRef.current.style.height = "auto";
   };
 
@@ -72,39 +119,83 @@ export function ChatInput({
     if (e.dataTransfer.files.length > 0) addFiles(e.dataTransfer.files);
   };
 
-  const canSend = (text.trim().length > 0 || attachedFiles.length > 0) && !disabled;
+  const canSend = (text.trim().length > 0 || items.length > 0) && !disabled;
 
   return (
     <div
-      className={cn("mx-4 mb-4 rounded-xl transition-all", isDragging && "ring-2 ring-violet-500")}
+      className={cn("mx-4 mb-4 rounded-2xl transition-all", isDragging && "ring-2 ring-violet-400")}
       style={{ background: "#fff", border: "1px solid #e9d5ff" }}
       onDragOver={onDragOver}
       onDragLeave={onDragLeave}
       onDrop={onDrop}
     >
-      {/* DOCX warning */}
-      {docxWarning && (
-        <div className="mx-3 mt-2 px-3 py-1.5 rounded-lg text-xs" style={{ background: "#fef3c7", color: "#92400e", border: "1px solid #fde68a" }}>
-          Fichiers Word non supportés — convertis en PDF pour que je puisse le lire.
-        </div>
-      )}
-
-      {/* File chips */}
-      {attachedFiles.length > 0 && (
-        <div className="flex flex-wrap gap-1.5 px-3 pt-2.5">
-          {attachedFiles.map((file, idx) => (
-            <div
-              key={idx}
-              className="flex items-center gap-1.5 px-2 py-1 rounded-lg text-xs"
-              style={{ background: "#f5f0ff", color: "#7c3aed", border: "1px solid #ede9fe" }}
-            >
-              <FileText className="w-3 h-3 shrink-0" />
-              <span className="max-w-[120px] truncate">{file.name}</span>
-              <button onClick={() => removeFile(idx)} className="ml-0.5 hover:text-white transition-colors">
-                <X className="w-2.5 h-2.5" />
-              </button>
-            </div>
-          ))}
+      {/* File cards row */}
+      {items.length > 0 && (
+        <div className="flex flex-wrap gap-2 px-3 pt-3">
+          {items.map((item, idx) =>
+            item.previewUrl ? (
+              /* Image thumbnail card */
+              <div
+                key={idx}
+                className="relative rounded-xl overflow-hidden shrink-0"
+                style={{ width: 130, height: 88 }}
+              >
+                <img
+                  src={item.previewUrl}
+                  alt={item.file.name}
+                  className="w-full h-full object-cover"
+                />
+                <div
+                  className="absolute bottom-0 left-0 right-0 px-1.5 py-0.5 text-[10px] truncate"
+                  style={{ background: "rgba(0,0,0,0.52)", color: "#fff" }}
+                >
+                  {item.file.name}
+                </div>
+                <button
+                  onClick={() => removeItem(idx)}
+                  className="absolute top-1.5 right-1.5 w-5 h-5 rounded-full flex items-center justify-center cursor-pointer transition-opacity hover:opacity-80"
+                  style={{ background: "rgba(0,0,0,0.55)" }}
+                >
+                  <X className="w-2.5 h-2.5 text-white" />
+                </button>
+              </div>
+            ) : (
+              /* Document card */
+              <div
+                key={idx}
+                className="relative flex items-center gap-2.5 px-3 py-2.5 rounded-xl shrink-0"
+                style={{
+                  background: "#f9f6ff",
+                  border: "1px solid #ede9fe",
+                  minWidth: 160,
+                  maxWidth: 220,
+                }}
+              >
+                <FileTypeIcon file={item.file} />
+                <div className="min-w-0 flex-1">
+                  <div
+                    className="text-xs font-medium truncate"
+                    style={{ color: "#1e1b4b", maxWidth: 130 }}
+                    title={item.file.name}
+                  >
+                    {item.file.name}
+                  </div>
+                  <div className="text-[10px] mt-0.5" style={{ color: "#9ca3af" }}>
+                    {item.file.size < 1024 * 1024
+                      ? `${(item.file.size / 1024).toFixed(0)} KB`
+                      : `${(item.file.size / (1024 * 1024)).toFixed(1)} MB`}
+                  </div>
+                </div>
+                <button
+                  onClick={() => removeItem(idx)}
+                  className="absolute top-1.5 right-1.5 w-4 h-4 rounded-full flex items-center justify-center cursor-pointer transition-colors hover:opacity-70"
+                  style={{ background: "#ddd6fe" }}
+                >
+                  <X className="w-2.5 h-2.5" style={{ color: "#7c3aed" }} />
+                </button>
+              </div>
+            )
+          )}
         </div>
       )}
 
@@ -130,45 +221,43 @@ export function ChatInput({
 
       {/* Bottom toolbar */}
       <div className="flex items-center justify-between px-3 pb-3 mt-1">
-        <div className="flex items-center gap-0.5">
-          {templateSlot && (
-            <>
-              {templateSlot}
-              <div className="w-px h-4 mx-1" style={{ background: "#e9d5ff" }} />
-            </>
-          )}
-          {/* Hidden inputs */}
-          <input ref={anyFileRef} type="file" multiple className="hidden" onChange={(e) => e.target.files && addFiles(e.target.files)} />
-          <input ref={imageRef} type="file" multiple accept="image/*" className="hidden" onChange={(e) => e.target.files && addFiles(e.target.files)} />
-          <input ref={docRef} type="file" multiple accept=".pdf,.txt,.csv,.md" className="hidden" onChange={(e) => e.target.files && addFiles(e.target.files)} />
-
-          {[
-            { icon: <Paperclip className="w-4 h-4" />, ref: anyFileRef, title: "Joindre" },
-            { icon: <Image className="w-4 h-4" />, ref: imageRef, title: "Image" },
-            { icon: <FileText className="w-4 h-4" />, ref: docRef, title: "Document" },
-          ].map(({ icon, ref, title }) => (
-            <button
-              key={title}
-              type="button"
-              title={title}
-              onClick={() => ref.current?.click()}
-              className="p-1.5 rounded-lg transition-colors"
-              style={{ color: "#a78bfa" }}
-              onMouseEnter={(e) => (e.currentTarget.style.color = "#7c3aed")}
-              onMouseLeave={(e) => (e.currentTarget.style.color = "#a78bfa")}
-            >
-              {icon}
-            </button>
-          ))}
+        <div className="flex items-center gap-1.5">
+          {templateSlot}
+          <input
+            ref={fileRef}
+            type="file"
+            multiple
+            className="hidden"
+            onChange={(e) => e.target.files && addFiles(e.target.files)}
+          />
+          <button
+            type="button"
+            title="Joindre un fichier (image, PDF, Word…)"
+            onClick={() => fileRef.current?.click()}
+            disabled={disabled}
+            className="w-7 h-7 rounded-lg flex items-center justify-center cursor-pointer transition-all disabled:opacity-40"
+            style={{ color: "#9ca3af", border: "1px solid #e5e7eb", background: "#f9fafb" }}
+            onMouseEnter={(e) => {
+              e.currentTarget.style.color = "#7c3aed";
+              e.currentTarget.style.borderColor = "#a78bfa";
+              e.currentTarget.style.background = "#f5f0ff";
+            }}
+            onMouseLeave={(e) => {
+              e.currentTarget.style.color = "#9ca3af";
+              e.currentTarget.style.borderColor = "#e5e7eb";
+              e.currentTarget.style.background = "#f9fafb";
+            }}
+          >
+            <Plus className="w-3.5 h-3.5" />
+          </button>
         </div>
 
         {isGenerating ? (
-          // Stop button (filled square) — shown while agent is running (Replit pattern)
           <button
             onClick={onAbort}
-            className="w-8 h-8 rounded-lg flex items-center justify-center transition-all"
-            style={{ background: "#7c3aed", border: "none" }}
-            title="Arrêter la génération"
+            className="w-8 h-8 rounded-lg flex items-center justify-center cursor-pointer transition-all"
+            style={{ background: "#7c3aed" }}
+            title="Arrêter"
           >
             <Square className="w-3.5 h-3.5 text-white fill-white" />
           </button>
@@ -176,10 +265,12 @@ export function ChatInput({
           <button
             onClick={handleSend}
             disabled={!canSend}
-            className="w-8 h-8 rounded-lg flex items-center justify-center transition-all disabled:opacity-30"
+            className="w-8 h-8 rounded-lg flex items-center justify-center transition-all"
             style={{
+              cursor: canSend ? "pointer" : "not-allowed",
               background: canSend ? "linear-gradient(135deg,#7c3aed,#a855f7)" : "#f3f4f6",
               border: canSend ? "none" : "1px solid #e5e7eb",
+              opacity: canSend ? 1 : 0.4,
             }}
           >
             <ArrowUp className="w-4 h-4 text-white" />
