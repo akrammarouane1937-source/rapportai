@@ -16,7 +16,7 @@ type TextBlock     = { type: "text"; text: string };
 type ImageBlock    = { type: "image"; source: { type: "base64"; media_type: string; data: string } };
 type DocumentBlock =
   | { type: "document"; source: { type: "base64"; media_type: string; data: string }; title?: string }
-  | { type: "document"; source: { type: "text"; data: string }; title?: string };
+  | { type: "document"; source: { type: "text"; media_type: "text/plain"; data: string }; title?: string };
 
 export type ContentBlock = TextBlock | ImageBlock | DocumentBlock;
 
@@ -89,7 +89,7 @@ async function processFiles(files: File[]): Promise<ContentBlock[]> {
       const text = await file.text();
       blocks.push({
         type: "document",
-        source: { type: "text", data: text },
+        source: { type: "text", media_type: "text/plain", data: text },
         title: file.name,
       });
     } else if (
@@ -141,7 +141,7 @@ async function processFiles(files: File[]): Promise<ContentBlock[]> {
         if (textResult.value.trim()) {
           blocks.push({
             type: "document",
-            source: { type: "text", data: textResult.value },
+            source: { type: "text", media_type: "text/plain", data: textResult.value },
             title: file.name,
           });
         }
@@ -154,7 +154,7 @@ async function processFiles(files: File[]): Promise<ContentBlock[]> {
           const arrayBuffer = await file.arrayBuffer();
           const result = await mammoth.extractRawText({ arrayBuffer });
           if (result.value.trim()) {
-            blocks.push({ type: "document", source: { type: "text", data: result.value }, title: file.name });
+            blocks.push({ type: "document", source: { type: "text", media_type: "text/plain", data: result.value }, title: file.name });
           }
         } catch { /* skip */ }
       }
