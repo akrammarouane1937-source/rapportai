@@ -98,20 +98,65 @@ async function processFiles(files: File[]): Promise<ContentBlock[]> {
       file.type === "application/vnd.openxmlformats-officedocument.wordprocessingml.document" ||
       file.type === "application/msword"
     ) {
-      // Extract raw text from Word documents using mammoth
+      // Render DOCX visually → screenshot → send as image so Claude sees layout,
+      // colors, logo placement exactly. Also send extracted text for field names.
       try {
-        const mammoth = await import("mammoth");
+        const mammoth = await import("mammoth") as unknown as {
+          convertToHtml: (opts: { arrayBuffer: ArrayBuffer; convertImage: unknown }) => Promise<{ value: string }>;
+          extractRawText: (opts: { arrayBuffer: ArrayBuffer }) => Promise<{ value: string }>;
+          images: { imgElement: (fn: (img: { contentType: string; read: (enc: string) => Promise<string> }) => Promise<{ src: string }>) => unknown };
+        };
         const arrayBuffer = await file.arrayBuffer();
-        const result = await (mammoth as unknown as { extractRawText: (opts: { arrayBuffer: ArrayBuffer }) => Promise<{ value: string }> }).extractRawText({ arrayBuffer });
-        if (result.value.trim()) {
+
+        // Build HTML with embedded images (logos, decorations)
+        const htmlResult = await mammoth.convertToHtml({
+          arrayBuffer,
+          convertImage: mammoth.images.imgElement(async (image) => {
+            const data = await image.read("base64");
+            return { src: `data:${image.contentType};base64,${data}` };
+          }),
+        });
+
+        // Render in an off-screen div and screenshot with html2canvas
+        const container = document.createElement("div");
+        container.style.cssText =
+          "position:fixed;left:-9999px;top:0;width:794px;min-height:500px;" +
+          "background:#fff;padding:60px 72px;font-family:'Times New Roman',serif;" +
+          "font-size:14px;line-height:1.6;color:#000;";
+        container.innerHTML = htmlResult.value;
+        document.body.appendChild(container);
+
+        const h2c = await import("html2canvas");
+        const canvas = await h2c.default(container, { scale: 1.5, useCORS: true, logging: false });
+        document.body.removeChild(container);
+
+        const jpeg = canvas.toDataURL("image/jpeg", 0.88).split(",")[1];
+        blocks.push({
+          type: "image",
+          source: { type: "base64", media_type: "image/jpeg", data: jpeg },
+        });
+
+        // Also include extracted text so Claude can read exact field values
+        const textResult = await mammoth.extractRawText({ arrayBuffer });
+        if (textResult.value.trim()) {
           blocks.push({
             type: "document",
-            source: { type: "text", data: result.value },
+            source: { type: "text", data: textResult.value },
             title: file.name,
           });
         }
       } catch {
-        // skip silently if extraction fails
+        // Fallback: text-only if screenshot fails
+        try {
+          const mammoth = await import("mammoth") as unknown as {
+            extractRawText: (opts: { arrayBuffer: ArrayBuffer }) => Promise<{ value: string }>;
+          };
+          const arrayBuffer = await file.arrayBuffer();
+          const result = await mammoth.extractRawText({ arrayBuffer });
+          if (result.value.trim()) {
+            blocks.push({ type: "document", source: { type: "text", data: result.value }, title: file.name });
+          }
+        } catch { /* skip */ }
       }
     }
   }
