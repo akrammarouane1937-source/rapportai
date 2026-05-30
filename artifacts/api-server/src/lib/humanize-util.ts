@@ -5,14 +5,13 @@ import { logger } from "./logger";
 
 const client = new Anthropic();
 
-// Every prose content section is humanized — no exceptions.
-// "abstract" and "sommaire" are intentionally included.
-// "page-de-garde" (HTML layout), "abbreviations" (JSON), "keywords", "problematique",
-// "contexte" are excluded — they are structured/short data, not prose.
+// Every content section is humanized — no exceptions.
+// "abbreviations" (JSON array) and "keywords", "problematique", "contexte"
+// (short utility outputs) are excluded — they are structured/non-prose data.
 const HUMANIZE_SECTIONS = new Set([
   "introduction", "partie-i", "partie-ii", "conclusion",
   "resume", "abstract", "dedicaces", "remerciements",
-  "bibliographie", "sommaire", "section",
+  "bibliographie", "sommaire", "page-de-garde", "section",
 ]);
 
 // Max words per chunk — Haiku handles 2000 words comfortably in one shot
