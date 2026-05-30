@@ -6,6 +6,7 @@ import { generateDocx, downloadBlob } from "@/lib/generateDocx";
 import { generatePdf } from "@/lib/generatePdf";
 import { Download, FileText, Maximize2, Minimize2, Copy, CheckCheck, Loader2, Share2, Pencil, Eye } from "lucide-react";
 import { API_BASE } from "@/lib/apiBase";
+import type { Components } from "react-markdown";
 
 interface PreviewPanelProps {
   activeSection: string;
@@ -24,6 +25,44 @@ const SECTIONS = [
   { id: "partie-ii",     field: "partieII",      label: "Partie II" },
   { id: "conclusion",    field: "conclusion",    label: "Conclusion" },
 ];
+
+// Custom components for the cover page — no inline <style> tag, no broken images
+const coverComponents: Components = {
+  h1: ({ children }) => (
+    <h1 style={{ fontSize: "16pt", fontWeight: 700, margin: "0.4cm 0", letterSpacing: "-0.01em" }}>
+      {children}
+    </h1>
+  ),
+  h2: ({ children }) => (
+    <h2 style={{ fontSize: "13pt", fontWeight: 600, margin: "0.3cm 0" }}>{children}</h2>
+  ),
+  h3: ({ children }) => (
+    <h3 style={{ fontSize: "12pt", fontWeight: 600, margin: "0.25cm 0" }}>{children}</h3>
+  ),
+  p: ({ children }) => <p style={{ margin: "0.2cm 0" }}>{children}</p>,
+  hr: () => (
+    <hr style={{ border: "none", borderTop: "1px solid #d1d5db", margin: "0.5cm auto", width: "60%" }} />
+  ),
+  strong: ({ children }) => <strong style={{ fontWeight: 700 }}>{children}</strong>,
+  em: ({ children }) => <em style={{ fontStyle: "italic" }}>{children}</em>,
+  // Replace broken image markdown (![...](...)) with a styled placeholder — never shows raw syntax
+  img: ({ alt }) => (
+    <div
+      style={{
+        display: "inline-block",
+        border: "1px dashed #d1d5db",
+        borderRadius: 6,
+        padding: "6px 14px",
+        color: "#9ca3af",
+        fontSize: "10pt",
+        background: "#f9fafb",
+        margin: "4px 0",
+      }}
+    >
+      {alt || "Logo École"}
+    </div>
+  ),
+};
 
 function splitIntoPages(text: string, wordsPerPage = 420): string[] {
   if (!text?.trim()) return [];
@@ -56,12 +95,36 @@ export function PreviewPanel({ activeSection, content }: PreviewPanelProps) {
   const [shareUrl, setShareUrl] = useState<string | null>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
 
-  // Scroll to active section when it changes
+  // Track whether active section already had content (to detect transition empty→non-empty)
+  const hadContentRef = useRef(false);
+
+  // Scroll to active section when it changes (step navigation)
   useEffect(() => {
-    if (!scrollRef.current) return;
-    const el = scrollRef.current.querySelector(`[data-section="${activeSection}"]`);
-    if (el) el.scrollIntoView({ behavior: "smooth", block: "start" });
+    hadContentRef.current = false; // reset on step change
+    const frame = requestAnimationFrame(() => {
+      if (!scrollRef.current) return;
+      const el = scrollRef.current.querySelector(`[data-section="${activeSection}"]`);
+      if (el) el.scrollIntoView({ behavior: "smooth", block: "start" });
+    });
+    return () => cancelAnimationFrame(frame);
   }, [activeSection]);
+
+  // Re-scroll when content appears for the first time after generation
+  const activeField = SECTIONS.find((s) => s.id === activeSection)?.field;
+  const activeSectionContent = activeField
+    ? (report as unknown as Record<string, string>)[activeField] || ""
+    : "";
+
+  useEffect(() => {
+    if (!activeSectionContent || hadContentRef.current) return;
+    hadContentRef.current = true;
+    const timer = setTimeout(() => {
+      if (!scrollRef.current) return;
+      const el = scrollRef.current.querySelector(`[data-section="${activeSection}"]`);
+      if (el) el.scrollIntoView({ behavior: "smooth", block: "start" });
+    }, 120);
+    return () => clearTimeout(timer);
+  }, [activeSectionContent, activeSection]);
 
   // Total words across all generated sections
   const allText = SECTIONS.map(({ field }) => (report as unknown as Record<string, string>)[field] || "").join(" ");
@@ -114,10 +177,48 @@ export function PreviewPanel({ activeSection, content }: PreviewPanelProps) {
   let pageNumber = 1;
   const allPageCards: React.ReactNode[] = [];
 
-  for (const { id, field } of SECTIONS) {
+  for (const { id, field, label } of SECTIONS) {
     const text = id === activeSection && content
       ? content
       : (report as unknown as Record<string, string>)[field] || "";
+
+    const isActive = id === activeSection;
+
+    // Active section accent: left border + faint tint
+    const activeAccent: React.CSSProperties = isActive
+      ? { borderLeft: "3px solid #7c3aed", background: "#faf5ff" }
+      : {};
+
+    // ── Placeholder card: active section with no content yet ──────────────────
+    if (!text.trim() && isActive) {
+      allPageCards.push(
+        <div
+          key={`${id}-placeholder`}
+          data-section={id}
+          style={{
+            width: "21cm",
+            maxWidth: "100%",
+            minHeight: "12cm",
+            boxShadow: "0 2px 12px rgba(0,0,0,0.10)",
+            marginBottom: "0.6cm",
+            borderRadius: 2,
+            display: "flex",
+            flexDirection: "column",
+            alignItems: "center",
+            justifyContent: "center",
+            gap: 10,
+            border: "2px dashed #c4b5fd",
+            background: "#faf5ff",
+          }}
+        >
+          <Loader2 style={{ width: 20, height: 20, color: "#a855f7", animation: "spin 1s linear infinite" }} className="animate-spin" />
+          <span style={{ fontSize: 13, color: "#7c3aed", fontStyle: "italic" }}>
+            En cours de génération — {label}…
+          </span>
+        </div>
+      );
+      continue;
+    }
 
     if (!text.trim()) continue;
 
@@ -127,7 +228,6 @@ export function PreviewPanel({ activeSection, content }: PreviewPanelProps) {
         <div
           key="page-de-garde"
           data-section="page-de-garde"
-          className="bg-white relative flex flex-col"
           style={{
             width: "21cm",
             maxWidth: "100%",
@@ -136,36 +236,23 @@ export function PreviewPanel({ activeSection, content }: PreviewPanelProps) {
             marginBottom: "0.6cm",
             fontFamily: "Times New Roman, Times, serif",
             fontSize: "12pt",
-            lineHeight: "1.6",
+            lineHeight: 1.6,
             color: "#111",
             padding: "2cm 2.5cm",
+            background: "#fff",
+            position: "relative",
+            display: "flex",
+            flexDirection: "column",
+            ...activeAccent,
           }}
         >
           {/* Top accent bar */}
           <div style={{ height: 4, background: "linear-gradient(90deg,#7c3aed,#a855f7)", borderRadius: 2, marginBottom: "1.2cm" }} />
 
-          <div
-            className="flex-1 flex flex-col items-center"
-            style={{ textAlign: "center" }}
-          >
-            <div
-              className="cover-page-content w-full"
-              style={{
-                ["--cover-h1-size" as string]: "16pt",
-                ["--cover-h2-size" as string]: "13pt",
-              }}
-            >
-              <style>{`
-                .cover-page-content h1 { font-size: 16pt; font-weight: 700; margin: 0.4cm 0; letter-spacing: -0.01em; }
-                .cover-page-content h2 { font-size: 13pt; font-weight: 600; margin: 0.3cm 0; }
-                .cover-page-content h3 { font-size: 12pt; font-weight: 600; margin: 0.25cm 0; }
-                .cover-page-content p  { margin: 0.2cm 0; }
-                .cover-page-content hr { border: none; border-top: 1px solid #d1d5db; margin: 0.5cm auto; width: 60%; }
-                .cover-page-content strong { font-weight: 700; }
-                .cover-page-content em { font-style: italic; }
-              `}</style>
-              <ReactMarkdown remarkPlugins={[remarkGfm]}>{text}</ReactMarkdown>
-            </div>
+          <div style={{ flex: 1, display: "flex", flexDirection: "column", alignItems: "center", textAlign: "center" }}>
+            <ReactMarkdown remarkPlugins={[remarkGfm]} components={coverComponents}>
+              {text}
+            </ReactMarkdown>
           </div>
 
           {/* Bottom accent bar */}
@@ -194,14 +281,23 @@ export function PreviewPanel({ activeSection, content }: PreviewPanelProps) {
             marginBottom: "0.6cm",
             fontFamily: "Times New Roman, Times, serif",
             fontSize: "12pt",
-            lineHeight: "1.5",
+            lineHeight: 1.5,
             color: "#111",
+            ...(pageIdx === 0 ? activeAccent : {}),
           }}
         >
           <ReactMarkdown remarkPlugins={[remarkGfm]}>{pageText}</ReactMarkdown>
           <div
-            className="absolute bottom-4 left-0 right-0 text-center text-xs"
-            style={{ color: "#9ca3af", fontFamily: "Times New Roman, serif" }}
+            style={{
+              position: "absolute",
+              bottom: 16,
+              left: 0,
+              right: 0,
+              textAlign: "center",
+              fontSize: 11,
+              color: "#9ca3af",
+              fontFamily: "Times New Roman, serif",
+            }}
           >
             {pn}
           </div>
@@ -210,7 +306,7 @@ export function PreviewPanel({ activeSection, content }: PreviewPanelProps) {
     }
   }
 
-  // If nothing generated yet, show empty first page
+  // If nothing generated yet and no active placeholder, show empty first page
   if (allPageCards.length === 0) {
     allPageCards.push(
       <div
@@ -277,19 +373,16 @@ export function PreviewPanel({ activeSection, content }: PreviewPanelProps) {
 
         {/* Actions */}
         <div className="flex items-center gap-2">
-          {/* Copy section */}
           <button style={btnBase} onClick={handleCopy} title="Copier la section active">
             {copied ? <CheckCheck style={{ width: 13, height: 13, color: "#16a34a" }} /> : <Copy style={{ width: 13, height: 13 }} />}
             {copied ? "Copié !" : "Copier"}
           </button>
 
-          {/* Share */}
           <button style={btnBase} onClick={handleShare} disabled={sharing} title="Lien de partage">
             {sharing ? <Loader2 style={{ width: 13, height: 13 }} className="animate-spin" /> : <Share2 style={{ width: 13, height: 13 }} />}
             Partager
           </button>
 
-          {/* PDF */}
           <button
             style={{ ...btnBase, background: "#fef2f2", borderColor: "#fecaca", color: "#dc2626" }}
             onClick={handlePdf}
@@ -299,7 +392,6 @@ export function PreviewPanel({ activeSection, content }: PreviewPanelProps) {
             PDF
           </button>
 
-          {/* Word */}
           <button
             style={{ ...btnBase, background: exportingDocx ? "#ede9fe" : "linear-gradient(135deg,#7c3aed,#a855f7)", borderColor: "transparent", color: "#fff" }}
             onClick={handleDocx}
@@ -310,7 +402,6 @@ export function PreviewPanel({ activeSection, content }: PreviewPanelProps) {
             {exportingDocx ? "Export..." : "Word .docx"}
           </button>
 
-          {/* Edit toggle */}
           <button
             style={{ ...btnBase, ...(editMode ? { background: "#ecfdf5", borderColor: "#a7f3d0", color: "#059669" } : {}) }}
             onClick={() => setEditMode((v) => !v)}
@@ -320,7 +411,6 @@ export function PreviewPanel({ activeSection, content }: PreviewPanelProps) {
             {editMode ? "Aperçu" : "Modifier"}
           </button>
 
-          {/* Fullscreen */}
           <button
             style={{ ...btnBase, padding: "6px 8px" }}
             onClick={() => setFullscreen((v) => !v)}
