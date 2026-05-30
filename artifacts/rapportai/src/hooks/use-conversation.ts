@@ -10,12 +10,19 @@ export interface ConvMsg {
   content: string | ReactNode;
 }
 
+export interface TemplateFile {
+  name: string;
+  data?: string;      // base64 for PDF; omitted for DOCX
+  mimeType?: string;
+}
+
 interface UseConversationOpts {
   step: number;
   initialMessage?: string;
   autoSend?: string;
   onSectionGenerated: (section: string, content: string) => void;
   onStepComplete: () => void;
+  templateFile?: TemplateFile;
 }
 
 export const SECTION_LABELS: Record<string, string> = {
@@ -42,6 +49,7 @@ export function useConversation({
   autoSend,
   onSectionGenerated,
   onStepComplete,
+  templateFile,
 }: UseConversationOpts) {
   const { report } = useReportStore();
 
@@ -114,6 +122,7 @@ export function useConversation({
             step,
             profile: report,
             generatedSections,
+            templateFile,
           }),
           signal: ctrl.signal,
         });

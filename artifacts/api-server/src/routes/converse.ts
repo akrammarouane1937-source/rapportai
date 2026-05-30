@@ -22,10 +22,11 @@ Mission : page de garde. Tu as le profil. Il te manque : encadrant pédagogique 
 Comment tu te comportes :
 - Tu RÉAGIS à ce que dit l'étudiant. "C'est FIKRI" → "Ah FIKRI, parfait." Jamais juste "noté".
 - Une seule info manquante à la fois. Pas de liste de questions.
-- L'étudiant donne tout d'un coup → tu captures tout, tu régénères pas les questions.
+- L'étudiant donne tout d'un coup → tu captures tout, tu ne re-demandes pas.
 - Tu as l'encadrant pédago → tu génères IMMÉDIATEMENT. Pas de "parfait, je génère" — tu génères et c'est tout.
 - "génère", "vas-y", "peu importe", "je sais pas", "laisse tomber" → génère avec ce que tu as.
 - Tu ne demandes JAMAIS de confirmation avant de générer.
+- Si l'étudiant a joint un modèle de page de garde (indiqué dans le profil "Modèle fourni") → utilise-le comme référence de mise en page dans l'argument "context" de generate_section.
 
 Action : generate_section("page-de-garde") avec context = tout ce qui a été dit. Puis step_complete.`,
 
@@ -110,12 +111,78 @@ const TOOLS = [
   },
 ];
 
-// ─── Server-side page de garde generation (no SDK required) ──────────────────
+// ─── Fallback page de garde (pure string interpolation — always works) ────────
+
+function buildFallbackPageDeGarde(
+  profile: Record<string, string>,
+  templateName?: string,
+): string {
+  const theme    = profile.theme        || "Rapport Académique";
+  const type     = profile.reportType   || "Rapport";
+  const name     = profile.studentName  || "";
+  const school   = profile.school       || "";
+  const filiere  = profile.filiere      || "";
+  const year     = profile.academicYear || "";
+  const encPeda  = profile.encadrantPeda || "";
+  const encPro   = profile.encadrantPro  || "";
+  const entreprise = profile.entreprise || "";
+  const jury1    = profile.juryMember1  || "";
+  const jury2    = profile.juryMember2  || "";
+  const debut    = profile.dateDebutStage || "";
+  const fin      = profile.dateFinStage   || "";
+
+  const lines: string[] = [];
+
+  lines.push(`# ${theme}`);
+  lines.push("");
+  lines.push(`**${type}**`);
+  lines.push("");
+  lines.push("---");
+  lines.push("");
+
+  if (name)   lines.push(`**Présenté par :** ${name}`);
+  if (filiere) lines.push(`**Filière :** ${filiere}`);
+  if (school)  lines.push(`**École :** ${school}`);
+
+  lines.push("");
+  lines.push("---");
+  lines.push("");
+
+  if (encPeda) lines.push(`**Encadrant pédagogique :** ${encPeda}`);
+  if (encPro) {
+    const lieu = entreprise ? ` — ${entreprise}` : "";
+    lines.push(`**Encadrant professionnel :** ${encPro}${lieu}`);
+  }
+  if (jury1 || jury2) {
+    lines.push(`**Jury :** ${[jury1, jury2].filter(Boolean).join(", ")}`);
+  }
+
+  if (debut || fin) {
+    const periode = [debut, fin].filter(Boolean).join(" – ");
+    lines.push(`**Période de stage :** ${periode}`);
+  }
+
+  lines.push("");
+  lines.push("---");
+  lines.push("");
+
+  if (year) lines.push(`**Année universitaire :** ${year}`);
+  if (templateName) lines.push(`*(Modèle : ${templateName})*`);
+
+  return lines.filter((_, i, arr) => {
+    // Collapse triple blank lines
+    if (arr[i] === "" && arr[i - 1] === "" && arr[i - 2] === "") return false;
+    return true;
+  }).join("\n");
+}
+
+// ─── Server-side page de garde generation ────────────────────────────────────
 
 async function generatePageDeGarde(
   profile: Record<string, string>,
   context: string,
   apiKey: string,
+  templateFile?: { name: string; data?: string; mimeType?: string },
 ): Promise<string> {
   const profileLines = [
     profile.studentName    && `- Nom : ${profile.studentName}`,
@@ -132,10 +199,13 @@ async function generatePageDeGarde(
     profile.dateFinStage   && `- Fin de stage : ${profile.dateFinStage}`,
     profile.juryMember1    && `- Jury 1 : ${profile.juryMember1}`,
     profile.juryMember2    && `- Jury 2 : ${profile.juryMember2}`,
-    profile.problematique  && `- Problématique : ${profile.problematique}`,
   ].filter(Boolean).join("\n");
 
-  const prompt = `Tu es un expert en rédaction de rapports académiques marocains (PFE, stage, mémoire). Génère la PAGE DE GARDE complète en Markdown.
+  const templateNote = templateFile?.name
+    ? `\nMODÈLE FOURNI PAR L'ÉTUDIANT : "${templateFile.name}" — respecte la structure de mise en page de ce modèle.`
+    : "";
+
+  const textPrompt = `Tu es un expert en rédaction de rapports académiques marocains (PFE, stage, mémoire). Génère la PAGE DE GARDE complète en Markdown.${templateNote}
 
 PROFIL ÉTUDIANT :
 ${profileLines}
@@ -155,6 +225,21 @@ INSTRUCTIONS :
 - Format Markdown uniquement, pas d'emojis, pas de commentaires, pas d'introduction
 - Retourne UNIQUEMENT le contenu de la page de garde`;
 
+  // Build Anthropic message — include PDF template as document if available
+  type ContentBlock =
+    | { type: "text"; text: string }
+    | { type: "document"; source: { type: "base64"; media_type: string; data: string } };
+
+  const userContent: ContentBlock[] = [];
+
+  if (templateFile?.data && templateFile.mimeType === "application/pdf") {
+    userContent.push({
+      type: "document",
+      source: { type: "base64", media_type: "application/pdf", data: templateFile.data },
+    });
+  }
+  userContent.push({ type: "text", text: textPrompt });
+
   try {
     const res = await fetch(ANTHROPIC_API, {
       method: "POST",
@@ -165,21 +250,26 @@ INSTRUCTIONS :
       },
       body: JSON.stringify({
         model: "claude-haiku-4-5",
-        max_tokens: 1000,
-        messages: [{ role: "user", content: prompt }],
+        max_tokens: 1200,
+        messages: [{ role: "user", content: userContent.length === 1 ? textPrompt : userContent }],
       }),
     });
 
-    if (!res.ok) return "";
+    if (!res.ok) {
+      return buildFallbackPageDeGarde(profile, templateFile?.name);
+    }
 
     const data = await res.json() as { content: Array<{ type: string; text?: string }> };
-    return data.content
+    const generated = data.content
       .filter((b) => b.type === "text")
       .map((b) => b.text ?? "")
       .join("")
       .trim();
+
+    // Always return something — fallback to profile interpolation if AI returned empty
+    return generated || buildFallbackPageDeGarde(profile, templateFile?.name);
   } catch {
-    return "";
+    return buildFallbackPageDeGarde(profile, templateFile?.name);
   }
 }
 
@@ -191,11 +281,13 @@ router.post("/converse", async (req: Request, res: Response) => {
     step,
     profile = {},
     generatedSections = [],
+    templateFile,
   } = req.body as {
     messages: { role: "user" | "assistant"; content: string }[];
     step: number;
     profile: Record<string, string>;
     generatedSections: string[];
+    templateFile?: { name: string; data?: string; mimeType?: string };
   };
 
   // Keep context bounded: preserve the first 4 turns (often contain key details
@@ -219,6 +311,11 @@ router.post("/converse", async (req: Request, res: Response) => {
 
   const stepSystem = STEP_SYSTEMS[step] ?? "Tu es l'assistant de RapportAI. Aide l'étudiant en français.";
 
+  // Build the profile section — include template indicator if one was provided
+  const templateLine = templateFile?.name
+    ? `- Modèle fourni : ${templateFile.name}`
+    : "";
+
   const system = `${stepSystem}
 
 ━━━ PROFIL COMPLET DE L'ÉTUDIANT (DÉJÀ CONNU — NE PAS RE-DEMANDER) ━━━
@@ -237,6 +334,7 @@ ${(profile as Record<string, string>).dateFinStage ? `- Fin stage : ${(profile a
 ${(profile as Record<string, string>).juryMember1 ? `- Jury 1 : ${(profile as Record<string, string>).juryMember1}` : ""}
 ${(profile as Record<string, string>).juryMember2 ? `- Jury 2 : ${(profile as Record<string, string>).juryMember2}` : ""}
 ${(profile as Record<string, string>).problematique ? `- Problématique : ${(profile as Record<string, string>).problematique}` : ""}
+${templateLine}
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
 RÈGLES ABSOLUES :
@@ -332,15 +430,14 @@ IMPORTANT : Réponds toujours en français. Sois naturel et humain, pas robotiqu
 
           if (currentToolName === "generate_section" && toolInput.section === "page-de-garde") {
             // Generate page de garde directly on the server — no SDK binary needed
+            // Always returns something (fallback to profile interpolation if AI fails)
             const content = await generatePageDeGarde(
               profile,
               (toolInput.context as string) ?? "",
               apiKey,
+              templateFile,
             );
-            if (content) {
-              res.write(`data: ${JSON.stringify({ section_content: { section: "page-de-garde", content } })}\n\n`);
-            }
-            // Don't forward this as an action — frontend would try the broken SDK path
+            res.write(`data: ${JSON.stringify({ section_content: { section: "page-de-garde", content } })}\n\n`);
           } else {
             res.write(`data: ${JSON.stringify({ action: { type: currentToolName, ...toolInput } })}\n\n`);
           }
