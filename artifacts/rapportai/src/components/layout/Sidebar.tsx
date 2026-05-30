@@ -9,6 +9,7 @@ import {
 import { UpsellModal } from "@/components/report/UpsellModal";
 import { getMyPlan, canUseFeature, PLAN_LIMITS } from "@/lib/userPlan";
 import { getReport } from "@/lib/reportStore";
+import { useReportStore } from "@/lib/store";
 
 const NAV_ITEMS = [
   { icon: Home,          label: "Accueil",            path: "/dashboard",          proFeature: "" },
@@ -68,6 +69,28 @@ export function Sidebar() {
     free: "Gratuit", essentiel: "Essentiel", pro: "Pro", premium: "Premium",
   };
 
+  const STEP_LABELS: Record<number, string> = {
+    1:  "Informations générales",
+    2:  "Page de garde",
+    3:  "Dédicaces & Remerciements",
+    4:  "Résumé & Abstract",
+    5:  "Sommaire",
+    6:  "Introduction",
+    7:  "Partie I",
+    8:  "Partie II",
+    9:  "Conclusion & Bibliographie",
+  };
+
+  const STEP_PATHS: Record<number, string> = {
+    1: "/rapport/step-1", 2: "/rapport/step-2", 3: "/rapport/step-3",
+    4: "/rapport/step-4", 5: "/rapport/step-5", 6: "/rapport/step-6",
+    7: "/rapport/partie-i", 8: "/rapport/partie-ii", 9: "/rapport/step-9",
+  };
+
+  const zustandStep = useReportStore((s) => s.report.currentStep);
+  const currentStepNum: number = zustandStep ?? 1;
+  const currentSection = STEP_LABELS[currentStepNum] ?? null;
+  const currentStepPath = STEP_PATHS[currentStepNum] ?? "/rapport/step-1";
   const hasReport      = !!(report.theme || report.school);
   const pagesUsed      = sectionsWithContent;
   const pagesLimit     = limits.sections === Infinity ? "∞" : limits.sections;
@@ -189,7 +212,7 @@ export function Sidebar() {
               <div className="mx-0.5 mb-1">
                 <p className="text-[10px] font-semibold text-gray-400 uppercase tracking-wider px-2 mb-1">En cours</p>
                 <button
-                  onClick={() => setLocation("/rapports")}
+                  onClick={() => setLocation(currentStepPath)}
                   className="w-full flex items-start gap-2 px-2.5 py-2 rounded-lg hover:bg-purple-50 transition-colors text-left group"
                   style={{ border: "1px solid #ede9fe" }}
                 >
@@ -198,9 +221,19 @@ export function Sidebar() {
                     <p className="text-xs font-medium text-gray-700 truncate group-hover:text-purple-700">
                       {report.theme ?? "Mon rapport"}
                     </p>
-                    <p className="text-[10px] text-gray-400 mt-0.5">
-                      {sectionsWithContent} section{sectionsWithContent !== 1 ? "s" : ""} générée{sectionsWithContent !== 1 ? "s" : ""}
-                    </p>
+                    {currentSection ? (
+                      <p className="text-[10px] mt-0.5 flex items-center gap-1" style={{ color: "#7c3aed" }}>
+                        <span
+                          className="inline-block w-1.5 h-1.5 rounded-full flex-shrink-0"
+                          style={{ background: "#7c3aed" }}
+                        />
+                        {currentSection}
+                      </p>
+                    ) : (
+                      <p className="text-[10px] text-gray-400 mt-0.5">
+                        {sectionsWithContent} section{sectionsWithContent !== 1 ? "s" : ""} générée{sectionsWithContent !== 1 ? "s" : ""}
+                      </p>
+                    )}
                   </div>
                 </button>
               </div>
