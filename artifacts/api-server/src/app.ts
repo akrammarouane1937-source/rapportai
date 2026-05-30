@@ -65,8 +65,8 @@ app.use(
 // Stripe webhook MUST be before express.json() — needs raw body for signature verification
 app.post("/api/webhooks/stripe", express.raw({ type: "application/json" }), stripeWebhookHandler);
 
-app.use(express.json());
-app.use(express.urlencoded({ extended: true }));
+app.use(express.json({ limit: "15mb" }));
+app.use(express.urlencoded({ extended: true, limit: "15mb" }));
 
 // Force UTF-8 charset on all JSON responses so French accents never corrupt
 app.use((_req: Request, res: Response, next: NextFunction) => {

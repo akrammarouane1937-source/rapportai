@@ -120,17 +120,28 @@ async function processFiles(files: File[]): Promise<ContentBlock[]> {
         // Render in an off-screen div and screenshot with html2canvas
         const container = document.createElement("div");
         container.style.cssText =
-          "position:fixed;left:-9999px;top:0;width:794px;min-height:500px;" +
-          "background:#fff;padding:60px 72px;font-family:'Times New Roman',serif;" +
-          "font-size:14px;line-height:1.6;color:#000;";
+          "position:fixed;left:-9999px;top:0;width:700px;" +
+          "background:#fff;padding:40px 56px;font-family:'Times New Roman',serif;" +
+          "font-size:13px;line-height:1.5;color:#000;";
         container.innerHTML = htmlResult.value;
         document.body.appendChild(container);
 
         const h2c = await import("html2canvas");
-        const canvas = await h2c.default(container, { scale: 1.5, useCORS: true, logging: false });
+        const canvas = await h2c.default(container, { scale: 1.0, useCORS: true, logging: false });
         document.body.removeChild(container);
 
-        const jpeg = canvas.toDataURL("image/jpeg", 0.88).split(",")[1];
+        // Resize to max 900px wide to keep base64 payload small (~60-120KB)
+        const MAX_W = 900;
+        let finalCanvas = canvas;
+        if (canvas.width > MAX_W) {
+          const ratio = MAX_W / canvas.width;
+          const resized = document.createElement("canvas");
+          resized.width = MAX_W;
+          resized.height = Math.round(canvas.height * ratio);
+          resized.getContext("2d")?.drawImage(canvas, 0, 0, resized.width, resized.height);
+          finalCanvas = resized;
+        }
+        const jpeg = finalCanvas.toDataURL("image/jpeg", 0.72).split(",")[1];
         blocks.push({
           type: "image",
           source: { type: "base64", media_type: "image/jpeg", data: jpeg },
