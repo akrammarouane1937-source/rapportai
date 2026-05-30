@@ -93,11 +93,7 @@ async function processFiles(files: File[]): Promise<ContentBlock[]> {
         title: file.name,
       });
     } else {
-      // DOCX / unknown — inform the agent without crashing
-      blocks.push({
-        type: "text",
-        text: `[Fichier joint: "${file.name}" — format non lisible directement. Pour que je puisse m'en servir, convertis-le en PDF ou colle son contenu ici.]`,
-      });
+      // DOCX / unknown — skip silently (UI already warns the user before send)
     }
   }
 

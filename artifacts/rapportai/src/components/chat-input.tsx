@@ -22,6 +22,7 @@ export function ChatInput({
   const [text, setText] = useState("");
   const [attachedFiles, setAttachedFiles] = useState<File[]>([]);
   const [isDragging, setIsDragging] = useState(false);
+  const [docxWarning, setDocxWarning] = useState(false);
 
   const anyFileRef = useRef<HTMLInputElement>(null);
   const imageRef = useRef<HTMLInputElement>(null);
@@ -30,9 +31,16 @@ export function ChatInput({
 
   const addFiles = useCallback((incoming: FileList | File[]) => {
     const arr = Array.from(incoming);
+    const docx = arr.filter((f) => f.name.endsWith(".docx") || f.name.endsWith(".doc"));
+    const valid = arr.filter((f) => !f.name.endsWith(".docx") && !f.name.endsWith(".doc"));
+    if (docx.length > 0) {
+      setDocxWarning(true);
+      setTimeout(() => setDocxWarning(false), 4000);
+    }
+    if (valid.length === 0) return;
     setAttachedFiles((prev) => {
       const names = new Set(prev.map((f) => f.name));
-      return [...prev, ...arr.filter((f) => !names.has(f.name))];
+      return [...prev, ...valid.filter((f) => !names.has(f.name))];
     });
   }, []);
 
@@ -74,6 +82,13 @@ export function ChatInput({
       onDragLeave={onDragLeave}
       onDrop={onDrop}
     >
+      {/* DOCX warning */}
+      {docxWarning && (
+        <div className="mx-3 mt-2 px-3 py-1.5 rounded-lg text-xs" style={{ background: "#fef3c7", color: "#92400e", border: "1px solid #fde68a" }}>
+          Fichiers Word non supportés — convertis en PDF pour que je puisse le lire.
+        </div>
+      )}
+
       {/* File chips */}
       {attachedFiles.length > 0 && (
         <div className="flex flex-wrap gap-1.5 px-3 pt-2.5">
@@ -125,7 +140,7 @@ export function ChatInput({
           {/* Hidden inputs */}
           <input ref={anyFileRef} type="file" multiple className="hidden" onChange={(e) => e.target.files && addFiles(e.target.files)} />
           <input ref={imageRef} type="file" multiple accept="image/*" className="hidden" onChange={(e) => e.target.files && addFiles(e.target.files)} />
-          <input ref={docRef} type="file" multiple accept=".pdf,.doc,.docx,.txt,.csv,.xlsx" className="hidden" onChange={(e) => e.target.files && addFiles(e.target.files)} />
+          <input ref={docRef} type="file" multiple accept=".pdf,.txt,.csv,.md" className="hidden" onChange={(e) => e.target.files && addFiles(e.target.files)} />
 
           {[
             { icon: <Paperclip className="w-4 h-4" />, ref: anyFileRef, title: "Joindre" },
