@@ -187,6 +187,14 @@ async function processFiles(files: File[]): Promise<ContentBlock[]> {
           const jpeg = finalCanvas.toDataURL("image/jpeg", 0.75).split(",")[1];
           if (jpeg && jpeg.length > 100) {
             blocks.push({ type: "image", source: { type: "base64", media_type: "image/jpeg", data: jpeg } });
+            // Also save as a File so SDK agents can Read the template visually from workDir
+            try {
+              const binary = atob(jpeg);
+              const bytes = new Uint8Array(binary.length);
+              for (let i = 0; i < binary.length; i++) bytes[i] = binary.charCodeAt(i);
+              const screenshotFile = new File([bytes], "template-screenshot.jpg", { type: "image/jpeg" });
+              useFileStore.getState().addFiles([screenshotFile]);
+            } catch { /* non-blocking */ }
           }
         } catch { /* screenshot failed — logos already sent individually */ }
 
@@ -198,6 +206,11 @@ async function processFiles(files: File[]): Promise<ContentBlock[]> {
             source: { type: "text", media_type: "text/plain", data: textResult.value },
             title: file.name,
           });
+          // Also save as a File so SDK agents can Read exact field names from workDir
+          try {
+            const textFile = new File([textResult.value], "template-text.txt", { type: "text/plain" });
+            useFileStore.getState().addFiles([textFile]);
+          } catch { /* non-blocking */ }
         }
       } catch {
         // Fallback: text-only

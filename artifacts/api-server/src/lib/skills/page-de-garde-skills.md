@@ -54,19 +54,27 @@ Rules:
 
 ### PATH A — Template uploaded
 
-Triggered when: `template-screenshot.png` OR a `.docx` file exists in session folder.
+Triggered when: `template-screenshot.jpg` OR `template-text.txt` OR any `.docx` file exists in the session folder.
 
 Steps:
-1. `Glob` — list all files
-2. `Read` template-screenshot.png → understand layout visually (colors, logo position, typography, borders)
-3. If `.docx` exists → `Read` it for placeholder names and structure
-4. Fill ALL placeholders with real student data
-5. Logos are already in the template — do NOT search for external logos
-6. `Write` page-de-garde.md with the filled content
+1. `Glob` — list ALL files in the directory
+2. If `template-screenshot.jpg` exists → `Read` it to understand the EXACT visual layout:
+   - Element order (logo positions, title placement, separators, typography)
+   - All fields present and their exact labels
+   - Borders, decorative elements, spacing style
+3. If `template-text.txt` exists → `Read` it to extract:
+   - Exact placeholder names and their positions
+   - Field labels word-for-word
+4. Reproduce the EXACT SAME structure as the template — same order, same separators, same labels
+5. Fill ALL placeholders with real student data from the profile
+6. Logos are already embedded in the template — do NOT search for external logos
+7. `Write` page-de-garde.md with the reproduced and filled content
+
+**Critical rule for PATH A:** The output must be structurally identical to the template. Do NOT reorder fields, add new sections, or remove existing ones. The student's school verified this exact format — any structural change will be rejected.
 
 ### PATH B — No template
 
-Triggered when: no template file found.
+Triggered when: no template files found after Glob.
 
 Steps:
 1. Search for school logo:
@@ -144,6 +152,7 @@ If a logo was not found: `<!-- logo-ecole: not found -->` as a note.
 - [ ] Glob run first — checked for template files
 - [ ] Missing info collected in ONE message (or skipped if all present)
 - [ ] PATH A or PATH B chosen correctly based on template presence
+- [ ] PATH A: output is structurally identical to template (same order, same labels)
 - [ ] Zero placeholders remaining
 - [ ] No "Royaume du Maroc" / "Ministère" lines
 - [ ] Logo école left, logo entreprise right (or centered if alone)

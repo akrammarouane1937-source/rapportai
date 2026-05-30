@@ -1,4 +1,4 @@
-import { Router, type Request, type Response } from "express";
+import { Router, type Request, type Response, type NextFunction } from "express";
 import { randomUUID } from "crypto";
 import multer from "multer";
 import { SDKReportAgent, type ReportProfile } from "../lib/sdk-agent";
@@ -247,6 +247,16 @@ Instructions :
 
 const upload = multer({ storage: multer.memoryStorage(), limits: { fileSize: 20 * 1024 * 1024 } });
 
+// Apply multer file parsing only for multipart/form-data requests (e.g. generate with files)
+const conditionalMultipart = (req: Request, res: Response, next: NextFunction) => {
+  const ct = req.headers["content-type"] ?? "";
+  if (ct.includes("multipart/form-data")) {
+    upload.array("files")(req, res, next);
+  } else {
+    next();
+  }
+};
+
 async function extractText(buffer: Buffer, filename: string): Promise<string> {
   const ext = filename.toLowerCase().split(".").pop() ?? "";
 
@@ -348,6 +358,7 @@ router.post("/session/start", (req: Request, res: Response) => {
 
 router.post(
   "/session/:sessionId/generate",
+  conditionalMultipart,
   guardPayment,
   guardSectionLimit,
   async (req: Request, res: Response) => {
@@ -377,6 +388,14 @@ router.post(
     if (!agent) {
       res.status(404).json({ error: "Session introuvable ou expirée. Relance /api/session/start." });
       return;
+    }
+
+    // Save any uploaded files to the agent's work directory so SDK agents can Read them
+    const uploadedFiles = req.files as Express.Multer.File[] | undefined;
+    if (uploadedFiles?.length) {
+      for (const file of uploadedFiles) {
+        agent.uploadDocument(file.originalname, file.buffer);
+      }
     }
 
     // If the frontend sent an updated problématique (e.g. from Step 6 form),
