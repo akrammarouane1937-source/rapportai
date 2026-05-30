@@ -99,6 +99,23 @@ const TOOLS = [
   },
 ];
 
+// ─── Extract image blocks from conversation (logos from uploaded DOCX) ────────
+
+type ImageBlock = { type: "image"; source: { type: "base64"; media_type: string; data: string } };
+
+function extractImageBlocks(messages: ApiMessage[]): ImageBlock[] {
+  const images: ImageBlock[] = [];
+  for (const msg of messages) {
+    if (!Array.isArray(msg.content)) continue;
+    for (const block of msg.content) {
+      if (block.type === "image" && images.length < 3) {
+        images.push(block as ImageBlock);
+      }
+    }
+  }
+  return images;
+}
+
 // ─── Fallback page de garde (guaranteed non-empty) ────────────────────────────
 
 function buildFallbackPageDeGarde(profile: Record<string, string>): string {
@@ -131,6 +148,7 @@ async function generatePageDeGarde(
   profile: Record<string, string>,
   context: string,
   apiKey: string,
+  templateImages?: ImageBlock[],
 ): Promise<string> {
   const profileLines = [
     profile.studentName    && `- Nom : ${profile.studentName}`,
@@ -148,8 +166,14 @@ async function generatePageDeGarde(
     profile.juryMember2    && `- Jury 2 : ${profile.juryMember2}`,
   ].filter(Boolean).join("\n");
 
-  const prompt = `Tu es un expert en rédaction de rapports académiques marocains. Génère la PAGE DE GARDE complète en Markdown.
+  const hasImages = templateImages && templateImages.length > 0;
 
+  const prompt = `Tu es un expert en rédaction de rapports académiques marocains. Génère la PAGE DE GARDE complète en Markdown.
+${hasImages ? `
+TEMPLATE VISUEL : Les images ci-dessus sont les logos/éléments graphiques extraits du template DOCX de l'étudiant.
+Analyse-les pour comprendre : le logo de l'école (position, style), les couleurs dominantes, la structure générale.
+Reproduis fidèlement la STRUCTURE du template (ordre des éléments, séparateurs, hiérarchie) dans ta génération.
+` : ""}
 PROFIL :
 ${profileLines}
 
@@ -162,6 +186,15 @@ RÈGLES :
 - Markdown uniquement, pas d'emojis, pas de commentaires
 - Retourne UNIQUEMENT le contenu de la page de garde`;
 
+  // Build user message: images first (so Claude sees template before the text prompt), then text
+  type UserContentBlock =
+    | { type: "image"; source: { type: "base64"; media_type: string; data: string } }
+    | { type: "text"; text: string };
+  const userContent: UserContentBlock[] = [
+    ...(hasImages ? templateImages : []),
+    { type: "text", text: prompt },
+  ];
+
   try {
     const res = await fetch(ANTHROPIC_API, {
       method: "POST",
@@ -173,7 +206,7 @@ RÈGLES :
       body: JSON.stringify({
         model: "claude-haiku-4-5",
         max_tokens: 1200,
-        messages: [{ role: "user", content: prompt }],
+        messages: [{ role: "user", content: userContent }],
       }),
     });
     if (!res.ok) return buildFallbackPageDeGarde(profile);
@@ -335,11 +368,13 @@ Réponds toujours en français. Sois naturel et humain.`;
           try { toolInput = JSON.parse(currentToolInput); } catch { /* malformed */ }
 
           if (currentToolName === "generate_section" && toolInput.section === "page-de-garde") {
-            // Generate page de garde server-side — always returns non-empty content
+            // Generate page de garde server-side — pass template logos so Claude sees them
+            const templateImages = extractImageBlocks(convoMessages);
             const content = await generatePageDeGarde(
               profile,
               (toolInput.context as string) ?? "",
               apiKey,
+              templateImages,
             );
             res.write(`data: ${JSON.stringify({ section_content: { section: "page-de-garde", content } })}\n\n`);
           } else {
