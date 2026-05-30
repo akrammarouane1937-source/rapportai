@@ -126,8 +126,18 @@ async function processFiles(files: File[]): Promise<ContentBlock[]> {
         container.innerHTML = htmlResult.value;
         document.body.appendChild(container);
 
+        // Wait for all embedded images (logos, etc.) to load before screenshotting
+        const imgs = Array.from(container.querySelectorAll("img"));
+        if (imgs.length > 0) {
+          await Promise.all(imgs.map(img =>
+            img.complete
+              ? Promise.resolve()
+              : new Promise<void>(res => { img.onload = () => res(); img.onerror = () => res(); })
+          ));
+        }
+
         const h2c = await import("html2canvas");
-        const canvas = await h2c.default(container, { scale: 1.0, useCORS: true, logging: false });
+        const canvas = await h2c.default(container, { scale: 1.0, useCORS: true, allowTaint: true, logging: false });
         document.body.removeChild(container);
 
         // Resize to max 900px wide to keep base64 payload small (~60-120KB)
