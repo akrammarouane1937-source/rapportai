@@ -12,7 +12,7 @@ import { getApprovedFigures } from "@/lib/figureStore";
 import { motion } from "framer-motion";
 import { AlertTriangle, ArrowLeft } from "lucide-react";
 
-type Phase = "blocked" | "confirm" | "sources" | "figures" | "generating" | "done";
+type Phase = "blocked" | "confirm" | "sources" | "figures" | "generating" | "retry" | "done";
 
 // Stable message IDs — never use array index as React key
 let msgCounter = 0;
@@ -204,10 +204,59 @@ export default function PartieI() {
       );
 
       if (!partieI) {
-        push({ id: nextId(), role: "agent", content: "Génération échouée. Réessaie." });
-        // If files were already staged, go to done so retry doesn't force re-upload
+        push({ id: nextId(), role: "agent", content: "Génération échouée. Appuie sur Envoyer pour réessayer sans tout re-uploader." });
+        // retry phase: files are already staged in refs — user just presses send again
         const hadFiles = allFiles.length > 0 || figuresForI.length > 0;
-        setPhase(hadFiles ? "done" : "figures");
+        setPhase(hadFiles ? "retry" : "figures");
+        return;
+      }
+
+      updateReport({ partieI });
+      const wc = partieI.split(/\s+/).filter(Boolean).length;
+      push({
+        id: nextId(),
+        role: "agent",
+        content: (
+          <div>
+            <p>Partie I complète</p>
+            <div className="mt-2 p-3 rounded-lg bg-muted text-sm">
+              <span className="font-semibold">{wc.toLocaleString("fr-FR")} mots</span>
+              {" · "}
+              <span>{chaptersFromStore} chapitres</span>
+              {sourceFilesRef.current.length > 0 && <span>{" · "}{sourceFilesRef.current.length} source(s)</span>}
+              {figureFilesRef.current.length > 0 && <span>{" · "}{figureFilesRef.current.length} figure(s)</span>}
+            </div>
+          </div>
+        ),
+      });
+      setPhase("done");
+
+    } else if (phase === "retry") {
+      // Re-run generation with the same files and figures already stored in refs
+      push({ id: nextId(), role: "agent", content: "Je relance la génération..." });
+      setPhase("generating");
+
+      const allFiles = [...sourceFilesRef.current, ...figureFilesRef.current];
+      const figuresForI = approvedFiguresRef.current.map((f) => ({
+        figureNumber: f.figureNumber,
+        title: f.title,
+        source: f.source ?? "",
+        author: f.author ?? "",
+        caption: f.caption,
+        placement: f.placement,
+      }));
+
+      const partieI = await generate(
+        "partie-i",
+        report,
+        injectedContext || undefined,
+        allFiles.length > 0 ? allFiles : undefined,
+        figuresForI.length > 0 ? figuresForI : undefined
+      );
+
+      if (!partieI) {
+        push({ id: nextId(), role: "agent", content: "Génération échouée à nouveau. Appuie sur Envoyer pour réessayer." });
+        setPhase("retry");
         return;
       }
 
@@ -295,6 +344,7 @@ export default function PartieI() {
             phase === "confirm"   ? "Oui / modifier le titre..." :
             phase === "sources"   ? "Uploader les sources PDF ou 'non'..." :
             phase === "figures"   ? "Uploader figures ou 'non'..." :
+            phase === "retry"     ? "Appuie sur Envoyer pour relancer..." :
             phase === "done"      ? "Demander une modification..." : ""
           }
         />
