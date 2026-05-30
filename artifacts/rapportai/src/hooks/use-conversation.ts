@@ -100,39 +100,97 @@ async function processFiles(files: File[]): Promise<ContentBlock[]> {
       file.type === "application/msword"
     ) {
       // Extract images (logos, decorations) directly from DOCX + raw text.
-      // Sending the actual embedded images is far more reliable than html2canvas.
+      // Two-pass approach:
+      // Pass 1 — extract embedded images (logos) directly via mammoth
+      // Pass 2 — html2canvas screenshot for full layout (opacity:0, NOT left:-9999px
+      //           which prevents browsers from decoding images off-screen)
       try {
         type MammothImage = { contentType: string; read: (enc: string) => Promise<string> };
         type MammothApi = {
           convertToHtml: (opts: { arrayBuffer: ArrayBuffer; convertImage: unknown }) => Promise<{ value: string }>;
           extractRawText: (opts: { arrayBuffer: ArrayBuffer }) => Promise<{ value: string }>;
-          images: { inline: (fn: (img: MammothImage) => Promise<Record<string, never>>) => unknown };
+          images: {
+            inline: (fn: (img: MammothImage) => Promise<Record<string, never>>) => unknown;
+            imgElement: (fn: (img: MammothImage) => Promise<{ src: string }>) => unknown;
+          };
         };
         const mammoth = await import("mammoth") as unknown as MammothApi;
         const arrayBuffer = await file.arrayBuffer();
 
-        // Collect all embedded images (logos, headers, decorations)
+        // ── Pass 1: extract embedded images (logos, header graphics) ──────────
         const extractedImages: Array<{ contentType: string; data: string }> = [];
-        await mammoth.convertToHtml({
-          arrayBuffer,
-          convertImage: mammoth.images.inline(async (image) => {
-            const data = await image.read("base64");
-            extractedImages.push({ contentType: image.contentType, data });
-            return {};
-          }),
-        });
-
-        // Send each extracted image as a separate image block (max 3 to limit payload)
-        for (const img of extractedImages.slice(0, 3)) {
-          const supported = ["image/jpeg", "image/png", "image/gif", "image/webp"];
-          const mediaType = supported.includes(img.contentType) ? img.contentType : "image/png";
-          blocks.push({
-            type: "image",
-            source: { type: "base64", media_type: mediaType, data: img.data },
+        let htmlWithImages = "";
+        try {
+          const htmlResult = await mammoth.convertToHtml({
+            arrayBuffer,
+            convertImage: mammoth.images.imgElement(async (image) => {
+              const data = await image.read("base64");
+              extractedImages.push({ contentType: image.contentType, data });
+              return { src: `data:${image.contentType};base64,${data}` };
+            }),
           });
+          htmlWithImages = htmlResult.value;
+        } catch { /* ignore, proceed with screenshot */ }
+
+        // Send up to 3 extracted images as individual blocks
+        const supported = ["image/jpeg", "image/png", "image/gif", "image/webp"];
+        for (const img of extractedImages.slice(0, 3)) {
+          const mediaType = supported.includes(img.contentType) ? img.contentType : "image/png";
+          blocks.push({ type: "image", source: { type: "base64", media_type: mediaType, data: img.data } });
         }
 
-        // Also send the full text so Claude can read field values
+        // ── Pass 2: html2canvas screenshot for full visual layout ─────────────
+        // Render INSIDE viewport at opacity:0 — browsers skip image decoding
+        // for elements rendered at left:-9999px or position:fixed off-screen.
+        try {
+          const wrapper = document.createElement("div");
+          wrapper.style.cssText =
+            "position:fixed;top:0;left:0;width:700px;opacity:0;pointer-events:none;z-index:-1;" +
+            "background:#fff;padding:40px 56px;font-family:'Times New Roman',serif;" +
+            "font-size:13px;line-height:1.5;color:#000;";
+          wrapper.innerHTML = htmlWithImages || "<p>Template chargé</p>";
+          document.body.appendChild(wrapper);
+
+          // Wait for all imgs to fully decode
+          const imgs = Array.from(wrapper.querySelectorAll("img"));
+          if (imgs.length > 0) {
+            await Promise.all(imgs.map((img) =>
+              img.complete
+                ? Promise.resolve()
+                : new Promise<void>((res) => { img.onload = () => res(); img.onerror = () => res(); })
+            ));
+          }
+          // Extra tick to let paint settle
+          await new Promise<void>((res) => requestAnimationFrame(() => res()));
+
+          const h2c = await import("html2canvas");
+          const canvas = await h2c.default(wrapper, {
+            scale: 1.0,
+            useCORS: true,
+            allowTaint: true,
+            logging: false,
+            width: 700,
+          });
+          document.body.removeChild(wrapper);
+
+          // Resize to ≤900px wide
+          const MAX_W = 900;
+          let finalCanvas = canvas;
+          if (canvas.width > MAX_W) {
+            const ratio = MAX_W / canvas.width;
+            const resized = document.createElement("canvas");
+            resized.width = MAX_W;
+            resized.height = Math.round(canvas.height * ratio);
+            resized.getContext("2d")?.drawImage(canvas, 0, 0, resized.width, resized.height);
+            finalCanvas = resized;
+          }
+          const jpeg = finalCanvas.toDataURL("image/jpeg", 0.75).split(",")[1];
+          if (jpeg && jpeg.length > 100) {
+            blocks.push({ type: "image", source: { type: "base64", media_type: "image/jpeg", data: jpeg } });
+          }
+        } catch { /* screenshot failed — logos already sent individually */ }
+
+        // ── Text for field values ─────────────────────────────────────────────
         const textResult = await mammoth.extractRawText({ arrayBuffer });
         if (textResult.value.trim()) {
           blocks.push({
