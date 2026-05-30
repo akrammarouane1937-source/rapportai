@@ -2,6 +2,7 @@ import { useState, useCallback, useRef, useEffect, createElement, type ReactNode
 import { API_BASE } from "@/lib/apiBase";
 import { useGenerate } from "./use-generate";
 import { useReportStore } from "@/lib/store";
+import { useFileStore } from "@/lib/fileStore";
 import { GeneratedCard } from "@/components/chat-panel";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
@@ -241,6 +242,11 @@ export function useConversation({
       let hasStartedStreaming = false;
 
       try {
+        // Persist uploaded files to fileStore so generation agents (all steps) can access them
+        if (files?.length) {
+          useFileStore.getState().addFiles(files);
+        }
+
         // Process attached files into content blocks
         const fileBlocks = files?.length ? await processFiles(files) : [];
 
