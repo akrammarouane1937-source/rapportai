@@ -5,25 +5,31 @@ description: >
   mémoire, rapport de stage). Trigger when a student requests their summary page, when
   /api/generate/resume is called, or when the user says "génère mon résumé", "écris le résumé
   et l'abstract", or "rédige la page de résumé". Handles bilingual output (French + English)
-  and an optional abbreviations table. Missing fields are inferred from session data and the
-  introduction if available. Do NOT use for generating any other section.
+  and an optional abbreviations table. Reads the full report content before writing.
+  Do NOT use for generating any other section.
 ---
 
 # RapportAI — Résumé Generator
 
-Generates the trilingual summary block: Résumé (FR) + Abstract (EN) + Liste des Abréviations.
+Generates the summary block: Résumé (FR) + Abstract (EN) + Liste des Abréviations.
+The résumé is written AFTER the full report — read all available sections before writing.
 
 ---
 
 ## Data Sources
 
-The agent reads from files on disk — not from a JSON payload. Read in this order:
+Read in this order:
 
 1. `profile.json` — student identity
 2. `student_memory.json` — enriched session state
-3. `introduction.md` — if present, for content synthesis only (do not copy sentences)
+3. `introduction.md` — if present
+4. `partie-i.md` — if present (read full content for synthesis)
+5. `partie-ii.md` — if present (read full content for synthesis)
+6. `conclusion.md` — if present
 
-**Key fields and where to find them:**
+Do NOT copy sentences. Synthesize: extract the core argument, methodology, and findings.
+
+**Key fields:**
 
 | Field | Source file | Key |
 |---|---|---|
@@ -33,24 +39,6 @@ The agent reads from files on disk — not from a JSON payload. Read in this ord
 | Filière | profile.json | `filiere` |
 | Mots-clés | student_memory.json | `report.mots_cles` |
 | Problématique | student_memory.json | `report.problematique` |
-| Style de citation | student_memory.json | `writing_profile.citation_style` |
-
-Student-provided resume_fr / abstract_en / abreviations may appear in the task prompt.
-
----
-
-## Field Handling
-
-| Field state | Behavior |
-|---|---|
-| `resume_fr` provided in task prompt | Reformulate into academic French, keep meaning |
-| `resume_fr` not provided | Generate from theme + filière + introduction.md (if present) |
-| `report.mots_cles` non-empty | Use as-is, normalize to lowercase |
-| `report.mots_cles` empty | Extract 5 most relevant terms from theme and field |
-| `abstract_en` provided in task prompt | Reformulate into academic English, keep meaning |
-| `abstract_en` not provided | Write independently from session data — do not translate résumé |
-| `abreviations` provided in task prompt | Include table with provided entries |
-| `abreviations` not provided | Infer standard abbreviations from theme/field; omit block if none apply |
 
 ---
 
@@ -60,12 +48,12 @@ Three blocks, in order:
 
 ```
 ## Résumé
-[Single paragraph, 150–300 words, French academic register]
+[2-3 paragraphs flowing prose, French academic register — NO sub-titles, NO bullet points]
 
 **Mots-clés :** mot1, mot2, mot3, mot4, mot5
 
 ## Abstract
-[Single paragraph, 150–300 words, English academic register]
+[1-2 paragraphs flowing prose, English academic register — NO sub-titles, NO bullet points]
 
 **Keywords:** word1, word2, word3, word4, word5
 
@@ -75,17 +63,31 @@ Three blocks, in order:
 | ... | ... |
 ```
 
-Omit `## Liste des Abréviations` block entirely if no abbreviations apply.
+Omit `## Liste des Abréviations` entirely if no abbreviations apply.
+
+---
+
+## Format Rules — STRICT
+
+**The résumé must be flowing prose paragraphs. NEVER use:**
+- Sub-titles like "Contexte et enjeux", "Objectifs", "Méthodologie", "Résultats" etc.
+- Bold headers inside the résumé body
+- Bullet points or numbered lists
+- Section breaks inside the résumé
+
+The only allowed headers are `## Résumé`, `## Abstract`, and `## Liste des Abréviations`.
+
+Each paragraph should weave together: context → problem → methodology → findings → contribution. This must read as continuous academic prose, not a structured list.
 
 ---
 
 ## Quality Rules
 
-- Résumé and Abstract: informationally equivalent, linguistically independent
+- Résumé: 2-3 paragraphs, 200–350 words total, no internal headers
+- Abstract: independently written in English (not a translation), 1-2 paragraphs, no internal headers
 - Keywords must be semantically parallel across both languages
-- Both summaries: single paragraph only, no sub-bullets, no internal headers
-- Do not copy sentences from introduction.md — synthesize
-- No first-person constructions
+- Do not copy sentences from source files — synthesize
+- No first-person constructions ("nous avons", "j'ai")
 
 ---
 
@@ -102,8 +104,11 @@ Omit `## Liste des Abréviations` block entirely if no abbreviations apply.
 
 - [ ] Read profile.json ✓
 - [ ] Read student_memory.json ✓
-- [ ] Read introduction.md if it exists ✓
-- [ ] Résumé is a single paragraph (150–300 words)
+- [ ] Read introduction.md if present ✓
+- [ ] Read partie-i.md if present ✓
+- [ ] Read partie-ii.md if present ✓
+- [ ] Read conclusion.md if present ✓
+- [ ] Résumé is flowing prose (NO sub-titles, NO bullets)
 - [ ] Abstract is independently written, not a translation
 - [ ] Keywords aligned across both languages
 - [ ] Abbreviations table included only if relevant
