@@ -14,6 +14,7 @@ interface ChatInputProps {
   disabled?: boolean;
   placeholder?: string;
   templateSlot?: React.ReactNode;
+  accept?: string;
 }
 
 const CODE_EXT_SET = new Set(["py","js","ts","jsx","tsx","java","c","cpp","h","sql","r","rb","php","go","rs","sh","json","xml","html","css","yaml","yml"]);
@@ -91,6 +92,8 @@ function FileTypeIcon({ file }: { file: File }) {
   );
 }
 
+const DEFAULT_ACCEPT = ".pdf,.doc,.docx,.xls,.xlsx,.csv,.txt,.md,.markdown,.py,.js,.ts,.jsx,.tsx,.java,.c,.cpp,.h,.sql,.r,.rb,.php,.go,.rs,.sh,.json,.xml,.html,.css,image/*";
+
 export function ChatInput({
   onSend,
   onAbort,
@@ -98,6 +101,7 @@ export function ChatInput({
   disabled = false,
   placeholder = "Écrire un message...",
   templateSlot,
+  accept = DEFAULT_ACCEPT,
 }: ChatInputProps) {
   const [text, setText] = useState("");
   const [items, setItems] = useState<AttachedItem[]>([]);
@@ -270,7 +274,7 @@ export function ChatInput({
             ref={fileRef}
             type="file"
             multiple
-            accept=".pdf,.doc,.docx,.xls,.xlsx,.csv,.txt,.md,.markdown,.py,.js,.ts,.jsx,.tsx,.java,.c,.cpp,.h,.sql,.r,.rb,.php,.go,.rs,.sh,.json,.xml,.html,.css,image/*"
+            accept={accept}
             className="hidden"
             onChange={(e) => e.target.files && addFiles(e.target.files)}
           />
