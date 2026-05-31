@@ -1,51 +1,48 @@
 import { useState } from "react";
-import { motion } from "framer-motion";
-import { Link } from "wouter";
-import {
-  Check, X, Sparkles, ShieldCheck,
-  ChevronRight, ArrowLeft, Loader2, Zap,
-} from "lucide-react";
+import { Link, useLocation } from "wouter";
+import { useAuth, useUser } from "@clerk/react";
+import { Check, X, Loader2, ChevronDown } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { getMyPlan, PLAN_LIMITS, type PlanId } from "@/lib/userPlan";
+import PublicNavbar from "@/components/layout/PublicNavbar";
+import { getMyPlan, type PlanId } from "@/lib/userPlan";
 import { API_BASE as BASE_PATH } from "@/lib/apiBase";
 
-/* ─── Plan definitions ─────────────────────────────────────────────────── */
+/* ─── Plan definitions ──────────────────────────────────────────────────── */
 interface Plan {
   id:          PlanId;
   name:        string;
-  priceMad:    number;
-  anchorMad:   number;
-  popular:     boolean;
+  priceMad:    number | null;
+  anchorMad:   number | null;
   description: string;
+  cta:         string;
+  popular:     boolean;
   features:    string[];
-  locked:      string[];
-  highlight?:  string;
 }
 
 const PLANS: Plan[] = [
   {
     id:          "free",
     name:        "Gratuit",
-    priceMad:    0,
-    anchorMad:   0,
+    priceMad:    null,
+    anchorMad:   null,
+    description: "Pour explorer la plateforme sans engagement.",
+    cta:         "Commencer gratuitement",
     popular:     false,
-    description: "Vois par toi-même avant de t'engager.",
-    highlight:   "Sans carte bancaire",
     features: [
       "15 pages générées",
       "2 révisions IA",
-      "Téléchargement Word inclus",
+      "Export Word",
       "Qualité identique aux plans payants",
     ],
-    locked: ["Export PDF", "Humanisation anti-IA", "Génération depuis tes documents"],
   },
   {
     id:          "starter",
     name:        "Essentiel",
     priceMad:    377,
     anchorMad:   1000,
+    description: "Pour finir ton rapport en une seule session.",
+    cta:         "Choisir Essentiel",
     popular:     false,
-    description: "Pour finir ton rapport sans stress.",
     features: [
       "60 pages générées",
       "20 révisions IA",
@@ -54,15 +51,15 @@ const PLANS: Plan[] = [
       "Génération depuis tes documents",
       "Canevas de ton école",
     ],
-    locked: ["Pages illimitées", "Révisions illimitées"],
   },
   {
     id:          "pro",
     name:        "Pro",
     priceMad:    677,
     anchorMad:   1500,
+    description: "Pages et révisions illimitées. Accès complet.",
+    cta:         "Choisir Pro",
     popular:     true,
-    description: "Le choix des étudiants sérieux.",
     features: [
       "Pages illimitées",
       "Révisions illimitées",
@@ -72,300 +69,292 @@ const PLANS: Plan[] = [
       "Canevas de ton école",
       "Accès JuryAI",
     ],
-    locked: [],
   },
 ];
 
-/* ─── Main page ─────────────────────────────────────────────────────────── */
-export default function PricingPage() {
-  const [checkoutLoading, setCheckoutLoading] = useState<PlanId | null>(null);
-  const [checkoutError, setCheckoutError]     = useState<string | null>(null);
-  const currentPlan = getMyPlan();
+const FAQ_ITEMS = [
+  {
+    q: "Est-ce un paiement unique ou un abonnement ?",
+    a: "Paiement unique. Pas d'abonnement, pas de renouvellement automatique. Tu paies une fois et tu accèdes à ta limite de pages.",
+  },
+  {
+    q: "Pourquoi une limite en pages et non en rapports ?",
+    a: "Un rapport PFE fait en moyenne 60–80 pages. Le plan Essentiel couvre exactement 1 rapport complet. Le Pro te donne l'illimité pour itérer autant que tu veux.",
+  },
+  {
+    q: "Puis-je passer de Essentiel à Pro ?",
+    a: "Oui. Tu ne paies que la différence — 300 MAD. Contacte-nous par email pour le faire.",
+  },
+  {
+    q: "Quels modes de paiement sont acceptés ?",
+    a: "Carte bancaire internationale (Visa / Mastercard). Carte marocaine CMI à venir.",
+  },
+  {
+    q: "Est-ce que les paiements sont sécurisés ?",
+    a: "Oui. Tous les paiements passent par Stripe, le standard mondial de sécurité. Nous ne stockons aucune donnée de carte.",
+  },
+];
 
-  const canUpgrade = (planId: PlanId) => {
-    const order: PlanId[] = ["free", "starter", "pro"];
-    return order.indexOf(planId) > order.indexOf(currentPlan.planId);
-  };
+/* ─── Main content — receives auth as props ─────────────────────────────── */
+function PricingContent({
+  isSignedIn,
+  userEmail,
+}: {
+  isSignedIn: boolean;
+  userEmail:  string | undefined;
+}) {
+  const [, setLocation]       = useLocation();
+  const [loading, setLoading] = useState<PlanId | null>(null);
+  const [error, setError]     = useState<string | null>(null);
+  const [openFaq, setOpenFaq] = useState<number | null>(null);
+
+  const currentPlan = getMyPlan();
+  const planOrder: PlanId[] = ["free", "starter", "pro"];
+  const canUpgrade = (id: PlanId) =>
+    planOrder.indexOf(id) > planOrder.indexOf(currentPlan.planId);
 
   const handleCheckout = async (plan: Plan) => {
-    if (plan.priceMad === 0) return;
-    setCheckoutLoading(plan.id);
-    setCheckoutError(null);
+    if (!plan.priceMad) return;
+    if (!isSignedIn) { setLocation("/sign-up"); return; }
+
+    setLoading(plan.id);
+    setError(null);
     try {
       const origin = window.location.origin;
-      const res = await fetch(`${BASE_PATH}/api/payments/checkout`, {
+      const res    = await fetch(`${BASE_PATH}/api/payments/checkout`, {
         method:  "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           plan:       plan.id,
           report_id:  crypto.randomUUID(),
+          user_email: userEmail,
           successUrl: `${origin}${BASE_PATH}/dashboard?payment=success&session_id={CHECKOUT_SESSION_ID}`,
           cancelUrl:  `${origin}${BASE_PATH}/pricing?payment=cancelled`,
         }),
       });
       const data = await res.json() as { checkout_url?: string; error?: string };
-      if (!res.ok || !data.checkout_url) throw new Error(data.error ?? "Erreur Stripe");
+      if (!res.ok || !data.checkout_url) throw new Error(data.error ?? "Erreur paiement");
       window.location.href = data.checkout_url;
     } catch (err) {
-      setCheckoutError(err instanceof Error ? err.message : "Erreur inconnue");
-      setCheckoutLoading(null);
+      setError(err instanceof Error ? err.message : "Erreur inconnue");
+      setLoading(null);
     }
   };
 
   return (
-    <div className="min-h-screen bg-[#f9f8ff] flex flex-col">
-      {/* ── Navbar ── */}
-      <header className="sticky top-0 z-50 bg-white/90 backdrop-blur-sm border-b border-gray-100">
-        <div className="container mx-auto px-4 h-16 flex items-center justify-between">
-          <Link href="/">
-            <div className="flex items-center gap-2.5 cursor-pointer">
-              <img src="/logo.svg" alt="RapportAI" className="w-8 h-8" />
-              <span className="font-bold text-xl text-gray-900" style={{ fontFamily: "'Plus Jakarta Sans', sans-serif" }}>
-                RapportAI
-              </span>
-            </div>
-          </Link>
-          <div className="flex items-center gap-3">
-            <Link href="/dashboard">
-              <Button variant="ghost" size="sm" className="text-gray-600 hover:text-purple-600 flex items-center gap-1.5">
-                <ArrowLeft className="w-3.5 h-3.5" /> Tableau de bord
-              </Button>
-            </Link>
-            <Link href="/sign-up">
-              <Button size="sm" className="bg-purple-600 hover:bg-purple-700 text-white rounded-full px-5">
-                Commencer gratuitement
-              </Button>
-            </Link>
-          </div>
-        </div>
-      </header>
+    <div className="min-h-screen bg-white flex flex-col">
+      <PublicNavbar />
 
       <main className="flex-1 py-20 px-4">
         <div className="container mx-auto max-w-5xl">
 
-          {/* ── Hero ── */}
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            className="text-center mb-6"
-          >
-            <div className="inline-flex items-center gap-2 bg-purple-50 text-purple-700 text-sm font-semibold px-4 py-2 rounded-full mb-6">
-              <Sparkles className="w-4 h-4" /> Paiement unique · Pas d'abonnement
-            </div>
+          {/* Hero */}
+          <div className="text-center mb-16">
             <h1
-              className="text-4xl md:text-5xl font-extrabold text-gray-900 mb-4"
+              className="text-5xl font-extrabold text-gray-900 mb-4 tracking-tight"
               style={{ fontFamily: "'Plus Jakarta Sans', sans-serif" }}
             >
-              Choisis ton plan
+              Pricing
             </h1>
-            <p className="text-xl text-gray-500 max-w-xl mx-auto">
+            <p className="text-lg text-gray-500">
               Un seul paiement. Ton rapport académique livré en 30 minutes.
             </p>
-          </motion.div>
+          </div>
 
-          {/* ── Market anchor banner ── */}
-          <motion.div
-            initial={{ opacity: 0, y: 8 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.15 }}
-            className="max-w-2xl mx-auto mb-12 bg-amber-50 border border-amber-200 rounded-xl px-5 py-3.5 flex items-center gap-3 text-sm"
-          >
-            <span className="text-amber-500 text-lg">💡</span>
-            <p className="text-amber-800">
-              <strong>Les prestataires chargent 1000–2500 MAD</strong> pour un rapport PFE.
-              RapportAI génère le même résultat en 30 minutes — <strong>à partir de 377 MAD</strong>.
-            </p>
-          </motion.div>
-
-          {/* ── Plan cards ── */}
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-            {PLANS.map((plan, i) => {
+          {/* Cards */}
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
+            {PLANS.map((plan) => {
               const isCurrent  = plan.id === currentPlan.planId;
+              const isFree     = plan.priceMad === null;
               const upgradable = canUpgrade(plan.id);
-              const isFree     = plan.priceMad === 0;
+              const discount   =
+                plan.priceMad && plan.anchorMad
+                  ? Math.round((1 - plan.priceMad / plan.anchorMad) * 100)
+                  : null;
 
               return (
-                <motion.div
+                <div
                   key={plan.id}
-                  initial={{ opacity: 0, y: 24 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  transition={{ delay: i * 0.08 }}
-                  className={`relative bg-white rounded-2xl flex flex-col overflow-hidden transition-transform hover:-translate-y-1
+                  className={`relative rounded-2xl p-7 flex flex-col border transition-shadow
                     ${plan.popular
-                      ? "border-2 border-purple-500 shadow-[0_8px_40px_rgba(124,58,237,0.18)]"
-                      : "border border-gray-100 shadow-[0_2px_12px_rgba(0,0,0,0.06)]"}
-                  `}
+                      ? "border-purple-400 shadow-[0_0_0_1px_rgba(124,58,237,0.2),0_8px_32px_rgba(124,58,237,0.10)]"
+                      : "border-gray-200 shadow-sm hover:shadow-md"
+                    }`}
                 >
-                  {/* Popular badge */}
+                  {/* Popular badge — top-right inside card */}
                   {plan.popular && (
-                    <div className="absolute top-0 left-1/2 -translate-x-1/2 -translate-y-1/2 z-10">
-                      <span className="bg-purple-600 text-white text-xs font-bold px-4 py-1.5 rounded-full shadow-lg whitespace-nowrap flex items-center gap-1.5">
-                        <Zap className="w-3 h-3" /> Le plus populaire
-                      </span>
-                    </div>
+                    <span className="absolute top-5 right-5 bg-purple-600 text-white text-[11px] font-bold px-2.5 py-1 rounded-full leading-none">
+                      Le plus populaire
+                    </span>
+                  )}
+                  {isCurrent && !plan.popular && (
+                    <span className="absolute top-5 right-5 bg-green-100 text-green-700 text-[11px] font-bold px-2.5 py-1 rounded-full border border-green-200 leading-none">
+                      Plan actuel
+                    </span>
                   )}
 
-                  {/* Current plan ribbon */}
-                  {isCurrent && (
-                    <div className="absolute top-3 right-3 z-10">
-                      <span className="bg-green-100 text-green-700 text-xs font-bold px-2.5 py-1 rounded-full border border-green-200">
-                        Plan actuel
-                      </span>
-                    </div>
-                  )}
+                  {/* Plan name */}
+                  <p className="text-sm font-semibold text-gray-500 mb-4">{plan.name}</p>
 
-                  <div className={`p-7 flex-1 ${plan.popular ? "pt-9" : ""}`}>
-                    {/* Name + desc */}
-                    <div className="mb-5">
-                      <h2 className="text-xl font-bold text-gray-900 mb-1" style={{ fontFamily: "'Plus Jakarta Sans', sans-serif" }}>
-                        {plan.name}
-                      </h2>
-                      <p className="text-sm text-gray-500">{plan.description}</p>
-                    </div>
-
-                    {/* Price */}
-                    <div className="mb-1">
-                      {!isFree && (
+                  {/* Price */}
+                  <div className="mb-6">
+                    {isFree ? (
+                      <p
+                        className="text-4xl font-extrabold text-gray-900"
+                        style={{ fontFamily: "'Plus Jakarta Sans', sans-serif" }}
+                      >
+                        Free
+                      </p>
+                    ) : (
+                      <>
                         <div className="flex items-center gap-2 mb-1">
-                          <span className="text-sm line-through text-gray-400">{plan.anchorMad} MAD</span>
-                          <span className="text-xs bg-red-100 text-red-600 font-bold px-2 py-0.5 rounded-full">
-                            -{Math.round((1 - plan.priceMad / plan.anchorMad) * 100)}%
-                          </span>
+                          <span className="text-sm text-gray-400 line-through">{plan.anchorMad} MAD</span>
+                          {discount && (
+                            <span className="text-xs bg-purple-100 text-purple-700 font-bold px-2 py-0.5 rounded-full">
+                              -{discount}%
+                            </span>
+                          )}
                         </div>
-                      )}
-                      <div className="flex items-end gap-1 mb-1">
-                        <span className="text-5xl font-extrabold text-gray-900" style={{ fontFamily: "'Plus Jakarta Sans', sans-serif" }}>
-                          {isFree ? "Gratuit" : plan.priceMad}
-                        </span>
-                        {!isFree && <span className="text-xl font-semibold text-gray-400 mb-1">MAD</span>}
-                      </div>
-                    </div>
-
-                    {plan.highlight && (
-                      <p className="text-xs text-green-600 font-semibold mb-5">{plan.highlight}</p>
+                        <p
+                          className="text-4xl font-extrabold text-gray-900"
+                          style={{ fontFamily: "'Plus Jakarta Sans', sans-serif" }}
+                        >
+                          {plan.priceMad}{" "}
+                          <span className="text-lg font-semibold text-gray-400">MAD</span>
+                        </p>
+                      </>
                     )}
-                    {!plan.highlight && <div className="mb-5" />}
-
-                    {/* Features */}
-                    <ul className="space-y-2.5 mb-5">
-                      {plan.features.map((f) => (
-                        <li key={f} className="flex items-start gap-3">
-                          <div className="w-4.5 h-4.5 rounded-full bg-purple-100 flex items-center justify-center flex-shrink-0 mt-0.5">
-                            <Check className="w-3 h-3 text-purple-600 stroke-[2.5]" />
-                          </div>
-                          <span className="text-sm text-gray-700 leading-snug">{f}</span>
-                        </li>
-                      ))}
-                    </ul>
-
-                    {/* Locked features */}
-                    {plan.locked.length > 0 && (
-                      <ul className="space-y-2.5 opacity-40">
-                        {plan.locked.map((f) => (
-                          <li key={f} className="flex items-start gap-3">
-                            <div className="w-4.5 h-4.5 rounded-full bg-gray-100 flex items-center justify-center flex-shrink-0 mt-0.5">
-                              <X className="w-3 h-3 text-gray-400" />
-                            </div>
-                            <span className="text-sm text-gray-400 leading-snug line-through">{f}</span>
-                          </li>
-                        ))}
-                      </ul>
-                    )}
+                    <p className="text-sm text-gray-500 mt-2 leading-snug">{plan.description}</p>
                   </div>
 
                   {/* CTA */}
-                  <div className="px-7 pb-7">
+                  <div className="mb-6">
                     {isCurrent ? (
-                      <div className="w-full h-11 rounded-xl border-2 border-green-200 bg-green-50 text-green-700 font-semibold text-sm flex items-center justify-center gap-2">
-                        <Check className="w-4 h-4" /> Plan actuel
+                      <div className="w-full h-10 rounded-lg border border-gray-200 bg-gray-50 text-gray-400 text-sm font-medium flex items-center justify-center">
+                        Plan actuel
                       </div>
                     ) : isFree ? (
                       <Link href="/sign-up">
-                        <Button className="w-full h-11 font-semibold rounded-xl text-sm border-2 border-purple-200 text-purple-700 hover:bg-purple-50 bg-white" variant="outline">
-                          Commencer gratuitement <ChevronRight className="w-3.5 h-3.5 ml-1" />
+                        <Button
+                          variant="outline"
+                          className="w-full h-10 rounded-lg font-semibold text-sm border-gray-300 text-gray-700 hover:bg-gray-50"
+                        >
+                          {plan.cta}
                         </Button>
                       </Link>
-                    ) : upgradable ? (
+                    ) : upgradable || !isSignedIn ? (
                       <Button
-                        onClick={() => handleCheckout(plan)}
-                        disabled={checkoutLoading !== null}
-                        className={`w-full h-11 font-semibold rounded-xl text-sm transition-all
-                          ${plan.popular
-                            ? "bg-purple-600 hover:bg-purple-700 text-white shadow-[0_4px_16px_rgba(124,58,237,0.32)]"
-                            : "border-2 border-purple-600 text-purple-600 hover:bg-purple-50 bg-white"}
-                        `}
-                        variant={plan.popular ? "default" : "outline"}
+                        onClick={() => void handleCheckout(plan)}
+                        disabled={loading !== null}
+                        className={`w-full h-10 rounded-lg font-semibold text-sm ${
+                          plan.popular
+                            ? "bg-purple-600 hover:bg-purple-700 text-white"
+                            : "bg-gray-900 hover:bg-gray-800 text-white"
+                        }`}
                       >
-                        {checkoutLoading === plan.id
-                          ? <><Loader2 className="w-4 h-4 animate-spin mr-2 inline" />Redirection…</>
-                          : <>Choisir {plan.name} <ChevronRight className="w-3.5 h-3.5 ml-1 inline" /></>
-                        }
+                        {loading === plan.id ? (
+                          <><Loader2 className="w-3.5 h-3.5 animate-spin mr-2 inline" />Redirection…</>
+                        ) : (
+                          plan.cta
+                        )}
                       </Button>
                     ) : (
-                      <Button disabled className="w-full h-11 rounded-xl text-sm border border-gray-200 text-gray-400 bg-gray-50 cursor-not-allowed" variant="ghost">
+                      <div className="w-full h-10 rounded-lg border border-gray-200 bg-gray-50 text-gray-400 text-sm font-medium flex items-center justify-center">
                         Plan supérieur requis
-                      </Button>
+                      </div>
                     )}
                   </div>
-                </motion.div>
+
+                  {/* Divider */}
+                  <div className="border-t border-gray-100 mb-5" />
+
+                  {/* Features */}
+                  <ul className="space-y-3 flex-1">
+                    {plan.features.map((f) => (
+                      <li key={f} className="flex items-start gap-2.5">
+                        <Check className="w-4 h-4 text-purple-500 flex-shrink-0 mt-0.5" strokeWidth={2.5} />
+                        <span className="text-sm text-gray-600">{f}</span>
+                      </li>
+                    ))}
+                  </ul>
+                </div>
               );
             })}
           </div>
 
-          {/* ── Checkout error ── */}
-          {checkoutError && (
-            <motion.div
-              initial={{ opacity: 0, y: -8 }}
-              animate={{ opacity: 1, y: 0 }}
-              className="mt-6 max-w-md mx-auto bg-red-50 border border-red-200 rounded-xl px-4 py-3 flex items-center gap-3"
-            >
+          {/* Checkout error */}
+          {error && (
+            <div className="mt-6 max-w-md mx-auto bg-red-50 border border-red-200 rounded-xl px-4 py-3 flex items-center gap-3">
               <X className="w-4 h-4 text-red-500 flex-shrink-0" />
-              <p className="text-sm text-red-700">{checkoutError}</p>
-              <button onClick={() => setCheckoutError(null)} className="ml-auto text-red-400 hover:text-red-600">
+              <p className="text-sm text-red-700 flex-1">{error}</p>
+              <button onClick={() => setError(null)} className="text-red-400 hover:text-red-600">
                 <X className="w-4 h-4" />
               </button>
-            </motion.div>
+            </div>
           )}
 
-          {/* ── Trust strip ── */}
-          <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            transition={{ delay: 0.4 }}
-            className="mt-12 flex flex-wrap items-center justify-center gap-6 text-sm text-gray-400"
-          >
-            <span className="flex items-center gap-2"><ShieldCheck className="w-4 h-4 text-green-500" /> Paiement sécurisé SSL</span>
-            <span className="flex items-center gap-2"><Check className="w-4 h-4 text-green-500" /> Remboursement 48h</span>
-            <span className="flex items-center gap-2"><Check className="w-4 h-4 text-green-500" /> Pas d'abonnement caché</span>
-            <span className="flex items-center gap-2"><Check className="w-4 h-4 text-green-500" /> Support 7j/7</span>
-          </motion.div>
+          {/* Trust strip */}
+          <div className="mt-10 flex flex-wrap items-center justify-center gap-6 text-sm text-gray-400">
+            <span className="flex items-center gap-1.5">
+              <Check className="w-3.5 h-3.5 text-green-500" /> Paiement sécurisé SSL
+            </span>
+            <span className="flex items-center gap-1.5">
+              <Check className="w-3.5 h-3.5 text-green-500" /> Pas d'abonnement caché
+            </span>
+            <span className="flex items-center gap-1.5">
+              <Check className="w-3.5 h-3.5 text-green-500" /> Support 7j/7
+            </span>
+          </div>
 
-          {/* ── FAQ ── */}
-          <motion.div
-            initial={{ opacity: 0, y: 16 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.5 }}
-            className="mt-16 max-w-2xl mx-auto"
-          >
-            <h2 className="text-xl font-bold text-gray-900 mb-6 text-center" style={{ fontFamily: "'Plus Jakarta Sans', sans-serif" }}>
+          {/* FAQ */}
+          <div className="mt-20 max-w-2xl mx-auto">
+            <h2
+              className="text-2xl font-bold text-gray-900 mb-8"
+              style={{ fontFamily: "'Plus Jakarta Sans', sans-serif" }}
+            >
               Questions fréquentes
             </h2>
-            {[
-              { q: "Est-ce vraiment un paiement unique ?", a: "Oui. Pas d'abonnement, pas de renouvellement automatique. Tu paies une fois et tu génères ton rapport." },
-              { q: "Pourquoi une limite en pages et non en rapports ?", a: "Un rapport PFE fait en moyenne 60–80 pages. Le plan Essentiel couvre exactement 1 rapport complet. Le Pro te donne l'illimité pour itérer autant que tu veux." },
-              { q: "Puis-je passer de Essentiel à Pro ?", a: "Oui, tu ne paies que la différence — 300 MAD pour passer au Pro." },
-              { q: "Quels modes de paiement sont acceptés ?", a: "Carte bancaire internationale (Visa / Mastercard). Carte marocaine CMI à venir." },
-              { q: "Comment fonctionne le remboursement ?", a: "Si tu n'es pas satisfait dans les 48h après l'achat, on te rembourse sans poser de questions." },
-            ].map(({ q, a }) => (
-              <div key={q} className="border-b border-gray-100 py-4">
-                <p className="font-semibold text-gray-800 text-sm mb-1.5">{q}</p>
-                <p className="text-sm text-gray-500 leading-relaxed">{a}</p>
-              </div>
-            ))}
-          </motion.div>
+            <div className="divide-y divide-gray-100">
+              {FAQ_ITEMS.map(({ q, a }, i) => (
+                <div key={i}>
+                  <button
+                    onClick={() => setOpenFaq(openFaq === i ? null : i)}
+                    className="w-full flex items-center justify-between py-4 text-left gap-4"
+                  >
+                    <span className="text-sm font-medium text-gray-800">{q}</span>
+                    <ChevronDown
+                      className={`w-4 h-4 text-gray-400 flex-shrink-0 transition-transform ${openFaq === i ? "rotate-180" : ""}`}
+                    />
+                  </button>
+                  {openFaq === i && (
+                    <p className="pb-4 text-sm text-gray-500 leading-relaxed">{a}</p>
+                  )}
+                </div>
+              ))}
+            </div>
+          </div>
 
         </div>
       </main>
     </div>
   );
+}
+
+/* ─── Clerk-aware wrapper (only rendered inside ClerkProvider) ──────────── */
+function PricingWithClerk() {
+  const { isSignedIn } = useAuth();
+  const { user }       = useUser();
+  return (
+    <PricingContent
+      isSignedIn={!!isSignedIn}
+      userEmail={user?.primaryEmailAddress?.emailAddress ?? undefined}
+    />
+  );
+}
+
+/* ─── Default export — safe in both Clerk and no-Clerk contexts ─────────── */
+export default function PricingPage() {
+  const clerkKey = import.meta.env.VITE_CLERK_PUBLISHABLE_KEY as string | undefined;
+  if (clerkKey) return <PricingWithClerk />;
+  return <PricingContent isSignedIn={false} userEmail={undefined} />;
 }
