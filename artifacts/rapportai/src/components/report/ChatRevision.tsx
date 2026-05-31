@@ -1,6 +1,6 @@
 import { useState, useRef, useCallback } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { Send, X, Sparkles, Loader2, RotateCcw } from "lucide-react";
+import { Send, X, Sparkles, Loader2, Plus } from "lucide-react";
 import { API_BASE } from "@/lib/apiBase";
 import { ensureSession } from "@/lib/useGenerate";
 
@@ -10,6 +10,43 @@ type Message = {
   content: string;
   streaming?: boolean;
 };
+
+interface AttachedItem {
+  file: File;
+  previewUrl?: string;
+}
+
+function FileTypeIcon({ file }: { file: File }) {
+  const ext = file.name.split(".").pop()?.toLowerCase() ?? "";
+  if (ext === "docx" || ext === "doc") {
+    return (
+      <div
+        className="w-9 h-9 rounded-lg flex items-center justify-center text-white font-bold shrink-0"
+        style={{ background: "#2B579A", fontSize: 13, fontFamily: "Georgia, serif" }}
+      >
+        W
+      </div>
+    );
+  }
+  if (ext === "pdf") {
+    return (
+      <div
+        className="w-9 h-9 rounded-lg flex items-center justify-center text-white font-bold shrink-0"
+        style={{ background: "#E74C3C", fontSize: 10 }}
+      >
+        PDF
+      </div>
+    );
+  }
+  return (
+    <div
+      className="w-9 h-9 rounded-lg flex items-center justify-center text-white font-bold shrink-0"
+      style={{ background: "#6b7280", fontSize: 9 }}
+    >
+      FILE
+    </div>
+  );
+}
 
 const SUGGESTIONS = [
   "Reformule le chapitre 1 de façon plus concise",
@@ -38,23 +75,58 @@ export function ChatRevision({
   ]);
   const [input, setInput] = useState("");
   const [streaming, setStreaming] = useState(false);
+  const [items, setItems] = useState<AttachedItem[]>([]);
+  const [uploading, setUploading] = useState(false);
   const bottomRef = useRef<HTMLDivElement>(null);
+  const fileRef = useRef<HTMLInputElement>(null);
 
   const scrollBottom = () =>
     setTimeout(() => bottomRef.current?.scrollIntoView({ behavior: "smooth" }), 80);
 
+  const addFiles = useCallback((incoming: FileList | File[]) => {
+    const arr = Array.from(incoming);
+    setItems((prev) => {
+      const names = new Set(prev.map((i) => i.file.name));
+      return [
+        ...prev,
+        ...arr
+          .filter((f) => !names.has(f.name))
+          .map((f) => ({
+            file: f,
+            previewUrl: f.type.startsWith("image/") ? URL.createObjectURL(f) : undefined,
+          })),
+      ];
+    });
+  }, []);
+
+  const removeItem = (idx: number) => {
+    setItems((prev) => {
+      const item = prev[idx];
+      if (item?.previewUrl) URL.revokeObjectURL(item.previewUrl);
+      return prev.filter((_, i) => i !== idx);
+    });
+  };
+
   const send = useCallback(
     async (instruction: string) => {
       const text = instruction.trim();
-      if (!text || streaming) return;
+      if ((!text && items.length === 0) || streaming) return;
       setInput("");
+
+      const filesToSend = [...items];
+      setItems([]);
+      filesToSend.forEach((i) => { if (i.previewUrl) URL.revokeObjectURL(i.previewUrl); });
 
       const userId = Date.now().toString();
       const agentId = (Date.now() + 1).toString();
 
+      const userContent = text + (filesToSend.length > 0
+        ? `\n\n[${filesToSend.length} fichier(s) joint(s) : ${filesToSend.map((f) => f.file.name).join(", ")}]`
+        : "");
+
       setMessages((prev) => [
         ...prev,
-        { id: userId,  role: "user",  content: text },
+        { id: userId, role: "user", content: userContent },
         { id: agentId, role: "agent", content: "", streaming: true },
       ]);
       setStreaming(true);
@@ -62,10 +134,29 @@ export function ChatRevision({
 
       try {
         const sessionId = await ensureSession();
+
+        // Upload files first so the agent can read them via its Read tool
+        if (filesToSend.length > 0) {
+          setUploading(true);
+          for (const item of filesToSend) {
+            const fd = new FormData();
+            fd.append("file", item.file);
+            await fetch(`${API_BASE}/api/session/${sessionId}/upload-document`, {
+              method: "POST",
+              body: fd,
+            }).catch(() => { /* silent — agent will still revise without the doc */ });
+          }
+          setUploading(false);
+        }
+
+        const finalInstruction = text + (filesToSend.length > 0
+          ? `\n\nJ'ai joint ${filesToSend.length} fichier(s) : ${filesToSend.map((f) => f.file.name).join(", ")}. Utilise-les pour guider la révision.`
+          : "");
+
         const resp = await fetch(`${API_BASE}/api/session/${sessionId}/revise`, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ sectionId, instruction: text }),
+          body: JSON.stringify({ sectionId, instruction: finalInstruction }),
         });
 
         if (!resp.ok || !resp.body) throw new Error(`HTTP ${resp.status}`);
@@ -112,6 +203,7 @@ export function ChatRevision({
           }
         }
       } catch {
+        setUploading(false);
         setMessages((prev) =>
           prev.map((m) =>
             m.id === agentId
@@ -124,8 +216,10 @@ export function ChatRevision({
         scrollBottom();
       }
     },
-    [streaming, sectionId, onContentUpdated]
+    [streaming, sectionId, onContentUpdated, items]
   );
+
+  const canSend = (input.trim().length > 0 || items.length > 0) && !streaming;
 
   return (
     <div className="absolute inset-0 bg-white z-20 flex flex-col">
@@ -160,7 +254,7 @@ export function ChatRevision({
                 </div>
               )}
               <div
-                className={`max-w-[82%] rounded-2xl px-4 py-2.5 text-sm leading-relaxed ${
+                className={`max-w-[82%] rounded-2xl px-4 py-2.5 text-sm leading-relaxed whitespace-pre-wrap ${
                   msg.role === "user"
                     ? "bg-purple-600 text-white rounded-tr-sm"
                     : "bg-gray-50 text-gray-700 border border-gray-100 rounded-tl-sm"
@@ -202,9 +296,96 @@ export function ChatRevision({
         <div ref={bottomRef} />
       </div>
 
-      {/* Input */}
+      {/* Input area */}
       <div className="px-4 py-3 border-t border-gray-100 flex-shrink-0">
+        {/* Attached file previews */}
+        {items.length > 0 && (
+          <div className="flex flex-wrap gap-2 mb-2">
+            {items.map((item, idx) =>
+              item.previewUrl ? (
+                <div
+                  key={idx}
+                  className="relative rounded-xl overflow-hidden shrink-0"
+                  style={{ width: 80, height: 56 }}
+                >
+                  <img
+                    src={item.previewUrl}
+                    alt={item.file.name}
+                    className="w-full h-full object-cover"
+                  />
+                  <button
+                    onClick={() => removeItem(idx)}
+                    className="absolute top-1 right-1 w-4 h-4 rounded-full flex items-center justify-center"
+                    style={{ background: "rgba(0,0,0,0.55)" }}
+                  >
+                    <X className="w-2.5 h-2.5 text-white" />
+                  </button>
+                </div>
+              ) : (
+                <div
+                  key={idx}
+                  className="relative flex items-center gap-2 px-2.5 py-2 rounded-xl shrink-0"
+                  style={{ background: "#f9f6ff", border: "1px solid #ede9fe", maxWidth: 180 }}
+                >
+                  <FileTypeIcon file={item.file} />
+                  <div className="min-w-0 flex-1">
+                    <div
+                      className="text-xs font-medium truncate"
+                      style={{ color: "#1e1b4b", maxWidth: 110 }}
+                      title={item.file.name}
+                    >
+                      {item.file.name}
+                    </div>
+                    <div className="text-[10px] mt-0.5" style={{ color: "#9ca3af" }}>
+                      {item.file.size < 1024 * 1024
+                        ? `${(item.file.size / 1024).toFixed(0)} KB`
+                        : `${(item.file.size / (1024 * 1024)).toFixed(1)} MB`}
+                    </div>
+                  </div>
+                  <button
+                    onClick={() => removeItem(idx)}
+                    className="absolute top-1 right-1 w-4 h-4 rounded-full flex items-center justify-center hover:opacity-70"
+                    style={{ background: "#ddd6fe" }}
+                  >
+                    <X className="w-2.5 h-2.5" style={{ color: "#7c3aed" }} />
+                  </button>
+                </div>
+              )
+            )}
+          </div>
+        )}
+
+        {/* Textarea + buttons row */}
         <div className="flex items-end gap-2">
+          {/* "+" file upload button */}
+          <input
+            ref={fileRef}
+            type="file"
+            multiple
+            className="hidden"
+            onChange={(e) => e.target.files && addFiles(e.target.files)}
+          />
+          <button
+            type="button"
+            title="Joindre un fichier (image, PDF, Word…)"
+            onClick={() => fileRef.current?.click()}
+            disabled={streaming}
+            className="w-8 h-8 rounded-xl flex items-center justify-center flex-shrink-0 transition-all disabled:opacity-40 self-end mb-0.5"
+            style={{ color: "#9ca3af", border: "1px solid #e5e7eb", background: "#f9fafb" }}
+            onMouseEnter={(e) => {
+              e.currentTarget.style.color = "#7c3aed";
+              e.currentTarget.style.borderColor = "#a78bfa";
+              e.currentTarget.style.background = "#f5f0ff";
+            }}
+            onMouseLeave={(e) => {
+              e.currentTarget.style.color = "#9ca3af";
+              e.currentTarget.style.borderColor = "#e5e7eb";
+              e.currentTarget.style.background = "#f9fafb";
+            }}
+          >
+            <Plus className="w-3.5 h-3.5" />
+          </button>
+
           <textarea
             value={input}
             onChange={(e) => setInput(e.target.value)}
@@ -218,15 +399,19 @@ export function ChatRevision({
             rows={2}
             className="flex-1 text-sm border border-gray-200 rounded-xl px-3 py-2 resize-none focus:outline-none focus:ring-2 focus:ring-purple-300 focus:border-purple-400 placeholder:text-gray-300"
           />
+
           <button
             onClick={() => send(input)}
-            disabled={!input.trim() || streaming}
-            className="w-9 h-9 bg-purple-600 hover:bg-purple-700 disabled:opacity-40 text-white rounded-xl flex items-center justify-center flex-shrink-0 transition-colors"
+            disabled={!canSend}
+            className="w-9 h-9 bg-purple-600 hover:bg-purple-700 disabled:opacity-40 text-white rounded-xl flex items-center justify-center flex-shrink-0 transition-colors self-end"
           >
-            {streaming ? <Loader2 className="w-4 h-4 animate-spin" /> : <Send className="w-4 h-4" />}
+            {(streaming || uploading) ? <Loader2 className="w-4 h-4 animate-spin" /> : <Send className="w-4 h-4" />}
           </button>
         </div>
-        <p className="text-[10px] text-gray-300 mt-1 px-1">Enter pour envoyer · Shift+Enter pour nouvelle ligne</p>
+
+        <p className="text-[10px] text-gray-300 mt-1 px-1">
+          Enter pour envoyer · Shift+Enter pour nouvelle ligne
+        </p>
       </div>
     </div>
   );
