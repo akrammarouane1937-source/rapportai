@@ -46,7 +46,14 @@ export default function PartieI() {
   const [sourceFiles, setSourceFiles] = useState<File[]>([]);
   const [figureFiles, setFigureFiles] = useState<File[]>([]);
 
-  const [phase, setPhase] = useState<Phase>(hasSommaire ? "confirm" : "blocked");
+  const hasPartieI = Boolean(report.partieI?.trim());
+
+  const [phase, setPhase] = useState<Phase>(() => {
+    if (!hasSommaire) return "blocked";
+    if (hasPartieI) return "done";
+    return "confirm";
+  });
+
   const [msgs, setMsgs] = useState<Msg[]>(() => {
     if (!hasSommaire) {
       return [{
@@ -70,6 +77,23 @@ export default function PartieI() {
               <ArrowLeft className="w-4 h-4" />
               Retourner à l'Étape 5 — Sommaire
             </button>
+          </div>
+        ),
+      }];
+    }
+    // Already generated — skip the confirmation flow and go straight to revision mode
+    if (hasPartieI) {
+      const wc = report.partieI.split(/\s+/).filter(Boolean).length;
+      return [{
+        id: nextId(),
+        role: "agent",
+        content: (
+          <div>
+            <p className="font-semibold">Partie I déjà générée</p>
+            <p className="mt-1 text-sm text-muted-foreground">
+              {wc.toLocaleString("fr-FR")} mots · {chaptersFromStore} chapitres.
+              Dis-moi ce que tu veux modifier, ou passe à la Partie II.
+            </p>
           </div>
         ),
       }];

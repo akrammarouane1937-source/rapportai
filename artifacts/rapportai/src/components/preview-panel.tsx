@@ -208,6 +208,7 @@ export function PreviewPanel({ activeSection, content, maxStep }: PreviewPanelPr
       : {};
 
     // ── Placeholder card: active section with no content yet ──────────────────
+    // Styled as a full A4 page so the student visualises the final format
     if (!text.trim() && isActive) {
       allPageCards.push(
         <div
@@ -216,23 +217,54 @@ export function PreviewPanel({ activeSection, content, maxStep }: PreviewPanelPr
           style={{
             width: "21cm",
             maxWidth: "100%",
-            minHeight: "12cm",
-            boxShadow: "0 2px 12px rgba(0,0,0,0.10)",
+            minHeight: "29.7cm",
+            boxShadow: "0 4px 20px rgba(0,0,0,0.18)",
             marginBottom: "0.6cm",
             borderRadius: 2,
             display: "flex",
             flexDirection: "column",
             alignItems: "center",
             justifyContent: "center",
-            gap: 10,
-            border: "2px dashed #c4b5fd",
-            background: "#faf5ff",
+            gap: 14,
+            background: "#fff",
+            padding: "2.54cm",
+            position: "relative",
           }}
         >
-          <Loader2 style={{ width: 20, height: 20, color: "#a855f7", animation: "spin 1s linear infinite" }} className="animate-spin" />
-          <span style={{ fontSize: 13, color: "#7c3aed", fontStyle: "italic" }}>
-            En cours de génération — {label}…
-          </span>
+          {/* Faint top-margin guide line */}
+          <div style={{
+            position: "absolute",
+            top: "2.54cm",
+            left: "3cm",
+            right: "2.54cm",
+            height: 1,
+            background: "#f3e8ff",
+          }} />
+          {/* Faint body area placeholder lines */}
+          {[0,1,2,3,4].map((i) => (
+            <div key={i} style={{
+              width: "60%",
+              height: 8,
+              borderRadius: 4,
+              background: i === 0 ? "#ede9fe" : "#f5f3ff",
+              opacity: 1 - i * 0.12,
+            }} />
+          ))}
+          <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 8, marginTop: 16 }}>
+            <Loader2 style={{ width: 24, height: 24, color: "#7c3aed" }} className="animate-spin" />
+            <span style={{ fontSize: 13, color: "#7c3aed", fontStyle: "italic" }}>
+              Rédaction en cours — {label}…
+            </span>
+          </div>
+          {/* Faint bottom-margin guide line */}
+          <div style={{
+            position: "absolute",
+            bottom: "2.54cm",
+            left: "3cm",
+            right: "2.54cm",
+            height: 1,
+            background: "#f3e8ff",
+          }} />
         </div>
       );
       continue;

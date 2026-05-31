@@ -45,9 +45,28 @@ export default function PartieII() {
   const [sourceFiles, setSourceFiles] = useState<File[]>([]);
   const [figureFiles, setFigureFiles] = useState<File[]>([]);
 
-  const [phase, setPhase] = useState<Phase>("confirm");
-  const [msgs, setMsgs] = useState<Msg[]>([
-    {
+  const hasPartieII = Boolean(report.partieII?.trim());
+
+  const [phase, setPhase] = useState<Phase>(() => hasPartieII ? "done" : "confirm");
+
+  const [msgs, setMsgs] = useState<Msg[]>(() => {
+    if (hasPartieII) {
+      const wc = report.partieII.split(/\s+/).filter(Boolean).length;
+      return [{
+        id: nextId(),
+        role: "agent",
+        content: (
+          <div>
+            <p className="font-semibold">Partie II déjà générée</p>
+            <p className="mt-1 text-sm text-muted-foreground">
+              {wc.toLocaleString("fr-FR")} mots · {chaptersFromStore} chapitres.
+              Dis-moi ce que tu veux modifier, ou passe aux annexes.
+            </p>
+          </div>
+        ),
+      }];
+    }
+    return [{
       id: nextId(),
       role: "agent",
       content: (
@@ -62,8 +81,8 @@ export default function PartieII() {
           )}
         </div>
       ),
-    },
-  ]);
+    }];
+  });
   const bottomRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
