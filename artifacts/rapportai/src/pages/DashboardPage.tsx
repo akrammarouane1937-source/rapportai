@@ -395,9 +395,9 @@ export default function DashboardPage() {
               style={{ boxShadow: "0 1px 4px rgba(0,0,0,0.06)" }}>
               {user?.imageUrl
                 ? <img src={user.imageUrl} alt="" className="w-5 h-5 rounded-full object-cover" />
-                : <div className="w-5 h-5 rounded-full bg-purple-200 flex items-center justify-center text-[10px] font-bold text-purple-700">{name[0]?.toUpperCase()}</div>
+                : <div className="w-5 h-5 rounded-full bg-purple-200 flex items-center justify-center text-[10px] font-bold text-purple-700">{name[0]?.toUpperCase() || "?"}</div>
               }
-              {workspaceName}'s Workspace
+              {name ? `${name}'s Workspace` : "Mon espace"}
               <ChevronDown className="w-3.5 h-3.5 text-gray-400" />
             </button>
           </div>
