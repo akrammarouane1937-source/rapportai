@@ -123,3 +123,49 @@ export async function runInternalHumanize(
   logger.info({ section: sectionType, inWords: wordCount, outWords }, "humanize: done");
   return result;
 }
+
+/**
+ * Streaming variant — calls `onChunk` for each humanized chunk as soon as it's
+ * ready, so the caller can forward partial results to the client without waiting
+ * for the entire text to be processed.
+ *
+ * For non-prose sections (skipped), `onChunk` is still called once with the
+ * raw text so the caller doesn't need a separate branch.
+ *
+ * Returns the full humanized text (all chunks joined with "\n\n").
+ */
+export async function streamingHumanize(
+  rawText: string,
+  sectionType: string,
+  onChunk: (chunk: string, isFirst: boolean) => void,
+): Promise<string> {
+  if (!HUMANIZE_SECTIONS.has(sectionType) || !rawText.trim()) {
+    logger.info({ section: sectionType }, "humanize: skipped (non-prose or empty) — streaming as-is");
+    onChunk(rawText, true);
+    return rawText;
+  }
+
+  const wordCount = rawText.split(/\s+/).filter(Boolean).length;
+  logger.info({ section: sectionType, wordCount }, "humanize: streaming start");
+
+  if (wordCount <= CHUNK_MAX_WORDS) {
+    const result = await humanizeChunk(rawText, sectionType);
+    onChunk(result, true);
+    logger.info({ section: sectionType, outWords: result.split(/\s+/).filter(Boolean).length }, "humanize: streaming done (single chunk)");
+    return result;
+  }
+
+  const chunks = splitIntoChunks(rawText);
+  logger.info({ section: sectionType, chunks: chunks.length }, "humanize: streaming multi-chunk");
+
+  const results: string[] = [];
+  for (const chunk of chunks) {
+    const humanized = await humanizeChunk(chunk, sectionType);
+    results.push(humanized);
+    onChunk(humanized, results.length === 1);
+  }
+
+  const result = results.join("\n\n");
+  logger.info({ section: sectionType, inWords: wordCount, outWords: result.split(/\s+/).filter(Boolean).length }, "humanize: streaming done (multi-chunk)");
+  return result;
+}

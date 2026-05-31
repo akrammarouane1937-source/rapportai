@@ -255,6 +255,12 @@ export function useGenerate() {
               ]);
             }
 
+            if (data.content_chunk) {
+              setToolCalls((prev) => prev.map((t) => ({ ...t, done: true })));
+              finalContent += data.content_chunk as string;
+              setStreamedContent((prev) => prev + (data.content_chunk as string));
+            }
+
             if (data.content) {
               setToolCalls((prev) => prev.map((t) => ({ ...t, done: true })));
               finalContent += data.content as string;

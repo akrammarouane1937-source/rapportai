@@ -15,6 +15,10 @@ import {
 } from "../lib/memory";
 import { guardSectionLimit, guardRevisionLimit, guardPayment } from "../lib/plan-guard";
 import { logger } from "../lib/logger";
+import { streamingHumanize } from "../lib/humanize-util";
+import { metrics, estimateCost, estimateTokens } from "../lib/metrics";
+import { writeFileSync } from "fs";
+import path from "path";
 
 // ─── Input sanitization + prompt injection prevention ────────────────────────
 
@@ -101,10 +105,6 @@ function advancePage(sessionId: string, sectionId: string): number {
 function resetPage(sessionId: string, sectionId: string): void {
   pageStateMap.get(sessionId)?.set(sectionId, 0);
 }
-import { runInternalHumanize } from "../lib/humanize-util";
-import { metrics, estimateCost, estimateTokens } from "../lib/metrics";
-import { writeFileSync } from "fs";
-import path from "path";
 
 // ─── Validation + retry (Replit architecture) ─────────────────────────────────
 
@@ -507,7 +507,14 @@ router.post(
         }
 
         res.write(`data: ${JSON.stringify({ phase: "humanizing" })}\n\n`);
-        const humanized = await runInternalHumanize(contentToHumanize, section);
+        let humanized = contentToHumanize;
+        let _humanizedAccum = "";
+        await streamingHumanize(contentToHumanize, section, (chunk, isFirst) => {
+          const separator = isFirst ? "" : "\n\n";
+          _humanizedAccum += separator + chunk;
+          res.write(`data: ${JSON.stringify({ content_chunk: separator + chunk })}\n\n`);
+        });
+        humanized = _humanizedAccum || contentToHumanize;
         if (humanized !== contentToHumanize) {
           const sectionFile = path.join(agent.workDir, `${section}.md`);
           writeFileSync(sectionFile, humanized, "utf-8");

@@ -8,7 +8,7 @@ import { getSectionConfig, buildMemoryContext } from "../lib/agents/sectionConfi
 import { schoolProfile } from "../lib/moroccan-schools";
 import { buildFormattingPromptBlock, type FormattingPrefs } from "../lib/formatting";
 import type { StudentMemory } from "../lib/memory-types";
-import { runInternalHumanize } from "../lib/humanize-util";
+import { streamingHumanize } from "../lib/humanize-util";
 
 const router = Router();
 
@@ -403,12 +403,15 @@ router.post("/generate", async (req: Request, res: Response) => {
       }
     }
 
-    // Phase 2 — humanize: run silently, student sees "Optimisation du texte…"
+    // Phase 2 — humanize: stream each chunk as it's ready so the frontend
+    // renders progressively rather than waiting for the full text.
     res.write(`data: ${JSON.stringify({ phase: "humanizing" })}\n\n`);
-    const finalOutput = await runInternalHumanize(fullOutput, body.section);
-
-    // Phase 3 — stream the humanized result
-    res.write(`data: ${JSON.stringify({ content: finalOutput })}\n\n`);
+    let finalOutput = "";
+    await streamingHumanize(fullOutput, body.section, (chunk, isFirst) => {
+      const separator = isFirst ? "" : "\n\n";
+      finalOutput += separator + chunk;
+      res.write(`data: ${JSON.stringify({ content_chunk: separator + chunk })}\n\n`);
+    });
 
     // Update memory: mark section complete with word count + key_points summary
     if (body.sessionId && finalOutput.trim()) {
