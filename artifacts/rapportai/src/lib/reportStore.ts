@@ -47,6 +47,7 @@ export interface ReportData {
   apports?: string;
   perspectives?: string;
   bibliographie?: Array<{ author: string; year: string; title: string; journal: string }>;
+  bibliographieText?: string; // generated markdown from the AI agent
   figures?: Array<{ n: number; title: string; page: number }>;
   tableaux?: Array<{ n: number; title: string; page: number }>;
   annexes?: string[];

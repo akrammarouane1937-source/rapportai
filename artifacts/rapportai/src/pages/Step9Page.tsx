@@ -5,7 +5,7 @@ import {
   Sparkles, Loader2, X, Upload, Download, Plus,
   CheckCircle2, Circle, FileText, BookOpen,
   BarChart2, Hash, ArrowRight, Share2, Link2, Check, Lock, Wand2, Table2,
-  MessageSquare, RotateCcw,
+  MessageSquare, RotateCcw, ChevronDown, ChevronUp, ExternalLink, Search,
 } from "lucide-react";
 import { ChatRevision } from "@/components/report/ChatRevision";
 import { useCheckpoint } from "@/lib/useCheckpoint";
@@ -71,6 +71,79 @@ function StatCard({ icon, value, label, color }: {
   );
 }
 
+// ─── Google Scholar guide ─────────────────────────────────────────────────────
+
+function ScholarGuide({ open, onToggle }: { open: boolean; onToggle: () => void }) {
+  return (
+    <div className="rounded-2xl border border-emerald-100 overflow-hidden">
+      <button
+        onClick={onToggle}
+        className="w-full flex items-center gap-2 px-4 py-3 text-left hover:bg-emerald-50/50 transition-colors"
+      >
+        <Search className="w-4 h-4 text-emerald-600 flex-shrink-0" />
+        <span className="flex-1 text-sm font-semibold text-emerald-800">Guide : Trouver des articles</span>
+        {open
+          ? <ChevronUp className="w-3.5 h-3.5 text-emerald-500" />
+          : <ChevronDown className="w-3.5 h-3.5 text-emerald-500" />}
+      </button>
+      <AnimatePresence>
+        {open && (
+          <motion.div
+            initial={{ height: 0, opacity: 0 }}
+            animate={{ height: "auto", opacity: 1 }}
+            exit={{ height: 0, opacity: 0 }}
+            transition={{ duration: 0.2 }}
+            className="overflow-hidden"
+          >
+            <div className="px-4 pb-4 space-y-3 border-t border-emerald-50">
+              {/* Step 1 */}
+              <div className="pt-3">
+                <div className="flex items-center gap-2 mb-1">
+                  <span className="w-5 h-5 rounded-full bg-emerald-100 text-emerald-700 text-[10px] font-black flex items-center justify-center flex-shrink-0">1</span>
+                  <p className="text-xs font-bold text-gray-700">Recherche sur Google Scholar</p>
+                </div>
+                <p className="text-xs text-gray-500 leading-relaxed pl-7">
+                  Va sur <a href="https://scholar.google.com" target="_blank" rel="noopener noreferrer" className="text-emerald-600 underline">scholar.google.com</a> et tape ton thème en français ou anglais. Utilise des guillemets pour les expressions exactes : <em>"gestion des risques" "PME Maroc"</em>. Filtre par date (ex : depuis 2018) pour du contenu récent.
+                </p>
+              </div>
+              {/* Step 2 */}
+              <div>
+                <div className="flex items-center gap-2 mb-1">
+                  <span className="w-5 h-5 rounded-full bg-emerald-100 text-emerald-700 text-[10px] font-black flex items-center justify-center flex-shrink-0">2</span>
+                  <p className="text-xs font-bold text-gray-700">Accéder au PDF</p>
+                </div>
+                <p className="text-xs text-gray-500 leading-relaxed pl-7">
+                  Clique sur <strong>[PDF]</strong> à droite du titre. Sinon, essaie <a href="https://www.researchgate.net" target="_blank" rel="noopener noreferrer" className="text-emerald-600 underline">ResearchGate</a> ou <a href="https://www.cairn.info" target="_blank" rel="noopener noreferrer" className="text-emerald-600 underline">Cairn.info</a> pour les articles francophones. Certaines universités marocaines donnent accès via leur portail.
+                </p>
+              </div>
+              {/* Step 3 */}
+              <div>
+                <div className="flex items-center gap-2 mb-1">
+                  <span className="w-5 h-5 rounded-full bg-emerald-100 text-emerald-700 text-[10px] font-black flex items-center justify-center flex-shrink-0">3</span>
+                  <p className="text-xs font-bold text-gray-700">Copier la citation APA</p>
+                </div>
+                <p className="text-xs text-gray-500 leading-relaxed pl-7">
+                  Clique sur l'icône <strong>"Citer"</strong> (guillemets) sous le résultat Scholar. Copie le format <strong>APA</strong> directement — c'est prêt à l'emploi.
+                </p>
+              </div>
+              {/* Step 4 */}
+              <div>
+                <div className="flex items-center gap-2 mb-1">
+                  <span className="w-5 h-5 rounded-full bg-emerald-100 text-emerald-700 text-[10px] font-black flex items-center justify-center flex-shrink-0">4</span>
+                  <p className="text-xs font-bold text-gray-700">Ajouter à ta bibliographie</p>
+                </div>
+                <p className="text-xs text-gray-500 leading-relaxed pl-7">
+                  Colle la citation dans le chat de révision ci-contre. L'IA va l'intégrer proprement dans la bibliographie générée.
+                </p>
+              </div>
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+    </div>
+  );
+}
+
 // ─── Main page ────────────────────────────────────────────────────────────────
 
 export default function Step9Page() {
@@ -82,7 +155,7 @@ export default function Step9Page() {
   const bibSrcs  = useMemo(() => getBibSources(), []);
   const plan     = useMemo(() => getMyPlan(), []);
 
-  // ── Local state ──────────────────────────────────────────────────────────────
+  // ── Conclusion state ──────────────────────────────────────────────────────
   const [apports, setApports]           = useState(report.apports ?? "");
   const [perspectives, setPerspectives] = useState(report.perspectives ?? "");
   const [annexes, setAnnexes]           = useState<string[]>(report.annexes ?? []);
@@ -101,7 +174,21 @@ export default function Step9Page() {
   const [linkCopied, setLinkCopied]       = useState(false);
   const rawTextRef = useRef(report.conclusion ?? "");
 
-  // ── Streaming generation ──────────────────────────────────────────────────
+  // ── Bibliographie state ───────────────────────────────────────────────────
+  const bibRawRef = useRef(report.bibliographieText ?? "");
+  const [bibContent, setBibContent] = useState(
+    report.bibliographieText ? markdownToHtml(report.bibliographieText) : ""
+  );
+  const [bibWordCount, setBibWordCount] = useState(wordCount(report.bibliographieText));
+  const [bibGenerating, setBibGenerating] = useState(false);
+  const [bibStatus, setBibStatus] = useState("");
+  const [showBibChat, setShowBibChat] = useState(false);
+  const [scholarGuideOpen, setScholarGuideOpen] = useState(false);
+
+  // ── Tab state ─────────────────────────────────────────────────────────────
+  const [activeTab, setActiveTab] = useState<"conclusion" | "bibliographie">("conclusion");
+
+  // ── Conclusion streaming ──────────────────────────────────────────────────
   const onChunk = useCallback((chunk: string) => {
     rawTextRef.current += chunk;
     setStreamedContent(markdownToHtml(rawTextRef.current));
@@ -132,7 +219,69 @@ export default function Step9Page() {
     setFeedDismissed(false);
     clearActivity();
     setShowChat(false);
+    setActiveTab("conclusion");
     generate({ section: "conclusion" });
+  };
+
+  // ── Bibliographie generation ───────────────────────────────────────────────
+  const handleGenerateBib = async () => {
+    const sessionId = (getReport() as Record<string, unknown>).sessionId as string | undefined;
+    if (!sessionId) {
+      alert("Génère d'abord une section (Introduction, Partie I ou II) pour initialiser la session IA, puis reviens générer la bibliographie.");
+      return;
+    }
+    bibRawRef.current = "";
+    setBibContent("");
+    setBibWordCount(0);
+    setBibGenerating(true);
+    setBibStatus("Lecture des sections générées…");
+    setShowBibChat(false);
+    setActiveTab("bibliographie");
+    try {
+      const resp = await fetch(`${BASE_PATH}/api/session/${sessionId}/bibliographie`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({}),
+      });
+      if (!resp.ok || !resp.body) {
+        setBibStatus("Erreur serveur. Réessaie.");
+        return;
+      }
+      const reader = resp.body.getReader();
+      const dec = new TextDecoder();
+      let buf = "";
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+        buf += dec.decode(value, { stream: true });
+        const lines = buf.split("\n");
+        buf = lines.pop() ?? "";
+        for (const line of lines) {
+          if (!line.startsWith("data: ")) continue;
+          try {
+            const j = JSON.parse(line.slice(6)) as {
+              content?: string; phase?: string; tool_call?: string;
+              done?: boolean; error?: string;
+            };
+            if (j.phase === "writing") setBibStatus("Extraction des citations…");
+            if (j.phase === "humanizing") setBibStatus("Humanisation en cours…");
+            if (j.tool_call) setBibStatus(`${j.tool_call}…`);
+            if (j.content) {
+              bibRawRef.current += j.content;
+              setBibContent(markdownToHtml(bibRawRef.current));
+              setBibWordCount(bibRawRef.current.split(/\s+/).filter(Boolean).length);
+            }
+            if (j.done) {
+              saveReport({ bibliographieText: bibRawRef.current });
+              setBibStatus("");
+            }
+            if (j.error) setBibStatus(`Erreur : ${j.error}`);
+          } catch { /* ignore malformed SSE */ }
+        }
+      }
+    } finally {
+      setBibGenerating(false);
+    }
   };
 
   const handleHumanize = async () => {
@@ -184,6 +333,7 @@ export default function Step9Page() {
     report.introduction,
     report.partieI, report.partieII,
     rawTextRef.current || report.conclusion,
+    bibRawRef.current || report.bibliographieText,
   ]);
   const estimatedPages = Math.max(1, Math.round(totalWords / 250));
 
@@ -197,6 +347,7 @@ export default function Step9Page() {
     { label: "Partie I",                    done: !!(report.partieI),                  words: wordCount(report.partieI) },
     { label: "Partie II",                   done: !!(report.partieII),                 words: wordCount(report.partieII) },
     { label: "Conclusion & Perspectives",   done: !!(rawTextRef.current || report.conclusion), words: wordCount(rawTextRef.current || report.conclusion) },
+    { label: "Bibliographie",               done: !!(bibContent || report.bibliographieText),     words: bibWordCount || wordCount(report.bibliographieText) },
   ];
 
   const completedCount = sections.filter((s) => s.done).length;
@@ -288,16 +439,22 @@ export default function Step9Page() {
                       <RotateCcw className="w-3 h-3" /> Restaurer
                     </button>
                   )}
-                  {streamedContent && (
+                  {streamedContent && activeTab === "conclusion" && (
                     <button onClick={() => setShowChat(!showChat)}
                       className={`flex items-center gap-1 text-xs px-2 py-1 rounded-lg transition-colors ${showChat ? "bg-purple-100 text-purple-700" : "text-gray-500 hover:text-gray-700 hover:bg-gray-100"}`}>
+                      <MessageSquare className="w-3 h-3" /> Réviser
+                    </button>
+                  )}
+                  {bibContent && activeTab === "bibliographie" && (
+                    <button onClick={() => setShowBibChat(!showBibChat)}
+                      className={`flex items-center gap-1 text-xs px-2 py-1 rounded-lg transition-colors ${showBibChat ? "bg-emerald-100 text-emerald-700" : "text-gray-500 hover:text-gray-700 hover:bg-gray-100"}`}>
                       <MessageSquare className="w-3 h-3" /> Réviser
                     </button>
                   )}
                 </div>
               </div>
               <p className="text-xs text-gray-400">
-                {completedCount}/{sections.length} sections complètes · Génère la conclusion et télécharge ton .docx
+                {completedCount}/{sections.length} sections complètes · Génère la conclusion et la bibliographie
               </p>
             </motion.div>
 
@@ -325,7 +482,6 @@ export default function Step9Page() {
                 ))}
               </div>
             </div>
-
 
             {/* ── Synthesis IA card ── */}
             <div className="rounded-2xl p-4" style={{ background: "#f5f0ff" }}>
@@ -370,6 +526,46 @@ export default function Step9Page() {
                 className="w-full text-sm border border-gray-200 rounded-xl p-3 resize-none focus:outline-none focus:ring-2 focus:ring-purple-300 focus:border-purple-400 placeholder:text-gray-300"
               />
             </div>
+
+            {/* ── Bibliographie automatique ── */}
+            <div className="rounded-2xl border border-emerald-100 overflow-hidden">
+              <div className="px-4 pt-3 pb-3">
+                <div className="flex items-center gap-2 mb-1.5">
+                  <BookOpen className="w-4 h-4 text-emerald-600" />
+                  <span className="text-sm font-bold text-emerald-800" style={{ fontFamily: "'Plus Jakarta Sans', sans-serif" }}>
+                    Bibliographie automatique
+                  </span>
+                  {(bibContent || report.bibliographieText) && (
+                    <span className="ml-auto text-[10px] font-bold px-2 py-0.5 rounded-full bg-emerald-50 text-emerald-600">
+                      {(bibWordCount || wordCount(report.bibliographieText)).toLocaleString("fr-FR")} mots
+                    </span>
+                  )}
+                </div>
+                <p className="text-xs text-emerald-700 leading-relaxed mb-3">
+                  Claude analyse toutes tes sections, extrait les citations, les complète via recherche web et formate en APA 7e (ou ton style défini).
+                  {bibSrcs.length > 0 && ` Les ${bibSrcs.length} source${bibSrcs.length > 1 ? "s" : ""} de ta bibliothèque sont incluses automatiquement.`}
+                </p>
+                <button
+                  onClick={handleGenerateBib}
+                  disabled={bibGenerating || generating}
+                  className="w-full h-10 rounded-xl font-bold text-sm flex items-center justify-center gap-2 transition-all disabled:opacity-60"
+                  style={{
+                    background: bibGenerating ? "#f0fdf4" : "linear-gradient(135deg, #10b981, #059669)",
+                    color: bibGenerating ? "#6b7280" : "white",
+                    boxShadow: bibGenerating ? "none" : "0 4px 14px rgba(16,185,129,0.35)",
+                  }}
+                >
+                  {bibGenerating
+                    ? <><Loader2 className="w-4 h-4 animate-spin text-emerald-500" /> {bibStatus || "Génération…"}</>
+                    : (bibContent || report.bibliographieText)
+                      ? <><RotateCcw className="w-4 h-4" /> Regénérer la bibliographie</>
+                      : <><Sparkles className="w-4 h-4" /> Générer la Bibliographie</>}
+                </button>
+              </div>
+            </div>
+
+            {/* ── Google Scholar guide ── */}
+            <ScholarGuide open={scholarGuideOpen} onToggle={() => setScholarGuideOpen(!scholarGuideOpen)} />
 
             {/* ── Bibliography sources ── */}
             {bibSrcs.length > 0 && (
@@ -453,48 +649,36 @@ export default function Step9Page() {
                 <input
                   value={newTableTitle}
                   onChange={(e) => setNewTableTitle(e.target.value)}
-                  onKeyDown={(e) => {
-                    if (e.key === "Enter" && newTableTitle.trim()) {
-                      setTableaux((prev) => [
-                        ...prev,
-                        { n: prev.length + 1, title: newTableTitle.trim(), page: parseInt(newTablePage) || 0 },
-                      ]);
-                      setNewTableTitle("");
-                      setNewTablePage("");
-                    }
-                  }}
-                  placeholder="Titre du tableau…"
-                  className="flex-1 text-xs bg-gray-50 border border-gray-200 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-200"
+                  placeholder="Titre du tableau"
+                  className="flex-1 text-xs border border-gray-200 rounded-xl px-3 py-2 focus:outline-none focus:ring-1 focus:ring-blue-300 placeholder:text-gray-300"
                 />
                 <input
                   value={newTablePage}
                   onChange={(e) => setNewTablePage(e.target.value)}
-                  placeholder="Page"
+                  placeholder="p."
                   type="number"
-                  min={1}
-                  className="w-16 text-xs bg-gray-50 border border-gray-200 rounded-lg px-2 py-2 text-center focus:outline-none focus:ring-2 focus:ring-blue-200"
+                  className="w-14 text-xs border border-gray-200 rounded-xl px-2 py-2 focus:outline-none focus:ring-1 focus:ring-blue-300 placeholder:text-gray-300 text-center"
                 />
                 <button
                   onClick={() => {
                     if (!newTableTitle.trim()) return;
-                    setTableaux((prev) => [
-                      ...prev,
-                      { n: prev.length + 1, title: newTableTitle.trim(), page: parseInt(newTablePage) || 0 },
-                    ]);
+                    const n = tableaux.length + 1;
+                    setTableaux((prev) => [...prev, { n, title: newTableTitle.trim(), page: parseInt(newTablePage) || 0 }]);
                     setNewTableTitle("");
                     setNewTablePage("");
                   }}
-                  disabled={!newTableTitle.trim()}
-                  className="w-8 h-8 bg-blue-500 hover:bg-blue-600 disabled:opacity-40 rounded-lg flex items-center justify-center transition-colors flex-shrink-0"
+                  className="w-8 h-8 rounded-xl bg-blue-50 hover:bg-blue-100 flex items-center justify-center text-blue-500 transition-colors flex-shrink-0"
                 >
-                  <Plus className="w-3.5 h-3.5 text-white" />
+                  <Plus className="w-3.5 h-3.5" />
                 </button>
               </div>
             </div>
 
             {/* ── Annexes ── */}
             <div>
-              <label className="block text-sm font-semibold text-gray-700 mb-2">Annexes</label>
+              <label className="block text-sm font-semibold text-gray-700 mb-2">
+                Annexes
+              </label>
               <AnimatePresence>
                 {annexes.map((a, i) => (
                   <motion.div key={i} initial={{ opacity: 0, x: -10 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -10 }}
@@ -646,70 +830,168 @@ export default function Step9Page() {
         </div>
 
         {/* ── RIGHT PANEL ───────────────────────────────────────────────── */}
-        <div className="flex-1 relative overflow-hidden">
-          {showChat && !generating && (
-            <ChatRevision sectionId="conclusion" sectionLabel="Conclusion" onContentUpdated={(c) => { rawTextRef.current = c; setStreamedContent(markdownToHtml(c)); setStreamedWordCount(c.split(/\s+/).filter(Boolean).length); saveReport({ conclusion: c }); }} onClose={() => setShowChat(false)} />
-          )}
-          {streamedContent ? (
-            <WordPreview
-              content={streamedContent}
-              rawContent={rawTextRef.current}
-              sectionTitle="Conclusion Générale"
-              wordCount={streamedWordCount}
-              sectionId="conclusion"
-            />
-          ) : (
-            /* Empty state — show a summary of what's ready */
-            <div className="h-full flex flex-col items-center justify-center px-12 bg-white">
-              <div className="w-16 h-16 rounded-2xl flex items-center justify-center mb-5"
-                   style={{ background: "#f5f0ff" }}>
-                <Sparkles className="w-8 h-8 text-purple-500" />
-              </div>
-              <h2 className="text-xl font-black text-gray-900 mb-2 text-center" style={{ fontFamily: "'Plus Jakarta Sans', sans-serif" }}>
-                Dernière étape !
-              </h2>
-              <p className="text-sm text-gray-400 text-center max-w-xs leading-relaxed mb-8">
-                Clique sur <strong className="text-gray-600">Générer la Conclusion</strong> : Claude va synthétiser tout ton travail en une conclusion académique complète.
-              </p>
+        <div className="flex-1 relative overflow-hidden flex flex-col">
 
-              {/* Mini report stats */}
-              <div className="w-full max-w-sm space-y-2 mb-8">
-                {sections.filter((s) => s.done).map((s) => (
-                  <div key={s.label}
-                    className="flex items-center gap-3 px-4 py-2.5 rounded-xl"
-                    style={{ background: "#f9fafb" }}>
-                    <CheckCircle2 className="w-4 h-4 text-green-500 flex-shrink-0" />
-                    <span className="flex-1 text-sm text-gray-700">{s.label}</span>
-                    {s.words > 0 && (
-                      <span className="text-xs text-gray-400 tabular-nums">{s.words.toLocaleString("fr-FR")} mots</span>
+          {/* ── Tab bar ── */}
+          <div className="flex border-b border-gray-100 bg-white flex-shrink-0">
+            <button
+              onClick={() => setActiveTab("conclusion")}
+              className={`flex-1 py-2.5 text-sm font-semibold flex items-center justify-center gap-1.5 transition-colors ${
+                activeTab === "conclusion"
+                  ? "text-purple-700 border-b-2 border-purple-500"
+                  : "text-gray-400 hover:text-gray-600"
+              }`}
+            >
+              <Sparkles className="w-3.5 h-3.5" /> Conclusion
+              {(streamedContent || report.conclusion) && (
+                <span className="w-1.5 h-1.5 rounded-full bg-green-400 ml-0.5" />
+              )}
+            </button>
+            <button
+              onClick={() => setActiveTab("bibliographie")}
+              className={`flex-1 py-2.5 text-sm font-semibold flex items-center justify-center gap-1.5 transition-colors ${
+                activeTab === "bibliographie"
+                  ? "text-emerald-700 border-b-2 border-emerald-500"
+                  : "text-gray-400 hover:text-gray-600"
+              }`}
+            >
+              <BookOpen className="w-3.5 h-3.5" /> Bibliographie
+              {bibGenerating && <Loader2 className="w-3 h-3 animate-spin ml-0.5 text-emerald-500" />}
+              {!bibGenerating && (bibContent || report.bibliographieText) && (
+                <span className="w-1.5 h-1.5 rounded-full bg-green-400 ml-0.5" />
+              )}
+            </button>
+          </div>
+
+          {/* ── Tab content ── */}
+          <div className="flex-1 relative overflow-hidden">
+
+            {/* CONCLUSION tab */}
+            {activeTab === "conclusion" && (
+              <>
+                {showChat && !generating && (
+                  <ChatRevision sectionId="conclusion" sectionLabel="Conclusion" onContentUpdated={(c) => { rawTextRef.current = c; setStreamedContent(markdownToHtml(c)); setStreamedWordCount(c.split(/\s+/).filter(Boolean).length); saveReport({ conclusion: c }); }} onClose={() => setShowChat(false)} />
+                )}
+                {streamedContent ? (
+                  <WordPreview
+                    content={streamedContent}
+                    rawContent={rawTextRef.current}
+                    sectionTitle="Conclusion Générale"
+                    wordCount={streamedWordCount}
+                    sectionId="conclusion"
+                  />
+                ) : (
+                  <div className="h-full flex flex-col items-center justify-center px-12 bg-white">
+                    <div className="w-16 h-16 rounded-2xl flex items-center justify-center mb-5"
+                         style={{ background: "#f5f0ff" }}>
+                      <Sparkles className="w-8 h-8 text-purple-500" />
+                    </div>
+                    <h2 className="text-xl font-black text-gray-900 mb-2 text-center" style={{ fontFamily: "'Plus Jakarta Sans', sans-serif" }}>
+                      Dernière étape !
+                    </h2>
+                    <p className="text-sm text-gray-400 text-center max-w-xs leading-relaxed mb-8">
+                      Clique sur <strong className="text-gray-600">Générer la Conclusion</strong> : Claude va synthétiser tout ton travail en une conclusion académique complète.
+                    </p>
+
+                    <div className="w-full max-w-sm space-y-2 mb-8">
+                      {sections.filter((s) => s.done).map((s) => (
+                        <div key={s.label}
+                          className="flex items-center gap-3 px-4 py-2.5 rounded-xl"
+                          style={{ background: "#f9fafb" }}>
+                          <CheckCircle2 className="w-4 h-4 text-green-500 flex-shrink-0" />
+                          <span className="flex-1 text-sm text-gray-700">{s.label}</span>
+                          {s.words > 0 && (
+                            <span className="text-xs text-gray-400 tabular-nums">{s.words.toLocaleString("fr-FR")} mots</span>
+                          )}
+                        </div>
+                      ))}
+                      {sections.filter((s) => !s.done).map((s) => (
+                        <div key={s.label}
+                          className="flex items-center gap-3 px-4 py-2.5 rounded-xl opacity-40"
+                          style={{ background: "#f9fafb" }}>
+                          <Circle className="w-4 h-4 text-gray-300 flex-shrink-0" />
+                          <span className="flex-1 text-sm text-gray-400">{s.label}</span>
+                        </div>
+                      ))}
+                    </div>
+
+                    <Button
+                      onClick={handleGenerate}
+                      disabled={generating}
+                      className="h-12 px-8 bg-purple-600 hover:bg-purple-700 text-white font-bold text-sm rounded-xl gap-2"
+                      style={{ boxShadow: "0 4px 20px rgba(124,58,237,0.35)" }}
+                    >
+                      {generating
+                        ? <><Loader2 className="w-4 h-4 animate-spin" /> Génération…</>
+                        : <><Sparkles className="w-4 h-4" /> Générer la Conclusion</>}
+                    </Button>
+                  </div>
+                )}
+              </>
+            )}
+
+            {/* BIBLIOGRAPHIE tab */}
+            {activeTab === "bibliographie" && (
+              <>
+                {showBibChat && !bibGenerating && (
+                  <ChatRevision
+                    sectionId="bibliographie"
+                    sectionLabel="Bibliographie"
+                    onContentUpdated={(c) => {
+                      bibRawRef.current = c;
+                      setBibContent(markdownToHtml(c));
+                      setBibWordCount(c.split(/\s+/).filter(Boolean).length);
+                      saveReport({ bibliographieText: c });
+                    }}
+                    onClose={() => setShowBibChat(false)}
+                  />
+                )}
+                {bibContent ? (
+                  <WordPreview
+                    content={bibContent}
+                    rawContent={bibRawRef.current}
+                    sectionTitle="Références bibliographiques"
+                    wordCount={bibWordCount}
+                    sectionId="bibliographie"
+                  />
+                ) : (
+                  <div className="h-full flex flex-col items-center justify-center px-12 bg-white">
+                    <div className="w-16 h-16 rounded-2xl flex items-center justify-center mb-5"
+                         style={{ background: "#f0fdf4" }}>
+                      {bibGenerating
+                        ? <Loader2 className="w-8 h-8 text-emerald-500 animate-spin" />
+                        : <BookOpen className="w-8 h-8 text-emerald-500" />}
+                    </div>
+                    <h2 className="text-xl font-black text-gray-900 mb-2 text-center" style={{ fontFamily: "'Plus Jakarta Sans', sans-serif" }}>
+                      {bibGenerating ? "Génération en cours…" : "Bibliographie automatique"}
+                    </h2>
+                    <p className="text-sm text-gray-400 text-center max-w-xs leading-relaxed mb-6">
+                      {bibGenerating
+                        ? <span className="text-emerald-600 font-medium">{bibStatus}</span>
+                        : "Claude va scanner tes sections, extraire toutes les citations, les compléter via recherche web et les formater en APA 7e."}
+                    </p>
+                    {!bibGenerating && (
+                      <button
+                        onClick={handleGenerateBib}
+                        disabled={generating}
+                        className="h-12 px-8 rounded-xl font-bold text-sm flex items-center justify-center gap-2 text-white disabled:opacity-60"
+                        style={{
+                          background: "linear-gradient(135deg, #10b981, #059669)",
+                          boxShadow: "0 4px 20px rgba(16,185,129,0.35)",
+                        }}
+                      >
+                        <Sparkles className="w-4 h-4" /> Générer la Bibliographie
+                      </button>
                     )}
                   </div>
-                ))}
-                {sections.filter((s) => !s.done).map((s) => (
-                  <div key={s.label}
-                    className="flex items-center gap-3 px-4 py-2.5 rounded-xl opacity-40"
-                    style={{ background: "#f9fafb" }}>
-                    <Circle className="w-4 h-4 text-gray-300 flex-shrink-0" />
-                    <span className="flex-1 text-sm text-gray-400">{s.label}</span>
-                  </div>
-                ))}
-              </div>
+                )}
+              </>
+            )}
 
-              <Button
-                onClick={handleGenerate}
-                disabled={generating}
-                className="h-12 px-8 bg-purple-600 hover:bg-purple-700 text-white font-bold text-sm rounded-xl gap-2"
-                style={{ boxShadow: "0 4px 20px rgba(124,58,237,0.35)" }}
-              >
-                {generating
-                  ? <><Loader2 className="w-4 h-4 animate-spin" /> Génération…</>
-                  : <><Sparkles className="w-4 h-4" /> Générer la Conclusion</>}
-              </Button>
-            </div>
-          )}
+          </div>
         </div>
-      </div>
 
+      </div>
     </StepLayout>
   );
 }

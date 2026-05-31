@@ -545,12 +545,59 @@ function buildConclusion(d: Report): Paragraph[] {
   ];
 }
 
+// Paragraph for a single bibliography entry with APA hanging indent.
+// First line at left margin, continuation lines indented 12.7 mm (0.5 in).
+function bibEntryPara(text: string): Paragraph {
+  return new Paragraph({
+    alignment: AlignmentType.LEFT,
+    spacing: { ...LINE_SPACING, before: 60, after: 60 },
+    indent: { left: convertMillimetersToTwip(12.7), hanging: convertMillimetersToTwip(12.7) },
+    children: parseInlineRuns(text),
+  });
+}
+
+// markdownToParas variant that uses bibEntryPara for body lines (no first-line indent).
+function bibMarkdownToParas(md: string): Paragraph[] {
+  if (!md?.trim()) return [bodyPara("(Section non générée)")];
+  const lines = md.split("\n");
+  const paras: Paragraph[] = [];
+  let buf = "";
+
+  const flushBuf = () => {
+    const trimmed = buf.trim();
+    if (trimmed) paras.push(bibEntryPara(trimmed));
+    buf = "";
+  };
+
+  for (const raw of lines) {
+    const line = raw.trimEnd();
+    if (line.startsWith("### ")) {
+      flushBuf();
+      paras.push(heading3(line.slice(4).trim()));
+    } else if (line.startsWith("## ")) {
+      flushBuf();
+      paras.push(heading2(line.slice(3).trim()));
+    } else if (line.startsWith("# ")) {
+      flushBuf();
+      paras.push(heading1(line.slice(2).trim(), false));
+    } else if (line === "" || line === "---") {
+      flushBuf();
+    } else {
+      buf += (buf ? " " : "") + line;
+    }
+  }
+  flushBuf();
+  return paras;
+}
+
 function buildBibliographie(d: Report): Paragraph[] {
-  if (!d.bibliographie?.trim()) return [];
+  // Prefer the AI-generated markdown text; fall back to legacy string field
+  const text = d.bibliographieText?.trim() || (typeof d.bibliographie === "string" ? d.bibliographie?.trim() : "");
+  if (!text) return [];
   return [
-    heading1("Bibliographie et Webographie"),
+    heading1("Références bibliographiques"),
     emptyLine(),
-    ...markdownToParas(d.bibliographie),
+    ...bibMarkdownToParas(text),
   ];
 }
 

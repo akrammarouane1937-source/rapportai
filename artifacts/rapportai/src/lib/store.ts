@@ -55,6 +55,7 @@ export interface Report {
   partieIIChapters: number;
   conclusion: string;
   bibliographie: string;
+  bibliographieText: string; // generated markdown from the AI agent
   annexes: string;
   annexeItems: AnnexeItem[];
 
@@ -109,6 +110,7 @@ export const initialReportState: Report = {
   partieIIChapters: 2,
   conclusion: "",
   bibliographie: "",
+  bibliographieText: "",
   annexes: "",
   annexeItems: [],
 
