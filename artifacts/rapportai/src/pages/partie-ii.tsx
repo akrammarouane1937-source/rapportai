@@ -224,8 +224,8 @@ export default function PartieII() {
       push({ id: nextId(), role: "user", content: t });
       push({ id: nextId(), role: "agent", content: "Je révise la Partie II..." });
 
-      // Re-send the same files and figures from the original generation
-      const allFiles = [...sourceFilesRef.current, ...figureFilesRef.current];
+      // Merge: original source/figure files + any newly attached revision files
+      const allFiles = [...sourceFilesRef.current, ...figureFilesRef.current, ...(files ?? [])];
       const figuresForII = approvedFiguresRef.current;
 
       const partieII = await generate(
