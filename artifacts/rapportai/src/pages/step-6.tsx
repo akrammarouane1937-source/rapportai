@@ -10,7 +10,7 @@ import { useConversation } from "@/hooks/use-conversation";
 export default function Step6() {
   const [, setLocation] = useLocation();
   const { report, updateReport } = useReportStore();
-  const [stepDone, setStepDone] = useState(false);
+  const [stepDone, setStepDone] = useState(() => !!report.introduction);
   const bottomRef = useRef<HTMLDivElement>(null);
 
   const { messages, send, abort, isThinking, isGenerating, toolCalls, thinkingText } = useConversation({

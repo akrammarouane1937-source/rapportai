@@ -54,8 +54,19 @@ function SommaireChoice({ onChoice }: { onChoice: (msg: string) => void }) {
 export default function Step5() {
   const [, setLocation] = useLocation();
   const { report, updateReport } = useReportStore();
-  const [stepDone, setStepDone] = useState(false);
-  const [choiceMade, setChoiceMade] = useState(false);
+  const [stepDone, setStepDone] = useState(() => !!report.sommaire);
+  // Choice is already made if there's a saved conversation or sommaire exists
+  const [choiceMade, setChoiceMade] = useState(() => {
+    if (report.sommaire) return true;
+    try {
+      const raw = localStorage.getItem("rapportai_chat_step5");
+      if (raw) {
+        const parsed = JSON.parse(raw) as unknown[];
+        return Array.isArray(parsed) && parsed.length > 0;
+      }
+    } catch { /* corrupt */ }
+    return false;
+  });
   const bottomRef = useRef<HTMLDivElement>(null);
 
   // No autoSend — we call send() directly when the user picks a path.

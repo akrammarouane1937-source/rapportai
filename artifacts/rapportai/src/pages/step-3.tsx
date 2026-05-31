@@ -13,7 +13,7 @@ const stripTitle = (text: string, title: string) =>
 export default function Step3() {
   const [, setLocation] = useLocation();
   const { report, updateReport } = useReportStore();
-  const [stepDone, setStepDone] = useState(false);
+  const [stepDone, setStepDone] = useState(() => !!(report.dedicaces || report.remerciements));
   const bottomRef = useRef<HTMLDivElement>(null);
 
   const { messages, send, abort, isThinking, isGenerating, toolCalls, thinkingText } = useConversation({

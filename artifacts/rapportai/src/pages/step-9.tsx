@@ -30,7 +30,7 @@ export default function Step9() {
   const [sharing, setSharing] = useState(false);
   const [shareUrl, setShareUrl] = useState<string | null>(null);
   const [exported, setExported] = useState(false);
-  const [exportDone, setExportDone] = useState(false);
+  const [exportDone, setExportDone] = useState(() => !!(report.conclusion && report.bibliographie));
   const bottomRef = useRef<HTMLDivElement>(null);
 
   const wc = totalWords(report);

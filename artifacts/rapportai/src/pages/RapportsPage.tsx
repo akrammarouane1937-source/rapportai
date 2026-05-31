@@ -30,7 +30,7 @@ const FIXED_SECTIONS: SectionConfig[] = [
 ];
 
 const BACK_MATTER_META: Record<string, { label: string; field: string | null; path: string }> = {
-  bibliographie:     { label: "Bibliographie",       field: "bibliographieText", path: "/rapport/step-9"  },
+  bibliographie:     { label: "Bibliographie",       field: "bibliographie",     path: "/rapport/step-9"  },
   abreviations:      { label: "Abréviations",        field: null,                path: "/rapport/step-9"  },
   tableDesFigures:   { label: "Liste des figures",   field: null,                path: "/figures"         },
   listeDesTableaux:  { label: "Liste des tableaux",  field: null,                path: "/figures"         },

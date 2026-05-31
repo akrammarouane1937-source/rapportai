@@ -13,10 +13,11 @@ const stripTitle = (text: string, title: string) =>
 export default function Step4() {
   const [, setLocation] = useLocation();
   const { report, updateReport } = useReportStore();
-  const [stepDone, setStepDone] = useState(false);
+  const [stepDone, setStepDone] = useState(() => !!report.resumeFr);
   const bottomRef = useRef<HTMLDivElement>(null);
 
-  const isLocked = !report.partieI || !report.partieII;
+  // Only gate if no résumé has been generated yet AND both parties aren't ready
+  const isLocked = !report.resumeFr && (!report.partieI || !report.partieII);
 
   const { messages, send, abort, isThinking, isGenerating, toolCalls, thinkingText } = useConversation({
     step: 4,
@@ -83,7 +84,7 @@ export default function Step4() {
           {stepDone && !isThinking && !isGenerating && (
             <StepTransitionCard
               title="Résumé & Abstract prêts"
-              subtitle="Je génère maintenant le sommaire de ton rapport."
+              subtitle="On passe maintenant au sommaire."
               onNext={() => { updateReport({ currentStep: 5 }); setLocation("/rapport/step-5"); }}
               nextLabel="Étape 5 : Sommaire"
             />

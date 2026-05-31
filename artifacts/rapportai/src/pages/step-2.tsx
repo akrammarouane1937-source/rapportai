@@ -16,7 +16,7 @@ export default function Step2Page() {
   const [, setLocation] = useLocation();
   const { report, updateReport } = useReportStore();
   const { user } = useUser();
-  const [stepDone, setStepDone] = useState(false);
+  const [stepDone, setStepDone] = useState(() => !!report.pageDeGarde);
   const bottomRef = useRef<HTMLDivElement>(null);
 
   const studentName = capitalizeName(
@@ -58,13 +58,15 @@ export default function Step2Page() {
         )}
         <div ref={bottomRef} />
       </div>
-      <ChatInput
-        isGenerating={isThinking || isGenerating}
-        onAbort={abort}
-        onSend={(text, files) => send(text, files)}
-        disabled={isThinking || isGenerating}
-        placeholder="Réponds naturellement... ou joins ton modèle de page de garde (PDF)"
-      />
+      <div className="shrink-0 border-t border-border">
+        <ChatInput
+          isGenerating={isThinking || isGenerating}
+          onAbort={abort}
+          onSend={(text, files) => send(text, files)}
+          disabled={isThinking || isGenerating}
+          placeholder="Réponds naturellement... ou joins ton modèle de page de garde (PDF)"
+        />
+      </div>
     </Layout>
   );
 }
