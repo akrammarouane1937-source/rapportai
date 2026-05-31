@@ -4,7 +4,8 @@ import { Layout } from "@/components/layout";
 import { ChatMessage, AgentSteps, StepTransitionCard } from "@/components/chat-panel";
 import { PreviewPanel } from "@/components/preview-panel";
 import { ChatInput } from "@/components/chat-input";
-import { UploadCard } from "@/components/upload-card";
+import { DynamicUploadCard } from "@/components/upload-card";
+import { setFileCardState } from "@/lib/fileCardState";
 import { useReportStore } from "@/lib/store";
 import { useGenerate } from "@/hooks/use-generate";
 import { useFileStore } from "@/lib/fileStore";
@@ -37,6 +38,9 @@ export default function PartieII() {
   const sourceFilesRef = useRef<File[]>([]);
   const figureFilesRef = useRef<File[]>([]);
   const approvedFiguresRef = useRef<FigureInput[]>([]);
+
+  // Track upload-card IDs so generation callbacks can update their progress state
+  const fileCardIdsRef = useRef<string[]>([]);
 
   // Retry function stored in ref so inline button never captures stale closure
   const retryFnRef = useRef<(() => Promise<void>) | null>(null);
@@ -95,14 +99,36 @@ export default function PartieII() {
   const runGeneration = async (extraContext?: string) => {
     const allFiles = [...sourceFilesRef.current, ...figureFilesRef.current];
     const figuresForII = approvedFiguresRef.current;
+    const cardIds = [...fileCardIdsRef.current];
+
+    let cardErrorHandled = false;
+    const uploadCallbacks = cardIds.length > 0 ? {
+      onUploadProgress: (pct: number) => {
+        cardIds.forEach((id) => setFileCardState(id, { status: "uploading", progress: pct }));
+      },
+      onUploadDone: () => {
+        cardIds.forEach((id) => setFileCardState(id, { status: "processing" }));
+      },
+      onError: (msg: string) => {
+        cardErrorHandled = true;
+        cardIds.forEach((id) => setFileCardState(id, { status: "error", errorMessage: msg }));
+      },
+    } : undefined;
 
     const partieII = await generate(
       "partie-ii",
       report,
       extraContext || undefined,
       allFiles.length > 0 ? allFiles : undefined,
-      figuresForII.length > 0 ? figuresForII : undefined
+      figuresForII.length > 0 ? figuresForII : undefined,
+      uploadCallbacks
     );
+
+    if (partieII) {
+      cardIds.forEach((id) => setFileCardState(id, { status: "ready" }));
+    } else if (!cardErrorHandled) {
+      cardIds.forEach((id) => setFileCardState(id, { status: "error", errorMessage: "Génération échouée" }));
+    }
 
     if (!partieII) {
       retryFnRef.current = async () => {
@@ -197,7 +223,12 @@ export default function PartieII() {
         setSourceFiles(files);
         addFiles(files);
         push({ id: nextId(), role: "user", content: `${files.length} fichier(s) uploadé(s)` });
-        files.forEach((f) => push({ id: nextId(), role: "agent", content: <UploadCard file={f} status="ready" /> }));
+        files.forEach((f) => {
+          const cardId = nextId();
+          setFileCardState(cardId, { status: "uploading", progress: 0 });
+          fileCardIdsRef.current = [...fileCardIdsRef.current, cardId];
+          push({ id: cardId, role: "agent", content: <DynamicUploadCard file={f} cardId={cardId} /> });
+        });
         const preApproved = getApprovedFigures().filter((f) => f.placement === "Partie II");
         push({
           id: nextId(),
@@ -223,7 +254,12 @@ export default function PartieII() {
         setFigureFiles(files);
         addFiles(files);
         push({ id: nextId(), role: "user", content: `${files.length} figure(s) uploadée(s)` });
-        files.forEach((f) => push({ id: nextId(), role: "agent", content: <UploadCard file={f} status="ready" /> }));
+        files.forEach((f) => {
+          const cardId = nextId();
+          setFileCardState(cardId, { status: "uploading", progress: 0 });
+          fileCardIdsRef.current = [...fileCardIdsRef.current, cardId];
+          push({ id: cardId, role: "agent", content: <DynamicUploadCard file={f} cardId={cardId} /> });
+        });
       } else {
         push({ id: nextId(), role: "user", content: skip ? "Non" : t });
       }

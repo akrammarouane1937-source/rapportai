@@ -4,7 +4,8 @@ import { Layout } from "@/components/layout";
 import { ChatMessage, AgentSteps, StepTransitionCard } from "@/components/chat-panel";
 import { PreviewPanel } from "@/components/preview-panel";
 import { ChatInput } from "@/components/chat-input";
-import { UploadCard } from "@/components/upload-card";
+import { DynamicUploadCard } from "@/components/upload-card";
+import { setFileCardState } from "@/lib/fileCardState";
 import { useReportStore } from "@/lib/store";
 import { useGenerate } from "@/hooks/use-generate";
 import { useFileStore } from "@/lib/fileStore";
@@ -38,6 +39,9 @@ export default function PartieI() {
   const sourceFilesRef = useRef<File[]>([]);
   const figureFilesRef = useRef<File[]>([]);
   const approvedFiguresRef = useRef<FigureInput[]>([]);
+
+  // Track upload-card IDs so generation callbacks can update their progress state
+  const fileCardIdsRef = useRef<string[]>([]);
 
   // Retry function stored in ref so inline button never captures stale closure
   const retryFnRef = useRef<(() => Promise<void>) | null>(null);
@@ -128,14 +132,36 @@ export default function PartieI() {
   const runGeneration = async (extraContext?: string) => {
     const allFiles = [...sourceFilesRef.current, ...figureFilesRef.current];
     const figuresForI = approvedFiguresRef.current;
+    const cardIds = [...fileCardIdsRef.current];
+
+    let cardErrorHandled = false;
+    const uploadCallbacks = cardIds.length > 0 ? {
+      onUploadProgress: (pct: number) => {
+        cardIds.forEach((id) => setFileCardState(id, { status: "uploading", progress: pct }));
+      },
+      onUploadDone: () => {
+        cardIds.forEach((id) => setFileCardState(id, { status: "processing" }));
+      },
+      onError: (msg: string) => {
+        cardErrorHandled = true;
+        cardIds.forEach((id) => setFileCardState(id, { status: "error", errorMessage: msg }));
+      },
+    } : undefined;
 
     const partieI = await generate(
       "partie-i",
       report,
       extraContext || undefined,
       allFiles.length > 0 ? allFiles : undefined,
-      figuresForI.length > 0 ? figuresForI : undefined
+      figuresForI.length > 0 ? figuresForI : undefined,
+      uploadCallbacks
     );
+
+    if (partieI) {
+      cardIds.forEach((id) => setFileCardState(id, { status: "ready" }));
+    } else if (!cardErrorHandled) {
+      cardIds.forEach((id) => setFileCardState(id, { status: "error", errorMessage: "Génération échouée" }));
+    }
 
     if (!partieI) {
       // Wire up retry function before pushing the message so the button can call it
@@ -231,7 +257,12 @@ export default function PartieI() {
         setSourceFiles(files);
         addFiles(files);
         push({ id: nextId(), role: "user", content: `${files.length} source(s) uploadée(s)` });
-        files.forEach((f) => push({ id: nextId(), role: "agent", content: <UploadCard file={f} status="ready" /> }));
+        files.forEach((f) => {
+          const cardId = nextId();
+          setFileCardState(cardId, { status: "uploading", progress: 0 });
+          fileCardIdsRef.current = [...fileCardIdsRef.current, cardId];
+          push({ id: cardId, role: "agent", content: <DynamicUploadCard file={f} cardId={cardId} /> });
+        });
         const preApproved = getApprovedFigures().filter((f) => f.placement === "Partie I");
         push({
           id: nextId(),
@@ -262,7 +293,12 @@ export default function PartieI() {
         setFigureFiles(files);
         addFiles(files);
         push({ id: nextId(), role: "user", content: `${files.length} figure(s) uploadée(s)` });
-        files.forEach((f) => push({ id: nextId(), role: "agent", content: <UploadCard file={f} status="ready" /> }));
+        files.forEach((f) => {
+          const cardId = nextId();
+          setFileCardState(cardId, { status: "uploading", progress: 0 });
+          fileCardIdsRef.current = [...fileCardIdsRef.current, cardId];
+          push({ id: cardId, role: "agent", content: <DynamicUploadCard file={f} cardId={cardId} /> });
+        });
       } else {
         push({ id: nextId(), role: "user", content: skip ? "Non" : t });
       }

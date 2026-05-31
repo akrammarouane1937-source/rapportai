@@ -1,6 +1,9 @@
 import { useRef, useState, useCallback, useEffect } from "react";
 import { Plus, X, ArrowUp, Square } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { useToast } from "@/hooks/use-toast";
+
+const MAX_FILE_BYTES = 10 * 1024 * 1024; // 10 MB
 
 interface AttachedItem {
   file: File;
@@ -106,15 +109,30 @@ export function ChatInput({
   const [text, setText] = useState("");
   const [items, setItems] = useState<AttachedItem[]>([]);
   const [isDragging, setIsDragging] = useState(false);
+  const { toast } = useToast();
 
   const fileRef = useRef<HTMLInputElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
 
   const addFiles = useCallback((incoming: FileList | File[]) => {
     const arr = Array.from(incoming);
+
+    const oversized = arr.filter((f) => f.size > MAX_FILE_BYTES);
+    if (oversized.length > 0) {
+      const names = oversized.map((f) => f.name).join(", ");
+      toast({
+        title: "Fichier trop volumineux",
+        description: `${names} dépasse la limite de 10 Mo. Compresse ou divise le fichier.`,
+        variant: "destructive",
+      });
+    }
+
+    const valid = arr.filter((f) => f.size <= MAX_FILE_BYTES);
+    if (valid.length === 0) return;
+
     setItems((prev) => {
       const names = new Set(prev.map((i) => i.file.name));
-      const newItems: AttachedItem[] = arr
+      const newItems: AttachedItem[] = valid
         .filter((f) => !names.has(f.name))
         .map((f) => ({
           file: f,
@@ -122,7 +140,7 @@ export function ChatInput({
         }));
       return [...prev, ...newItems];
     });
-  }, []);
+  }, [toast]);
 
   const removeItem = (idx: number) => {
     setItems((prev) => {
