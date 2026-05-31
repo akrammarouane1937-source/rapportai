@@ -270,11 +270,8 @@ router.post("/chat", async (req: Request, res: Response) => {
     const navPath = path.join(workDir, "chat-nav.json");
     if (existsSync(navPath)) unlinkSync(navPath);
 
-    // ── 5. Send initial progress ───────────────────────────────────────────
-    sse(res, { progress: completedKeys.length > 0
-      ? "RapportAI lit ton rapport…"
-      : "RapportAI réfléchit…"
-    });
+    // ── 5. Flush headers so the client knows we're alive ──────────────────
+    // (no progress event — let the frontend's animated thinkingMessage run naturally)
 
     // ── 6. Build prompt ────────────────────────────────────────────────────
     const isJury = mode === "jury";
@@ -305,11 +302,7 @@ router.post("/chat", async (req: Request, res: Response) => {
           if (block.type === "text" && block.text) {
             fullText += block.text;
           }
-          if (block.type === "tool_use") {
-            // Send live tool trace so frontend can show what Claude is doing
-            const detail = buildToolDetail(block.name as string, block.input as Record<string, unknown>);
-            sse(res, { progress: detail });
-          }
+          // tool_use blocks are internal — no progress events sent to client
         }
       }
     }
