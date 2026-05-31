@@ -1,7 +1,7 @@
 export type FileCardStatus =
   | { status: "uploading"; progress: number }
   | { status: "processing" }
-  | { status: "ready"; metadata?: { title?: string; author?: string; year?: string } }
+  | { status: "ready"; metadata?: { title?: string; author?: string; year?: string }; extractedPreview?: string }
   | { status: "error"; errorMessage: string };
 
 const _states = new Map<string, FileCardStatus>();

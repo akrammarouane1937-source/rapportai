@@ -12,6 +12,40 @@ import { useFileStore } from "@/lib/fileStore";
 import { getApprovedFigures } from "@/lib/figureStore";
 import { motion } from "framer-motion";
 import { AlertTriangle, RefreshCw } from "lucide-react";
+import { API_BASE } from "@/lib/apiBase";
+
+const SESSION_KEY = "rapportai_session";
+const IMAGE_EXTS = new Set(["png", "jpg", "jpeg", "gif", "webp", "bmp", "svg"]);
+
+async function previewUploadFile(cardId: string, file: File): Promise<void> {
+  const sessionId = localStorage.getItem(SESSION_KEY);
+  if (!sessionId) {
+    setFileCardState(cardId, { status: "ready" });
+    return;
+  }
+  const ext = file.name.split(".").pop()?.toLowerCase() ?? "";
+  if (IMAGE_EXTS.has(ext)) {
+    setFileCardState(cardId, { status: "ready" });
+    return;
+  }
+  try {
+    setFileCardState(cardId, { status: "processing" });
+    const fd = new FormData();
+    fd.append("file", file);
+    const resp = await fetch(`${API_BASE}/api/session/${sessionId}/upload-document`, {
+      method: "POST",
+      body: fd,
+    });
+    if (!resp.ok) {
+      setFileCardState(cardId, { status: "ready" });
+      return;
+    }
+    const data = await resp.json() as { preview?: string };
+    setFileCardState(cardId, { status: "ready", extractedPreview: data.preview });
+  } catch {
+    setFileCardState(cardId, { status: "ready" });
+  }
+}
 
 type Phase = "confirm" | "sources" | "figures" | "generating" | "retry" | "done";
 
@@ -228,6 +262,7 @@ export default function PartieII() {
           setFileCardState(cardId, { status: "uploading", progress: 0 });
           fileCardIdsRef.current = [...fileCardIdsRef.current, cardId];
           push({ id: cardId, role: "agent", content: <DynamicUploadCard file={f} cardId={cardId} /> });
+          void previewUploadFile(cardId, f);
         });
         const preApproved = getApprovedFigures().filter((f) => f.placement === "Partie II");
         push({

@@ -761,7 +761,12 @@ router.post(
           markCanevasUploaded(sessionId, file.originalname);
         }
 
-        res.json({ success: true, filename: file.originalname, chars: text.length });
+        res.json({
+          success: true,
+          filename: file.originalname,
+          chars: text.length,
+          preview: text.slice(0, 500),
+        });
       }
     } catch (err: unknown) {
       const message = err instanceof Error ? err.message : "Erreur d'extraction";
