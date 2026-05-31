@@ -22,9 +22,11 @@ const SECTIONS = [
   { id: "abstract",      field: "abstractEn",    label: "Abstract" },
   { id: "sommaire",      field: "sommaire",      label: "Sommaire" },
   { id: "introduction",  field: "introduction",  label: "Introduction" },
-  { id: "partie-i",      field: "partieI",       label: "Partie I" },
-  { id: "partie-ii",     field: "partieII",      label: "Partie II" },
-  { id: "conclusion",    field: "conclusion",    label: "Conclusion" },
+  { id: "partie-i",       field: "partieI",        label: "Partie I" },
+  { id: "partie-ii",     field: "partieII",       label: "Partie II" },
+  { id: "conclusion",    field: "conclusion",     label: "Conclusion" },
+  { id: "liste-figures", field: "listeDesFigures", label: "Liste des figures" },
+  { id: "liste-tableaux",field: "listeDesTableaux", label: "Liste des tableaux" },
 ];
 
 // Which step first produces each section. Used to filter sections in the preview.
@@ -36,9 +38,11 @@ const SECTION_STEPS: Record<string, number> = {
   "abstract":      4,
   "sommaire":      5,
   "introduction":  6,
-  "partie-i":      7,
-  "partie-ii":     8,
-  "conclusion":    9,
+  "partie-i":       7,
+  "partie-ii":      8,
+  "conclusion":     9,
+  "liste-figures":  99,
+  "liste-tableaux": 99,
 };
 
 // Custom components for the cover page — no inline <style> tag, no broken images

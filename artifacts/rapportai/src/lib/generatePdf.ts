@@ -376,7 +376,15 @@ export async function generatePdf(report: ReportData): Promise<void> {
     sections.push({ title: "Références bibliographiques", content: bibText });
   }
 
-  const annexeItems = (report as unknown as { annexeItems?: AnnexeItem[] }).annexeItems ?? [];
+  const extendedReport = report as unknown as { listeDesFigures?: string; listeDesTableaux?: string; annexeItems?: AnnexeItem[] };
+  if (extendedReport.listeDesFigures?.trim()) {
+    sections.push({ title: "Liste des figures", content: extendedReport.listeDesFigures });
+  }
+  if (extendedReport.listeDesTableaux?.trim()) {
+    sections.push({ title: "Liste des tableaux", content: extendedReport.listeDesTableaux });
+  }
+
+  const annexeItems = extendedReport.annexeItems ?? [];
 
   // ── Pass 1: measure content page numbers ──────────────────────────────────
   //
@@ -454,7 +462,15 @@ export async function generatePdfBlobUrl(report: ReportData): Promise<string> {
     sections.push({ title: "Références bibliographiques", content: bibText });
   }
 
-  const annexeItems = (report as unknown as { annexeItems?: AnnexeItem[] }).annexeItems ?? [];
+  const extendedReport2 = report as unknown as { listeDesFigures?: string; listeDesTableaux?: string; annexeItems?: AnnexeItem[] };
+  if (extendedReport2.listeDesFigures?.trim()) {
+    sections.push({ title: "Liste des figures", content: extendedReport2.listeDesFigures });
+  }
+  if (extendedReport2.listeDesTableaux?.trim()) {
+    sections.push({ title: "Liste des tableaux", content: extendedReport2.listeDesTableaux });
+  }
+
+  const annexeItems = extendedReport2.annexeItems ?? [];
 
   const scratch1 = new jsPDF({ orientation: "portrait", unit: "mm", format: "a4" });
   const rawEntries = renderSections(scratch1, sections, annexeItems);

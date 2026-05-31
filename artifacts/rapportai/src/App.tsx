@@ -29,6 +29,8 @@ import PaymentSuccessPage from "@/pages/PaymentSuccessPage";
 import ParametresPage from "@/pages/ParametresPage";
 import MiseEnFormePage from "@/pages/MiseEnFormePage";
 import FiguresPage from "@/pages/FiguresPage";
+import ListeFiguresPage from "@/pages/liste-figures";
+import ListeTableauxPage from "@/pages/liste-tableaux";
 import AboutPage from "@/pages/AboutPage";
 import TonMomentPage from "@/pages/TonMomentPage";
 import WhyRapportAIPage from "@/pages/WhyRapportAIPage";
@@ -304,6 +306,12 @@ function ClerkProviderWithRoutes() {
             <Route path="/rapport/annexes">
               <ProtectedRoute component={AnnexesPage} />
             </Route>
+            <Route path="/rapport/liste-figures">
+              <ProtectedRoute component={ListeFiguresPage} />
+            </Route>
+            <Route path="/rapport/liste-tableaux">
+              <ProtectedRoute component={ListeTableauxPage} />
+            </Route>
             <Route path="/juryai">
               <ProtectedRoute component={JuryAIPage} />
             </Route>
@@ -369,6 +377,8 @@ function NoAuthApp() {
           <Route path="/rapport/partie-i" component={PartieIPage} />
           <Route path="/rapport/partie-ii" component={PartieIIPage} />
           <Route path="/rapport/annexes" component={AnnexesPage} />
+          <Route path="/rapport/liste-figures" component={ListeFiguresPage} />
+          <Route path="/rapport/liste-tableaux" component={ListeTableauxPage} />
           <Route path="/juryai" component={JuryAIPage} />
           <Route path="/bibliotheque" component={BibliothequeePage} />
           <Route path="/parametres" component={ParametresPage} />

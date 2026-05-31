@@ -686,9 +686,14 @@ function buildFiguresSection(placement: "Partie I" | "Partie II"): Paragraph[] {
   return paras;
 }
 
-// Liste des figures — standard academic front matter page with captions and page placeholders.
-// Heading "Liste des figures" (French convention). Each entry: Figure N — Titre, source, voir p. X.
-function buildTableDesFigures(): Paragraph[] {
+// Liste des figures — uses AI-generated content if available, otherwise builds from approved figures.
+function buildTableDesFigures(listeDesFigures?: string): Paragraph[] {
+  // AI-generated list takes priority (richer, includes chapter context)
+  if (listeDesFigures?.trim()) {
+    return [heading1("Liste des figures"), emptyLine(), ...markdownToParas(listeDesFigures)];
+  }
+
+  // Fallback: build from approved figures metadata
   const figs = getApprovedFigures();
   const paras: Paragraph[] = [heading1("Liste des figures"), emptyLine()];
 
@@ -698,7 +703,6 @@ function buildTableDesFigures(): Paragraph[] {
   }
 
   for (const fig of figs) {
-    // Title line: "Figure N — Titre de la figure ............... voir p. X"
     paras.push(new Paragraph({
       spacing: { ...LINE_SPACING, before: 80, after: 20 },
       children: [
@@ -708,7 +712,6 @@ function buildTableDesFigures(): Paragraph[] {
         new TextRun({ text: "voir p. X", font: FONT, size: BODY_PT, italics: true, color: "888888" }),
       ],
     }));
-    // Source line (indented, italic)
     const src = fig.formattedSource || (fig.source ? `Source : ${fig.source}` : "");
     if (src) {
       paras.push(new Paragraph({
@@ -724,9 +727,12 @@ function buildTableDesFigures(): Paragraph[] {
   return paras;
 }
 
-function buildListeDesTableaux(): Paragraph[] {
+function buildListeDesTableaux(listeDesTableaux?: string): Paragraph[] {
+  if (listeDesTableaux?.trim()) {
+    return [heading1("Liste des tableaux"), emptyLine(), ...markdownToParas(listeDesTableaux)];
+  }
   return [
-    heading1("Liste des Tableaux"),
+    heading1("Liste des tableaux"),
     emptyLine(),
     bodyPara("(Les tableaux seront numérotés automatiquement lors de la mise en page finale)"),
   ];
@@ -891,7 +897,7 @@ export async function generateDocx(data: Report, formatting?: FormattingPrefs): 
           ...buildResume(data),
           ...buildAbreviations(data),
           ...buildSommaire(data),
-          ...(getApprovedFigures().length > 0 ? buildTableDesFigures() : []),
+          ...(data.listeDesFigures?.trim() || getApprovedFigures().length > 0 ? buildTableDesFigures(data.listeDesFigures) : []),
         ],
       },
       {
@@ -915,8 +921,8 @@ export async function generateDocx(data: Report, formatting?: FormattingPrefs): 
           ...(data.sectionOrder?.length ? data.sectionOrder : ["bibliographie", "listeDesTableaux", "annexes"])
             .flatMap((id) => {
               if (id === "bibliographie")    return buildBibliographie(data);
-              if (id === "tableDesFigures")  return buildTableDesFigures();
-              if (id === "listeDesTableaux") return buildListeDesTableaux();
+              if (id === "tableDesFigures")  return buildTableDesFigures(data.listeDesFigures);
+              if (id === "listeDesTableaux") return buildListeDesTableaux(data.listeDesTableaux);
               if (id === "annexes")          return buildAnnexes(data);
               // tableDesMatieres is now always in front-matter — skip to avoid duplication
               if (id === "tableDesMatieres") return [];

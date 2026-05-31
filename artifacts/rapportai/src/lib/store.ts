@@ -58,6 +58,8 @@ export interface Report {
   bibliographieText: string; // generated markdown from the AI agent
   annexes: string;
   annexeItems: AnnexeItem[];
+  listeDesFigures: string;
+  listeDesTableaux: string;
 
   // Report intelligence
   problematique: string;
@@ -113,6 +115,8 @@ export const initialReportState: Report = {
   bibliographieText: "",
   annexes: "",
   annexeItems: [],
+  listeDesFigures: "",
+  listeDesTableaux: "",
 
   problematique: "",
   sectionSummaries: {},

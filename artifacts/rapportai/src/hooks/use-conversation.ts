@@ -44,9 +44,11 @@ export const SECTION_LABELS: Record<string, string> = {
   introduction:    "Introduction",
   "partie-i":      "Partie I",
   "partie-ii":     "Partie II",
-  conclusion:      "Conclusion",
-  bibliographie:   "Bibliographie",
-  abbreviations:   "Abréviations",
+  conclusion:       "Conclusion",
+  bibliographie:    "Bibliographie",
+  abbreviations:    "Abréviations",
+  "liste-figures":  "Liste des figures",
+  "liste-tableaux": "Liste des tableaux",
 };
 
 // ─── File processing helpers ──────────────────────────────────────────────────
