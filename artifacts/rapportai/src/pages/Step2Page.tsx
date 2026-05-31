@@ -8,6 +8,7 @@ import { saveReport, getReport, useAutoSave } from "@/lib/reportStore";
 import { ensureSession, clearSession } from "@/lib/useGenerate";
 import { API_BASE } from "@/lib/apiBase";
 import { fillDocxTemplate, type DocxFillData } from "@/lib/fillDocxTemplate";
+import { uploadWithProgress } from "@/lib/uploadWithProgress";
 
 const REPORT_TYPES = [
   { id: "PFE", label: "PFE", desc: "Projet de Fin d'Études" },
@@ -47,9 +48,12 @@ export default function Step2Page() {
   const [logoUrl,        setLogoUrl]        = useState<string | null>(stored.logoUrl ?? null);
   const [logoFetching,   setLogoFetching]   = useState(false);
   const [logoNotFound,   setLogoNotFound]   = useState(false);
+  const [logoReading,    setLogoReading]    = useState(false);
+  const [logoReadProgress, setLogoReadProgress] = useState(0);
 
   const [templateName,     setTemplateName]     = useState<string | null>(stored.coverTemplate ?? null);
   const [templateStatus,   setTemplateStatus]   = useState<"idle"|"uploading"|"ready"|"error">("idle");
+  const [templateUploadProgress, setTemplateUploadProgress] = useState(0);
   const [rawTemplateBuf,   setRawTemplateBuf]   = useState<ArrayBuffer | null>(null);
   const [filledBuf,        setFilledBuf]        = useState<ArrayBuffer | null>(null);
   const [filling,          setFilling]          = useState(false);
@@ -154,8 +158,18 @@ export default function Step2Page() {
   const handleLogo = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
+    setLogoReading(true);
+    setLogoReadProgress(0);
     const reader = new FileReader();
-    reader.onload = ev => setLogoUrl(ev.target?.result as string);
+    reader.onprogress = (ev) => {
+      if (ev.lengthComputable) setLogoReadProgress(Math.round((ev.loaded / ev.total) * 100));
+    };
+    reader.onload = (ev) => {
+      setLogoReadProgress(100);
+      setLogoUrl(ev.target?.result as string);
+      setLogoReading(false);
+    };
+    reader.onerror = () => setLogoReading(false);
     reader.readAsDataURL(file);
   };
 
@@ -179,8 +193,10 @@ export default function Step2Page() {
     const file = e.target.files?.[0];
     if (!file) return;
     setTemplateStatus("uploading");
+    setTemplateUploadProgress(0);
     try {
       const arrayBuffer = await file.arrayBuffer();
+      setTemplateUploadProgress(20);
 
       // Extract logo from template with mammoth
       const mammoth = await import("mammoth");
@@ -201,24 +217,34 @@ export default function Step2Page() {
 
       setRawTemplateBuf(arrayBuffer);
       setTemplateName(file.name);
-      setTemplateStatus("ready");
       saveReport({ coverTemplate: file.name });
+      setTemplateUploadProgress(40);
 
-      // Upload raw .docx to session in background
+      // Upload raw .docx to session with progress tracking
       try {
         let sessionId = await ensureSession();
         const fd = new FormData();
         fd.append("file", file);
-        let resp = await fetch(`${API_BASE}/api/session/${sessionId}/upload-document`, { method: "POST", body: fd });
+        let resp = await uploadWithProgress(
+          `${API_BASE}/api/session/${sessionId}/upload-document`,
+          fd,
+          { onProgress: (pct) => setTemplateUploadProgress(40 + Math.round(pct * 0.6)) }
+        );
         if (resp.status === 404) {
-          // Server restarted — clear stale session and retry with new one
           clearSession();
           sessionId = await ensureSession();
           const fd2 = new FormData();
           fd2.append("file", file);
-          resp = await fetch(`${API_BASE}/api/session/${sessionId}/upload-document`, { method: "POST", body: fd2 });
+          resp = await uploadWithProgress(
+            `${API_BASE}/api/session/${sessionId}/upload-document`,
+            fd2,
+            { onProgress: (pct) => setTemplateUploadProgress(40 + Math.round(pct * 0.6)) }
+          );
         }
       } catch { /* non-blocking */ }
+
+      setTemplateUploadProgress(100);
+      setTemplateStatus("ready");
     } catch (err) {
       console.error("Template upload error:", err);
       setTemplateStatus("error");
@@ -445,16 +471,26 @@ export default function Step2Page() {
                   </button>
                 </div>
               ) : (
-                <button onClick={() => templateRef.current?.click()} disabled={templateStatus === "uploading" || !canContinue}
-                  className="flex items-center gap-3 border-2 border-dashed border-gray-200 rounded-xl p-3 w-full hover:border-purple-300 hover:bg-purple-50/30 transition-colors text-left disabled:opacity-50">
-                  <div className="w-10 h-10 rounded-lg bg-gray-100 flex items-center justify-center flex-shrink-0">
-                    {templateStatus === "uploading" ? <Loader2 className="w-4 h-4 text-purple-500 animate-spin" /> : <FileText className="w-4 h-4 text-gray-400" />}
-                  </div>
-                  <div>
-                    <p className="text-sm font-medium text-gray-600">{templateStatus === "uploading" ? "Chargement..." : "Importer le modèle Word"}</p>
-                    <p className="text-xs text-gray-400">.docx · max 20 Mo</p>
-                  </div>
-                </button>
+                <div className="space-y-2">
+                  <button onClick={() => templateRef.current?.click()} disabled={templateStatus === "uploading" || !canContinue}
+                    className="flex items-center gap-3 border-2 border-dashed border-gray-200 rounded-xl p-3 w-full hover:border-purple-300 hover:bg-purple-50/30 transition-colors text-left disabled:opacity-50">
+                    <div className="w-10 h-10 rounded-lg bg-gray-100 flex items-center justify-center flex-shrink-0">
+                      {templateStatus === "uploading" ? <Loader2 className="w-4 h-4 text-purple-500 animate-spin" /> : <FileText className="w-4 h-4 text-gray-400" />}
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <p className="text-sm font-medium text-gray-600">{templateStatus === "uploading" ? `Chargement… ${templateUploadProgress}%` : "Importer le modèle Word"}</p>
+                      <p className="text-xs text-gray-400">.docx · max 20 Mo</p>
+                    </div>
+                  </button>
+                  {templateStatus === "uploading" && (
+                    <div className="h-1.5 bg-purple-100 rounded-full overflow-hidden">
+                      <div
+                        className="h-full bg-purple-500 rounded-full transition-all duration-200"
+                        style={{ width: `${templateUploadProgress}%` }}
+                      />
+                    </div>
+                  )}
+                </div>
               )}
               {templateStatus === "error" && <p className="text-xs text-red-500 mt-1">Erreur lors de l'import. Réessaie.</p>}
             </div>
@@ -471,23 +507,33 @@ export default function Step2Page() {
                   </button>
                 </div>
               ) : (
-                <div className="flex gap-2">
-                  <button onClick={() => fileRef.current?.click()}
-                    className="flex items-center gap-3 border-2 border-dashed border-gray-200 rounded-xl p-3 flex-1 hover:border-purple-300 hover:bg-purple-50/30 transition-colors text-left">
-                    <div className="w-10 h-10 rounded-lg bg-gray-100 flex items-center justify-center flex-shrink-0">
-                      <Upload className="w-4 h-4 text-gray-400" />
+                <div className="space-y-2">
+                  <div className="flex gap-2">
+                    <button onClick={() => fileRef.current?.click()} disabled={logoReading}
+                      className="flex items-center gap-3 border-2 border-dashed border-gray-200 rounded-xl p-3 flex-1 hover:border-purple-300 hover:bg-purple-50/30 transition-colors text-left disabled:opacity-50">
+                      <div className="w-10 h-10 rounded-lg bg-gray-100 flex items-center justify-center flex-shrink-0">
+                        {logoReading ? <Loader2 className="w-4 h-4 text-purple-500 animate-spin" /> : <Upload className="w-4 h-4 text-gray-400" />}
+                      </div>
+                      <div>
+                        <p className="text-sm font-medium text-gray-600">{logoReading ? `Lecture… ${logoReadProgress}%` : "Importer le logo"}</p>
+                        <p className="text-xs text-gray-400">PNG, JPG · max 2 Mo</p>
+                      </div>
+                    </button>
+                    <button onClick={handleAILogo} disabled={logoFetching || logoReading || !school.trim()}
+                      title="Trouver automatiquement avec l'IA"
+                      className="flex flex-col items-center justify-center gap-1 border-2 border-dashed border-purple-200 rounded-xl p-3 w-20 hover:border-purple-400 hover:bg-purple-50/30 transition-colors disabled:opacity-40">
+                      {logoFetching ? <Loader2 className="w-4 h-4 text-purple-500 animate-spin" /> : <Sparkles className="w-4 h-4 text-purple-500" />}
+                      <p className="text-[10px] text-purple-500 font-medium text-center leading-tight">IA auto</p>
+                    </button>
+                  </div>
+                  {logoReading && (
+                    <div className="h-1.5 bg-purple-100 rounded-full overflow-hidden">
+                      <div
+                        className="h-full bg-purple-500 rounded-full transition-all duration-200"
+                        style={{ width: `${logoReadProgress}%` }}
+                      />
                     </div>
-                    <div>
-                      <p className="text-sm font-medium text-gray-600">Importer le logo</p>
-                      <p className="text-xs text-gray-400">PNG, JPG · max 2 Mo</p>
-                    </div>
-                  </button>
-                  <button onClick={handleAILogo} disabled={logoFetching || !school.trim()}
-                    title="Trouver automatiquement avec l'IA"
-                    className="flex flex-col items-center justify-center gap-1 border-2 border-dashed border-purple-200 rounded-xl p-3 w-20 hover:border-purple-400 hover:bg-purple-50/30 transition-colors disabled:opacity-40">
-                    {logoFetching ? <Loader2 className="w-4 h-4 text-purple-500 animate-spin" /> : <Sparkles className="w-4 h-4 text-purple-500" />}
-                    <p className="text-[10px] text-purple-500 font-medium text-center leading-tight">IA auto</p>
-                  </button>
+                  )}
                 </div>
               )}
               {logoNotFound && <p className="text-xs text-orange-500 mt-1">Logo introuvable automatiquement. Importe-le manuellement.</p>}

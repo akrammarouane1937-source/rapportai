@@ -21,6 +21,7 @@ import { ScholarChips } from "@/components/figures/ScholarChips";
 import { FigurePanel } from "@/components/figures/FigurePanel";
 import { API_BASE as BASE_PATH } from "@/lib/apiBase";
 import { getMyPlan } from "@/lib/userPlan";
+import { uploadWithProgress } from "@/lib/uploadWithProgress";
 
 
 function KeywordChip({ label, onRemove }: { label: string; onRemove: () => void }) {
@@ -66,6 +67,7 @@ export default function PartieIPage() {
   const [dragOver, setDragOver] = useState(false);
   const [uploadedFile, setUploadedFile] = useState<File | null>(null);
   const [uploadStatus, setUploadStatus] = useState<"idle" | "uploading" | "ready" | "error">("idle");
+  const [uploadProgress, setUploadProgress] = useState(0);
   const [uploadError, setUploadError] = useState<string | null>(null);
   const [wordCount, setWordCount] = useState(() =>
     report.partieI ? report.partieI.split(/\s+/).filter(Boolean).length : 0
@@ -237,17 +239,19 @@ export default function PartieIPage() {
   const handleFileUpload = useCallback(async (file: File) => {
     setUploadedFile(file);
     setUploadStatus("uploading");
+    setUploadProgress(0);
     setUploadError(null);
     try {
       const sessionId = await ensureSession();
       const formData = new FormData();
       formData.append("file", file);
-      const resp = await fetch(`${BASE_PATH}/api/session/${sessionId}/upload-document`, {
-        method: "POST",
-        body: formData,
-      });
+      const resp = await uploadWithProgress(
+        `${BASE_PATH}/api/session/${sessionId}/upload-document`,
+        formData,
+        { onProgress: setUploadProgress }
+      );
       if (!resp.ok) {
-        const err = await resp.json() as { error?: string };
+        const err = await resp.json<{ error?: string }>();
         throw new Error(err.error ?? `HTTP ${resp.status}`);
       }
       setUploadStatus("ready");
@@ -420,7 +424,20 @@ export default function PartieIPage() {
                         <button onClick={(e) => { e.stopPropagation(); setUploadedFile(null); setUploadStatus("idle"); setUploadError(null); }}
                           className="text-gray-400 hover:text-gray-600 flex-shrink-0"><X className="w-4 h-4" /></button>
                       </div>
-                      {uploadStatus === "uploading" && <p className="text-xs text-purple-500">Extraction du texte…</p>}
+                      {uploadStatus === "uploading" && (
+                        <div className="w-full max-w-[200px]">
+                          <div className="flex items-center justify-between mb-1">
+                            <p className="text-xs text-purple-500">Envoi en cours…</p>
+                            <p className="text-xs text-purple-400 font-medium">{uploadProgress}%</p>
+                          </div>
+                          <div className="h-1.5 bg-purple-100 rounded-full overflow-hidden">
+                            <div
+                              className="h-full bg-purple-500 rounded-full transition-all duration-200"
+                              style={{ width: `${uploadProgress}%` }}
+                            />
+                          </div>
+                        </div>
+                      )}
                       {uploadStatus === "ready" && <p className="text-xs text-green-600 font-medium">✓ Document prêt. L'IA va le lire.</p>}
                       {uploadStatus === "error" && <p className="text-xs text-red-500">{uploadError}</p>}
                     </div>

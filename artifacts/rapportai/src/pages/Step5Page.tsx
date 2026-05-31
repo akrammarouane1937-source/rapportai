@@ -7,6 +7,7 @@ import { StepLayout } from "@/components/report/StepLayout";
 import { getReport, saveReport } from "@/lib/reportStore";
 import { ensureSession } from "@/lib/useGenerate";
 import { API_BASE } from "@/lib/apiBase";
+import { uploadWithProgress } from "@/lib/uploadWithProgress";
 
 type SommaireItem = {
   id: string;
@@ -98,6 +99,7 @@ export default function Step5Page() {
   const [generating, setGenerating] = useState(false);
   const [genStatus, setGenStatus] = useState("");
   const [uploadStatus, setUploadStatus] = useState<"idle" | "uploading" | "done" | "error">("idle");
+  const [uploadProgress, setUploadProgress] = useState(0);
   const fileRef = useRef<HTMLInputElement>(null);
 
   // Items: prefer AI-generated if available, else build from existing sections
@@ -174,14 +176,16 @@ export default function Step5Page() {
 
   const handleUpload = async (file: File) => {
     setUploadStatus("uploading");
+    setUploadProgress(0);
     try {
       const sessionId = await ensureSession();
       const fd = new FormData();
       fd.append("file", file);
-      const resp = await fetch(`${API_BASE}/api/session/${sessionId}/upload-document`, {
-        method: "POST",
-        body: fd,
-      });
+      const resp = await uploadWithProgress(
+        `${API_BASE}/api/session/${sessionId}/upload-document`,
+        fd,
+        { onProgress: setUploadProgress }
+      );
       if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
       setUploadStatus("done");
       // Trigger generation so the agent reads the uploaded plan
@@ -217,14 +221,24 @@ export default function Step5Page() {
                 className="hidden"
                 onChange={(e) => { const f = e.target.files?.[0]; if (f) handleUpload(f); e.target.value = ""; }}
               />
-              <button
-                onClick={() => fileRef.current?.click()}
-                disabled={generating || uploadStatus === "uploading"}
-                className="flex items-center gap-1.5 px-3 py-2 rounded-xl border border-gray-200 text-xs font-semibold text-gray-600 hover:border-purple-300 hover:text-purple-600 transition-colors disabled:opacity-50"
-              >
-                {uploadStatus === "uploading" ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Upload className="w-3.5 h-3.5" />}
-                {uploadStatus === "uploading" ? "Upload…" : uploadStatus === "done" ? "Uploadé ✓" : "Uploader un plan"}
-              </button>
+              <div className="flex flex-col items-end gap-1">
+                <button
+                  onClick={() => fileRef.current?.click()}
+                  disabled={generating || uploadStatus === "uploading"}
+                  className="flex items-center gap-1.5 px-3 py-2 rounded-xl border border-gray-200 text-xs font-semibold text-gray-600 hover:border-purple-300 hover:text-purple-600 transition-colors disabled:opacity-50"
+                >
+                  {uploadStatus === "uploading" ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Upload className="w-3.5 h-3.5" />}
+                  {uploadStatus === "uploading" ? `Envoi… ${uploadProgress}%` : uploadStatus === "done" ? "Uploadé ✓" : "Uploader un plan"}
+                </button>
+                {uploadStatus === "uploading" && (
+                  <div className="w-full h-1 bg-purple-100 rounded-full overflow-hidden">
+                    <div
+                      className="h-full bg-purple-500 rounded-full transition-all duration-200"
+                      style={{ width: `${uploadProgress}%` }}
+                    />
+                  </div>
+                )}
+              </div>
               {/* AI generate button */}
               <button
                 onClick={handleGenerate}
