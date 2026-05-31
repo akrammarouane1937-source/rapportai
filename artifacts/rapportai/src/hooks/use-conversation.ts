@@ -91,9 +91,8 @@ async function processFiles(files: File[]): Promise<ContentBlock[]> {
     ) {
       const text = await file.text();
       blocks.push({
-        type: "document",
-        source: { type: "text", media_type: "text/plain", data: text },
-        title: file.name,
+        type: "text",
+        text: `=== Fichier joint : ${file.name} ===\n${text}`,
       });
     } else if (
       file.name.endsWith(".docx") ||
@@ -204,9 +203,8 @@ async function processFiles(files: File[]): Promise<ContentBlock[]> {
         const textResult = await mammoth.extractRawText({ arrayBuffer });
         if (textResult.value.trim()) {
           blocks.push({
-            type: "document",
-            source: { type: "text", media_type: "text/plain", data: textResult.value },
-            title: file.name,
+            type: "text",
+            text: `=== Contenu du fichier ${file.name} ===\n${textResult.value}`,
           });
           // Also save as a File so SDK agents can Read exact field names from workDir
           try {
@@ -223,7 +221,7 @@ async function processFiles(files: File[]): Promise<ContentBlock[]> {
           const arrayBuffer = await file.arrayBuffer();
           const result = await mammoth.extractRawText({ arrayBuffer });
           if (result.value.trim()) {
-            blocks.push({ type: "document", source: { type: "text", media_type: "text/plain", data: result.value }, title: file.name });
+            blocks.push({ type: "text", text: `=== Contenu du fichier ${file.name} ===\n${result.value}` });
           }
         } catch { /* skip */ }
       }

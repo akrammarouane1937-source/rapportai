@@ -1,5 +1,5 @@
 import { useRef, useState, useCallback, useEffect } from "react";
-import { Plus, X, ArrowUp, Square } from "lucide-react";
+import { Paperclip, X, ArrowUp, Square, FileText, FileImage, FileSpreadsheet, FileCode } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useToast } from "@/hooks/use-toast";
 
@@ -22,77 +22,26 @@ interface ChatInputProps {
 
 const CODE_EXT_SET = new Set(["py","js","ts","jsx","tsx","java","c","cpp","h","sql","r","rb","php","go","rs","sh","json","xml","html","css","yaml","yml"]);
 const SHEET_EXT_SET = new Set(["xls","xlsx","csv","tsv"]);
+const IMAGE_EXT_SET = new Set(["jpg","jpeg","png","gif","webp","svg","bmp"]);
 
-function FileTypeIcon({ file }: { file: File }) {
+function chipIcon(file: File) {
   const ext = file.name.split(".").pop()?.toLowerCase() ?? "";
-  if (ext === "docx" || ext === "doc") {
-    return (
-      <div
-        className="w-10 h-10 rounded-lg flex items-center justify-center text-white font-bold shrink-0"
-        style={{ background: "#2B579A", fontSize: 15, fontFamily: "Georgia, serif" }}
-      >
-        W
-      </div>
-    );
-  }
-  if (ext === "pdf") {
-    return (
-      <div
-        className="w-10 h-10 rounded-lg flex items-center justify-center text-white font-bold shrink-0"
-        style={{ background: "#E74C3C", fontSize: 11 }}
-      >
-        PDF
-      </div>
-    );
-  }
-  if (SHEET_EXT_SET.has(ext)) {
-    return (
-      <div
-        className="w-10 h-10 rounded-lg flex items-center justify-center text-white font-bold shrink-0"
-        style={{ background: "#217346", fontSize: 10 }}
-      >
-        {ext === "csv" || ext === "tsv" ? "CSV" : "XLS"}
-      </div>
-    );
-  }
-  if (CODE_EXT_SET.has(ext)) {
-    return (
-      <div
-        className="w-10 h-10 rounded-lg flex items-center justify-center text-white font-bold shrink-0"
-        style={{ background: "#0f172a", fontSize: 10, letterSpacing: "-0.5px" }}
-      >
-        {`<${ext.length <= 3 ? ext.toUpperCase() : "CODE"}>`}
-      </div>
-    );
-  }
-  if (ext === "md" || ext === "markdown") {
-    return (
-      <div
-        className="w-10 h-10 rounded-lg flex items-center justify-center text-white font-bold shrink-0"
-        style={{ background: "#4b5563", fontSize: 10 }}
-      >
-        MD
-      </div>
-    );
-  }
-  if (ext === "txt") {
-    return (
-      <div
-        className="w-10 h-10 rounded-lg flex items-center justify-center text-white font-bold shrink-0"
-        style={{ background: "#6b7280", fontSize: 10 }}
-      >
-        TXT
-      </div>
-    );
-  }
-  return (
-    <div
-      className="w-10 h-10 rounded-lg flex items-center justify-center text-white font-bold shrink-0"
-      style={{ background: "#6b7280", fontSize: 10 }}
-    >
-      FILE
-    </div>
-  );
+  if (ext === "pdf") return <FileText className="w-3 h-3 shrink-0" />;
+  if (ext === "docx" || ext === "doc") return <FileText className="w-3 h-3 shrink-0" />;
+  if (SHEET_EXT_SET.has(ext)) return <FileSpreadsheet className="w-3 h-3 shrink-0" />;
+  if (CODE_EXT_SET.has(ext)) return <FileCode className="w-3 h-3 shrink-0" />;
+  if (IMAGE_EXT_SET.has(ext) || file.type.startsWith("image/")) return <FileImage className="w-3 h-3 shrink-0" />;
+  return <FileText className="w-3 h-3 shrink-0" />;
+}
+
+function chipColor(file: File) {
+  const ext = file.name.split(".").pop()?.toLowerCase() ?? "";
+  if (ext === "pdf") return { bg: "#fee2e2", text: "#b91c1c" };
+  if (ext === "docx" || ext === "doc") return { bg: "#dbeafe", text: "#1d4ed8" };
+  if (SHEET_EXT_SET.has(ext)) return { bg: "#dcfce7", text: "#15803d" };
+  if (CODE_EXT_SET.has(ext)) return { bg: "#fef9c3", text: "#854d0e" };
+  if (IMAGE_EXT_SET.has(ext) || file.type.startsWith("image/")) return { bg: "#f3e8ff", text: "#7c3aed" };
+  return { bg: "#f3f4f6", text: "#374151" };
 }
 
 const DEFAULT_ACCEPT = ".pdf,.doc,.docx,.xls,.xlsx,.csv,.txt,.md,.markdown,.py,.js,.ts,.jsx,.tsx,.java,.c,.cpp,.h,.sql,.r,.rb,.php,.go,.rs,.sh,.json,.xml,.html,.css,image/*";
@@ -116,39 +65,37 @@ export function ChatInput({
 
   const addFiles = useCallback((incoming: FileList | File[]) => {
     const arr = Array.from(incoming);
-
     const oversized = arr.filter((f) => f.size > MAX_FILE_BYTES);
     if (oversized.length > 0) {
-      const names = oversized.map((f) => f.name).join(", ");
       toast({
         title: "Fichier trop volumineux",
-        description: `${names} dépasse la limite de 10 Mo. Compresse ou divise le fichier.`,
+        description: `${oversized.map((f) => f.name).join(", ")} dépasse la limite de 10 Mo.`,
         variant: "destructive",
       });
     }
-
     const valid = arr.filter((f) => f.size <= MAX_FILE_BYTES);
     if (valid.length === 0) return;
-
     setItems((prev) => {
       const names = new Set(prev.map((i) => i.file.name));
-      const newItems: AttachedItem[] = valid
-        .filter((f) => !names.has(f.name))
-        .map((f) => ({
-          file: f,
-          previewUrl: f.type.startsWith("image/") ? URL.createObjectURL(f) : undefined,
-        }));
-      return [...prev, ...newItems];
+      return [
+        ...prev,
+        ...valid
+          .filter((f) => !names.has(f.name))
+          .map((f) => ({
+            file: f,
+            previewUrl: f.type.startsWith("image/") ? URL.createObjectURL(f) : undefined,
+          })),
+      ];
     });
   }, [toast]);
 
-  const removeItem = (idx: number) => {
+  const removeItem = useCallback((idx: number) => {
     setItems((prev) => {
       const item = prev[idx];
       if (item?.previewUrl) URL.revokeObjectURL(item.previewUrl);
       return prev.filter((_, i) => i !== idx);
     });
-  };
+  }, []);
 
   useEffect(() => {
     return () => {
@@ -194,71 +141,62 @@ export function ChatInput({
       onDragLeave={onDragLeave}
       onDrop={onDrop}
     >
-      {/* File cards row */}
+      {/* Attached file chips */}
       {items.length > 0 && (
-        <div className="flex flex-wrap gap-2 px-3 pt-3">
+        <div className="flex flex-wrap gap-1.5 px-3 pt-2.5">
           {items.map((item, idx) =>
             item.previewUrl ? (
-              /* Image thumbnail card */
+              /* Image thumbnail — compact square */
               <div
                 key={idx}
-                className="relative rounded-xl overflow-hidden shrink-0"
-                style={{ width: 130, height: 88 }}
+                className="relative rounded-lg overflow-hidden shrink-0 group"
+                style={{ width: 52, height: 52 }}
               >
                 <img
                   src={item.previewUrl}
                   alt={item.file.name}
                   className="w-full h-full object-cover"
                 />
-                <div
-                  className="absolute bottom-0 left-0 right-0 px-1.5 py-0.5 text-[10px] truncate"
-                  style={{ background: "rgba(0,0,0,0.52)", color: "#fff" }}
-                >
-                  {item.file.name}
-                </div>
                 <button
+                  type="button"
                   onClick={() => removeItem(idx)}
-                  className="absolute top-1.5 right-1.5 w-5 h-5 rounded-full flex items-center justify-center cursor-pointer transition-opacity hover:opacity-80"
-                  style={{ background: "rgba(0,0,0,0.55)" }}
+                  className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity cursor-pointer"
+                  style={{ background: "rgba(0,0,0,0.45)" }}
+                  title="Supprimer"
                 >
-                  <X className="w-2.5 h-2.5 text-white" />
+                  <X className="w-3.5 h-3.5 text-white" />
                 </button>
               </div>
             ) : (
-              /* Document card */
-              <div
-                key={idx}
-                className="relative flex items-center gap-2.5 px-3 py-2.5 rounded-xl shrink-0"
-                style={{
-                  background: "#f9f6ff",
-                  border: "1px solid #ede9fe",
-                  minWidth: 160,
-                  maxWidth: 220,
-                }}
-              >
-                <FileTypeIcon file={item.file} />
-                <div className="min-w-0 flex-1">
+              /* Document chip */
+              (() => {
+                const { bg, text: col } = chipColor(item.file);
+                return (
                   <div
-                    className="text-xs font-medium truncate"
-                    style={{ color: "#1e1b4b", maxWidth: 130 }}
-                    title={item.file.name}
+                    key={idx}
+                    className="flex items-center gap-1.5 rounded-lg pl-2 pr-1 py-1 shrink-0 max-w-[200px]"
+                    style={{ background: bg, border: `1px solid ${col}22` }}
                   >
-                    {item.file.name}
+                    <span style={{ color: col }}>{chipIcon(item.file)}</span>
+                    <span
+                      className="text-[11px] font-medium truncate"
+                      style={{ color: col, maxWidth: 130 }}
+                      title={item.file.name}
+                    >
+                      {item.file.name}
+                    </span>
+                    <button
+                      type="button"
+                      onClick={() => removeItem(idx)}
+                      className="flex items-center justify-center w-4 h-4 rounded shrink-0 cursor-pointer transition-opacity hover:opacity-70 ml-0.5"
+                      style={{ color: col }}
+                      title="Supprimer"
+                    >
+                      <X className="w-3 h-3" />
+                    </button>
                   </div>
-                  <div className="text-[10px] mt-0.5" style={{ color: "#9ca3af" }}>
-                    {item.file.size < 1024 * 1024
-                      ? `${(item.file.size / 1024).toFixed(0)} KB`
-                      : `${(item.file.size / (1024 * 1024)).toFixed(1)} MB`}
-                  </div>
-                </div>
-                <button
-                  onClick={() => removeItem(idx)}
-                  className="absolute top-1.5 right-1.5 w-4 h-4 rounded-full flex items-center justify-center cursor-pointer transition-colors hover:opacity-70"
-                  style={{ background: "#ddd6fe" }}
-                >
-                  <X className="w-2.5 h-2.5" style={{ color: "#7c3aed" }} />
-                </button>
-              </div>
+                );
+              })()
             )
           )}
         </div>
@@ -288,12 +226,14 @@ export function ChatInput({
       <div className="flex items-center justify-between px-3 pb-3 mt-1">
         <div className="flex items-center gap-1.5">
           {templateSlot}
+          {/* Hidden file input — reset value on click so same file can be re-selected */}
           <input
             ref={fileRef}
             type="file"
             multiple
             accept={accept}
             className="hidden"
+            onClick={(e) => { (e.target as HTMLInputElement).value = ""; }}
             onChange={(e) => e.target.files && addFiles(e.target.files)}
           />
           <button
@@ -301,12 +241,14 @@ export function ChatInput({
             title="Joindre un fichier (image, PDF, Word…)"
             onClick={() => fileRef.current?.click()}
             disabled={disabled}
-            className="w-7 h-7 rounded-lg flex items-center justify-center cursor-pointer transition-all disabled:opacity-40"
+            className="w-7 h-7 rounded-lg flex items-center justify-center cursor-pointer transition-all disabled:opacity-40 disabled:cursor-not-allowed"
             style={{ color: "#9ca3af", border: "1px solid #e5e7eb", background: "#f9fafb" }}
             onMouseEnter={(e) => {
-              e.currentTarget.style.color = "#7c3aed";
-              e.currentTarget.style.borderColor = "#a78bfa";
-              e.currentTarget.style.background = "#f5f0ff";
+              if (!disabled) {
+                e.currentTarget.style.color = "#7c3aed";
+                e.currentTarget.style.borderColor = "#a78bfa";
+                e.currentTarget.style.background = "#f5f0ff";
+              }
             }}
             onMouseLeave={(e) => {
               e.currentTarget.style.color = "#9ca3af";
@@ -314,12 +256,13 @@ export function ChatInput({
               e.currentTarget.style.background = "#f9fafb";
             }}
           >
-            <Plus className="w-3.5 h-3.5" />
+            <Paperclip className="w-3.5 h-3.5" />
           </button>
         </div>
 
         {isGenerating ? (
           <button
+            type="button"
             onClick={onAbort}
             className="w-8 h-8 rounded-lg flex items-center justify-center cursor-pointer transition-all"
             style={{ background: "#7c3aed" }}
@@ -329,6 +272,7 @@ export function ChatInput({
           </button>
         ) : (
           <button
+            type="button"
             onClick={handleSend}
             disabled={!canSend}
             className="w-8 h-8 rounded-lg flex items-center justify-center transition-all"
@@ -339,7 +283,7 @@ export function ChatInput({
               opacity: canSend ? 1 : 0.4,
             }}
           >
-            <ArrowUp className="w-4 h-4 text-white" />
+            <ArrowUp className="w-4 h-4" style={{ color: canSend ? "#fff" : "#9ca3af" }} />
           </button>
         )}
       </div>
