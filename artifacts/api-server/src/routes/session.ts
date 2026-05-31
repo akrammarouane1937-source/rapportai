@@ -17,7 +17,7 @@ import { guardSectionLimit, guardRevisionLimit, guardPayment } from "../lib/plan
 import { logger } from "../lib/logger";
 import { streamingHumanize } from "../lib/humanize-util";
 import { metrics, estimateCost, estimateTokens } from "../lib/metrics";
-import { writeFileSync } from "fs";
+import { writeFileSync, mkdirSync } from "fs";
 import path from "path";
 
 // ─── Input sanitization + prompt injection prevention ────────────────────────
@@ -626,18 +626,20 @@ router.post(
     res.flushHeaders();
 
     try {
-      // Write attached files to the session workDir so the agent can read them
+      // Write attached files to an isolated subdirectory — never touches core session files
       const attachedFileNames: string[] = [];
       if (files && files.length > 0) {
+        const uploadsDir = path.join(agent.workDir, "_revision_uploads");
+        mkdirSync(uploadsDir, { recursive: true });
         for (const block of files) {
           const safeName = block.name.replace(/[^a-zA-Z0-9._-]/g, "_");
-          const filePath = path.join(agent.workDir, safeName);
+          const filePath = path.join(uploadsDir, safeName);
           if (block.source.type === "base64") {
             writeFileSync(filePath, Buffer.from(block.source.data, "base64"));
           } else {
             writeFileSync(filePath, block.source.data, "utf-8");
           }
-          attachedFileNames.push(safeName);
+          attachedFileNames.push(`_revision_uploads/${safeName}`);
         }
       }
 
