@@ -302,9 +302,13 @@ export class SDKReportAgent {
       `Dans quelle mesure "${p.theme}" peut-il être approfondi dans le contexte marocain ?`;
 
     const docs = this.getDocumentNames();
+    const txtCompanions = docs.filter(f => f.endsWith(".txt") && docs.includes(f.slice(0, -4)));
     const docNote =
       docs.length > 0
-        ? `\nDocuments uploadés disponibles dans ce dossier : ${docs.join(", ")}. Commence par les lire avec Read.\n`
+        ? `\nDocuments uploadés disponibles dans ce dossier : ${docs.join(", ")}. Commence par les lire avec Read.\n` +
+          (txtCompanions.length > 0
+            ? `Note : les fichiers ${txtCompanions.map(f => f.slice(0, -4)).join(", ")} ont été convertis en texte — lis leur version .txt (ex: "${txtCompanions[0]}") pour accéder au contenu extrait.\n`
+            : "")
         : "";
 
     switch (section) {

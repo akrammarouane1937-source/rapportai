@@ -184,7 +184,7 @@ export default function PartieII() {
                   </p>
                 </div>
               </div>
-              <p className="text-sm">Uploade tes sources et données (PDF, Excel, CSV) ou tape "non".</p>
+              <p className="text-sm">Uploade tes sources et données (PDF, Word, Excel, CSV, code, TXT…) ou tape "non".</p>
             </motion.div>
           ),
         }
@@ -299,7 +299,7 @@ export default function PartieII() {
           disabled={isGenerating || phase === "generating"}
           placeholder={
             phase === "confirm" ? "Oui / modifier le titre..." :
-            phase === "sources" ? "Uploader sources ou 'non'..." :
+            phase === "sources" ? "Uploader sources (PDF, Excel, CSV, code…) ou 'non'..." :
             phase === "figures" ? "Uploader figures ou 'non'..." :
             phase === "retry"   ? "Ou tape ici pour relancer avec contexte..." :
             phase === "done"    ? "Demander une modification..." : ""

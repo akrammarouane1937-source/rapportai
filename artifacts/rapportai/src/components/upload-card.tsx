@@ -1,5 +1,18 @@
 import { motion } from "framer-motion";
-import { FileText, Image, CheckCircle2 } from "lucide-react";
+import { FileText, Image, CheckCircle2, FileCode, Sheet, FileType } from "lucide-react";
+
+const CODE_EXTS = new Set(["py","js","ts","jsx","tsx","java","c","cpp","h","sql","r","rb","php","go","rs","sh","json","xml","html","css","yaml","yml"]);
+const SHEET_EXTS = new Set(["xls","xlsx","csv","tsv"]);
+
+function getFileIcon(file: File) {
+  if (file.type.startsWith("image/")) return Image;
+  const ext = file.name.split(".").pop()?.toLowerCase() ?? "";
+  if (ext === "pdf" || ext === "doc" || ext === "docx") return FileText;
+  if (SHEET_EXTS.has(ext)) return Sheet;
+  if (CODE_EXTS.has(ext)) return FileCode;
+  if (ext === "md" || ext === "markdown" || ext === "txt") return FileType;
+  return FileText;
+}
 
 interface UploadCardProps {
   file: File;
@@ -8,8 +21,7 @@ interface UploadCardProps {
 }
 
 export function UploadCard({ file, status, metadata }: UploadCardProps) {
-  const isImage = file.type.startsWith("image/");
-  const Icon = isImage ? Image : FileText;
+  const Icon = getFileIcon(file);
 
   return (
     <motion.div

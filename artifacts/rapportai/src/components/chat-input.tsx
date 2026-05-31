@@ -16,6 +16,9 @@ interface ChatInputProps {
   templateSlot?: React.ReactNode;
 }
 
+const CODE_EXT_SET = new Set(["py","js","ts","jsx","tsx","java","c","cpp","h","sql","r","rb","php","go","rs","sh","json","xml","html","css","yaml","yml"]);
+const SHEET_EXT_SET = new Set(["xls","xlsx","csv","tsv"]);
+
 function FileTypeIcon({ file }: { file: File }) {
   const ext = file.name.split(".").pop()?.toLowerCase() ?? "";
   if (ext === "docx" || ext === "doc") {
@@ -35,6 +38,46 @@ function FileTypeIcon({ file }: { file: File }) {
         style={{ background: "#E74C3C", fontSize: 11 }}
       >
         PDF
+      </div>
+    );
+  }
+  if (SHEET_EXT_SET.has(ext)) {
+    return (
+      <div
+        className="w-10 h-10 rounded-lg flex items-center justify-center text-white font-bold shrink-0"
+        style={{ background: "#217346", fontSize: 10 }}
+      >
+        {ext === "csv" || ext === "tsv" ? "CSV" : "XLS"}
+      </div>
+    );
+  }
+  if (CODE_EXT_SET.has(ext)) {
+    return (
+      <div
+        className="w-10 h-10 rounded-lg flex items-center justify-center text-white font-bold shrink-0"
+        style={{ background: "#0f172a", fontSize: 10, letterSpacing: "-0.5px" }}
+      >
+        {`<${ext.length <= 3 ? ext.toUpperCase() : "CODE"}>`}
+      </div>
+    );
+  }
+  if (ext === "md" || ext === "markdown") {
+    return (
+      <div
+        className="w-10 h-10 rounded-lg flex items-center justify-center text-white font-bold shrink-0"
+        style={{ background: "#4b5563", fontSize: 10 }}
+      >
+        MD
+      </div>
+    );
+  }
+  if (ext === "txt") {
+    return (
+      <div
+        className="w-10 h-10 rounded-lg flex items-center justify-center text-white font-bold shrink-0"
+        style={{ background: "#6b7280", fontSize: 10 }}
+      >
+        TXT
       </div>
     );
   }
@@ -227,6 +270,7 @@ export function ChatInput({
             ref={fileRef}
             type="file"
             multiple
+            accept=".pdf,.doc,.docx,.xls,.xlsx,.csv,.txt,.md,.markdown,.py,.js,.ts,.jsx,.tsx,.java,.c,.cpp,.h,.sql,.r,.rb,.php,.go,.rs,.sh,.json,.xml,.html,.css,image/*"
             className="hidden"
             onChange={(e) => e.target.files && addFiles(e.target.files)}
           />

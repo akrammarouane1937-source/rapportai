@@ -218,7 +218,7 @@ export default function PartieI() {
                   </p>
                 </div>
               </div>
-              <p className="text-sm">Uploade tes sources (articles, PDF de recherche) ou tape "non" pour continuer sans.</p>
+              <p className="text-sm">Uploade tes sources (PDF, Word, Excel, CSV, code, TXT…) ou tape "non" pour continuer sans.</p>
             </motion.div>
           ),
         }
@@ -340,7 +340,7 @@ export default function PartieI() {
           placeholder={
             phase === "blocked"   ? "Génère d'abord le sommaire à l'étape 5..." :
             phase === "confirm"   ? "Oui / modifier le titre..." :
-            phase === "sources"   ? "Uploader les sources PDF ou 'non'..." :
+            phase === "sources"   ? "Uploader sources (PDF, Excel, CSV, code…) ou 'non'..." :
             phase === "figures"   ? "Uploader figures ou 'non'..." :
             phase === "retry"     ? "Ou tape ici pour relancer avec contexte..." :
             phase === "done"      ? "Demander une modification..." : ""

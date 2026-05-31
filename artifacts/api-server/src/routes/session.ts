@@ -245,7 +245,7 @@ Instructions :
 - Écrase ${section}.md avec la version corrigée`;
 }
 
-const upload = multer({ storage: multer.memoryStorage(), limits: { fileSize: 20 * 1024 * 1024 } });
+const upload = multer({ storage: multer.memoryStorage(), limits: { fileSize: 10 * 1024 * 1024 } });
 
 // Apply multer file parsing only for multipart/form-data requests (e.g. generate with files)
 const conditionalMultipart = (req: Request, res: Response, next: NextFunction) => {
@@ -256,6 +256,9 @@ const conditionalMultipart = (req: Request, res: Response, next: NextFunction) =
     next();
   }
 };
+
+const CODE_EXTS = new Set(["py", "js", "ts", "jsx", "tsx", "java", "c", "cpp", "h", "sql", "r", "rb", "php", "go", "rs", "sh", "yaml", "yml", "json", "xml", "html", "css"]);
+const TEXT_EXTS = new Set(["txt", "md", "markdown", "csv", "tsv", "log"]);
 
 async function extractText(buffer: Buffer, filename: string): Promise<string> {
   const ext = filename.toLowerCase().split(".").pop() ?? "";
@@ -272,11 +275,23 @@ async function extractText(buffer: Buffer, filename: string): Promise<string> {
     return result.value;
   }
 
-  if (ext === "txt") {
+  if (ext === "xlsx" || ext === "xls") {
+    const XLSX = await import("xlsx") as typeof import("xlsx");
+    const workbook = XLSX.read(buffer, { type: "buffer" });
+    const parts: string[] = [];
+    for (const sheetName of workbook.SheetNames) {
+      const sheet = workbook.Sheets[sheetName];
+      const csv = XLSX.utils.sheet_to_csv(sheet);
+      if (csv.trim()) parts.push(`=== Feuille : ${sheetName} ===\n${csv}`);
+    }
+    return parts.join("\n\n");
+  }
+
+  if (TEXT_EXTS.has(ext) || CODE_EXTS.has(ext)) {
     return buffer.toString("utf-8");
   }
 
-  throw new Error(`Format non supporté : .${ext}. Utilise PDF, Word ou TXT.`);
+  throw new Error(`Format non supporté : .${ext}. Formats acceptés : PDF, Word, Excel, CSV, TXT, Markdown, et fichiers code.`);
 }
 
 const router = Router();
@@ -390,11 +405,27 @@ router.post(
       return;
     }
 
-    // Save any uploaded files to the agent's work directory so SDK agents can Read them
+    // Save any uploaded files to the agent's work directory so SDK agents can Read them.
+    // Binary formats (Excel, Word) are converted to text; text-based files pass through as-is.
     const uploadedFiles = req.files as Express.Multer.File[] | undefined;
     if (uploadedFiles?.length) {
+      const imageExts = new Set(["png", "jpg", "jpeg", "gif", "webp", "bmp", "svg"]);
       for (const file of uploadedFiles) {
-        agent.uploadDocument(file.originalname, file.buffer);
+        const ext = file.originalname.toLowerCase().split(".").pop() ?? "";
+        if (imageExts.has(ext) || ext === "pdf") {
+          // Keep binary as-is — agent reads images/PDFs natively
+          agent.uploadDocument(file.originalname, file.buffer);
+        } else {
+          try {
+            const text = await extractText(file.buffer, file.originalname);
+            // Save original for reference + converted text the agent can Read
+            agent.uploadDocument(file.originalname, file.buffer);
+            agent.uploadDocument(`${file.originalname}.txt`, text);
+          } catch {
+            // Unsupported binary — save raw and let agent handle gracefully
+            agent.uploadDocument(file.originalname, file.buffer);
+          }
+        }
       }
     }
 
