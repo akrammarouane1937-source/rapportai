@@ -101,6 +101,100 @@ const TOOLS = [
 ];
 
 
+// ─── POST /api/converse/intent ────────────────────────────────────────────────
+// Lightweight (Haiku, non-streaming) endpoint that decides whether a student's
+// free-text input is:
+//   • a real answer  → { type: "answer", value: "<normalised value>" }
+//   • a skip intent  → { type: "skip" }
+//   • anything else  → { type: "reply", text: "<conversational reply>" }
+//
+// The frontend uses this for ALL text inputs in step-1 phases (theme, school,
+// filière, année). No client-side heuristics — Claude decides.
+
+const PHASE_QUESTIONS: Record<string, string> = {
+  theme:   "C'est quoi le thème / sujet de ton rapport ?",
+  school:  "Ton école ou université ?",
+  filiere: "Ta filière ? (tu peux dire 'passer' si tu ne sais pas encore)",
+  annee:   "Année académique ? (ex: 2025–2026)",
+};
+
+router.post("/converse/intent", async (req: Request, res: Response) => {
+  const { phase, userInput, profile = {} } = req.body as {
+    phase: string;
+    userInput: string;
+    profile: Record<string, string>;
+  };
+
+  const apiKey = process.env.ANTHROPIC_API_KEY;
+  if (!apiKey) { res.status(500).json({ type: "reply", text: "Erreur de configuration." }); return; }
+
+  const question = PHASE_QUESTIONS[phase] ?? "Ta réponse ?";
+
+  const system = `Tu lis un message d'un étudiant marocain qui remplit une fiche pour son rapport académique.
+
+Question qui lui était posée : "${question}"
+
+Contexte déjà connu :
+- Thème : ${profile.theme || "(pas encore renseigné)"}
+- École : ${profile.school || "(pas encore renseignée)"}
+- Filière : ${profile.filiere || "(pas encore renseignée)"}
+- Type de rapport : ${profile.reportType || "(pas encore renseigné)"}
+- Année : ${profile.academicYear || "(pas encore renseignée)"}
+
+Ta mission : décider si l'étudiant répond vraiment à la question, ou fait autre chose.
+
+CAS 1 — C'est une vraie réponse à la question :
+Réponds EXACTEMENT avec : ANSWER:<valeur>
+La valeur doit être la réponse normalisée uniquement (pas de ponctuation après).
+Exemples : ANSWER:EMSI | ANSWER:Génie Informatique | ANSWER:2024-2025 | ANSWER:Impact des fintech sur le crédit au Maroc
+
+CAS 2 — L'étudiant veut passer / ignore / dit "je sais pas" / "peu importe" / "skip" :
+Réponds EXACTEMENT avec : SKIP
+
+CAS 3 — L'étudiant fait autre chose (question, digression, hors sujet, attente, confusion, blague) :
+Réponds naturellement en français, comme un ami bienveillant. Max 2 phrases courtes.
+Termine toujours par une reformulation courte de la question pour relancer.
+Jamais d'emojis. Jamais de listes.`;
+
+  try {
+    const anthropicRes = await fetch(ANTHROPIC_API, {
+      method: "POST",
+      headers: {
+        "anthropic-version": "2023-06-01",
+        "x-api-key": apiKey,
+        "content-type": "application/json",
+      },
+      body: JSON.stringify({
+        model: "claude-haiku-4-5",
+        max_tokens: 200,
+        system,
+        messages: [{ role: "user", content: String(userInput) }],
+      }),
+    });
+
+    if (!anthropicRes.ok) {
+      res.json({ type: "reply", text: "Je n'ai pas bien compris, tu peux reformuler ?" });
+      return;
+    }
+
+    const data = await anthropicRes.json() as {
+      content: Array<{ type: string; text: string }>;
+    };
+    const raw = data.content.find((b) => b.type === "text")?.text?.trim() ?? "";
+
+    if (raw.startsWith("ANSWER:")) {
+      const value = raw.slice(7).trim();
+      res.json({ type: "answer", value });
+    } else if (raw === "SKIP") {
+      res.json({ type: "skip" });
+    } else {
+      res.json({ type: "reply", text: stripEmoji(raw) });
+    }
+  } catch {
+    res.json({ type: "reply", text: "Une erreur s'est produite, essaie à nouveau." });
+  }
+});
+
 // ─── Message types ────────────────────────────────────────────────────────────
 
 type ContentBlock =
