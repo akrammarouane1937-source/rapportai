@@ -219,17 +219,17 @@ export default function DashboardPage() {
           ),
         },
         {
-          label: "⚡ On génère quand tu veux",
+          label: "🤖 IA et plagiarisme — mon rapport est-il safe ?",
           action: () => sendQuickAction(
-            "On génère quand tu veux",
-            "Je suis prêt à commencer mon rapport. Guide-moi étape par étape : qu'est-ce que tu as besoin de savoir sur moi et mon projet pour qu'on génère un rapport complet et solide ?"
+            "IA et plagiarisme — mon rapport est-il safe ?",
+            "Est-ce qu'un rapport généré par IA peut être détecté comme plagiat par mon école ? Comment RapportAI contourne la détection IA ? Mon rapport risque-t-il d'être refusé ?"
           ),
         },
         {
-          label: "🎯 C'est quoi un rapport parfait ?",
+          label: "📄 Je peux débuter en uploadant mon plan ?",
           action: () => sendQuickAction(
-            "C'est quoi un rapport parfait ?",
-            "Qu'est-ce qui fait qu'un rapport PFE ou de stage est excellent aux yeux d'un jury marocain ? Donne-moi les critères concrets : structure, fond, forme, longueur, ce qu'il faut absolument éviter."
+            "Je peux débuter en uploadant mon plan ?",
+            "J'ai déjà un plan ou une ébauche de mon rapport. Est-ce que je peux l'uploader pour que RapportAI s'en serve comme base ? Comment ça marche ?"
           ),
         },
       ];
