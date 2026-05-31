@@ -557,6 +557,8 @@ function bibEntryPara(text: string): Paragraph {
 }
 
 // markdownToParas variant that uses bibEntryPara for body lines (no first-line indent).
+// List items (-, *, 1.) and numbered entries are emitted as individual hanging-indent
+// paragraphs — never concatenated — to match APA one-entry-per-paragraph convention.
 function bibMarkdownToParas(md: string): Paragraph[] {
   if (!md?.trim()) return [bodyPara("(Section non générée)")];
   const lines = md.split("\n");
@@ -568,6 +570,9 @@ function bibMarkdownToParas(md: string): Paragraph[] {
     if (trimmed) paras.push(bibEntryPara(trimmed));
     buf = "";
   };
+
+  // Detects list item prefixes: "- ", "* ", "1. ", "[1] "
+  const LIST_RE = /^(?:[-*]|\d+\.|[\[\(]\d+[\]\)])\s+/;
 
   for (const raw of lines) {
     const line = raw.trimEnd();
@@ -582,6 +587,11 @@ function bibMarkdownToParas(md: string): Paragraph[] {
       paras.push(heading1(line.slice(2).trim(), false));
     } else if (line === "" || line === "---") {
       flushBuf();
+    } else if (LIST_RE.test(line)) {
+      // Each list entry is its own paragraph — flush any accumulated text first
+      flushBuf();
+      const text = line.replace(LIST_RE, "").trim();
+      if (text) paras.push(bibEntryPara(text));
     } else {
       buf += (buf ? " " : "") + line;
     }

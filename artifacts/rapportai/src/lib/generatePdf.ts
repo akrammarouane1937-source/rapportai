@@ -189,11 +189,15 @@ export async function generatePdf(report: ReportData): Promise<void> {
     { title: "Perspectives",       content: report.perspectives  ?? "" },
   ].filter((s) => s.content.trim());
 
-  if ((report.bibliographie ?? []).length > 0) {
-    const bibText = (report.bibliographie ?? [])
-      .map((e) => `${e.author} (${e.year}). ${e.title}. ${e.journal}`)
-      .join("\n\n");
-    sections.push({ title: "Bibliographie", content: bibText });
+  // Prefer AI-generated markdown text; fall back to structured array if present
+  const bibText = report.bibliographieText?.trim()
+    || ((report.bibliographie ?? []).length > 0
+        ? (report.bibliographie ?? [])
+            .map((e) => `${e.author} (${e.year}). ${e.title}. ${e.journal}`)
+            .join("\n\n")
+        : "");
+  if (bibText) {
+    sections.push({ title: "Références bibliographiques", content: bibText });
   }
 
   for (const { title, content } of sections) {

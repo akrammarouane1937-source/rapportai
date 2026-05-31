@@ -113,7 +113,7 @@ function ScholarGuide({ open, onToggle }: { open: boolean; onToggle: () => void 
                   <p className="text-xs font-bold text-gray-700">Accéder au PDF</p>
                 </div>
                 <p className="text-xs text-gray-500 leading-relaxed pl-7">
-                  Clique sur <strong>[PDF]</strong> à droite du titre. Sinon, essaie <a href="https://www.researchgate.net" target="_blank" rel="noopener noreferrer" className="text-emerald-600 underline">ResearchGate</a> ou <a href="https://www.cairn.info" target="_blank" rel="noopener noreferrer" className="text-emerald-600 underline">Cairn.info</a> pour les articles francophones. Certaines universités marocaines donnent accès via leur portail.
+                  Clique sur <strong>[PDF]</strong> à droite du titre. Sinon essaie <a href="https://www.researchgate.net" target="_blank" rel="noopener noreferrer" className="text-emerald-600 underline">ResearchGate</a>, <a href="https://www.cairn.info" target="_blank" rel="noopener noreferrer" className="text-emerald-600 underline">Cairn.info</a> (articles francophones), ou l'accès institutionnel de ton université. En dernier recours, Sci-Hub permet d'accéder aux articles derrière paywall — vérifie les règles de ton établissement.
                 </p>
               </div>
               {/* Step 3 */}
@@ -238,10 +238,20 @@ export default function Step9Page() {
     setShowBibChat(false);
     setActiveTab("bibliographie");
     try {
+      // Build extra context from saved bib sources so the agent can include them
+      const savedSources = getBibSources();
+      const extraContext = savedSources.length > 0
+        ? `Sources déjà enregistrées par l'étudiant (à inclure obligatoirement) :\n${
+            savedSources.map((s) =>
+              `${s.authors} (${s.year}). ${s.title}${s.journal ? `. ${s.journal}` : ""}${s.doi ? `. DOI: ${s.doi}` : ""}`
+            ).join("\n")
+          }`
+        : undefined;
+
       const resp = await fetch(`${BASE_PATH}/api/session/${sessionId}/bibliographie`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({}),
+        body: JSON.stringify({ extraContext }),
       });
       if (!resp.ok || !resp.body) {
         setBibStatus("Erreur serveur. Réessaie.");
