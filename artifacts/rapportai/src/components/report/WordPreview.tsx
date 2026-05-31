@@ -17,6 +17,8 @@ interface WordPreviewProps {
   blurred?: boolean;
   onContentChange?: (newContent: string) => void;
   sectionId?: string;
+  /** When provided, renders a TOC "page" before the main content pages */
+  tocContent?: React.ReactNode;
 }
 
 // Fun Claude Code-style status messages
@@ -687,6 +689,7 @@ export function WordPreview({
   blurred = false,
   onContentChange,
   sectionId,
+  tocContent,
 }: WordPreviewProps) {
   const [revisionOpen, setRevisionOpen]   = useState(false);
   const [humanizeOpen, setHumanizeOpen]   = useState(false);
@@ -761,6 +764,30 @@ export function WordPreview({
       {/* Multi-page A4 preview */}
       <div className="flex-1 overflow-y-auto relative" style={{ background: "#d1d5db" }}>
         <div className="flex flex-col items-center py-8 px-6 gap-6 min-h-full">
+
+          {/* TOC page — rendered as the first A4 page when tocContent is provided */}
+          {tocContent && (
+            <div
+              className="w-full max-w-[680px] bg-white flex-shrink-0"
+              style={{ padding: "56px 64px", boxShadow: "0 2px 24px rgba(0,0,0,0.14)", minHeight: 560 }}
+            >
+              <div style={{ borderBottom: "2px solid #1a1a1a", paddingBottom: 10, marginBottom: 28 }}>
+                <p className="text-center mb-1" style={{ fontSize: 9, fontFamily: "Times New Roman, serif", color: "#aaa" }}>
+                  {report.theme ?? "RapportAI"} - {report.annee ?? "2024–2025"}
+                </p>
+                <h1 style={{ fontFamily: "Times New Roman, serif", fontSize: 16, fontWeight: 700, color: "#1a1a1a", margin: 0 }}>
+                  Table des Matières
+                </h1>
+              </div>
+              {tocContent}
+              <div style={{ marginTop: 48, paddingTop: 12, borderTop: "1px solid #f0f0f0" }}>
+                <p style={{ fontSize: 9, color: "#bbb", fontStyle: "italic", fontFamily: "Times New Roman, serif", margin: 0 }}>
+                  Dans Word : Ctrl+A puis F9 pour afficher les numéros de page réels.
+                </p>
+              </div>
+            </div>
+          )}
+
           {pages.map((pageHtml, idx) => (
             <div
               key={idx}

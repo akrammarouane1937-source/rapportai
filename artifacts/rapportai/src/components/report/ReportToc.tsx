@@ -60,11 +60,12 @@ function TocRow({
           : <Circle className="w-3.5 h-3.5 text-gray-200" />}
       </div>
       <div className="flex-1 min-w-0">
+        {/* Primary: AI-extracted heading when available; fallback to static label */}
         <p className={`text-sm font-semibold leading-tight ${done ? "text-gray-800" : "text-gray-300"}`}>
-          {label}
+          {done && generatedTitle && generatedTitle !== label ? generatedTitle : label}
         </p>
-        {generatedTitle && generatedTitle !== label && (
-          <p className="text-[11px] text-gray-400 leading-tight mt-0.5 truncate italic">{generatedTitle}</p>
+        {done && generatedTitle && generatedTitle !== label && (
+          <p className="text-[10px] text-gray-300 leading-tight mt-0.5 truncate">{label}</p>
         )}
       </div>
       <div className="flex items-center gap-1.5 flex-shrink-0">

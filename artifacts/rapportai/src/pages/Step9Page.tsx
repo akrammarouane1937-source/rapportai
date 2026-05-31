@@ -1009,48 +1009,15 @@ export default function Step9Page() {
               </>
             )}
 
-            {/* STRUCTURE tab — Word-preview-styled TOC */}
+            {/* STRUCTURE tab — TOC rendered inside WordPreview as a proper A4 page */}
             {activeTab === "structure" && (
-              <div className="h-full flex flex-col overflow-hidden">
-                {/* Header bar matching WordPreview style */}
-                <div className="flex items-center gap-3 px-4 py-2.5 border-b border-gray-100 bg-white flex-shrink-0">
-                  <div className="flex-1 min-w-0">
-                    <p className="text-sm font-semibold text-gray-700 truncate">Table des matières</p>
-                    <p className="text-xs text-gray-400">{sections.length} sections · se met à jour en temps réel</p>
-                  </div>
-                  <span className="flex-shrink-0 text-[10px] font-bold px-2 py-0.5 rounded-full"
-                        style={{ background: "#f5f0ff", color: "#7c3aed" }}>
-                    Auto-générée dans Word
-                  </span>
-                </div>
-                {/* Document-like paper page */}
-                <div className="flex-1 overflow-y-auto p-6"
-                     style={{ background: "#e8e8e8" }}>
-                  <div style={{
-                    background: "#fff",
-                    boxShadow: "0 2px 12px rgba(0,0,0,0.14)",
-                    borderRadius: 2,
-                    padding: "48px 52px",
-                    minHeight: 400,
-                    fontFamily: "Times New Roman, Times, serif",
-                  }}>
-                    {/* TOC heading */}
-                    <div style={{ borderBottom: "2px solid #1a1a1a", paddingBottom: 10, marginBottom: 24 }}>
-                      <h1 style={{ fontSize: 17, fontWeight: 700, color: "#1a1a1a", letterSpacing: 0.3, margin: 0 }}>
-                        Table des Matières
-                      </h1>
-                    </div>
-                    {/* Reactive TOC list */}
-                    <ReportToc />
-                    {/* Word instruction note */}
-                    <div style={{ marginTop: 40, paddingTop: 12, borderTop: "1px solid #f0f0f0" }}>
-                      <p style={{ fontSize: 10, color: "#aaa", fontStyle: "italic", margin: 0, fontFamily: "Arial, sans-serif" }}>
-                        Astuce Word : après l'export, appuie sur Ctrl+A puis F9 pour afficher les numéros de page réels.
-                      </p>
-                    </div>
-                  </div>
-                </div>
-              </div>
+              <WordPreview
+                content=""
+                sectionTitle="Table des matières"
+                wordCount={0}
+                sectionId="tableDesMatieres"
+                tocContent={<ReportToc compact />}
+              />
             )}
 
           </div>
