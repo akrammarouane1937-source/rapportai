@@ -15,6 +15,15 @@ function totalWords(r: Report) {
     .join(" ").split(/\s+/).filter(Boolean).length;
 }
 
+const stripTitle = (text: string, title: string) =>
+  text.replace(new RegExp(`^#{0,3}\\s*${title}\\s*\\n+`, "i"), "").trim();
+
+function abreviationsToMarkdown(abrevs: Report["abreviations"]): string {
+  if (!abrevs?.length) return "";
+  const rows = abrevs.map((a) => `| ${a.abbr} | ${a.sig} |`).join("\n");
+  return `## Abréviations\n\n| Abréviation | Signification |\n|-------------|---------------|\n${rows}`;
+}
+
 export default function Step9() {
   const { report, updateReport } = useReportStore();
   const [exporting, setExporting] = useState(false);
@@ -39,7 +48,6 @@ export default function Step9() {
       if (section === "bibliographie") updateReport({ bibliographie: content });
       if (section === "abbreviations") {
         try {
-          // The agent returns raw JSON — extract it from the markdown if wrapped
           const jsonMatch = content.match(/\[[\s\S]*\]/);
           const parsed = JSON.parse(jsonMatch ? jsonMatch[0] : content);
           if (Array.isArray(parsed)) updateReport({ abreviations: parsed, abbreviationsGenerated: true });
@@ -48,6 +56,13 @@ export default function Step9() {
     },
     onStepComplete: () => setExportDone(true),
   });
+
+  // Combined preview content: conclusion + bibliographie + abréviations table
+  const previewContent = [
+    report.conclusion   ? `## Conclusion\n\n${stripTitle(report.conclusion, "Conclusion")}`       : "",
+    report.bibliographie ? `## Bibliographie\n\n${stripTitle(report.bibliographie, "Bibliographie")}` : "",
+    report.abreviations?.length ? abreviationsToMarkdown(report.abreviations)                     : "",
+  ].filter(Boolean).join("\n\n---\n\n");
 
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -88,7 +103,7 @@ export default function Step9() {
 
   return (
     <Layout stepName="Conclusion & Export" stepNumber={9}
-      previewPanel={<PreviewPanel activeSection="conclusion" content={report.conclusion ?? ""} maxStep={9} />}
+      previewPanel={<PreviewPanel activeSection="conclusion" content={previewContent} maxStep={9} />}
     >
       <div className="flex-1 overflow-y-auto py-4 px-2 md:py-5 md:px-3">
         {messages.map((m) => <ChatMessage key={m.id} role={m.role} content={m.content} />)}
