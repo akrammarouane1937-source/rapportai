@@ -1,3 +1,5 @@
 - [Dashboard quick-action pills](dashboard-pills.md) — pills must use sendQuickAction(label, prompt) not sendWithText(expandedText) to avoid showing raw prompt in user bubble
 - [Stripe pricing model](stripe-pricing.md) — one-time payment in USD (MAD not supported by Stripe); display prices in MAD on frontend; Essentiel $37/Pro $67
 - [Plan limits: pages not sections](plan-limits.md) — plans tracked in pages (250 words≈1 page), not sections; FREE_LAUNCH=true bypasses all limits; header is x-pages-generated
+- [SDK SECTION_IDS whitelist](sdk-section-ids.md) — every section the SDK agent writes must be in SECTION_IDS array (sdk-agent.ts) or getSections() never reads it
+- [FREE_LAUNCH env var required](free-launch.md) — must be set as a Replit shared env var; if missing, guardPayment blocks ALL SDK generations with payment_required

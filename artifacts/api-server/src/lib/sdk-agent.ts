@@ -34,6 +34,7 @@ export interface ReportProfile {
 
 const SECTION_IDS = [
   "page-de-garde",
+  "sommaire",
   "dedicaces",
   "remerciements",
   "resume",
@@ -401,6 +402,21 @@ Si elles n'y sont pas non plus, génère quand même la page de garde avec ce qu
 
 Suis les instructions du skills file (page-de-garde-skills.md) pour choisir PATH A (template) ou PATH B (pas de template).
 Enregistre dans page-de-garde.md.`;
+      }
+
+      case "sommaire": {
+        const sommaireExtra = opts?.extraContext
+          ? `\n\n## PLAN VALIDÉ PAR L'ÉTUDIANT — respecte exactement cette structure :\n${opts.extraContext}\n---\n`
+          : "";
+        return `${docNote}${sommaireExtra}Lis profile.json.
+Génère le Sommaire structuré du ${p.reportType} "${p.theme}" en Markdown académique.
+Format obligatoire :
+- ## pour les parties principales (Partie I, Partie II, etc.)
+- ### pour les chapitres
+- #### pour les sections
+Inclus : Introduction Générale, les parties avec leurs chapitres, Conclusion Générale, Bibliographie, Abréviations.
+N'invente aucune structure non validée. Respecte EXACTEMENT le plan fourni dans le contexte.
+Enregistre dans sommaire.md.`;
       }
 
       case "dedicaces": {
