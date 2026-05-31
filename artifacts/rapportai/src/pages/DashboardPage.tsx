@@ -149,25 +149,48 @@ export default function DashboardPage() {
 
   const completedCount = Object.values(stepDone).filter(Boolean).length;
 
-  const greeting = hasReport
-    ? `Bonjour ${name}, ton rapport avance.`
-    : `Bonjour ${name}, bienvenue sur RapportAI.`;
+  const nextSectionLabel = SECTION_NAV_LABELS[STEP_PATHS[currentStep] ?? ""] ?? "la prochaine étape";
 
-  const subtitle = hasReport && completedCount > 0
-    ? completedCount >= 7
-      ? "Ton rapport est presque complet. Que veux-tu affiner ?"
-      : "Je connais toutes tes sections. Dis-moi ce qui bloque."
-    : "Je génère ton rapport complet, section par section. Par où on commence ?";
+  const greeting = !hasReport
+    ? `Bonjour ${name}, qu'est-ce que tu prépares ?`
+    : completedCount >= 7
+    ? `Presque fini, ${name} 🎯`
+    : completedCount >= 4
+    ? `Content de te revoir, ${name} 👋`
+    : `Bon courage, ${name} 💪`;
+
+  const subtitle = !hasReport
+    ? "PFE, stage ou mémoire — dis-moi ton idée et on génère tout ensemble."
+    : completedCount >= 7
+    ? `${completedCount}/9 sections prêtes. Qu'est-ce qu'on affine ?`
+    : completedCount >= 4
+    ? `${completedCount}/9 sections · Prochaine : ${nextSectionLabel}`
+    : `${completedCount}/9 sections · Continue là où tu t'es arrêté.`;
+
+  // sendQuickAction: shows `label` in the chat bubble but sends `prompt` to the API
+  // This avoids showing the raw enriched prompt as a user message
+  const sendQuickAction = (label: string, prompt: string) => {
+    if (loading) return;
+    const userMsg: Message = { id: crypto.randomUUID(), role: "user", text: label };
+    setMessages((prev) => [...prev, userMsg]);
+    sendInternal(prompt, [...messages, userMsg]);
+  };
 
   const quickActions = hasReport && completedCount > 0
     ? [
         {
-          label: "Qu'est-ce qu'il manque dans mon rapport ?",
-          action: () => sendWithText(`J'ai généré ${completedCount} sections sur 9 dans mon rapport sur "${theme}". Qu'est-ce qui manque et dans quel ordre je dois continuer ?`),
+          label: "Qu'est-ce qu'il manque ?",
+          action: () => sendQuickAction(
+            "Qu'est-ce qu'il manque ?",
+            `J'ai généré ${completedCount} sections sur 9 dans mon rapport${shortTheme ? ` sur "${shortTheme}"` : ""}. Qu'est-ce qui manque et dans quel ordre continuer ?`
+          ),
         },
         {
           label: "Mon rapport est-il cohérent ?",
-          action: () => sendWithText(`Analyse la cohérence globale de mon rapport sur "${theme}" : est-ce que l'intro, le développement et la conclusion se tiennent ?`),
+          action: () => sendQuickAction(
+            "Mon rapport est-il cohérent ?",
+            `Analyse la cohérence de mon rapport${shortTheme ? ` sur "${shortTheme}"` : ""} : est-ce que l'intro, le développement et la conclusion se tiennent ?`
+          ),
         },
         {
           label: "Emmène-moi à l'étape suivante",
@@ -175,37 +198,51 @@ export default function DashboardPage() {
         },
         {
           label: "Prépare-moi pour la soutenance",
-          action: () => sendWithText(`Prépare-moi pour la soutenance de mon rapport sur "${theme}". Quelles questions difficiles mon jury va me poser ?`),
+          action: () => sendQuickAction(
+            "Prépare-moi pour la soutenance",
+            `Prépare-moi pour la soutenance de mon rapport${shortTheme ? ` sur "${shortTheme}"` : ""}. Quelles questions difficiles mon jury va me poser ?`
+          ),
         },
       ]
     : [
         {
-          label: "Comment RapportAI génère mon rapport ?",
-          action: () => sendWithText("Explique-moi exactement comment RapportAI génère mon rapport. C'est quoi les étapes, combien de temps ça prend, et qu'est-ce que je dois faire moi ?"),
+          label: "💡 Parle-moi de ton idée de rapport",
+          action: () => sendQuickAction(
+            "Parle-moi de mon idée de rapport",
+            "Je veux brainstormer mon idée de rapport avec toi. Pose-moi des questions sur mon domaine, mon école, ce qui m'intéresse — aide-moi à définir un thème solide et une problématique claire avant de commencer."
+          ),
         },
         {
-          label: "PFE, stage ou mémoire : c'est quoi la différence ?",
-          action: () => sendWithText("C'est quoi la différence entre un PFE, un rapport de stage et un mémoire ? Lequel me correspond ?"),
+          label: "Aide-moi à choisir un thème",
+          action: () => sendQuickAction(
+            "Aide-moi à choisir un thème",
+            "J'ai du mal à choisir un thème pour mon rapport. Pose-moi des questions sur ma filière, mon école, mes intérêts et ce que mon jury attend — puis propose-moi 3 thèmes concrets avec une problématique pour chacun."
+          ),
         },
         {
-          label: "Commencer mon rapport maintenant",
+          label: "PFE, stage ou mémoire ?",
+          action: () => sendQuickAction(
+            "PFE, stage ou mémoire — c'est quoi la différence ?",
+            "C'est quoi la différence entre un PFE, un rapport de stage et un mémoire au Maroc ? Lequel me correspond selon mon niveau ?"
+          ),
+        },
+        {
+          label: "Commencer mon rapport",
           action: () => setLocation("/rapport/step-1"),
         },
       ];
 
   const sendWithText = (text: string) => {
-    setInput(text);
-    setTimeout(() => send(text), 0);
-  };
-
-  const send = async (overrideText?: string) => {
-    const text = (overrideText ?? input).trim();
-    if (!text || loading) return;
-    setInput("");
-    if (textareaRef.current) textareaRef.current.style.height = "auto";
-
+    if (loading) return;
     const userMsg: Message = { id: crypto.randomUUID(), role: "user", text };
     setMessages((prev) => [...prev, userMsg]);
+    sendInternal(text, [...messages, userMsg]);
+  };
+
+  // Core send logic — decoupled from UI state so both sendWithText and sendQuickAction can use it
+  const sendInternal = async (apiText: string, historyWithUser: Message[]) => {
+    setInput("");
+    if (textareaRef.current) textareaRef.current.style.height = "auto";
     setLoading(true);
 
     const assistantId = crypto.randomUUID();
@@ -214,9 +251,10 @@ export default function DashboardPage() {
     const ctrl = new AbortController();
     abortRef.current = ctrl;
 
-    const history = [...messages, userMsg].map((m) => ({
+    // Build history: all previous messages keep their display text; the last user msg uses apiText
+    const history = historyWithUser.map((m, i) => ({
       role: m.role as "user" | "assistant",
-      content: m.text,
+      content: i === historyWithUser.length - 1 && m.role === "user" ? apiText : m.text,
     }));
 
     // Build sections summaries for orchestrator cross-section intelligence
@@ -306,7 +344,7 @@ export default function DashboardPage() {
           )
         );
       } else {
-        const nav = detectNav(text) || detectNav(fullText);
+        const nav = detectNav(apiText) || detectNav(fullText);
         setMessages((prev) =>
           prev.map((m) =>
             m.id === assistantId ? { ...m, streaming: false, navSuggestion: nav } : m
@@ -325,6 +363,13 @@ export default function DashboardPage() {
     } finally {
       setLoading(false);
     }
+  };
+
+  // send() — triggered by textarea send button / Enter key
+  const send = () => {
+    const text = input.trim();
+    if (!text || loading) return;
+    sendWithText(text);
   };
 
   const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {

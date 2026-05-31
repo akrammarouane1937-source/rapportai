@@ -1,0 +1,1 @@
+- [Dashboard quick-action pills](dashboard-pills.md) — pills must use sendQuickAction(label, prompt) not sendWithText(expandedText) to avoid showing raw prompt in user bubble
