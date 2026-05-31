@@ -354,6 +354,7 @@ export default function DashboardPage() {
       const reader  = resp.body.getReader();
       const decoder = new TextDecoder();
       let buf = "";
+      let fullText = "";
       let pendingNav: { path: string; injection: string } | null = null;
 
       while (true) {
@@ -367,24 +368,19 @@ export default function DashboardPage() {
           try {
             const msg = JSON.parse(line.slice(6)) as {
               content?: string;
-              progress?: string;
               done?: boolean;
               error?: string;
               action?: { type: string; path?: string; injection?: string };
             };
             if (msg.error) throw new Error(msg.error);
             if (msg.done) break;
-            if (msg.progress) {
-              setMessages((prev) =>
-                prev.map((m) => m.id === assistantId ? { ...m, progressText: msg.progress } : m)
-              );
-            }
             if (msg.action?.type === "navigate" && msg.action.path) {
               pendingNav = { path: msg.action.path, injection: msg.action.injection ?? "" };
             }
             if (msg.content) {
+              fullText += msg.content;
               setMessages((prev) =>
-                prev.map((m) => m.id === assistantId ? { ...m, text: msg.content! } : m)
+                prev.map((m) => m.id === assistantId ? { ...m, text: fullText } : m)
               );
             }
           } catch { /* skip malformed */ }
@@ -401,7 +397,7 @@ export default function DashboardPage() {
           )
         );
       } else {
-        const nav = detectNav(apiText);
+        const nav = detectNav(apiText) || detectNav(fullText);
         setMessages((prev) =>
           prev.map((m) =>
             m.id === assistantId ? { ...m, streaming: false, navSuggestion: nav } : m
