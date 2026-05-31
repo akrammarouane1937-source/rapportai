@@ -139,9 +139,7 @@ export default function DashboardPage() {
     9: !!report.conclusion,
   };
   const currentStep = ([1,2,3,4,5,6,7,8,9].find((n) => !stepDone[n])) ?? 9;
-  const name = user?.firstName
-    || rawReport.studentName?.split(" ")[0]
-    || "";
+  const name = user?.firstName || "";
 
   const theme = report.theme || rawReport.theme || "";
   const shortTheme = theme.length > 28 ? theme.slice(0, 28) + "…" : theme;
