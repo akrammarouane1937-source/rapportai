@@ -553,25 +553,24 @@ export default function LandingPage() {
         </section>
 
         {/* 10. PRICING */}
-        <section className="py-24 bg-white border-t border-border">
+        <section className="py-24 bg-[#f5f5f0] border-t border-border">
           <div className="container mx-auto px-4 max-w-5xl">
-            <div className="text-center mb-14">
-              <p className="text-sm font-semibold text-purple-600 uppercase tracking-widest mb-3">Tarifs</p>
-              <h2 className="text-3xl md:text-4xl font-bold font-heading text-foreground mb-3">
-                Choisis ton plan
+            <div className="mb-10">
+              <h2 className="text-3xl md:text-4xl font-bold font-heading text-foreground mb-2">
+                Choisis ton plan.
               </h2>
-              <p className="text-lg text-secondary-foreground">
-                Un seul paiement. Ton rapport livré en 30 minutes.
+              <p className="text-base text-secondary-foreground">
+                Conçu pour chaque étudiant.
               </p>
             </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
               {([
                 {
                   name: "Gratuit",
                   price: null as number | null,
                   anchor: null as number | null,
-                  cta: "Commencer gratuitement",
+                  cta: "S'inscrire",
                   href: "/sign-up",
                   popular: false,
                   description: "Pour explorer sans engagement.",
@@ -591,12 +590,12 @@ export default function LandingPage() {
                   popular: false,
                   description: "Pour finir ton rapport en une seule session.",
                   features: [
+                    "Tout dans Gratuit",
                     "60 pages générées",
                     "20 révisions IA",
                     "Export Word + PDF",
                     "Humanisation anti-détection IA",
                     "Génération depuis tes documents",
-                    "Canevas de ton école",
                   ],
                 },
                 {
@@ -606,13 +605,11 @@ export default function LandingPage() {
                   cta: "Choisir Pro",
                   href: "/pricing",
                   popular: true,
-                  description: "Pages et révisions illimitées. Accès complet.",
+                  description: "Pour les étudiants qui veulent le meilleur.",
                   features: [
+                    "Tout dans Essentiel",
                     "Pages illimitées",
                     "Révisions illimitées",
-                    "Export Word + PDF",
-                    "Humanisation anti-détection IA",
-                    "Génération depuis tes documents",
                     "Canevas de ton école",
                     "Accès JuryAI",
                   ],
@@ -628,60 +625,50 @@ export default function LandingPage() {
                     whileInView={{ opacity: 1, y: 0 }}
                     viewport={{ once: true }}
                     transition={{ delay: i * 0.08 }}
-                    className={`relative bg-white rounded-2xl p-7 flex flex-col border transition-shadow ${
-                      p.popular
-                        ? "border-purple-400 shadow-[0_0_0_1px_rgba(124,58,237,0.2),0_8px_32px_rgba(124,58,237,0.10)]"
-                        : "border-gray-200 shadow-sm hover:shadow-md"
-                    }`}
+                    className="bg-white rounded-2xl p-6 flex flex-col border border-gray-200 shadow-sm"
                   >
-                    {p.popular && (
-                      <span className="absolute top-5 right-5 bg-purple-600 text-white text-[11px] font-bold px-2.5 py-1 rounded-full leading-none">
-                        Le plus populaire
-                      </span>
-                    )}
+                    {/* Plan name — colored like Replit */}
+                    <p className="text-base font-bold text-purple-600 mb-1">{p.name}</p>
+                    <p className="text-sm text-gray-500 mb-5 leading-snug">{p.description}</p>
 
-                    <p className="text-sm font-semibold text-gray-500 mb-3">{p.name}</p>
-
+                    {/* Price */}
                     <div className="mb-5">
                       {!p.price ? (
-                        <p className="text-4xl font-extrabold text-gray-900" style={{ fontFamily: "'Plus Jakarta Sans',sans-serif" }}>Free</p>
+                        <p className="text-4xl font-extrabold text-gray-900" style={{ fontFamily: "'Plus Jakarta Sans',sans-serif" }}>
+                          Free
+                        </p>
                       ) : (
                         <>
-                          <div className="flex items-center gap-2 mb-1">
-                            <span className="text-sm text-gray-400 line-through">{p.anchor} MAD</span>
-                            {discount && (
-                              <span className="text-xs bg-purple-100 text-purple-700 font-bold px-2 py-0.5 rounded-full">-{discount}%</span>
-                            )}
-                          </div>
+                          {discount && (
+                            <p className="text-sm text-gray-400 mb-0.5">
+                              <span className="line-through">{p.anchor} MAD</span>
+                              {" "}<span className="text-purple-600 font-semibold">Save {discount}%</span>
+                            </p>
+                          )}
                           <p className="text-4xl font-extrabold text-gray-900" style={{ fontFamily: "'Plus Jakarta Sans',sans-serif" }}>
-                            {p.price} <span className="text-lg font-semibold text-gray-400">MAD</span>
+                            {p.price}{" "}
+                            <span className="text-base font-semibold text-gray-400">MAD</span>
                           </p>
                         </>
                       )}
-                      <p className="text-sm text-gray-500 mt-2 leading-snug">{p.description}</p>
                     </div>
 
-                    <Link href={p.href}>
-                      <button
-                        className={`w-full h-10 rounded-lg font-semibold text-sm transition-all mb-5 ${
-                          p.popular
-                            ? "bg-purple-600 hover:bg-purple-700 text-white"
-                            : !p.price
-                              ? "border border-gray-300 text-gray-700 hover:bg-gray-50 bg-white"
-                              : "bg-gray-900 hover:bg-gray-800 text-white"
-                        }`}
-                      >
+                    {/* CTA button — always dark/filled like Replit */}
+                    <Link href={p.href} className="mb-6">
+                      <button className="w-full h-11 rounded-xl font-bold text-sm bg-gray-900 hover:bg-gray-800 text-white transition-colors">
                         {p.cta}
                       </button>
                     </Link>
 
+                    {/* Divider */}
                     <div className="border-t border-gray-100 mb-5" />
 
-                    <ul className="space-y-3 flex-1">
+                    {/* Features with + prefix like Replit */}
+                    <ul className="space-y-2.5 flex-1">
                       {p.features.map((f) => (
-                        <li key={f} className="flex items-start gap-2.5">
-                          <CheckCircle2 className="w-4 h-4 text-purple-500 flex-shrink-0 mt-0.5" strokeWidth={2.5} />
-                          <span className="text-sm text-gray-600">{f}</span>
+                        <li key={f} className="flex items-start gap-2">
+                          <span className="text-purple-500 font-bold text-sm leading-5 flex-shrink-0">+</span>
+                          <span className="text-sm text-gray-600 leading-snug">{f}</span>
                         </li>
                       ))}
                     </ul>
@@ -690,7 +677,7 @@ export default function LandingPage() {
               })}
             </div>
 
-            <p className="text-center text-sm text-muted-foreground mt-10">
+            <p className="text-sm text-muted-foreground mt-8">
               Paiement unique · Pas d'abonnement caché · Support 7j/7
             </p>
           </div>
