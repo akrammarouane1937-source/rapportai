@@ -366,25 +366,26 @@ router.post("/generate", async (req: Request, res: Response) => {
     tools = workDir ? ["Read"] : [];
   }
 
-  // Write figures.md to session dir for partie-i/partie-ii so the agent can read it via tool
+  // Write figures.md to session dir for partie-i/partie-ii so the agent can read it via tool.
+  // Always overwrite (even when empty) to prevent stale context from previous generations.
   if (workDir && (body.section === "partie-i" || body.section === "partie-ii")) {
     const placement = body.section === "partie-i" ? "Partie I" : "Partie II";
     const sectionFigs = (body.availableFigures ?? []).filter((f) => f.placement === placement);
     const figuresPath = path.join(workDir, "figures.md");
-    if (sectionFigs.length > 0) {
-      const lines = [
-        `# Figures approuvées — ${placement}`,
-        "",
-        "Ces figures ont été préparées par l'étudiant. Référence-les naturellement dans le texte avec leur numéro exact.",
-        "",
-        ...sectionFigs.map((f) =>
-          `## Figure ${f.figure_number} — ${f.description}\n- **Placement :** ${f.placement}\n- **Référence dans le texte :** « Comme l'illustre la Figure ${f.figure_number}, … »`
-        ),
-        "",
-        "**Règle :** N'invente PAS d'autres numéros de figures. Utilise uniquement les numéros listés ci-dessus.",
-      ];
-      try { writeFileSync(figuresPath, lines.join("\n"), "utf-8"); } catch { /* ignore */ }
-    }
+    const lines = sectionFigs.length > 0
+      ? [
+          `# Figures approuvées — ${placement}`,
+          "",
+          "Ces figures ont été préparées par l'étudiant. Référence-les naturellement dans le texte avec leur numéro exact.",
+          "",
+          ...sectionFigs.map((f) =>
+            `## Figure ${f.figure_number} — ${f.description}\n- **Placement :** ${f.placement}\n- **Référence dans le texte :** « Comme l'illustre la Figure ${f.figure_number}, … »`
+          ),
+          "",
+          "**Règle :** N'invente PAS d'autres numéros de figures. Utilise uniquement les numéros listés ci-dessus.",
+        ]
+      : [`# Figures — ${placement}`, "", "Aucune figure approuvée pour cette section. Ne référence pas de figures numérotées."];
+    try { writeFileSync(figuresPath, lines.join("\n"), "utf-8"); } catch { /* ignore */ }
   }
 
   let fullOutput = "";

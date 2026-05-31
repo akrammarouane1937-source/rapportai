@@ -72,7 +72,12 @@ export function addApprovedFigure(fig: ApprovedFigure): void {
 }
 
 export function removeApprovedFigure(id: string): void {
-  saveApprovedFigures(getApprovedFigures().filter((f) => f.id !== id));
+  // Remove then renumber to keep a strictly contiguous 1-based sequence
+  const remaining = getApprovedFigures()
+    .filter((f) => f.id !== id)
+    .sort((a, b) => a.figureNumber - b.figureNumber)
+    .map((f, i) => ({ ...f, figureNumber: i + 1 }));
+  saveApprovedFigures(remaining);
 }
 
 export function clearApprovedFigures(): void {

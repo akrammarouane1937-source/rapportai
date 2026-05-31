@@ -629,11 +629,11 @@ function buildFiguresSection(placement: "Partie I" | "Partie II"): Paragraph[] {
   return paras;
 }
 
-// Liste des figures — static numbered list with source/author, plus Word TOC field
-// Table des figures — built from approved figures manifest (Word also auto-updates from Caption styles)
+// Liste des figures — standard academic front matter page with captions and page placeholders.
+// Heading "Liste des figures" (French convention). Each entry: Figure N — Titre, source, voir p. X.
 function buildTableDesFigures(): Paragraph[] {
   const figs = getApprovedFigures();
-  const paras: Paragraph[] = [heading1("Table des Figures"), emptyLine()];
+  const paras: Paragraph[] = [heading1("Liste des figures"), emptyLine()];
 
   if (figs.length === 0) {
     paras.push(bodyPara("(Aucune figure ajoutée)"));
@@ -641,18 +641,27 @@ function buildTableDesFigures(): Paragraph[] {
   }
 
   for (const fig of figs) {
+    // Title line: "Figure N — Titre de la figure ............... voir p. X"
     paras.push(new Paragraph({
-      spacing: { ...LINE_SPACING, before: 60, after: 60 },
+      spacing: { ...LINE_SPACING, before: 80, after: 20 },
       children: [
         new TextRun({ text: `Figure ${fig.figureNumber}`, font: FONT, size: BODY_PT, bold: true }),
         new TextRun({ text: ` — ${fig.title}`, font: FONT, size: BODY_PT }),
+        new TextRun({ text: "  ............... ", font: FONT, size: BODY_PT, color: "AAAAAA" }),
+        new TextRun({ text: "voir p. X", font: FONT, size: BODY_PT, italics: true, color: "888888" }),
       ],
     }));
-    paras.push(new Paragraph({
-      indent: { left: convertMillimetersToTwip(8) },
-      spacing: { ...LINE_SPACING, before: 0, after: 80 },
-      children: [new TextRun({ text: fig.formattedSource || fig.source || "", font: FONT, size: 20, italics: true, color: "555555" })],
-    }));
+    // Source line (indented, italic)
+    const src = fig.formattedSource || (fig.source ? `Source : ${fig.source}` : "");
+    if (src) {
+      paras.push(new Paragraph({
+        indent: { left: convertMillimetersToTwip(8) },
+        spacing: { ...LINE_SPACING, before: 0, after: 100 },
+        children: [new TextRun({ text: src, font: FONT, size: 20, italics: true, color: "555555" })],
+      }));
+    } else {
+      paras.push(emptyLine());
+    }
   }
 
   return paras;

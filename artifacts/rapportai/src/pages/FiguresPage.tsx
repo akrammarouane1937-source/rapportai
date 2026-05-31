@@ -530,7 +530,7 @@ export default function FiguresPage() {
 
   const partieI  = figures.filter((f) => f.placement === "Partie I");
   const partieII = figures.filter((f) => f.placement === "Partie II");
-  const nextNumber = figures.length + 1;
+  const nextNumber = figures.length === 0 ? 1 : Math.max(...figures.map((f) => f.figureNumber)) + 1;
 
   return (
     <div className="flex min-h-screen bg-[#f9f8ff]">
