@@ -17,7 +17,11 @@ export default function Step5() {
     step: 5,
     autoSend: "Génère le sommaire maintenant.",
     onSectionGenerated: (section, content) => {
-      if (section === "sommaire") updateReport({ sommaire: content });
+      if (section === "sommaire") {
+        updateReport({ sommaire: content });
+        // Re-show the transition card after each successful (re)generation
+        setStepDone(true);
+      }
     },
     onStepComplete: () => setStepDone(true),
   });
@@ -25,6 +29,13 @@ export default function Step5() {
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages, toolCalls, isThinking, isGenerating]);
+
+  // When the student sends a revision request, hide the transition card so the UI
+  // doesn't look frozen/done while the agent is working
+  const handleSend = (text: string, files?: File[]) => {
+    if (stepDone) setStepDone(false);
+    send(text, files);
+  };
 
   return (
     <Layout stepName="Sommaire" stepNumber={5}
@@ -48,7 +59,7 @@ export default function Step5() {
         <ChatInput
           isGenerating={isThinking || isGenerating}
           onAbort={abort}
-          onSend={(text, files) => send(text, files)}
+          onSend={handleSend}
           disabled={isThinking || isGenerating}
           placeholder="Demander une modification du sommaire..."
         />

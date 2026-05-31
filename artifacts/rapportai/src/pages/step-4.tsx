@@ -7,6 +7,9 @@ import { ChatInput } from "@/components/chat-input";
 import { useReportStore } from "@/lib/store";
 import { useConversation } from "@/hooks/use-conversation";
 
+const stripTitle = (text: string, title: string) =>
+  text.replace(new RegExp(`^#{0,3}\\s*${title}\\s*\\n+`, "i"), "").trim();
+
 export default function Step4() {
   const [, setLocation] = useLocation();
   const { report, updateReport } = useReportStore();
@@ -19,7 +22,20 @@ export default function Step4() {
     step: 4,
     autoSend: isLocked ? undefined : "Démarre.",
     onSectionGenerated: (section, content) => {
-      if (section === "resume") updateReport({ resumeFr: content });
+      if (section === "resume") {
+        // The agent sometimes returns both Résumé FR and Abstract EN in a single "resume" block.
+        // Detect and split them so each field in the store is clean.
+        const abstractIdx = content.search(/^##\s*Abstract\b/im);
+        if (abstractIdx > 0) {
+          updateReport({
+            resumeFr: content.slice(0, abstractIdx).trim(),
+            abstractEn: content.slice(abstractIdx).trim(),
+          });
+        } else {
+          updateReport({ resumeFr: content });
+        }
+      }
+      if (section === "abstract") updateReport({ abstractEn: content });
     },
     onStepComplete: () => setStepDone(true),
   });
@@ -28,7 +44,11 @@ export default function Step4() {
     bottomRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages, toolCalls, isThinking, isGenerating]);
 
-  const previewContent = report.resumeFr ?? "";
+  // Combine both fields into a single preview string — same pattern as step-3 for dedicaces+remerciements.
+  // stripTitle removes any leading ## header that the agent already embedded to avoid doubling.
+  const previewContent =
+    (report.resumeFr   ? `## Résumé\n\n${stripTitle(report.resumeFr, "Résumé")}\n\n`   : "") +
+    (report.abstractEn ? `## Abstract\n\n${stripTitle(report.abstractEn, "Abstract")}` : "");
 
   return (
     <Layout stepName="Résumé & Abstract" stepNumber={4}
