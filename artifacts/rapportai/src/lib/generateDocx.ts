@@ -776,12 +776,11 @@ function buildTableDesMatieres(): Paragraph[] {
     emptyLine(),
     new TableOfContents("Table des Matières", {
       hyperlink:         true,
-      headingStyleRange: "1-4",
+      headingStyleRange: "1-3",
       stylesWithLevels: [
         new StyleLevel("Heading1", 1),
         new StyleLevel("Heading2", 2),
         new StyleLevel("Heading3", 3),
-        new StyleLevel("Heading4", 4),
       ],
     }) as unknown as Paragraph,
   ];
@@ -913,13 +912,14 @@ export async function generateDocx(data: Report, formatting?: FormattingPrefs): 
           ...buildFiguresSection("Partie II"),
           ...buildConclusion(data),
           // Back-matter in user-defined order (draggable in Mon Rapport)
-          ...(data.sectionOrder?.length ? data.sectionOrder : ["bibliographie", "listeDesTableaux", "annexes", "tableDesMatieres"])
+          ...(data.sectionOrder?.length ? data.sectionOrder : ["bibliographie", "listeDesTableaux", "annexes"])
             .flatMap((id) => {
               if (id === "bibliographie")    return buildBibliographie(data);
               if (id === "tableDesFigures")  return buildTableDesFigures();
               if (id === "listeDesTableaux") return buildListeDesTableaux();
               if (id === "annexes")          return buildAnnexes(data);
-              if (id === "tableDesMatieres") return buildTableDesMatieres();
+              // tableDesMatieres is now always in front-matter — skip to avoid duplication
+              if (id === "tableDesMatieres") return [];
               return [];
             }),
         ],

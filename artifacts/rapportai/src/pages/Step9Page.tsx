@@ -1009,28 +1009,46 @@ export default function Step9Page() {
               </>
             )}
 
-            {/* STRUCTURE tab */}
+            {/* STRUCTURE tab — Word-preview-styled TOC */}
             {activeTab === "structure" && (
-              <div className="h-full overflow-y-auto bg-white">
-                <div className="px-6 pt-5 pb-2">
-                  <div className="flex items-center gap-2 mb-1">
-                    <ListOrdered className="w-4 h-4 text-purple-500" />
-                    <h2 className="text-base font-black text-gray-900"
-                        style={{ fontFamily: "'Plus Jakarta Sans', sans-serif" }}>
-                      Table des matières
-                    </h2>
+              <div className="h-full flex flex-col overflow-hidden">
+                {/* Header bar matching WordPreview style */}
+                <div className="flex items-center gap-3 px-4 py-2.5 border-b border-gray-100 bg-white flex-shrink-0">
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm font-semibold text-gray-700 truncate">Table des matières</p>
+                    <p className="text-xs text-gray-400">{sections.length} sections · se met à jour en temps réel</p>
                   </div>
-                  <p className="text-xs text-gray-400 leading-relaxed mb-4">
-                    Vue d'ensemble de ton rapport. Clique sur une section pour la modifier. La table des matières sera générée automatiquement dans le Word exporté.
-                  </p>
+                  <span className="flex-shrink-0 text-[10px] font-bold px-2 py-0.5 rounded-full"
+                        style={{ background: "#f5f0ff", color: "#7c3aed" }}>
+                    Auto-générée dans Word
+                  </span>
                 </div>
-                <div className="px-4 pb-6">
-                  <ReportToc />
-                </div>
-                <div className="mx-4 mb-4 rounded-xl px-4 py-3 border border-purple-100 bg-purple-50/40">
-                  <p className="text-[11px] text-purple-600 leading-relaxed">
-                    <span className="font-bold">Dans Word :</span> Le document exporté contient une vraie table des matières Word avec liens et numéros de page. Appuie sur <strong>Ctrl+A</strong> puis <strong>F9</strong> pour l'actualiser.
-                  </p>
+                {/* Document-like paper page */}
+                <div className="flex-1 overflow-y-auto p-6"
+                     style={{ background: "#e8e8e8" }}>
+                  <div style={{
+                    background: "#fff",
+                    boxShadow: "0 2px 12px rgba(0,0,0,0.14)",
+                    borderRadius: 2,
+                    padding: "48px 52px",
+                    minHeight: 400,
+                    fontFamily: "Times New Roman, Times, serif",
+                  }}>
+                    {/* TOC heading */}
+                    <div style={{ borderBottom: "2px solid #1a1a1a", paddingBottom: 10, marginBottom: 24 }}>
+                      <h1 style={{ fontSize: 17, fontWeight: 700, color: "#1a1a1a", letterSpacing: 0.3, margin: 0 }}>
+                        Table des Matières
+                      </h1>
+                    </div>
+                    {/* Reactive TOC list */}
+                    <ReportToc />
+                    {/* Word instruction note */}
+                    <div style={{ marginTop: 40, paddingTop: 12, borderTop: "1px solid #f0f0f0" }}>
+                      <p style={{ fontSize: 10, color: "#aaa", fontStyle: "italic", margin: 0, fontFamily: "Arial, sans-serif" }}>
+                        Astuce Word : après l'export, appuie sur Ctrl+A puis F9 pour afficher les numéros de page réels.
+                      </p>
+                    </div>
+                  </div>
                 </div>
               </div>
             )}
