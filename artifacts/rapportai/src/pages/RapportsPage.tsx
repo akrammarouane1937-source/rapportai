@@ -30,14 +30,15 @@ const FIXED_SECTIONS: SectionConfig[] = [
 ];
 
 const BACK_MATTER_META: Record<string, { label: string; field: string | null; path: string }> = {
-  bibliographie:     { label: "Bibliographie",       field: "bibliographie",  path: "/rapport/step-9"         },
-  tableDesFigures:   { label: "Liste des figures",   field: null,             path: "/figures"                },
-  listeDesTableaux:  { label: "Liste des tableaux",  field: null,             path: "/figures"                },
-  annexes:           { label: "Annexes",             field: null,             path: "/rapport/annexes"        },
-  tableDesMatieres:  { label: "Table des matières",  field: null,             path: "/rapport/step-9"         },
+  bibliographie:     { label: "Bibliographie",       field: "bibliographieText", path: "/rapport/step-9"  },
+  abreviations:      { label: "Abréviations",        field: null,                path: "/rapport/step-9"  },
+  tableDesFigures:   { label: "Liste des figures",   field: null,                path: "/figures"         },
+  listeDesTableaux:  { label: "Liste des tableaux",  field: null,                path: "/figures"         },
+  annexes:           { label: "Annexes",             field: null,                path: "/rapport/annexes" },
+  tableDesMatieres:  { label: "Table des matières",  field: null,                path: "/rapport/step-9"  },
 };
 
-const DEFAULT_ORDER = ["bibliographie", "tableDesFigures", "listeDesTableaux", "annexes", "tableDesMatieres"];
+const DEFAULT_ORDER = ["bibliographie", "abreviations", "tableDesFigures", "listeDesTableaux", "annexes", "tableDesMatieres"];
 
 // ─── Status helpers ───────────────────────────────────────────────────────────
 
@@ -85,13 +86,14 @@ function SectionThumbnail({ text }: { text: string | undefined }) {
 
 // ─── Grid card ────────────────────────────────────────────────────────────────
 
-function StepCard({ section, text, index, onOpen }: {
+function StepCard({ section, text, status: statusProp, index, onOpen }: {
   section: SectionConfig;
   text: string | undefined;
+  status?: "completed" | "in_progress" | "not_started";
   index: number;
   onOpen: () => void;
 }) {
-  const status = section.field ? getStatus(text) : "not_started";
+  const status = statusProp ?? (section.field ? getStatus(text) : "not_started");
   const cfg = STATUS_CONFIG[status];
 
   return (
@@ -189,7 +191,32 @@ export default function RapportsPage({ completedOnly = false }: RapportsPageProp
   const [tocOpen, setTocOpen] = useState(false);
 
   const reportData = report as unknown as Record<string, string>;
-  const sectionOrder: string[] = report.sectionOrder?.length ? report.sectionOrder : DEFAULT_ORDER;
+
+  // Merge saved order with DEFAULT_ORDER so new items (abreviations, etc.)
+  // appear for users whose persisted order predates this entry.
+  const savedOrder: string[] = report.sectionOrder?.length ? report.sectionOrder : DEFAULT_ORDER;
+  const sectionOrder: string[] = [
+    ...savedOrder,
+    ...DEFAULT_ORDER.filter((id) => !savedOrder.includes(id)),
+  ];
+
+  // Compute the display text for a section (handles non-string fields like abréviations).
+  const getSectionText = (s: SectionConfig): string | undefined => {
+    if (s.id === "abreviations") {
+      return report.abreviations?.length > 0
+        ? report.abreviations.map((a) => `${a.abbr} : ${a.sig}`).join("\n")
+        : undefined;
+    }
+    return s.field ? reportData[s.field] : undefined;
+  };
+
+  // Status for a section — special-case array-typed sections.
+  const getSectionStatus = (s: SectionConfig): "completed" | "in_progress" | "not_started" => {
+    if (s.id === "abreviations") {
+      return report.abreviations?.length > 0 ? "completed" : "not_started";
+    }
+    return s.field ? getStatus(reportData[s.field]) : "not_started";
+  };
 
   // Build back-matter sections in current order
   const backMatterSections: SectionConfig[] = sectionOrder.map((id) => {
@@ -200,13 +227,13 @@ export default function RapportsPage({ completedOnly = false }: RapportsPageProp
   const allSections = [...FIXED_SECTIONS, ...backMatterSections];
 
   const filteredSections = allSections.filter((s) => {
-    const status = s.field ? getStatus(reportData[s.field]) : "not_started";
+    const status = getSectionStatus(s);
     const matchesFilter = activeFilter === "all" || status === activeFilter;
     const matchesSearch = !search || s.label.toLowerCase().includes(search.toLowerCase());
     return matchesFilter && matchesSearch;
   });
 
-  const completedCount = allSections.filter((s) => s.field && getStatus(reportData[s.field]) === "completed").length;
+  const completedCount = allSections.filter((s) => getSectionStatus(s) === "completed").length;
 
   const handleReorder = (newOrder: string[]) => {
     updateReport({ sectionOrder: newOrder });
@@ -314,10 +341,7 @@ export default function RapportsPage({ completedOnly = false }: RapportsPageProp
                         const isActive = activeFilter === tab.id;
                         const count = tab.id === "all"
                           ? allSections.length
-                          : allSections.filter((s) => {
-                              const st = s.field ? getStatus(reportData[s.field]) : "not_started";
-                              return st === tab.id;
-                            }).length;
+                          : allSections.filter((s) => getSectionStatus(s) === tab.id).length;
                         return (
                           <button
                             key={tab.id}
@@ -356,7 +380,8 @@ export default function RapportsPage({ completedOnly = false }: RapportsPageProp
                       <StepCard
                         key={section.id}
                         section={section}
-                        text={section.field ? reportData[section.field] : undefined}
+                        text={getSectionText(section)}
+                        status={getSectionStatus(section)}
                         index={i}
                         onOpen={() => navigate(section.path)}
                       />

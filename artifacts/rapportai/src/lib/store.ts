@@ -117,7 +117,7 @@ export const initialReportState: Report = {
   problematique: "",
   sectionSummaries: {},
 
-  sectionOrder: ["bibliographie", "tableDesFigures", "listeDesTableaux", "annexes"],
+  sectionOrder: ["bibliographie", "abreviations", "tableDesFigures", "listeDesTableaux", "annexes", "tableDesMatieres"],
 
   currentStep: 1,
   checkpoints: {},
