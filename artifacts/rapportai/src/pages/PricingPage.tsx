@@ -7,6 +7,8 @@ import PublicNavbar from "@/components/layout/PublicNavbar";
 import { getMyPlan, type PlanId } from "@/lib/userPlan";
 import { API_BASE as BASE_PATH } from "@/lib/apiBase";
 
+const FREE_LAUNCH = import.meta.env.VITE_FREE_LAUNCH === "true";
+
 /* ─── Plan definitions ──────────────────────────────────────────────────── */
 interface Plan {
   id:          PlanId;
@@ -41,7 +43,7 @@ const PLANS: Plan[] = [
     priceMad:    377,
     anchorMad:   1000,
     description: "Pour finir ton rapport en une seule session.",
-    cta:         "Choisir Essentiel",
+    cta:         FREE_LAUNCH ? "Commencer gratuitement" : "Choisir Essentiel",
     popular:     false,
     features: [
       "60 pages générées",
@@ -58,7 +60,7 @@ const PLANS: Plan[] = [
     priceMad:    677,
     anchorMad:   1500,
     description: "Pages et révisions illimitées. Accès complet.",
-    cta:         "Choisir Pro",
+    cta:         FREE_LAUNCH ? "Commencer gratuitement" : "Choisir Pro",
     popular:     true,
     features: [
       "Pages illimitées",
@@ -95,7 +97,7 @@ const FAQ_ITEMS = [
   },
 ];
 
-/* ─── Main content — receives auth as props ─────────────────────────────── */
+/* ─── Content — receives auth as props ─────────────────────────────────── */
 function PricingContent({
   isSignedIn,
   userEmail,
@@ -115,6 +117,10 @@ function PricingContent({
 
   const handleCheckout = async (plan: Plan) => {
     if (!plan.priceMad) return;
+
+    // FREE_LAUNCH: skip Stripe, redirect to sign-up
+    if (FREE_LAUNCH) { setLocation("/sign-up"); return; }
+
     if (!isSignedIn) { setLocation("/sign-up"); return; }
 
     setLoading(plan.id);
@@ -150,6 +156,11 @@ function PricingContent({
 
           {/* Hero */}
           <div className="text-center mb-16">
+            {FREE_LAUNCH && (
+              <div className="inline-flex items-center gap-2 bg-green-50 text-green-700 text-sm font-semibold px-4 py-2 rounded-full mb-6 border border-green-200">
+                Lancement bêta — accès gratuit pour tous les premiers utilisateurs
+              </div>
+            )}
             <h1
               className="text-5xl font-extrabold text-gray-900 mb-4 tracking-tight"
               style={{ fontFamily: "'Plus Jakarta Sans', sans-serif" }}
@@ -157,7 +168,9 @@ function PricingContent({
               Pricing
             </h1>
             <p className="text-lg text-gray-500">
-              Un seul paiement. Ton rapport académique livré en 30 minutes.
+              {FREE_LAUNCH
+                ? "Accès complet offert pendant le lancement. Sans carte bancaire."
+                : "Un seul paiement. Ton rapport académique livré en 30 minutes."}
             </p>
           </div>
 
@@ -172,6 +185,46 @@ function PricingContent({
                   ? Math.round((1 - plan.priceMad / plan.anchorMad) * 100)
                   : null;
 
+              // CTA button
+              let ctaButton: React.ReactNode;
+              if (isCurrent) {
+                ctaButton = (
+                  <div className="w-full h-10 rounded-lg border border-gray-200 bg-gray-50 text-gray-400 text-sm font-medium flex items-center justify-center">
+                    Plan actuel
+                  </div>
+                );
+              } else if (isFree) {
+                ctaButton = (
+                  <Link href="/sign-up">
+                    <Button variant="outline" className="w-full h-10 rounded-lg font-semibold text-sm border-gray-300 text-gray-700 hover:bg-gray-50">
+                      {plan.cta}
+                    </Button>
+                  </Link>
+                );
+              } else if (FREE_LAUNCH || upgradable || !isSignedIn) {
+                ctaButton = (
+                  <Button
+                    onClick={() => void handleCheckout(plan)}
+                    disabled={loading !== null}
+                    className={`w-full h-10 rounded-lg font-semibold text-sm ${
+                      plan.popular
+                        ? "bg-purple-600 hover:bg-purple-700 text-white"
+                        : "bg-gray-900 hover:bg-gray-800 text-white"
+                    }`}
+                  >
+                    {loading === plan.id ? (
+                      <><Loader2 className="w-3.5 h-3.5 animate-spin mr-2 inline" />Redirection…</>
+                    ) : plan.cta}
+                  </Button>
+                );
+              } else {
+                ctaButton = (
+                  <div className="w-full h-10 rounded-lg border border-gray-200 bg-gray-50 text-gray-400 text-sm font-medium flex items-center justify-center">
+                    Plan supérieur requis
+                  </div>
+                );
+              }
+
               return (
                 <div
                   key={plan.id}
@@ -181,7 +234,7 @@ function PricingContent({
                       : "border-gray-200 shadow-sm hover:shadow-md"
                     }`}
                 >
-                  {/* Popular badge — top-right inside card */}
+                  {/* Popular badge */}
                   {plan.popular && (
                     <span className="absolute top-5 right-5 bg-purple-600 text-white text-[11px] font-bold px-2.5 py-1 rounded-full leading-none">
                       Le plus populaire
@@ -199,77 +252,38 @@ function PricingContent({
                   {/* Price */}
                   <div className="mb-6">
                     {isFree ? (
-                      <p
-                        className="text-4xl font-extrabold text-gray-900"
-                        style={{ fontFamily: "'Plus Jakarta Sans', sans-serif" }}
-                      >
+                      <p className="text-4xl font-extrabold text-gray-900" style={{ fontFamily: "'Plus Jakarta Sans', sans-serif" }}>
                         Free
                       </p>
                     ) : (
                       <>
-                        <div className="flex items-center gap-2 mb-1">
-                          <span className="text-sm text-gray-400 line-through">{plan.anchorMad} MAD</span>
-                          {discount && (
-                            <span className="text-xs bg-purple-100 text-purple-700 font-bold px-2 py-0.5 rounded-full">
-                              -{discount}%
-                            </span>
+                        {!FREE_LAUNCH && (
+                          <div className="flex items-center gap-2 mb-1">
+                            <span className="text-sm text-gray-400 line-through">{plan.anchorMad} MAD</span>
+                            {discount && (
+                              <span className="text-xs bg-purple-100 text-purple-700 font-bold px-2 py-0.5 rounded-full">
+                                -{discount}%
+                              </span>
+                            )}
+                          </div>
+                        )}
+                        <p className="text-4xl font-extrabold text-gray-900" style={{ fontFamily: "'Plus Jakarta Sans', sans-serif" }}>
+                          {FREE_LAUNCH ? (
+                            <span className="text-green-600">Gratuit</span>
+                          ) : (
+                            <>{plan.priceMad} <span className="text-lg font-semibold text-gray-400">MAD</span></>
                           )}
-                        </div>
-                        <p
-                          className="text-4xl font-extrabold text-gray-900"
-                          style={{ fontFamily: "'Plus Jakarta Sans', sans-serif" }}
-                        >
-                          {plan.priceMad}{" "}
-                          <span className="text-lg font-semibold text-gray-400">MAD</span>
                         </p>
                       </>
                     )}
                     <p className="text-sm text-gray-500 mt-2 leading-snug">{plan.description}</p>
                   </div>
 
-                  {/* CTA */}
-                  <div className="mb-6">
-                    {isCurrent ? (
-                      <div className="w-full h-10 rounded-lg border border-gray-200 bg-gray-50 text-gray-400 text-sm font-medium flex items-center justify-center">
-                        Plan actuel
-                      </div>
-                    ) : isFree ? (
-                      <Link href="/sign-up">
-                        <Button
-                          variant="outline"
-                          className="w-full h-10 rounded-lg font-semibold text-sm border-gray-300 text-gray-700 hover:bg-gray-50"
-                        >
-                          {plan.cta}
-                        </Button>
-                      </Link>
-                    ) : upgradable || !isSignedIn ? (
-                      <Button
-                        onClick={() => void handleCheckout(plan)}
-                        disabled={loading !== null}
-                        className={`w-full h-10 rounded-lg font-semibold text-sm ${
-                          plan.popular
-                            ? "bg-purple-600 hover:bg-purple-700 text-white"
-                            : "bg-gray-900 hover:bg-gray-800 text-white"
-                        }`}
-                      >
-                        {loading === plan.id ? (
-                          <><Loader2 className="w-3.5 h-3.5 animate-spin mr-2 inline" />Redirection…</>
-                        ) : (
-                          plan.cta
-                        )}
-                      </Button>
-                    ) : (
-                      <div className="w-full h-10 rounded-lg border border-gray-200 bg-gray-50 text-gray-400 text-sm font-medium flex items-center justify-center">
-                        Plan supérieur requis
-                      </div>
-                    )}
-                  </div>
-
                   {/* Divider */}
                   <div className="border-t border-gray-100 mb-5" />
 
                   {/* Features */}
-                  <ul className="space-y-3 flex-1">
+                  <ul className="space-y-3 flex-1 mb-6">
                     {plan.features.map((f) => (
                       <li key={f} className="flex items-start gap-2.5">
                         <Check className="w-4 h-4 text-purple-500 flex-shrink-0 mt-0.5" strokeWidth={2.5} />
@@ -277,6 +291,9 @@ function PricingContent({
                       </li>
                     ))}
                   </ul>
+
+                  {/* CTA — below features */}
+                  {ctaButton}
                 </div>
               );
             })}
@@ -340,7 +357,7 @@ function PricingContent({
   );
 }
 
-/* ─── Clerk-aware wrapper (only rendered inside ClerkProvider) ──────────── */
+/* ─── Clerk-aware wrapper ────────────────────────────────────────────────── */
 function PricingWithClerk() {
   const { isSignedIn } = useAuth();
   const { user }       = useUser();

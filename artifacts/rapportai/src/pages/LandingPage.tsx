@@ -553,100 +553,145 @@ export default function LandingPage() {
         </section>
 
         {/* 10. PRICING */}
-        <section className="py-24 bg-[#f9f8ff] border-t border-border">
+        <section className="py-24 bg-white border-t border-border">
           <div className="container mx-auto px-4 max-w-5xl">
-            <div className="text-center mb-12">
-              <div className="inline-flex items-center gap-2 bg-purple-50 text-purple-700 text-xs font-bold px-4 py-2 rounded-full mb-4 uppercase tracking-wide">
-                💰 Tarifs
-              </div>
+            <div className="text-center mb-14">
+              <p className="text-sm font-semibold text-purple-600 uppercase tracking-widest mb-3">Tarifs</p>
               <h2 className="text-3xl md:text-4xl font-bold font-heading text-foreground mb-3">
-                Moins cher qu'un prestataire.<br className="hidden md:block" /> Infiniment plus rapide.
+                Choisis ton plan
               </h2>
-              <p className="text-lg text-secondary-foreground max-w-xl mx-auto">
-                Les prestataires chargent <strong className="line-through text-gray-400">1000–2500 MAD</strong> pour un rapport PFE.
-                RapportAI le fait en 30 minutes.
+              <p className="text-lg text-secondary-foreground">
+                Un seul paiement. Ton rapport livré en 30 minutes.
               </p>
             </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-10">
-              {[
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
+              {([
                 {
                   name: "Gratuit",
-                  price: null,
-                  anchor: null,
-                  badge: "Sans carte",
-                  desc: "15 pages · 2 révisions · Téléchargement Word",
+                  price: null as number | null,
+                  anchor: null as number | null,
                   cta: "Commencer gratuitement",
                   href: "/sign-up",
                   popular: false,
+                  description: "Pour explorer sans engagement.",
+                  features: [
+                    "15 pages générées",
+                    "2 révisions IA",
+                    "Export Word",
+                    "Qualité identique aux plans payants",
+                  ],
                 },
                 {
                   name: "Essentiel",
-                  price: 377,
-                  anchor: 1000,
-                  badge: "-62%",
-                  desc: "60 pages · 20 révisions · PDF · Humanisation anti-IA",
+                  price: 377 as number | null,
+                  anchor: 1000 as number | null,
                   cta: "Choisir Essentiel",
                   href: "/pricing",
                   popular: false,
+                  description: "Pour finir ton rapport en une seule session.",
+                  features: [
+                    "60 pages générées",
+                    "20 révisions IA",
+                    "Export Word + PDF",
+                    "Humanisation anti-détection IA",
+                    "Génération depuis tes documents",
+                    "Canevas de ton école",
+                  ],
                 },
                 {
                   name: "Pro",
-                  price: 677,
-                  anchor: 1500,
-                  badge: "Le plus populaire",
-                  desc: "Pages illimitées · Révisions illimitées · JuryAI inclus",
+                  price: 677 as number | null,
+                  anchor: 1500 as number | null,
                   cta: "Choisir Pro",
                   href: "/pricing",
                   popular: true,
+                  description: "Pages et révisions illimitées. Accès complet.",
+                  features: [
+                    "Pages illimitées",
+                    "Révisions illimitées",
+                    "Export Word + PDF",
+                    "Humanisation anti-détection IA",
+                    "Génération depuis tes documents",
+                    "Canevas de ton école",
+                    "Accès JuryAI",
+                  ],
                 },
-              ].map((p, i) => (
-                <motion.div
-                  key={p.name}
-                  initial={{ opacity: 0, y: 20 }}
-                  whileInView={{ opacity: 1, y: 0 }}
-                  viewport={{ once: true }}
-                  transition={{ delay: i * 0.08 }}
-                  className={`bg-white rounded-2xl p-6 flex flex-col ${p.popular ? "border-2 border-purple-500 shadow-[0_8px_32px_rgba(124,58,237,0.15)] relative" : "border border-gray-100 shadow-sm"}`}
-                >
-                  {p.popular && (
-                    <div className="absolute -top-3.5 left-1/2 -translate-x-1/2">
-                      <span className="bg-purple-600 text-white text-xs font-bold px-4 py-1.5 rounded-full whitespace-nowrap shadow">
-                        ⚡ {p.badge}
+              ] as const).map((p, i) => {
+                const discount = p.price && p.anchor
+                  ? Math.round((1 - p.price / p.anchor) * 100)
+                  : null;
+                return (
+                  <motion.div
+                    key={p.name}
+                    initial={{ opacity: 0, y: 20 }}
+                    whileInView={{ opacity: 1, y: 0 }}
+                    viewport={{ once: true }}
+                    transition={{ delay: i * 0.08 }}
+                    className={`relative bg-white rounded-2xl p-7 flex flex-col border transition-shadow ${
+                      p.popular
+                        ? "border-purple-400 shadow-[0_0_0_1px_rgba(124,58,237,0.2),0_8px_32px_rgba(124,58,237,0.10)]"
+                        : "border-gray-200 shadow-sm hover:shadow-md"
+                    }`}
+                  >
+                    {p.popular && (
+                      <span className="absolute top-5 right-5 bg-purple-600 text-white text-[11px] font-bold px-2.5 py-1 rounded-full leading-none">
+                        Le plus populaire
                       </span>
-                    </div>
-                  )}
-                  <div className="mb-4 mt-2">
-                    <h3 className="font-bold text-lg text-foreground mb-1" style={{ fontFamily: "'Plus Jakarta Sans',sans-serif" }}>{p.name}</h3>
-                    {p.price ? (
-                      <div className="flex items-baseline gap-2">
-                        <span className="text-sm line-through text-gray-400">{p.anchor} MAD</span>
-                        {!p.popular && <span className="text-xs bg-red-100 text-red-600 font-bold px-1.5 py-0.5 rounded-full">{p.badge}</span>}
-                      </div>
-                    ) : (
-                      <div className="h-5" />
                     )}
-                    <div className="flex items-end gap-1">
-                      <span className="text-4xl font-extrabold text-foreground" style={{ fontFamily: "'Plus Jakarta Sans',sans-serif" }}>
-                        {p.price ? p.price : "Gratuit"}
-                      </span>
-                      {p.price && <span className="text-base text-gray-400 mb-1">MAD</span>}
+
+                    <p className="text-sm font-semibold text-gray-500 mb-3">{p.name}</p>
+
+                    <div className="mb-5">
+                      {!p.price ? (
+                        <p className="text-4xl font-extrabold text-gray-900" style={{ fontFamily: "'Plus Jakarta Sans',sans-serif" }}>Free</p>
+                      ) : (
+                        <>
+                          <div className="flex items-center gap-2 mb-1">
+                            <span className="text-sm text-gray-400 line-through">{p.anchor} MAD</span>
+                            {discount && (
+                              <span className="text-xs bg-purple-100 text-purple-700 font-bold px-2 py-0.5 rounded-full">-{discount}%</span>
+                            )}
+                          </div>
+                          <p className="text-4xl font-extrabold text-gray-900" style={{ fontFamily: "'Plus Jakarta Sans',sans-serif" }}>
+                            {p.price} <span className="text-lg font-semibold text-gray-400">MAD</span>
+                          </p>
+                        </>
+                      )}
+                      <p className="text-sm text-gray-500 mt-2 leading-snug">{p.description}</p>
                     </div>
-                  </div>
-                  <p className="text-sm text-secondary-foreground mb-5 leading-relaxed">{p.desc}</p>
-                  <Link href={p.href} className="mt-auto">
-                    <button
-                      className={`w-full h-10 rounded-xl font-semibold text-sm transition-all ${p.popular ? "bg-purple-600 hover:bg-purple-700 text-white shadow-[0_4px_14px_rgba(124,58,237,0.28)]" : "border-2 border-purple-200 text-purple-700 hover:bg-purple-50 bg-white"}`}
-                    >
-                      {p.cta}
-                    </button>
-                  </Link>
-                </motion.div>
-              ))}
+
+                    <Link href={p.href}>
+                      <button
+                        className={`w-full h-10 rounded-lg font-semibold text-sm transition-all mb-5 ${
+                          p.popular
+                            ? "bg-purple-600 hover:bg-purple-700 text-white"
+                            : !p.price
+                              ? "border border-gray-300 text-gray-700 hover:bg-gray-50 bg-white"
+                              : "bg-gray-900 hover:bg-gray-800 text-white"
+                        }`}
+                      >
+                        {p.cta}
+                      </button>
+                    </Link>
+
+                    <div className="border-t border-gray-100 mb-5" />
+
+                    <ul className="space-y-3 flex-1">
+                      {p.features.map((f) => (
+                        <li key={f} className="flex items-start gap-2.5">
+                          <CheckCircle2 className="w-4 h-4 text-purple-500 flex-shrink-0 mt-0.5" strokeWidth={2.5} />
+                          <span className="text-sm text-gray-600">{f}</span>
+                        </li>
+                      ))}
+                    </ul>
+                  </motion.div>
+                );
+              })}
             </div>
 
-            <p className="text-center text-sm text-muted-foreground">
-              Paiement unique · Remboursement 48h garanti · Pas d'abonnement caché
+            <p className="text-center text-sm text-muted-foreground mt-10">
+              Paiement unique · Pas d'abonnement caché · Support 7j/7
             </p>
           </div>
         </section>
