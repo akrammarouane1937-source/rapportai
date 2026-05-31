@@ -162,6 +162,8 @@ export default function DashboardPage() {
     ? `${completedCount}/9 sections prêtes. Qu'est-ce qu'on affine ?`
     : completedCount >= 4
     ? `${completedCount}/9 sections · Prochaine : ${nextSectionLabel}`
+    : completedCount === 0
+    ? "Génère un rapport académique complet en quelques minutes."
     : `${completedCount}/9 sections · Continue là où tu t'es arrêté.`;
 
   // sendQuickAction: shows `label` in the chat bubble but sends `prompt` to the API
@@ -203,14 +205,31 @@ export default function DashboardPage() {
       ]
     : [
         {
-          label: "🚀 Créer mon rapport",
-          action: () => setLocation("/rapport/step-1"),
+          label: "💡 Parlons de mon rapport",
+          action: () => sendQuickAction(
+            "Parlons de mon rapport",
+            "Je veux brainstormer mon rapport avec toi. Pose-moi des questions sur mon domaine, mon école et mes objectifs — aide-moi à définir un thème solide et une problématique claire."
+          ),
         },
         {
-          label: "💡 Aide-moi à choisir un thème",
+          label: "Aide-moi à choisir un thème",
           action: () => sendQuickAction(
             "Aide-moi à choisir un thème",
             "J'ai du mal à choisir un thème pour mon rapport. Pose-moi des questions sur ma filière, mon école, mes intérêts et ce que mon jury attend — puis propose-moi 3 thèmes concrets avec une problématique pour chacun."
+          ),
+        },
+        {
+          label: "⚡ On génère quand tu veux",
+          action: () => sendQuickAction(
+            "On génère quand tu veux",
+            "Je suis prêt à commencer mon rapport. Guide-moi étape par étape : qu'est-ce que tu as besoin de savoir sur moi et mon projet pour qu'on génère un rapport complet et solide ?"
+          ),
+        },
+        {
+          label: "🎯 C'est quoi un rapport parfait ?",
+          action: () => sendQuickAction(
+            "C'est quoi un rapport parfait ?",
+            "Qu'est-ce qui fait qu'un rapport PFE ou de stage est excellent aux yeux d'un jury marocain ? Donne-moi les critères concrets : structure, fond, forme, longueur, ce qu'il faut absolument éviter."
           ),
         },
       ];
