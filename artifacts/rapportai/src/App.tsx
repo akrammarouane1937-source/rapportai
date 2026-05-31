@@ -38,6 +38,7 @@ import StoryPage from "@/pages/StoryPage";
 import TermsPage from "@/pages/TermsPage";
 import PrivacyPage from "@/pages/PrivacyPage";
 import ReferralPage from "@/pages/ReferralPage";
+import PricingPage from "@/pages/PricingPage";
 import NotFound from "@/pages/not-found";
 import { ErrorBoundary } from "@/components/ErrorBoundary";
 
@@ -345,6 +346,7 @@ function ClerkProviderWithRoutes() {
             <Route path="/story" component={StoryPage} />
             <Route path="/terms" component={TermsPage} />
             <Route path="/privacy" component={PrivacyPage} />
+            <Route path="/pricing" component={PricingPage} />
             <Route component={NotFound} />
           </Switch>
           <Toaster />
@@ -393,6 +395,7 @@ function NoAuthApp() {
           <Route path="/story" component={StoryPage} />
           <Route path="/terms" component={TermsPage} />
           <Route path="/privacy" component={PrivacyPage} />
+          <Route path="/pricing" component={PricingPage} />
           <Route component={NotFound} />
         </Switch>
         <Toaster />

@@ -35,6 +35,9 @@ export default function PublicNavbar() {
           <Link href="/story">
             <span className="text-sm font-medium text-gray-500 hover:text-gray-900 transition-colors cursor-pointer">Notre histoire</span>
           </Link>
+          <Link href="/pricing">
+            <span className="text-sm font-medium text-gray-500 hover:text-gray-900 transition-colors cursor-pointer">Tarifs</span>
+          </Link>
         </div>
 
         {/* Right — Auth */}
