@@ -1,4 +1,6 @@
 import { useEffect } from "react";
+import { useReportStore } from "./store";
+import type { Report } from "./store";
 
 const KEY = "rapportai_v1";
 
@@ -68,6 +70,40 @@ export function saveReport(patch: Partial<ReportData>): void {
     localStorage.setItem(KEY, JSON.stringify({ ...current, ...patch }));
   } catch {
     // ignore quota errors in demo mode
+  }
+
+  // Sync to Zustand store so reactive components (ReportToc, etc.) update in real time.
+  // Field names differ between the two stores — map them explicitly.
+  try {
+    const z: Partial<Report> = {};
+    if ("theme"             in patch) z.theme            = patch.theme            ?? "";
+    if ("school"            in patch) z.school           = patch.school           ?? "";
+    if ("filiere"           in patch) z.filiere          = patch.filiere          ?? "";
+    if ("reportType"        in patch) z.reportType       = (patch.reportType as Report["reportType"]) ?? "PFE";
+    if ("annee"             in patch) z.academicYear     = patch.annee            ?? "";
+    if ("studentName"       in patch) z.studentName      = patch.studentName      ?? "";
+    if ("encadrantPeda"     in patch) z.encadrantPeda    = patch.encadrantPeda    ?? "";
+    if ("encadrantPro"      in patch) z.encadrantPro     = patch.encadrantPro     ?? "";
+    if ("entreprise"        in patch) z.entreprise       = patch.entreprise       ?? "";
+    if ("ville"             in patch) z.ville            = patch.ville            ?? "";
+    if ("dedicaces"         in patch) z.dedicaces        = patch.dedicaces        ?? "";
+    if ("remerciements"     in patch) z.remerciements    = patch.remerciements    ?? "";
+    if ("resume"            in patch) z.resumeFr         = patch.resume           ?? "";
+    if ("abstract"          in patch) z.abstractEn       = patch.abstract         ?? "";
+    if ("motsCles"          in patch) z.motsCles         = patch.motsCles         ?? [];
+    if ("abreviations"      in patch) z.abreviations     = patch.abreviations     ?? [];
+    if ("sommaireText"      in patch) z.sommaire         = patch.sommaireText     ?? "";
+    if ("introduction"      in patch) z.introduction     = patch.introduction     ?? "";
+    if ("partieI"           in patch) z.partieI          = patch.partieI          ?? "";
+    if ("partieII"          in patch) z.partieII         = patch.partieII         ?? "";
+    if ("conclusion"        in patch) z.conclusion       = patch.conclusion       ?? "";
+    if ("bibliographieText" in patch) z.bibliographieText = patch.bibliographieText ?? "";
+    if ("problematique"     in patch) z.problematique    = patch.problematique    ?? "";
+    if (Object.keys(z).length > 0) {
+      useReportStore.getState().updateReport(z);
+    }
+  } catch {
+    // Non-fatal — Zustand sync is best-effort
   }
 }
 
