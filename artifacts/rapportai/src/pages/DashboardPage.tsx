@@ -140,9 +140,8 @@ export default function DashboardPage() {
   };
   const currentStep = ([1,2,3,4,5,6,7,8,9].find((n) => !stepDone[n])) ?? 9;
   const name = user?.firstName
-    || user?.emailAddresses?.[0]?.emailAddress?.split("@")[0]
     || rawReport.studentName?.split(" ")[0]
-    || "Étudiant";
+    || "";
 
   const theme = report.theme || rawReport.theme || "";
   const shortTheme = theme.length > 28 ? theme.slice(0, 28) + "…" : theme;
@@ -152,15 +151,15 @@ export default function DashboardPage() {
   const nextSectionLabel = SECTION_NAV_LABELS[STEP_PATHS[currentStep] ?? ""] ?? "la prochaine étape";
 
   const greeting = !hasReport
-    ? `Bonjour ${name}, qu'est-ce que tu prépares ?`
+    ? name ? `Bonjour ${name} 👋` : `Bonjour 👋`
     : completedCount >= 7
-    ? `Presque fini, ${name} 🎯`
+    ? name ? `Presque fini, ${name} 🎯` : `Presque fini 🎯`
     : completedCount >= 4
-    ? `Content de te revoir, ${name} 👋`
-    : `Bon courage, ${name} 💪`;
+    ? name ? `Content de te revoir, ${name} 👋` : `Content de te revoir 👋`
+    : name ? `Bon courage, ${name} 💪` : `Bon courage 💪`;
 
   const subtitle = !hasReport
-    ? "PFE, stage ou mémoire — dis-moi ton idée et on génère tout ensemble."
+    ? "Génère un rapport académique complet en quelques minutes."
     : completedCount >= 7
     ? `${completedCount}/9 sections prêtes. Qu'est-ce qu'on affine ?`
     : completedCount >= 4
@@ -206,29 +205,15 @@ export default function DashboardPage() {
       ]
     : [
         {
-          label: "💡 Parle-moi de ton idée de rapport",
-          action: () => sendQuickAction(
-            "Parle-moi de mon idée de rapport",
-            "Je veux brainstormer mon idée de rapport avec toi. Pose-moi des questions sur mon domaine, mon école, ce qui m'intéresse — aide-moi à définir un thème solide et une problématique claire avant de commencer."
-          ),
+          label: "🚀 Créer mon rapport",
+          action: () => setLocation("/rapport/step-1"),
         },
         {
-          label: "Aide-moi à choisir un thème",
+          label: "💡 Aide-moi à choisir un thème",
           action: () => sendQuickAction(
             "Aide-moi à choisir un thème",
             "J'ai du mal à choisir un thème pour mon rapport. Pose-moi des questions sur ma filière, mon école, mes intérêts et ce que mon jury attend — puis propose-moi 3 thèmes concrets avec une problématique pour chacun."
           ),
-        },
-        {
-          label: "PFE, stage ou mémoire ?",
-          action: () => sendQuickAction(
-            "PFE, stage ou mémoire — c'est quoi la différence ?",
-            "C'est quoi la différence entre un PFE, un rapport de stage et un mémoire au Maroc ? Lequel me correspond selon mon niveau ?"
-          ),
-        },
-        {
-          label: "Commencer mon rapport",
-          action: () => setLocation("/rapport/step-1"),
         },
       ];
 
@@ -396,9 +381,7 @@ export default function DashboardPage() {
     { label: "Conclusion",        field: "conclusion",   path: "/rapport/step-9"   },
   ].filter((s) => !!(report as unknown as Record<string, string>)[s.field]).slice(0, 3);
 
-  const workspaceName = user?.emailAddresses?.[0]?.emailAddress?.split("@")[0]
-    || user?.firstName
-    || "Mon espace";
+  const workspaceName = user?.firstName || "Mon espace";
 
   return (
     <div className="flex h-screen overflow-hidden" style={{ background: "#f9f8ff" }}>

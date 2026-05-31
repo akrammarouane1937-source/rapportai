@@ -71,7 +71,7 @@ export function Sidebar() {
     "U";
   const userName = user?.firstName
     ? `${user.firstName} ${user.lastName || ""}`.trim()
-    : user?.emailAddresses?.[0]?.emailAddress?.split("@")[0] || "Étudiant";
+    : "Étudiant";
 
   const planLabel: Record<string, string> = {
     free: "Gratuit", essentiel: "Essentiel", pro: "Pro", premium: "Premium",
