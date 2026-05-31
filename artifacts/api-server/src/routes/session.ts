@@ -595,9 +595,18 @@ router.post(
   guardRevisionLimit,
   async (req: Request, res: Response) => {
     const { sessionId } = req.params;
-    const { sectionId, instruction } = req.body as {
+    type RevisionFileBlock = {
+      type: "image" | "document";
+      name: string;
+      source:
+        | { type: "base64"; media_type: string; data: string }
+        | { type: "text";   media_type: string; data: string };
+    };
+
+    const { sectionId, instruction, files } = req.body as {
       sectionId: string;
       instruction: string;
+      files?: RevisionFileBlock[];
     };
 
     if (!sectionId || !instruction) {
@@ -617,7 +626,22 @@ router.post(
     res.flushHeaders();
 
     try {
-      const task = agent.buildRevisionTask(sectionId, instruction);
+      // Write attached files to the session workDir so the agent can read them
+      const attachedFileNames: string[] = [];
+      if (files && files.length > 0) {
+        for (const block of files) {
+          const safeName = block.name.replace(/[^a-zA-Z0-9._-]/g, "_");
+          const filePath = path.join(agent.workDir, safeName);
+          if (block.source.type === "base64") {
+            writeFileSync(filePath, Buffer.from(block.source.data, "base64"));
+          } else {
+            writeFileSync(filePath, block.source.data, "utf-8");
+          }
+          attachedFileNames.push(safeName);
+        }
+      }
+
+      const task = agent.buildRevisionTask(sectionId, instruction, attachedFileNames);
       const finished = await streamToSSE(res, agent.stream(task));
 
       if (finished) {

@@ -434,9 +434,13 @@ Enregistre dans abbreviations.md.`;
   }
 
   // Build a surgical revision task
-  buildRevisionTask(sectionId: string, instruction: string): string {
+  buildRevisionTask(sectionId: string, instruction: string, attachedFiles?: string[]): string {
+    const filesNote = attachedFiles && attachedFiles.length > 0
+      ? `\n\nL'étudiant a joint ${attachedFiles.length} fichier(s). Lis-les avec Read avant de réviser : ${attachedFiles.join(", ")}.`
+      : "";
+
     return `Lis ${sectionId}.md.
-L'étudiant demande : ${instruction}
+L'étudiant demande : ${instruction}${filesNote}
 
 Applique des modifications chirurgicales uniquement. Ne réécris pas toute la section.
 Utilise Edit pour modifier uniquement les passages concernés.

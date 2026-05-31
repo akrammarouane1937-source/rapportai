@@ -16,6 +16,44 @@ interface AttachedItem {
   previewUrl?: string;
 }
 
+type RevisionFileBlock =
+  | { type: "image";    name: string; source: { type: "base64"; media_type: string; data: string } }
+  | { type: "document"; name: string; source: { type: "base64"; media_type: string; data: string } }
+  | { type: "document"; name: string; source: { type: "text";   media_type: "text/plain"; data: string } };
+
+function readAsBase64(file: File): Promise<string> {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => resolve((reader.result as string).split(",")[1] ?? "");
+    reader.onerror = reject;
+    reader.readAsDataURL(file);
+  });
+}
+
+async function processRevisionFiles(files: File[]): Promise<RevisionFileBlock[]> {
+  const blocks: RevisionFileBlock[] = [];
+  for (const file of files) {
+    if (file.type === "application/pdf") {
+      const data = await readAsBase64(file);
+      blocks.push({ type: "document", name: file.name, source: { type: "base64", media_type: "application/pdf", data } });
+    } else if (file.type.startsWith("image/")) {
+      const data = await readAsBase64(file);
+      blocks.push({ type: "image", name: file.name, source: { type: "base64", media_type: file.type, data } });
+    } else if (
+      file.type === "text/plain" ||
+      file.name.endsWith(".txt") ||
+      file.name.endsWith(".md")
+    ) {
+      const text = await file.text();
+      blocks.push({ type: "document", name: file.name, source: { type: "text", media_type: "text/plain", data: text } });
+    } else {
+      const data = await readAsBase64(file);
+      blocks.push({ type: "document", name: file.name, source: { type: "base64", media_type: file.type || "application/octet-stream", data } });
+    }
+  }
+  return blocks;
+}
+
 function FileTypeIcon({ file }: { file: File }) {
   const ext = file.name.split(".").pop()?.toLowerCase() ?? "";
   if (ext === "docx" || ext === "doc") {
@@ -76,7 +114,6 @@ export function ChatRevision({
   const [input, setInput] = useState("");
   const [streaming, setStreaming] = useState(false);
   const [items, setItems] = useState<AttachedItem[]>([]);
-  const [uploading, setUploading] = useState(false);
   const bottomRef = useRef<HTMLDivElement>(null);
   const fileRef = useRef<HTMLInputElement>(null);
 
@@ -117,16 +154,16 @@ export function ChatRevision({
       setItems([]);
       filesToSend.forEach((i) => { if (i.previewUrl) URL.revokeObjectURL(i.previewUrl); });
 
-      const userId = Date.now().toString();
+      const userId  = Date.now().toString();
       const agentId = (Date.now() + 1).toString();
 
-      const userContent = text + (filesToSend.length > 0
+      const userLabel = text + (filesToSend.length > 0
         ? `\n\n[${filesToSend.length} fichier(s) joint(s) : ${filesToSend.map((f) => f.file.name).join(", ")}]`
         : "");
 
       setMessages((prev) => [
         ...prev,
-        { id: userId, role: "user", content: userContent },
+        { id: userId,  role: "user",  content: userLabel },
         { id: agentId, role: "agent", content: "", streaming: true },
       ]);
       setStreaming(true);
@@ -135,35 +172,26 @@ export function ChatRevision({
       try {
         const sessionId = await ensureSession();
 
-        // Upload files first so the agent can read them via its Read tool
-        if (filesToSend.length > 0) {
-          setUploading(true);
-          for (const item of filesToSend) {
-            const fd = new FormData();
-            fd.append("file", item.file);
-            await fetch(`${API_BASE}/api/session/${sessionId}/upload-document`, {
-              method: "POST",
-              body: fd,
-            }).catch(() => { /* silent — agent will still revise without the doc */ });
-          }
-          setUploading(false);
-        }
-
-        const finalInstruction = text + (filesToSend.length > 0
-          ? `\n\nJ'ai joint ${filesToSend.length} fichier(s) : ${filesToSend.map((f) => f.file.name).join(", ")}. Utilise-les pour guider la révision.`
-          : "");
+        // Encode attached files as content blocks (same format as ChatInput / use-conversation)
+        const fileBlocks = filesToSend.length > 0
+          ? await processRevisionFiles(filesToSend.map((i) => i.file))
+          : undefined;
 
         const resp = await fetch(`${API_BASE}/api/session/${sessionId}/revise`, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ sectionId, instruction: finalInstruction }),
+          body: JSON.stringify({
+            sectionId,
+            instruction: text,
+            files: fileBlocks,
+          }),
         });
 
         if (!resp.ok || !resp.body) throw new Error(`HTTP ${resp.status}`);
 
         const reader = resp.body.getReader();
-        const dec = new TextDecoder();
-        let buf = "";
+        const dec    = new TextDecoder();
+        let buf       = "";
         let agentText = "";
 
         while (true) {
@@ -203,7 +231,6 @@ export function ChatRevision({
           }
         }
       } catch {
-        setUploading(false);
         setMessages((prev) =>
           prev.map((m) =>
             m.id === agentId
@@ -363,7 +390,7 @@ export function ChatRevision({
             type="file"
             multiple
             className="hidden"
-            onChange={(e) => e.target.files && addFiles(e.target.files)}
+            onChange={(e) => { if (e.target.files) { addFiles(e.target.files); e.target.value = ""; } }}
           />
           <button
             type="button"
@@ -405,7 +432,7 @@ export function ChatRevision({
             disabled={!canSend}
             className="w-9 h-9 bg-purple-600 hover:bg-purple-700 disabled:opacity-40 text-white rounded-xl flex items-center justify-center flex-shrink-0 transition-colors self-end"
           >
-            {(streaming || uploading) ? <Loader2 className="w-4 h-4 animate-spin" /> : <Send className="w-4 h-4" />}
+            {streaming ? <Loader2 className="w-4 h-4 animate-spin" /> : <Send className="w-4 h-4" />}
           </button>
         </div>
 
