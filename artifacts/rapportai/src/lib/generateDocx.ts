@@ -807,6 +807,7 @@ export async function generateDocx(data: Report, formatting?: FormattingPrefs): 
           ...buildResume(data),
           ...buildAbreviations(data),
           ...buildSommaire(data),
+          ...(getApprovedFigures().length > 0 ? buildTableDesFigures() : []),
         ],
       },
       {
@@ -827,7 +828,7 @@ export async function generateDocx(data: Report, formatting?: FormattingPrefs): 
           ...buildFiguresSection("Partie II"),
           ...buildConclusion(data),
           // Back-matter in user-defined order (draggable in Mon Rapport)
-          ...(data.sectionOrder?.length ? data.sectionOrder : ["bibliographie", "tableDesFigures", "listeDesTableaux", "annexes", "tableDesMatieres"])
+          ...(data.sectionOrder?.length ? data.sectionOrder : ["bibliographie", "listeDesTableaux", "annexes", "tableDesMatieres"])
             .flatMap((id) => {
               if (id === "bibliographie")    return buildBibliographie(data);
               if (id === "tableDesFigures")  return buildTableDesFigures();

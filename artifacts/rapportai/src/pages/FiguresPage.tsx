@@ -565,7 +565,7 @@ export default function FiguresPage() {
               <motion.div
                 initial={{ opacity: 0, y: 12 }}
                 animate={{ opacity: 1, y: 0 }}
-                className="flex flex-col items-center justify-center py-24 text-center"
+                className="flex flex-col items-center justify-center py-20 text-center"
               >
                 <div className="w-20 h-20 bg-purple-50 rounded-3xl flex items-center justify-center mb-5">
                   <ImageIcon className="w-9 h-9 text-purple-300" />
@@ -573,9 +573,19 @@ export default function FiguresPage() {
                 <h2 className="text-xl font-bold text-gray-900 mb-2" style={{ fontFamily: "'Plus Jakarta Sans', sans-serif" }}>
                   Aucune figure pour l'instant
                 </h2>
-                <p className="text-gray-500 text-sm max-w-sm mb-6">
-                  Uploade une image directement ou importe un PDF/Word. L'IA extrait toutes les figures et génère les légendes avec attribution de source.
+                <p className="text-gray-500 text-sm max-w-sm mb-4">
+                  Uploade une image directement ou importe un PDF/Word — l'IA extrait les figures, génère les légendes avec source, et les intègre automatiquement dans ta Partie I, Partie II et le rapport Word final.
                 </p>
+                <div className="flex gap-3 mb-6">
+                  <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-blue-50 border border-blue-100">
+                    <span className="w-2 h-2 rounded-full bg-blue-400 flex-shrink-0" />
+                    <span className="text-xs font-medium text-blue-700">Partie I</span>
+                  </div>
+                  <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-orange-50 border border-orange-100">
+                    <span className="w-2 h-2 rounded-full bg-orange-400 flex-shrink-0" />
+                    <span className="text-xs font-medium text-orange-700">Partie II</span>
+                  </div>
+                </div>
                 <Button onClick={() => setShowModal(true)} className="bg-purple-600 hover:bg-purple-700 text-white gap-2 rounded-xl">
                   <Upload className="w-4 h-4" /> Ajouter ma première figure
                 </Button>

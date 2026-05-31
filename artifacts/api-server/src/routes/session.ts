@@ -411,6 +411,28 @@ router.post(
       agent.patchProfile({ formatting });
     }
 
+    // Write figures.md to session dir so the agent can read it via the Read tool
+    if (figures && figures.length > 0 && (section === "partie-i" || section === "partie-ii")) {
+      const placement = section === "partie-i" ? "Partie I" : "Partie II";
+      const sectionFigs = figures.filter((f) => f.placement === placement);
+      if (sectionFigs.length > 0) {
+        const lines = [
+          `# Figures approuvées — ${placement}`,
+          "",
+          "Ces figures ont été préparées par l'étudiant. Référence-les naturellement dans le texte avec leur numéro exact.",
+          "",
+          ...sectionFigs.map((f) =>
+            `## Figure ${f.figureNumber} — ${f.title}\n- **Description :** ${f.caption || f.title}\n- **Source :** ${f.source || "Auteur propre"}\n- **Référence dans le texte :** « Comme l'illustre la Figure ${f.figureNumber}, … »`
+          ),
+          "",
+          "**Règle :** N'invente PAS d'autres numéros de figures. Utilise uniquement les numéros listés ci-dessus.",
+        ];
+        try {
+          writeFileSync(`${agent.workDir}/figures.md`, lines.join("\n"), "utf-8");
+        } catch { /* ignore write errors */ }
+      }
+    }
+
     res.setHeader("Content-Type", "text/event-stream");
     res.setHeader("Cache-Control", "no-cache");
     res.setHeader("Connection", "keep-alive");

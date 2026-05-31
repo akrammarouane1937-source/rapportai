@@ -1,6 +1,6 @@
 import { Router, type Request, type Response } from "express";
 import { query } from "@anthropic-ai/claude-agent-sdk";
-import { existsSync, readFileSync } from "fs";
+import { existsSync, readFileSync, writeFileSync } from "fs";
 import path from "path";
 import { findClaudeBinary } from "../lib/find-claude-binary";
 import { markSectionComplete, sessionDir, readMemory } from "../lib/memory";
@@ -364,6 +364,27 @@ router.post("/generate", async (req: Request, res: Response) => {
   } catch {
     // Unknown section — minimal fallback
     tools = workDir ? ["Read"] : [];
+  }
+
+  // Write figures.md to session dir for partie-i/partie-ii so the agent can read it via tool
+  if (workDir && (body.section === "partie-i" || body.section === "partie-ii")) {
+    const placement = body.section === "partie-i" ? "Partie I" : "Partie II";
+    const sectionFigs = (body.availableFigures ?? []).filter((f) => f.placement === placement);
+    const figuresPath = path.join(workDir, "figures.md");
+    if (sectionFigs.length > 0) {
+      const lines = [
+        `# Figures approuvées — ${placement}`,
+        "",
+        "Ces figures ont été préparées par l'étudiant. Référence-les naturellement dans le texte avec leur numéro exact.",
+        "",
+        ...sectionFigs.map((f) =>
+          `## Figure ${f.figure_number} — ${f.description}\n- **Placement :** ${f.placement}\n- **Référence dans le texte :** « Comme l'illustre la Figure ${f.figure_number}, … »`
+        ),
+        "",
+        "**Règle :** N'invente PAS d'autres numéros de figures. Utilise uniquement les numéros listés ci-dessus.",
+      ];
+      try { writeFileSync(figuresPath, lines.join("\n"), "utf-8"); } catch { /* ignore */ }
+    }
   }
 
   let fullOutput = "";

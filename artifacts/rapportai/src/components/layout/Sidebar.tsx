@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useLocation } from "wouter";
 import { useOptionalUser as useUser, useOptionalClerk as useClerk } from "@/lib/useOptionalClerk";
 import {
@@ -38,7 +38,13 @@ export function Sidebar() {
   const plan   = getMyPlan();
   const limits = PLAN_LIMITS[plan.planId];
   const report = getReport();
-  const figureCount = getApprovedFigures().length;
+
+  const [figureCount, setFigureCount] = useState(() => getApprovedFigures().length);
+  useEffect(() => {
+    const handler = () => setFigureCount(getApprovedFigures().length);
+    window.addEventListener("rapportai:figures-changed", handler);
+    return () => window.removeEventListener("rapportai:figures-changed", handler);
+  }, []);
 
   const sectionsWithContent = [
     report.introduction, report.resume, report.dedicaces,

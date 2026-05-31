@@ -65,7 +65,7 @@ export const SECTION_CONFIGS: Record<string, SectionConfig> = {
   "partie-i": {
     skillsFile:   "partie-i-skills.md",
     maxTurns:     50,
-    dependencies: ["generation_context.md", "sommaire.md", "introduction.md"],
+    dependencies: ["generation_context.md", "sommaire.md", "introduction.md", "figures.md"],
     allowedTools: ["Read", "Write", "Edit", "Bash", "Glob", "Grep", "WebFetch", "WebSearch"],
     description:  "Rédaction du cadre théorique (Partie I)",
   },
@@ -73,7 +73,7 @@ export const SECTION_CONFIGS: Record<string, SectionConfig> = {
   "partie-ii": {
     skillsFile:   "partie-ii-skills.md",
     maxTurns:     50,
-    dependencies: ["generation_context.md", "sommaire.md", "introduction.md", "partie-i.md"],
+    dependencies: ["generation_context.md", "sommaire.md", "introduction.md", "partie-i.md", "figures.md"],
     allowedTools: ["Read", "Write", "Edit", "Bash", "Glob", "Grep", "WebFetch", "WebSearch"],
     description:  "Rédaction de l'étude empirique (Partie II)",
   },

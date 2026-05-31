@@ -60,6 +60,7 @@ export function getApprovedFigures(): ApprovedFigure[] {
 export function saveApprovedFigures(figures: ApprovedFigure[]): void {
   try {
     localStorage.setItem(KEY, JSON.stringify(figures));
+    window.dispatchEvent(new Event("rapportai:figures-changed"));
   } catch {
     // ignore quota errors
   }
