@@ -10,6 +10,7 @@ import { UpsellModal } from "@/components/report/UpsellModal";
 import { getMyPlan, canUseFeature, PLAN_LIMITS } from "@/lib/userPlan";
 import { getReport } from "@/lib/reportStore";
 import { useReportStore } from "@/lib/store";
+import { getApprovedFigures } from "@/lib/figureStore";
 
 const NAV_ITEMS = [
   { icon: Home,          label: "Accueil",            path: "/dashboard",          proFeature: "" },
@@ -37,6 +38,7 @@ export function Sidebar() {
   const plan   = getMyPlan();
   const limits = PLAN_LIMITS[plan.planId];
   const report = getReport();
+  const figureCount = getApprovedFigures().length;
 
   const sectionsWithContent = [
     report.introduction, report.resume, report.dedicaces,
@@ -196,6 +198,11 @@ export function Sidebar() {
                   }`}
                 />
                 <span className="truncate flex-1">{item.label}</span>
+                {item.path === "/figures" && figureCount > 0 && !locked && (
+                  <span className="text-[10px] bg-purple-100 text-purple-600 px-1.5 py-0.5 rounded-full font-semibold flex-shrink-0 min-w-[18px] text-center">
+                    {figureCount}
+                  </span>
+                )}
                 {locked && (
                   <span className="text-[10px] bg-purple-100 text-purple-600 px-1.5 py-0.5 rounded-full font-semibold flex-shrink-0">
                     Pro

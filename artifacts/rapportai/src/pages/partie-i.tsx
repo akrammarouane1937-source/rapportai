@@ -208,20 +208,26 @@ export default function PartieI() {
         addFiles(files);
         push({ id: nextId(), role: "user", content: `${files.length} source(s) uploadée(s)` });
         files.forEach((f) => push({ id: nextId(), role: "agent", content: <UploadCard file={f} status="ready" /> }));
+        const preApproved = getApprovedFigures().filter((f) => f.placement === "Partie I");
         push({
           id: nextId(),
           role: "agent",
           content: (
             <span>
               {files.length} source(s) reçue(s)<br />
-              Tu veux uploader des figures ou graphiques à intégrer dans le texte ? (ou "non")
+              {preApproved.length > 0
+                ? `✓ ${preApproved.length} figure${preApproved.length > 1 ? "s" : ""} Partie I déjà dans ta bibliothèque. Tu veux ajouter d'autres fichiers graphiques ? (ou "non")`
+                : `Tu veux uploader des figures ou graphiques à intégrer dans le texte ? (ou "non")`}
             </span>
           ),
         });
       } else {
+        const preApproved = getApprovedFigures().filter((f) => f.placement === "Partie I");
         push(
           { id: nextId(), role: "user", content: "Non, continuer sans sources" },
-          { id: nextId(), role: "agent", content: "Tu veux uploader des figures ou graphiques ? (ou 'non')" }
+          { id: nextId(), role: "agent", content: preApproved.length > 0
+              ? `✓ ${preApproved.length} figure${preApproved.length > 1 ? "s" : ""} Partie I trouvée${preApproved.length > 1 ? "s" : ""} dans ta bibliothèque. Tu veux ajouter d'autres fichiers graphiques ? (ou 'non')`
+              : "Tu veux uploader des figures ou graphiques ? (ou 'non')" }
         );
       }
       setPhase("figures");

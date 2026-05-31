@@ -179,15 +179,21 @@ export default function PartieII() {
         addFiles(files);
         push({ id: nextId(), role: "user", content: `${files.length} fichier(s) uploadé(s)` });
         files.forEach((f) => push({ id: nextId(), role: "agent", content: <UploadCard file={f} status="ready" /> }));
+        const preApproved = getApprovedFigures().filter((f) => f.placement === "Partie II");
         push({
           id: nextId(),
           role: "agent",
-          content: "Fichiers reçus. Tu veux uploader des figures ou graphiques ? (ou 'non')",
+          content: preApproved.length > 0
+            ? `Fichiers reçus. ✓ ${preApproved.length} figure${preApproved.length > 1 ? "s" : ""} Partie II déjà dans ta bibliothèque. Tu veux ajouter d'autres fichiers graphiques ? (ou 'non')`
+            : "Fichiers reçus. Tu veux uploader des figures ou graphiques ? (ou 'non')",
         });
       } else {
+        const preApproved = getApprovedFigures().filter((f) => f.placement === "Partie II");
         push(
           { id: nextId(), role: "user", content: "Non, continuer" },
-          { id: nextId(), role: "agent", content: "Tu veux uploader des figures ou graphiques ? (ou 'non')" }
+          { id: nextId(), role: "agent", content: preApproved.length > 0
+              ? `✓ ${preApproved.length} figure${preApproved.length > 1 ? "s" : ""} Partie II trouvée${preApproved.length > 1 ? "s" : ""} dans ta bibliothèque. Tu veux ajouter d'autres fichiers graphiques ? (ou 'non')`
+              : "Tu veux uploader des figures ou graphiques ? (ou 'non')" }
         );
       }
       setPhase("figures");
