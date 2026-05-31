@@ -242,7 +242,7 @@ export function useGenerate() {
         const planData = getMyPlan();
         const planHeaders: Record<string, string> = {
           "x-plan-id":            planData.planId,
-          "x-sections-generated": String(planData.sectionsGenerated ?? 0),
+          "x-pages-generated":    String(planData.pagesGenerated ?? 0),
           "x-revision-count":     String(planData.revisionCount ?? 0),
         };
         const formatting = useUserSettingsStore.getState().formatting;

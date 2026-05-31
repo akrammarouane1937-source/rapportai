@@ -552,7 +552,106 @@ export default function LandingPage() {
           </div>
         </section>
 
-        {/* 10. BOTTOM CTA */}
+        {/* 10. PRICING */}
+        <section className="py-24 bg-[#f9f8ff] border-t border-border">
+          <div className="container mx-auto px-4 max-w-5xl">
+            <div className="text-center mb-12">
+              <div className="inline-flex items-center gap-2 bg-purple-50 text-purple-700 text-xs font-bold px-4 py-2 rounded-full mb-4 uppercase tracking-wide">
+                💰 Tarifs
+              </div>
+              <h2 className="text-3xl md:text-4xl font-bold font-heading text-foreground mb-3">
+                Moins cher qu'un prestataire.<br className="hidden md:block" /> Infiniment plus rapide.
+              </h2>
+              <p className="text-lg text-secondary-foreground max-w-xl mx-auto">
+                Les prestataires chargent <strong className="line-through text-gray-400">1000–2500 MAD</strong> pour un rapport PFE.
+                RapportAI le fait en 30 minutes.
+              </p>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-10">
+              {[
+                {
+                  name: "Gratuit",
+                  price: null,
+                  anchor: null,
+                  badge: "Sans carte",
+                  desc: "15 pages · 2 révisions · Téléchargement Word",
+                  cta: "Commencer gratuitement",
+                  href: "/sign-up",
+                  popular: false,
+                },
+                {
+                  name: "Essentiel",
+                  price: 377,
+                  anchor: 1000,
+                  badge: "-62%",
+                  desc: "60 pages · 20 révisions · PDF · Humanisation anti-IA",
+                  cta: "Choisir Essentiel",
+                  href: "/pricing",
+                  popular: false,
+                },
+                {
+                  name: "Pro",
+                  price: 677,
+                  anchor: 1500,
+                  badge: "Le plus populaire",
+                  desc: "Pages illimitées · Révisions illimitées · JuryAI inclus",
+                  cta: "Choisir Pro",
+                  href: "/pricing",
+                  popular: true,
+                },
+              ].map((p, i) => (
+                <motion.div
+                  key={p.name}
+                  initial={{ opacity: 0, y: 20 }}
+                  whileInView={{ opacity: 1, y: 0 }}
+                  viewport={{ once: true }}
+                  transition={{ delay: i * 0.08 }}
+                  className={`bg-white rounded-2xl p-6 flex flex-col ${p.popular ? "border-2 border-purple-500 shadow-[0_8px_32px_rgba(124,58,237,0.15)] relative" : "border border-gray-100 shadow-sm"}`}
+                >
+                  {p.popular && (
+                    <div className="absolute -top-3.5 left-1/2 -translate-x-1/2">
+                      <span className="bg-purple-600 text-white text-xs font-bold px-4 py-1.5 rounded-full whitespace-nowrap shadow">
+                        ⚡ {p.badge}
+                      </span>
+                    </div>
+                  )}
+                  <div className="mb-4 mt-2">
+                    <h3 className="font-bold text-lg text-foreground mb-1" style={{ fontFamily: "'Plus Jakarta Sans',sans-serif" }}>{p.name}</h3>
+                    {p.price ? (
+                      <div className="flex items-baseline gap-2">
+                        <span className="text-sm line-through text-gray-400">{p.anchor} MAD</span>
+                        {!p.popular && <span className="text-xs bg-red-100 text-red-600 font-bold px-1.5 py-0.5 rounded-full">{p.badge}</span>}
+                      </div>
+                    ) : (
+                      <div className="h-5" />
+                    )}
+                    <div className="flex items-end gap-1">
+                      <span className="text-4xl font-extrabold text-foreground" style={{ fontFamily: "'Plus Jakarta Sans',sans-serif" }}>
+                        {p.price ? p.price : "Gratuit"}
+                      </span>
+                      {p.price && <span className="text-base text-gray-400 mb-1">MAD</span>}
+                    </div>
+                  </div>
+                  <p className="text-sm text-secondary-foreground mb-5 leading-relaxed">{p.desc}</p>
+                  <Link href={p.href} className="mt-auto">
+                    <button
+                      className={`w-full h-10 rounded-xl font-semibold text-sm transition-all ${p.popular ? "bg-purple-600 hover:bg-purple-700 text-white shadow-[0_4px_14px_rgba(124,58,237,0.28)]" : "border-2 border-purple-200 text-purple-700 hover:bg-purple-50 bg-white"}`}
+                    >
+                      {p.cta}
+                    </button>
+                  </Link>
+                </motion.div>
+              ))}
+            </div>
+
+            <p className="text-center text-sm text-muted-foreground">
+              Paiement unique · Remboursement 48h garanti · Pas d'abonnement caché
+            </p>
+          </div>
+        </section>
+
+        {/* 11. BOTTOM CTA */}
         <section className="py-24 bg-gradient-to-b from-white to-primary/5 border-t border-border">
           <div className="container mx-auto px-4 max-w-4xl text-center">
             <h2 className="text-4xl md:text-5xl font-bold font-heading text-foreground mb-6">

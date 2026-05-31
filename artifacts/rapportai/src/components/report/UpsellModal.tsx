@@ -1,7 +1,7 @@
 import { motion, AnimatePresence } from "framer-motion";
 import { X, Zap, Check, Lock, AlertTriangle, FileText } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { type PlanId, PLAN_LIMITS, upgradeCost, nextPlan } from "@/lib/userPlan";
+import { type PlanId, PLAN_LIMITS, upgradeCostMad, nextPlan } from "@/lib/userPlan";
 
 export type UpsellVariant =
   | "page-essentiel"
@@ -26,7 +26,7 @@ function getConfig(
   featureName?: string,
 ): UpsellConfig {
   const to = nextPlan(currentPlan);
-  const cost = upgradeCost(currentPlan, to);
+  const cost = upgradeCostMad(currentPlan, to);
 
   switch (variant) {
     case "page-essentiel":

@@ -7,14 +7,14 @@ import { db, reportsTable } from "@workspace/db";
 export type PlanId = "free" | "starter" | "pro";
 
 interface PlanLimit {
-  sections:  number;
+  pages:     number;   // max pages (250 words ≈ 1 page). Infinity = unlimited.
   revisions: number;
 }
 
 const PLAN_LIMITS: Record<PlanId, PlanLimit> = {
-  free:    { sections: 3,        revisions: 2        },
-  starter: { sections: 60,       revisions: 10       },
-  pro:     { sections: Infinity, revisions: Infinity },
+  free:    { pages: 15,       revisions: 2        },
+  starter: { pages: 60,       revisions: 20       },
+  pro:     { pages: Infinity, revisions: Infinity },
 };
 
 const VALID_PLANS = new Set<string>(["free", "starter", "pro"]);
@@ -24,14 +24,19 @@ function parsePlanId(raw: string | undefined): PlanId {
   return "pro"; // default: unlimited during free launch
 }
 
+/** 250 words ≈ 1 page */
+export function wordsToPages(wordCount: number): number {
+  return Math.ceil(wordCount / 250);
+}
+
 // ─── Augment Express request with plan context ────────────────────────────────
 
 declare global {
   namespace Express {
     interface Request {
-      planId:            PlanId;
-      planSections:      number;
-      planRevisions:     number;
+      planId:        PlanId;
+      planPages:     number;
+      planRevisions: number;
     }
   }
 }
@@ -39,32 +44,29 @@ declare global {
 // ─── Middleware: attach plan to every request ─────────────────────────────────
 // During free launch (FREE_LAUNCH=true), all limits are bypassed.
 // Founding users (x-founding: true) bypass all limits forever.
-// Post-launch: replace header reads with Clerk metadata lookups.
 
 export function attachPlan(req: Request, _res: Response, next: NextFunction) {
   if (process.env.FREE_LAUNCH === "true" || req.headers["x-founding"] === "true") {
     req.planId        = "pro";
-    req.planSections  = Infinity;
+    req.planPages     = Infinity;
     req.planRevisions = Infinity;
     return next();
   }
 
   const planId      = parsePlanId(req.headers["x-plan-id"] as string | undefined);
   req.planId        = planId;
-  req.planSections  = PLAN_LIMITS[planId].sections;
+  req.planPages     = PLAN_LIMITS[planId].pages;
   req.planRevisions = PLAN_LIMITS[planId].revisions;
   next();
 }
 
 // ─── Guard: reject if report is unpaid ───────────────────────────────────────
-// Skipped during FREE_LAUNCH and for founding users.
-// Reads report_id from route params (:sessionId maps to report id).
 
 export async function guardPayment(req: Request, res: Response, next: NextFunction): Promise<void> {
   if (process.env.FREE_LAUNCH === "true" || req.headers["x-founding"] === "true") {
     next(); return;
   }
-  if (req.planId === "free") { next(); return; } // free plan has no payment gate
+  if (req.planId === "free") { next(); return; }
 
   const reportId = req.params.sessionId;
   if (!reportId) { next(); return; }
@@ -87,21 +89,23 @@ export async function guardPayment(req: Request, res: Response, next: NextFuncti
   next();
 }
 
-// ─── Guard: reject if section limit exceeded ─────────────────────────────────
+// ─── Guard: reject if page limit exceeded ────────────────────────────────────
+// Frontend sends x-pages-generated header (total pages generated so far).
 
-export function guardSectionLimit(req: Request, res: Response, next: NextFunction) {
+export function guardPageLimit(req: Request, res: Response, next: NextFunction) {
   if (process.env.FREE_LAUNCH === "true" || req.headers["x-founding"] === "true") return next();
 
-  const generated = parseInt(req.headers["x-sections-generated"] as string ?? "0", 10);
-  const limit      = req.planSections;
+  const pagesGenerated = parseInt(req.headers["x-pages-generated"] as string ?? "0", 10);
+  const limit          = req.planPages;
 
-  if (isFinite(limit) && generated >= limit) {
+  if (isFinite(limit) && pagesGenerated >= limit) {
     res.status(403).json({
       error:       "plan_limit_reached",
-      message:     `Votre plan ${req.planId} permet ${limit} sections. Passez au plan supérieur pour continuer.`,
+      limit_type:  "pages",
+      message:     `Tu as atteint la limite de ${limit} pages de ton plan ${req.planId === "free" ? "Gratuit" : "Essentiel"}.`,
       planId:      req.planId,
       limit,
-      generated,
+      pagesGenerated,
     });
     return;
   }
@@ -118,9 +122,10 @@ export function guardRevisionLimit(req: Request, res: Response, next: NextFuncti
 
   if (isFinite(limit) && revisions >= limit) {
     res.status(403).json({
-      error:    "revision_limit_reached",
-      message:  `Votre plan ${req.planId} permet ${limit} révisions. Passez au plan supérieur pour continuer.`,
-      planId:   req.planId,
+      error:      "plan_limit_reached",
+      limit_type: "revisions",
+      message:    `Tu as atteint la limite de ${limit} révisions de ton plan ${req.planId === "free" ? "Gratuit" : "Essentiel"}.`,
+      planId:     req.planId,
       limit,
       revisions,
     });
@@ -128,3 +133,6 @@ export function guardRevisionLimit(req: Request, res: Response, next: NextFuncti
   }
   next();
 }
+
+// ─── Legacy aliases (kept for backward compat with old routes) ────────────────
+export const guardSectionLimit = guardPageLimit;

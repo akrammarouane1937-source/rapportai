@@ -1,1 +1,3 @@
 - [Dashboard quick-action pills](dashboard-pills.md) — pills must use sendQuickAction(label, prompt) not sendWithText(expandedText) to avoid showing raw prompt in user bubble
+- [Stripe pricing model](stripe-pricing.md) — one-time payment in USD (MAD not supported by Stripe); display prices in MAD on frontend; Essentiel $37/Pro $67
+- [Plan limits: pages not sections](plan-limits.md) — plans tracked in pages (250 words≈1 page), not sections; FREE_LAUNCH=true bypasses all limits; header is x-pages-generated

@@ -7,9 +7,31 @@ import { logger } from "../lib/logger";
 
 const router = Router();
 
-const PRICES: Record<string, { amount: number; label: string }> = {
-  starter: { amount: 3700, label: "RapportAI Starter — 1 rapport" },
-  pro:     { amount: 6700, label: "RapportAI Pro — 1 rapport"     },
+// ─── Plan catalogue ───────────────────────────────────────────────────────────
+// Prices charged in USD (Stripe doesn't support MAD).
+// Display prices on the frontend are in MAD (377 / 677 MAD ≈ $37 / $67 USD).
+
+const PRICES: Record<string, {
+  amountUsd:    number;   // cents
+  priceMad:     number;   // display only
+  anchorMad:    number;   // crossed-out anchor price
+  label:        string;
+  stripePriceId: string;
+}> = {
+  starter: {
+    amountUsd:    3700,
+    priceMad:     377,
+    anchorMad:    1000,
+    label:        "RapportAI Essentiel",
+    stripePriceId: "price_1TdDGG003Ts2AXbaNkwwT03b",
+  },
+  pro: {
+    amountUsd:    6700,
+    priceMad:     677,
+    anchorMad:    1500,
+    label:        "RapportAI Pro",
+    stripePriceId: "price_1TdDGO003Ts2AXbac5dyihpl",
+  },
 };
 
 function getStripe(): Stripe {
@@ -19,7 +41,6 @@ function getStripe(): Stripe {
 }
 
 // ─── POST /api/payments/checkout ─────────────────────────────────────────────
-// Creates a Stripe Checkout session. Body: { plan, report_id, user_email? }
 
 router.post("/payments/checkout", async (req: Request, res: Response) => {
   const { plan, report_id, user_email } = req.body as {
@@ -37,27 +58,23 @@ router.post("/payments/checkout", async (req: Request, res: Response) => {
     return;
   }
 
-  const appUrl = process.env.APP_URL ?? "http://localhost:3000";
+  const appUrl  = process.env.APP_URL ?? "http://localhost:3000";
+  const price   = PRICES[plan];
+  const clerkId = req.headers["x-clerk-id"] as string | undefined;
 
   try {
     const stripe  = getStripe();
-    const price   = PRICES[plan];
-    const clerkId = req.headers["x-clerk-id"] as string | undefined;
 
     const session = await stripe.checkout.sessions.create({
       payment_method_types: ["card"],
       mode:                 "payment",
       line_items: [{
-        price_data: {
-          currency:     "usd",
-          product_data: { name: price.label },
-          unit_amount:  price.amount,
-        },
+        price:    price.stripePriceId,
         quantity: 1,
       }],
-      metadata:      { clerk_id: clerkId ?? "", report_id, plan },
-      success_url:   `${appUrl}/dashboard?payment=success&session_id={CHECKOUT_SESSION_ID}`,
-      cancel_url:    `${appUrl}/pricing?payment=cancelled`,
+      metadata:    { clerk_id: clerkId ?? "", report_id, plan },
+      success_url: `${appUrl}/dashboard?payment=success&session_id={CHECKOUT_SESSION_ID}`,
+      cancel_url:  `${appUrl}/pricing?payment=cancelled`,
       ...(user_email ? { customer_email: user_email } : {}),
     });
 
@@ -71,11 +88,9 @@ router.post("/payments/checkout", async (req: Request, res: Response) => {
 });
 
 // ─── POST /api/webhooks/stripe ────────────────────────────────────────────────
-// IMPORTANT: registered BEFORE express.json() in app.ts — raw body required.
-// Verifies Stripe signature, then unlocks the report for generation.
 
 export function stripeWebhookHandler(req: Request, res: Response, _next: NextFunction): void {
-  const sig = req.headers["stripe-signature"];
+  const sig    = req.headers["stripe-signature"];
   const secret = process.env.STRIPE_WEBHOOK_SECRET;
 
   if (!sig || !secret) {
@@ -94,7 +109,6 @@ export function stripeWebhookHandler(req: Request, res: Response, _next: NextFun
     return;
   }
 
-  // Handle asynchronously — respond immediately to avoid Stripe timeout
   void handleWebhookEvent(event);
   res.json({ received: true });
 }
@@ -102,7 +116,7 @@ export function stripeWebhookHandler(req: Request, res: Response, _next: NextFun
 async function handleWebhookEvent(event: Stripe.Event): Promise<void> {
   if (event.type !== "checkout.session.completed") return;
 
-  const session  = event.data.object as Stripe.Checkout.Session;
+  const session                   = event.data.object as Stripe.Checkout.Session;
   const { clerk_id, report_id, plan } = session.metadata ?? {};
 
   if (!report_id) {
@@ -111,7 +125,6 @@ async function handleWebhookEvent(event: Stripe.Event): Promise<void> {
   }
 
   try {
-    // Mark report as paid
     await db
       .insert(reportsTable)
       .values({
@@ -126,7 +139,6 @@ async function handleWebhookEvent(event: Stripe.Event): Promise<void> {
         set: { plan, paymentStatus: "paid", stripeSessionId: session.id, paidAt: new Date() },
       });
 
-    // Update user's plan if we have their Clerk ID
     if (clerk_id) {
       await db
         .update(usersTable)
@@ -148,7 +160,6 @@ async function handleWebhookEvent(event: Stripe.Event): Promise<void> {
 }
 
 // ─── GET /api/payments/verify?session_id=xxx ─────────────────────────────────
-// Frontend calls this on success_url landing to confirm payment.
 
 router.get("/payments/verify", async (req: Request, res: Response) => {
   const sessionId = req.query.session_id as string;
