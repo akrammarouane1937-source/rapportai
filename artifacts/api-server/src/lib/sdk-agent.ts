@@ -430,35 +430,39 @@ Chaque abréviation doit avoir "abbr" (le sigle) et "sig" (la signification comp
 Inclus minimum 10 abréviations. Ne génère AUCUN texte en dehors du JSON.
 Enregistre dans abbreviations.md.`;
 
-      case "liste-figures":
-        return `${docNote}Lis partie-i.md et partie-ii.md (utilise Glob si tu n'es pas sûr des fichiers disponibles).
-Identifie TOUTES les références aux figures : "Figure N", "Fig. N", "Figure N —", etc.
-Génère une liste académique numérotée au format Markdown :
+      case "liste-figures": {
+        const figExtra = opts?.extraContext
+          ? `\n\n## MÉTADONNÉES ET CONTEXTE FOURNIS PAR L'ÉTUDIANT — utilise impérativement ces informations :\n${opts.extraContext}\n---\n`
+          : "";
+        return `${docNote}${figExtra}Lis partie-i.md et partie-ii.md (utilise Glob si tu n'es pas sûr des fichiers disponibles).
+Combine ce contexte avec les mentions trouvées dans les fichiers .md pour identifier TOUTES les figures du rapport.
+Génère une liste académique numérotée au format Markdown (sans ligne de titre ## en début — elle sera ajoutée par l'export) :
 
-## Liste des figures
-
-**Figure 1** — [Titre tel qu'il apparaît dans le texte]
+**Figure 1** — [Titre tel qu'il apparaît dans le texte ou dans les métadonnées]
 *Source : [source mentionnée, ou "Auteur propre" si absente]*
 
 **Figure 2** — ...
 
-Si aucune figure n'est mentionnée dans le texte : génère "## Liste des figures\n\n*(Aucune figure dans ce rapport)*"
+Si aucune figure n'est trouvée : génère "*(Aucune figure dans ce rapport)*"
 Enregistre dans liste-figures.md.`;
+      }
 
-      case "liste-tableaux":
-        return `${docNote}Lis partie-i.md et partie-ii.md (utilise Glob si tu n'es pas sûr des fichiers disponibles).
+      case "liste-tableaux": {
+        const tabExtra = opts?.extraContext
+          ? `\n\n## CONTEXTE FOURNI PAR L'ÉTUDIANT :\n${opts.extraContext}\n---\n`
+          : "";
+        return `${docNote}${tabExtra}Lis partie-i.md et partie-ii.md (utilise Glob si tu n'es pas sûr des fichiers disponibles).
 Identifie TOUTES les références aux tableaux : "Tableau N", "Table N", "Tableau N —", etc.
-Génère une liste académique numérotée au format Markdown :
-
-## Liste des tableaux
+Génère une liste académique numérotée au format Markdown (sans ligne de titre ## en début — elle sera ajoutée par l'export) :
 
 **Tableau 1** — [Titre tel qu'il apparaît dans le texte]
 *Source : [source mentionnée, ou "Données primaires" si absente]*
 
 **Tableau 2** — ...
 
-Si aucun tableau n'est mentionné dans le texte : génère "## Liste des tableaux\n\n*(Aucun tableau dans ce rapport)*"
+Si aucun tableau n'est trouvé : génère "*(Aucun tableau dans ce rapport)*"
 Enregistre dans liste-tableaux.md.`;
+      }
 
       default:
         return `${docNote}Rédige la section "${section}" du rapport.${opts?.extraContext ? `\n\nContexte supplémentaire : ${opts.extraContext}` : ""}\nEnregistre dans ${section}.md.`;

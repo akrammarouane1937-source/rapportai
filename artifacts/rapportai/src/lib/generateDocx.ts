@@ -686,11 +686,23 @@ function buildFiguresSection(placement: "Partie I" | "Partie II"): Paragraph[] {
   return paras;
 }
 
+// Strip a leading "## Liste des figures" / "## Liste des tableaux" heading from AI output
+// so the document-level heading1 added by the builder is not duplicated.
+function stripLeadingListeHeading(md: string, label: string): string {
+  const lines = md.split("\n");
+  const first = lines[0]?.trim().toLowerCase() ?? "";
+  if (first === `## ${label}`.toLowerCase() || first === `# ${label}`.toLowerCase()) {
+    return lines.slice(1).join("\n").replace(/^\n+/, "");
+  }
+  return md;
+}
+
 // Liste des figures — uses AI-generated content if available, otherwise builds from approved figures.
 function buildTableDesFigures(listeDesFigures?: string): Paragraph[] {
   // AI-generated list takes priority (richer, includes chapter context)
   if (listeDesFigures?.trim()) {
-    return [heading1("Liste des figures"), emptyLine(), ...markdownToParas(listeDesFigures)];
+    const content = stripLeadingListeHeading(listeDesFigures.trim(), "liste des figures");
+    return [heading1("Liste des figures"), emptyLine(), ...markdownToParas(content)];
   }
 
   // Fallback: build from approved figures metadata
@@ -729,7 +741,8 @@ function buildTableDesFigures(listeDesFigures?: string): Paragraph[] {
 
 function buildListeDesTableaux(listeDesTableaux?: string): Paragraph[] {
   if (listeDesTableaux?.trim()) {
-    return [heading1("Liste des tableaux"), emptyLine(), ...markdownToParas(listeDesTableaux)];
+    const content = stripLeadingListeHeading(listeDesTableaux.trim(), "liste des tableaux");
+    return [heading1("Liste des tableaux"), emptyLine(), ...markdownToParas(content)];
   }
   return [
     heading1("Liste des tableaux"),
