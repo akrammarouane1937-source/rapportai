@@ -108,6 +108,46 @@ export function saveReport(patch: Partial<ReportData>): void {
 }
 
 /**
+ * Write Zustand `Report` fields into `rapportai_v1` raw localStorage.
+ * Used when hydrating from the server so generation pages (which read via
+ * `getReport()`) can see the restored content without triggering another
+ * Zustand update loop.
+ */
+export function hydrateRawFromZustand(r: Partial<Report>): void {
+  const patch: Partial<ReportData> = {};
+  if (r.theme)            patch.theme            = r.theme;
+  if (r.school)           patch.school           = r.school;
+  if (r.filiere)          patch.filiere          = r.filiere;
+  if (r.reportType)       patch.reportType       = r.reportType;
+  if (r.academicYear)     patch.annee            = r.academicYear;
+  if (r.studentName)      patch.studentName      = r.studentName;
+  if (r.encadrantPeda)    patch.encadrantPeda    = r.encadrantPeda;
+  if (r.encadrantPro)     patch.encadrantPro     = r.encadrantPro;
+  if (r.entreprise)       patch.entreprise       = r.entreprise;
+  if (r.ville)            patch.ville            = r.ville;
+  if (r.dedicaces)        patch.dedicaces        = r.dedicaces;
+  if (r.remerciements)    patch.remerciements    = r.remerciements;
+  if (r.resumeFr)         patch.resume           = r.resumeFr;
+  if (r.abstractEn)       patch.abstract         = r.abstractEn;
+  if (r.motsCles?.length) patch.motsCles         = r.motsCles;
+  if (r.abreviations?.length) patch.abreviations = r.abreviations;
+  if (r.sommaire)         patch.sommaireText     = r.sommaire;
+  if (r.introduction)     patch.introduction     = r.introduction;
+  if (r.partieI)          patch.partieI          = r.partieI;
+  if (r.partieII)         patch.partieII         = r.partieII;
+  if (r.conclusion)       patch.conclusion       = r.conclusion;
+  if (r.bibliographieText) patch.bibliographieText = r.bibliographieText;
+  if (r.problematique)    patch.problematique    = r.problematique;
+  if (Object.keys(patch).length === 0) return;
+  try {
+    const current = getReport();
+    localStorage.setItem(KEY, JSON.stringify({ ...current, ...patch }));
+  } catch {
+    // non-fatal
+  }
+}
+
+/**
  * Auto-saves a partial report snapshot whenever any dependency changes.
  * Uses a 600 ms debounce so saves don't fire on every keystroke.
  */
