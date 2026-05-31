@@ -104,7 +104,7 @@ export default function Step5() {
     <Layout
       stepName="Sommaire"
       stepNumber={5}
-      previewPanel={<PreviewPanel activeSection="sommaire" content={report.sommaire ?? ""} maxStep={5} />}
+      previewPanel={<PreviewPanel activeSection="sommaire" content={report.sommaire ?? ""} maxStep={5} isGenerating={isThinking || isGenerating} />}
     >
       <div className="flex-1 overflow-y-auto flex flex-col py-4 px-2 md:py-5 md:px-3">
 

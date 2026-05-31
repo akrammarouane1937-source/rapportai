@@ -42,7 +42,7 @@ export default function Step2Page() {
     <Layout
       stepName="Page de garde"
       stepNumber={2}
-      previewPanel={<PreviewPanel activeSection="page-de-garde" content={report.pageDeGarde} maxStep={2} />}
+      previewPanel={<PreviewPanel activeSection="page-de-garde" content={report.pageDeGarde} maxStep={2} isGenerating={isThinking || isGenerating} />}
     >
       <div className="flex-1 overflow-y-auto py-4 px-2 md:py-5 md:px-3">
         {messages.map((m) => <ChatMessage key={m.id} role={m.role} content={m.content} />)}

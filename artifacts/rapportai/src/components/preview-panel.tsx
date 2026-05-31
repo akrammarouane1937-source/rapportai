@@ -12,6 +12,7 @@ interface PreviewPanelProps {
   activeSection: string;
   content?: string;
   maxStep?: number;
+  isGenerating?: boolean;
 }
 
 const SECTIONS = [
@@ -104,7 +105,7 @@ function splitIntoPages(text: string, wordsPerPage = 420): string[] {
   return pages.length ? pages : [];
 }
 
-export function PreviewPanel({ activeSection, content, maxStep }: PreviewPanelProps) {
+export function PreviewPanel({ activeSection, content, maxStep, isGenerating }: PreviewPanelProps) {
   const { report, updateReport } = useReportStore();
   const [fullscreen, setFullscreen] = useState(false);
   const [editMode, setEditMode] = useState(false);
@@ -255,10 +256,17 @@ export function PreviewPanel({ activeSection, content, maxStep }: PreviewPanelPr
             }} />
           ))}
           <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 8, marginTop: 16 }}>
-            <Loader2 style={{ width: 24, height: 24, color: "#7c3aed" }} className="animate-spin" />
-            <span style={{ fontSize: 13, color: "#7c3aed", fontStyle: "italic" }}>
-              Rédaction en cours — {label}…
-            </span>
+            {isGenerating
+              ? <>
+                  <Loader2 style={{ width: 24, height: 24, color: "#7c3aed" }} className="animate-spin" />
+                  <span style={{ fontSize: 13, color: "#7c3aed", fontStyle: "italic" }}>
+                    Rédaction en cours — {label}…
+                  </span>
+                </>
+              : <span style={{ fontSize: 13, color: "#a78bfa", fontStyle: "italic" }}>
+                  La prévisualisation apparaîtra ici après la génération.
+                </span>
+            }
           </div>
           {/* Faint bottom-margin guide line */}
           <div style={{

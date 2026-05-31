@@ -103,7 +103,7 @@ export default function Step9() {
 
   return (
     <Layout stepName="Conclusion & Export" stepNumber={9}
-      previewPanel={<PreviewPanel activeSection="conclusion" content={previewContent} maxStep={9} />}
+      previewPanel={<PreviewPanel activeSection="conclusion" content={previewContent} maxStep={9} isGenerating={isThinking || isGenerating} />}
     >
       <div className="flex-1 overflow-y-auto py-4 px-2 md:py-5 md:px-3">
         {messages.map((m) => <ChatMessage key={m.id} role={m.role} content={m.content} />)}

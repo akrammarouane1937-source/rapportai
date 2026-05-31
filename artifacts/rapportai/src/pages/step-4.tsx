@@ -53,7 +53,7 @@ export default function Step4() {
 
   return (
     <Layout stepName="Résumé & Abstract" stepNumber={4}
-      previewPanel={<PreviewPanel activeSection="resume" content={previewContent} maxStep={4} />}
+      previewPanel={<PreviewPanel activeSection="resume" content={previewContent} maxStep={4} isGenerating={isThinking || isGenerating} />}
     >
       {isLocked ? (
         <div className="flex-1 flex flex-col items-center justify-center px-6 py-10 text-center gap-5">

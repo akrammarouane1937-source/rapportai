@@ -75,7 +75,7 @@ export default function Step6() {
 
   return (
     <Layout stepName="Introduction Générale" stepNumber={6}
-      previewPanel={<PreviewPanel activeSection="introduction" content={report.introduction ?? ""} maxStep={6} />}
+      previewPanel={<PreviewPanel activeSection="introduction" content={report.introduction ?? ""} maxStep={6} isGenerating={isThinking || isGenerating} />}
     >
       <div className="flex-1 overflow-y-auto py-4 px-2 md:py-5 md:px-3">
         {messages.map((m) => <ChatMessage key={m.id} role={m.role} content={m.content} />)}
