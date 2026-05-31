@@ -1,0 +1,94 @@
+Qu'est-ce qu'il manque ?
+RapportAI
+Sections manquantes (6/8)
+PHASE A - Indépendante (1 section) :
+
+✅ Dédicaces & Remerciements (optionnel, mais recommandé)
+PHASE B - Nécessite profil (2 sections) : 2. ⚠️ Sommaire (structure du rapport) 3. ⚠️ Introduction (problématique + méthodologie)
+
+PHASE D - Séquentielle (2 sections) : 4. ⚠️ Partie I : Cadre théorique (fondements DCF, cycles économiques) 5. ⚠️ Partie II : Étude empirique (validation méthodologie)
+
+PHASE E - Finale (1 section) : 6. ⚠️ Conclusion (synthèse + réponse problématique)
+
+Ordre recommandé
+Option 1 - Logique académique stricte :
+
+Sommaire → 2. Introduction → 3. Partie I → 4. Partie II → 5. Conclusion → 6. Dédicaces
+Option 2 - Flux productif (recommandé) :
+
+Sommaire (pose la structure)
+Introduction (définit la problématique à laquelle tout le reste répond)
+Partie I (cadre théorique DCF et cycles)
+Partie II (méthodologie flexible, cas empiriques)
+Conclusion (synthèse et recommandations)
+Dédicaces (touche finale)
+Action immédiate : Génère le Sommaire pour structurer ton plan. Prêt ?
+
+Aller à Dédicaces
+tu peut m'aider a choisir mon theme ?
+RapportAI
+Analyse de ton thème actuel
+Thème actuel :
+"Valorisation face aux cycles économiques : Allier rigueur méthodologique et flexibilité contextuelle dans les modèles DCF"
+
+Points forts
+✅ Pertinent académiquement : croise finance théorique (DCF) et conjoncture réelle (cycles)
+✅ Contexte marocain applicable : volatilité MASI, secteurs cycliques (immobilier, BTP, tourisme)
+✅ Problématique claire : comment adapter les modèles rigides à des contextes instables
+✅ Terrain empirique riche : données Bourse de Casablanca, secteurs post-COVID
+
+Points à clarifier
+1. Périmètre trop large ?
+
+Tous les cycles (expansion, récession, reprise) ou focus sur une phase précise ?
+Tous les secteurs ou cas ciblés (banques, télécoms, immobilier) ?
+2. Méthodologie envisagée ?
+
+Ajustement du WACC selon le cycle ?
+Scénarios multiples (DCF pessimiste/optimiste/neutre) ?
+Comparaison avec méthodes alternatives (comparables boursiers, APV) ?
+3. Données accessibles ?
+
+As-tu accès à des états financiers d'entreprises marocaines cotées ?
+Comptes-tu interviewer des analystes/banquiers ?
+Alternative : recentrage
+Option A - Thème actuel (garde tel quel)
+→ Bon si tu as stage en M&A, audit, ou analyse financière
+→ Nécessite cas pratique solide (ex : valorisation ATW, BMCE, Maroc Telecom en période COVID vs reprise)
+
+Option B - Recentrage sectoriel
+→ "Valorisation DCF des banques marocaines face aux chocs conjoncturels : ajustements méthodologiques post-COVID"
+→ Plus de données publiques (Bank Al-Maghrib, GPBM)
+
+Option C - Recentrage méthodologique
+→ "Limites du DCF en contexte de forte incertitude : comparaison avec les méthodes d'options réelles (cas du secteur immobilier marocain)"
+→ Plus innovant, angle recherche
+
+Question précise : Ton stage/PFE est dans quel contexte ? (Banque, cabinet audit, startup, recherche académique ?)
+
+je veux changer mon theme \
+RapportAI
+Parfait, construisons ensemble ton nouveau thème
+Pour te proposer des thèmes pertinents, j'ai besoin de 4 infos :
+
+1. Domaine d'intérêt (choisis 1 ou 2)
+Finance de marché (bourse, trading, gestion d'actifs)
+Finance d'entreprise (valorisation, M&A, structure financière)
+Banque & crédit (risque crédit, financement, réglementation)
+Audit & contrôle (audit financier, contrôle interne, conformité)
+Fintech & innovation (blockchain, paiement digital, IA en finance)
+Comptabilité & normes (IFRS, consolidation, reporting)
+Autre : _____________
+2. Type de travail préféré
+Quantitatif : modèles, données, statistiques, Excel/Python
+Qualitatif : étude de cas, interviews, analyse comparative
+Mixte : théorie + application terrain
+3. Contexte de ton PFE
+Stage en entreprise (précise le secteur si possible)
+Recherche académique pure
+Projet libre (pas de stage imposé)
+4. Niveau d'ambition
+Classique : thème validé facilement, littérature abondante
+Original : angle innovant, peu traité au Maroc
+Ambitieux : contribution méthodologique, publication potentielle
+Réponds à ces 4 points, et je te propose 3-5 thèmes calibrés pour ton profil IFA/EMSI.
