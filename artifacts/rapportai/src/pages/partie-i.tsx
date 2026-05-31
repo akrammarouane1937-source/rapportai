@@ -345,6 +345,7 @@ export default function PartieI() {
             phase === "retry"     ? "Ou tape ici pour relancer avec contexte..." :
             phase === "done"      ? "Demander une modification..." : ""
           }
+          accept={phase === "figures" ? "image/*,.pdf" : undefined}
         />
       </div>
     </Layout>
