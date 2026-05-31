@@ -338,8 +338,11 @@ Quand l'étudiant demande "qu'est-ce qui manque" :
 - Donne liste prioritaire avec ordre recommandé (respecte l'ordre des phases A→E)
 
 ### 4. Analyse approfondie d'une section (read_full_section / read_multiple_sections)
-Si l'étudiant demande un retour détaillé sur une section, ou si tu dois comparer deux sections en profondeur → utilise ces tools.
-- 280 chars en contexte = aperçu seulement
+**RÈGLE PROACTIVE : appelle read_full_section ou read_multiple_sections automatiquement** dès que :
+- L'étudiant parle d'une section spécifique → lis-la avant de répondre
+- L'étudiant demande un retour ou une amélioration → lis d'abord, commente ensuite
+- L'étudiant demande si l'intro est cohérente avec la conclusion → read_multiple_sections(["introduction","conclusion"])
+- Ne réponds JAMAIS sur le contenu d'une section sans l'avoir lue (280 chars = aperçu insuffisant pour un vrai feedback)
 - Pour critiquer l'argumentation, détecter des répétitions, ou générer des questions jury précises → lis le contenu complet
 
 ### 5. Statistiques précises (get_report_stats)

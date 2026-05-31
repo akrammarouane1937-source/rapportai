@@ -1,7 +1,7 @@
-import { useState, useRef, useEffect } from "react";
+import { useState, useRef, useEffect, useCallback } from "react";
 import { useSessionRecover } from "@/hooks/use-session-recover";
 import { motion, AnimatePresence } from "framer-motion";
-import { Send, Loader2, ArrowRight, ChevronDown } from "lucide-react";
+import { Send, ArrowRight, ChevronDown, Square, Copy, Check } from "lucide-react";
 import { useLocation } from "wouter";
 import { useOptionalUser as useUser } from "@/lib/useOptionalClerk";
 import { Sidebar, SidebarSpacer } from "@/components/layout/Sidebar";
@@ -94,6 +94,21 @@ function useAnimatedPlaceholder(active: boolean, hasReport: boolean) {
   return { text: pool[index] ?? pool[0], visible };
 }
 
+// ── Thinking message hook ─────────────────────────────────────────────────────
+const THINKING_NEW = ["En train d'écrire…", "Je réfléchis…", "Je prépare une réponse…"];
+const THINKING_ACTIVE = ["Je lis ton rapport…", "J'analyse tes sections…", "Je formule une réponse…", "Je vérifie la cohérence…"];
+
+function useThinkingMessage(loading: boolean, hasReport: boolean) {
+  const pool = hasReport ? THINKING_ACTIVE : THINKING_NEW;
+  const [index, setIndex] = useState(0);
+  useEffect(() => {
+    if (!loading) { setIndex(0); return; }
+    const id = setInterval(() => setIndex((i) => (i + 1) % pool.length), 2200);
+    return () => clearInterval(id);
+  }, [loading, pool.length]);
+  return pool[index] ?? pool[0];
+}
+
 // ── Main component ────────────────────────────────────────────────────────────
 const SECTION_NAV_LABELS: Record<string, string> = {
   "/rapport/step-2":   "Page de garde",
@@ -117,12 +132,15 @@ export default function DashboardPage() {
   const [messages, setMessages] = useState<Message[]>([]);
   const [input, setInput]       = useState("");
   const [loading, setLoading]   = useState(false);
+  const [copiedId, setCopiedId] = useState<string | null>(null);
   const bottomRef               = useRef<HTMLDivElement>(null);
   const textareaRef             = useRef<HTMLTextAreaElement>(null);
   const abortRef                = useRef<AbortController | null>(null);
+  const proactiveShownRef       = useRef(false);
   const showGreeting            = messages.length === 0;
   const hasReport               = !!(report.theme || report.school);
   const placeholder             = useAnimatedPlaceholder(showGreeting && !input, hasReport);
+  const thinkingMessage         = useThinkingMessage(loading, hasReport);
 
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -165,6 +183,35 @@ export default function DashboardPage() {
     : completedCount === 0
     ? "Génère un rapport académique complet en quelques minutes."
     : `${completedCount}/9 sections · Continue là où tu t'es arrêté.`;
+
+  // ── Proactivity: auto-greet when user has sections done ──────────────────────
+  useEffect(() => {
+    if (proactiveShownRef.current || completedCount === 0 || !hasReport) return;
+    proactiveShownRef.current = true;
+    const sectionList = [
+      { key: "pageDeGarde", label: "Page de garde" }, { key: "dedicaces", label: "Dédicaces" },
+      { key: "resumeFr", label: "Résumé" }, { key: "sommaire", label: "Sommaire" },
+      { key: "introduction", label: "Introduction" }, { key: "partieI", label: "Partie I" },
+      { key: "partieII", label: "Partie II" }, { key: "conclusion", label: "Conclusion" },
+    ];
+    const done = sectionList.filter((s) => !!(report as unknown as Record<string, string>)[s.key]).map((s) => s.label);
+    const nextLabel = SECTION_NAV_LABELS[STEP_PATHS[currentStep] ?? ""] ?? null;
+    const proactiveText = [
+      `J'ai lu ton rapport${shortTheme ? ` sur **"${shortTheme}"**` : ""} — ${done.length}/8 sections générées : ${done.join(", ")}.`,
+      nextLabel ? `Prochaine étape : **${nextLabel}**.` : `Toutes tes sections sont là — on peut affiner ou préparer la soutenance.`,
+      `Dis-moi ce que tu veux faire ou pose-moi une question sur ton rapport.`,
+    ].join(" ");
+    setMessages([{ id: "proactive-init", role: "assistant", text: proactiveText }]);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [completedCount]);
+
+  // ── Copy message ──────────────────────────────────────────────────────────────
+  const copyMessage = useCallback((id: string, text: string) => {
+    navigator.clipboard.writeText(text).then(() => {
+      setCopiedId(id);
+      setTimeout(() => setCopiedId(null), 2000);
+    });
+  }, []);
 
   // sendQuickAction: shows `label` in the chat bubble but sends `prompt` to the API
   // This avoids showing the raw enriched prompt as a user message
@@ -457,13 +504,37 @@ export default function DashboardPage() {
                   >
                     <div className={msg.role === "user" ? "max-w-[78%]" : "w-full"}>
                       {msg.role === "assistant" ? (
-                        <div className="flex gap-3">
+                        <div className="flex gap-3 group">
                           <img src="/logo.png" alt="RapportAI" className="shrink-0 w-6 h-6 mt-0.5 object-contain" />
                           <div className="flex-1 min-w-0 text-sm text-gray-800 leading-relaxed">
                             {msg.streaming && !msg.text
-                              ? <span className="flex items-center gap-1.5 text-gray-400"><Loader2 className="w-3.5 h-3.5 animate-spin" />En train d'écrire…</span>
+                              ? (
+                                <span className="flex items-center gap-2 text-gray-400">
+                                  <span className="flex gap-0.5">
+                                    <span className="w-1.5 h-1.5 rounded-full bg-purple-400 animate-bounce" style={{ animationDelay: "0ms" }} />
+                                    <span className="w-1.5 h-1.5 rounded-full bg-purple-400 animate-bounce" style={{ animationDelay: "150ms" }} />
+                                    <span className="w-1.5 h-1.5 rounded-full bg-purple-400 animate-bounce" style={{ animationDelay: "300ms" }} />
+                                  </span>
+                                  <AnimatePresence mode="wait">
+                                    <motion.span key={thinkingMessage} initial={{ opacity: 0, y: 4 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -4 }} transition={{ duration: 0.25 }} className="text-xs">
+                                      {thinkingMessage}
+                                    </motion.span>
+                                  </AnimatePresence>
+                                </span>
+                              )
                               : <ReactMarkdown remarkPlugins={[remarkGfm]} className="prose prose-sm max-w-none prose-p:my-1 prose-headings:font-semibold">{msg.text}</ReactMarkdown>
                             }
+                            {!msg.streaming && msg.text && (
+                              <button
+                                onClick={() => copyMessage(msg.id, msg.text)}
+                                className="mt-1.5 flex items-center gap-1 text-[11px] text-gray-400 hover:text-gray-600 transition-colors opacity-0 group-hover:opacity-100"
+                              >
+                                {copiedId === msg.id
+                                  ? <><Check className="w-3 h-3 text-green-500" /><span className="text-green-500">Copié</span></>
+                                  : <><Copy className="w-3 h-3" />Copier</>
+                                }
+                              </button>
+                            )}
                           </div>
                         </div>
                       ) : (
@@ -541,14 +612,25 @@ export default function DashboardPage() {
                   style={{ minHeight: 24, maxHeight: 140 }}
                 />
               </div>
-              <button
-                onClick={() => send()}
-                disabled={!input.trim() || loading}
-                className="w-8 h-8 rounded-xl flex items-center justify-center flex-shrink-0 disabled:opacity-30 hover:opacity-90 transition-all"
-                style={{ background: "linear-gradient(135deg,#7c3aed,#a855f7)" }}
-              >
-                {loading ? <Loader2 className="w-3.5 h-3.5 text-white animate-spin" /> : <Send className="w-3.5 h-3.5 text-white" />}
-              </button>
+              {loading ? (
+                <button
+                  onClick={() => abortRef.current?.abort()}
+                  className="w-8 h-8 rounded-xl flex items-center justify-center flex-shrink-0 hover:opacity-80 transition-all"
+                  style={{ background: "linear-gradient(135deg,#7c3aed,#a855f7)" }}
+                  title="Arrêter"
+                >
+                  <Square className="w-3.5 h-3.5 text-white fill-white" />
+                </button>
+              ) : (
+                <button
+                  onClick={() => send()}
+                  disabled={!input.trim()}
+                  className="w-8 h-8 rounded-xl flex items-center justify-center flex-shrink-0 disabled:opacity-30 hover:opacity-90 transition-all"
+                  style={{ background: "linear-gradient(135deg,#7c3aed,#a855f7)" }}
+                >
+                  <Send className="w-3.5 h-3.5 text-white" />
+                </button>
+              )}
             </div>
 
             {/* Quick action pills — BELOW input, only on greeting screen */}
