@@ -37,6 +37,7 @@ interface Message {
   role: "user" | "assistant";
   text: string;
   streaming?: boolean;
+  progressText?: string;
   navSuggestion?: { path: string; label: string } | null;
   navAction?: { path: string; label: string; injection: string } | null;
 }
@@ -327,10 +328,13 @@ export default function DashboardPage() {
     }
 
     try {
+      const sessionId = localStorage.getItem("rapportai_session") ?? undefined;
+
       const resp = await fetch(`${API_BASE}/api/chat`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
+          sessionId,
           messages:        history,
           mode:            "assistant",
           theme:           report.theme || rawReport.theme,
@@ -350,7 +354,6 @@ export default function DashboardPage() {
       const reader  = resp.body.getReader();
       const decoder = new TextDecoder();
       let buf = "";
-      let fullText = "";
       let pendingNav: { path: string; injection: string } | null = null;
 
       while (true) {
@@ -364,19 +367,24 @@ export default function DashboardPage() {
           try {
             const msg = JSON.parse(line.slice(6)) as {
               content?: string;
+              progress?: string;
               done?: boolean;
               error?: string;
               action?: { type: string; path?: string; injection?: string };
             };
             if (msg.error) throw new Error(msg.error);
             if (msg.done) break;
+            if (msg.progress) {
+              setMessages((prev) =>
+                prev.map((m) => m.id === assistantId ? { ...m, progressText: msg.progress } : m)
+              );
+            }
             if (msg.action?.type === "navigate" && msg.action.path) {
               pendingNav = { path: msg.action.path, injection: msg.action.injection ?? "" };
             }
             if (msg.content) {
-              fullText += msg.content;
               setMessages((prev) =>
-                prev.map((m) => m.id === assistantId ? { ...m, text: fullText } : m)
+                prev.map((m) => m.id === assistantId ? { ...m, text: msg.content! } : m)
               );
             }
           } catch { /* skip malformed */ }
@@ -393,7 +401,7 @@ export default function DashboardPage() {
           )
         );
       } else {
-        const nav = detectNav(apiText) || detectNav(fullText);
+        const nav = detectNav(apiText);
         setMessages((prev) =>
           prev.map((m) =>
             m.id === assistantId ? { ...m, streaming: false, navSuggestion: nav } : m
@@ -516,8 +524,8 @@ export default function DashboardPage() {
                                     <span className="w-1.5 h-1.5 rounded-full bg-purple-400 animate-bounce" style={{ animationDelay: "300ms" }} />
                                   </span>
                                   <AnimatePresence mode="wait">
-                                    <motion.span key={thinkingMessage} initial={{ opacity: 0, y: 4 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -4 }} transition={{ duration: 0.25 }} className="text-xs">
-                                      {thinkingMessage}
+                                    <motion.span key={msg.progressText ?? thinkingMessage} initial={{ opacity: 0, y: 4 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -4 }} transition={{ duration: 0.25 }} className="text-xs">
+                                      {msg.progressText ?? thinkingMessage}
                                     </motion.span>
                                   </AnimatePresence>
                                 </span>
