@@ -1,10 +1,11 @@
 import { useState } from "react";
-import { motion, Reorder } from "framer-motion";
-import { FileText, Search, CheckCircle2, Clock, ChevronRight, LayoutGrid, GripVertical, Lock, ArrowUpDown } from "lucide-react";
+import { motion, Reorder, AnimatePresence } from "framer-motion";
+import { FileText, Search, CheckCircle2, Clock, ChevronRight, LayoutGrid, GripVertical, Lock, ArrowUpDown, ListOrdered, ChevronDown, ChevronUp } from "lucide-react";
 import { useLocation } from "wouter";
 import { Sidebar, SidebarSpacer } from "@/components/layout/Sidebar";
 import { FloatingChat } from "@/components/dashboard/FloatingChat";
 import { useReportStore } from "@/lib/store";
+import { ReportToc } from "@/components/report/ReportToc";
 
 // ─── Section definitions ──────────────────────────────────────────────────────
 
@@ -185,6 +186,7 @@ export default function RapportsPage({ completedOnly = false }: RapportsPageProp
   const [search, setSearch] = useState("");
   const [reorderMode, setReorderMode] = useState(false);
   const [activeFilter, setActiveFilter] = useState<FilterTab>(completedOnly ? "completed" : "all");
+  const [tocOpen, setTocOpen] = useState(false);
 
   const reportData = report as unknown as Record<string, string>;
   const sectionOrder: string[] = report.sectionOrder?.length ? report.sectionOrder : DEFAULT_ORDER;
@@ -359,6 +361,46 @@ export default function RapportsPage({ completedOnly = false }: RapportsPageProp
                         onOpen={() => navigate(section.path)}
                       />
                     ))}
+                  </div>
+                )}
+
+                {/* ── Table des matières collapsible ── */}
+                {!completedOnly && (
+                  <div className="mt-6 rounded-2xl border border-gray-100 overflow-hidden">
+                    <button
+                      onClick={() => setTocOpen((v) => !v)}
+                      className="w-full flex items-center gap-3 px-5 py-3.5 text-left hover:bg-gray-50 transition-colors"
+                    >
+                      <div className="w-7 h-7 rounded-lg flex items-center justify-center flex-shrink-0"
+                           style={{ background: "linear-gradient(135deg,#7c3aed,#a855f7)" }}>
+                        <ListOrdered className="w-3.5 h-3.5 text-white" />
+                      </div>
+                      <span className="flex-1 text-sm font-bold text-gray-800"
+                            style={{ fontFamily: "'Plus Jakarta Sans', sans-serif" }}>
+                        Table des matières
+                      </span>
+                      <span className="text-[11px] text-gray-400 font-medium mr-1">
+                        Aperçu de la structure
+                      </span>
+                      {tocOpen
+                        ? <ChevronUp className="w-4 h-4 text-gray-300" />
+                        : <ChevronDown className="w-4 h-4 text-gray-300" />}
+                    </button>
+                    <AnimatePresence>
+                      {tocOpen && (
+                        <motion.div
+                          initial={{ height: 0, opacity: 0 }}
+                          animate={{ height: "auto", opacity: 1 }}
+                          exit={{ height: 0, opacity: 0 }}
+                          transition={{ duration: 0.2 }}
+                          className="overflow-hidden border-t border-gray-100"
+                        >
+                          <div className="p-3">
+                            <ReportToc />
+                          </div>
+                        </motion.div>
+                      )}
+                    </AnimatePresence>
                   </div>
                 )}
               </>

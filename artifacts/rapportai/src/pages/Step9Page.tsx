@@ -5,9 +5,10 @@ import {
   Sparkles, Loader2, X, Upload, Download, Plus,
   CheckCircle2, Circle, FileText, BookOpen,
   BarChart2, Hash, ArrowRight, Share2, Link2, Check, Lock, Wand2, Table2,
-  MessageSquare, RotateCcw, ChevronDown, ChevronUp, ExternalLink, Search,
+  MessageSquare, RotateCcw, ChevronDown, ChevronUp, ExternalLink, Search, ListOrdered,
 } from "lucide-react";
 import { ChatRevision } from "@/components/report/ChatRevision";
+import { ReportToc } from "@/components/report/ReportToc";
 import { useCheckpoint } from "@/lib/useCheckpoint";
 import { Button } from "@/components/ui/button";
 import { StepLayout } from "@/components/report/StepLayout";
@@ -186,7 +187,7 @@ export default function Step9Page() {
   const [scholarGuideOpen, setScholarGuideOpen] = useState(false);
 
   // ── Tab state ─────────────────────────────────────────────────────────────
-  const [activeTab, setActiveTab] = useState<"conclusion" | "bibliographie">("conclusion");
+  const [activeTab, setActiveTab] = useState<"conclusion" | "bibliographie" | "structure">("conclusion");
 
   // ── Conclusion streaming ──────────────────────────────────────────────────
   const onChunk = useCallback((chunk: string) => {
@@ -871,6 +872,16 @@ export default function Step9Page() {
                 <span className="w-1.5 h-1.5 rounded-full bg-green-400 ml-0.5" />
               )}
             </button>
+            <button
+              onClick={() => setActiveTab("structure")}
+              className={`flex-1 py-2.5 text-sm font-semibold flex items-center justify-center gap-1.5 transition-colors ${
+                activeTab === "structure"
+                  ? "text-purple-700 border-b-2 border-purple-500"
+                  : "text-gray-400 hover:text-gray-600"
+              }`}
+            >
+              <ListOrdered className="w-3.5 h-3.5" /> Structure
+            </button>
           </div>
 
           {/* ── Tab content ── */}
@@ -996,6 +1007,32 @@ export default function Step9Page() {
                   </div>
                 )}
               </>
+            )}
+
+            {/* STRUCTURE tab */}
+            {activeTab === "structure" && (
+              <div className="h-full overflow-y-auto bg-white">
+                <div className="px-6 pt-5 pb-2">
+                  <div className="flex items-center gap-2 mb-1">
+                    <ListOrdered className="w-4 h-4 text-purple-500" />
+                    <h2 className="text-base font-black text-gray-900"
+                        style={{ fontFamily: "'Plus Jakarta Sans', sans-serif" }}>
+                      Table des matières
+                    </h2>
+                  </div>
+                  <p className="text-xs text-gray-400 leading-relaxed mb-4">
+                    Vue d'ensemble de ton rapport. Clique sur une section pour la modifier. La table des matières sera générée automatiquement dans le Word exporté.
+                  </p>
+                </div>
+                <div className="px-4 pb-6">
+                  <ReportToc />
+                </div>
+                <div className="mx-4 mb-4 rounded-xl px-4 py-3 border border-purple-100 bg-purple-50/40">
+                  <p className="text-[11px] text-purple-600 leading-relaxed">
+                    <span className="font-bold">Dans Word :</span> Le document exporté contient une vraie table des matières Word avec liens et numéros de page. Appuie sur <strong>Ctrl+A</strong> puis <strong>F9</strong> pour l'actualiser.
+                  </p>
+                </div>
+              </div>
             )}
 
           </div>

@@ -768,7 +768,7 @@ function buildAnnexes(d: Report): Paragraph[] {
   return paras;
 }
 
-// Table des Matières — LAST PAGE — real Word TOC field with page numbers + hyperlinks.
+// Table des Matières — Word TOC field with page numbers + hyperlinks.
 // updateFields: true on Document forces Word to populate it automatically on open.
 function buildTableDesMatieres(): Paragraph[] {
   return [
@@ -785,6 +785,22 @@ function buildTableDesMatieres(): Paragraph[] {
       ],
     }) as unknown as Paragraph,
   ];
+}
+
+// Small instruction note placed after the front-matter TOC field.
+function buildTocInstruction(): Paragraph {
+  return new Paragraph({
+    spacing: { before: 280, after: 0 },
+    children: [
+      new TextRun({
+        text: "Astuce Word : appuie sur Ctrl+A puis F9 pour afficher les numeros de page reels.",
+        font: FONT,
+        size: 18,
+        italics: true,
+        color: "999999",
+      }),
+    ],
+  });
 }
 
 // ─── Styles ─────────────────────────────────────────────────────────────────
@@ -868,6 +884,9 @@ export async function generateDocx(data: Report, formatting?: FormattingPrefs): 
         headers: { default: header },
         footers: { default: buildFooter() },
         children: [
+          // Table des matières en début de document (avant Dédicaces)
+          ...buildTableDesMatieres(),
+          buildTocInstruction(),
           ...buildDedicaces(data),
           ...buildRemerciements(data),
           ...buildResume(data),
