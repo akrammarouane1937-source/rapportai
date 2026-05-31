@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect } from "react";
+import { useState, useRef, useEffect, useMemo } from "react";
 import { useLocation } from "wouter";
 import { Layout } from "@/components/layout";
 import { ChatMessage, StepTransitionCard, AgentSteps } from "@/components/chat-panel";
@@ -81,6 +81,21 @@ export default function Step5() {
     onStepComplete: () => setStepDone(true),
   });
 
+  // Live preview: extract the latest plan structure from the chat so the preview
+  // updates as soon as the agent proposes a version — before generate_section fires.
+  const liveContent = useMemo(() => {
+    const lastAgent = [...messages].reverse().find(
+      (m) => m.role === "agent" && typeof m.content === "string"
+    );
+    if (!lastAgent || typeof lastAgent.content !== "string") return null;
+    const txt = lastAgent.content.trim();
+    // Only treat it as a plan preview if it has multiple heading lines
+    const headings = (txt.match(/^#{1,3}\s+.+/gm) ?? []).length;
+    return headings >= 2 ? txt : null;
+  }, [messages]);
+
+  const previewContent = liveContent ?? report.sommaire ?? "";
+
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages, toolCalls, isThinking, isGenerating]);
@@ -104,7 +119,7 @@ export default function Step5() {
     <Layout
       stepName="Sommaire"
       stepNumber={5}
-      previewPanel={<PreviewPanel activeSection="sommaire" content={report.sommaire ?? ""} maxStep={5} isGenerating={isThinking || isGenerating} />}
+      previewPanel={<PreviewPanel activeSection="sommaire" content={previewContent} maxStep={5} isGenerating={isThinking || isGenerating} />}
     >
       <div className="flex-1 overflow-y-auto flex flex-col py-4 px-2 md:py-5 md:px-3">
 
