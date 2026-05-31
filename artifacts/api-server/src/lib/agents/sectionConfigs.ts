@@ -109,6 +109,22 @@ export const SECTION_CONFIGS: Record<string, SectionConfig> = {
     allowedTools: ["Read", "Write", "Edit", "Glob", "Grep"],
     description:  "Génération des annexes (questionnaires, données, code, etc.)",
   },
+
+  "liste-figures": {
+    skillsFile:   "liste-figures-skills.md",
+    maxTurns:     12,
+    dependencies: ["partie-i.md", "partie-ii.md"],
+    allowedTools: ["Read", "Write", "Glob"],
+    description:  "Génération de la liste des figures",
+  },
+
+  "liste-tableaux": {
+    skillsFile:   "liste-tableaux-skills.md",
+    maxTurns:     12,
+    dependencies: ["partie-i.md", "partie-ii.md"],
+    allowedTools: ["Read", "Write", "Glob"],
+    description:  "Génération de la liste des tableaux",
+  },
 };
 
 export function getSectionConfig(section: string): SectionConfig {

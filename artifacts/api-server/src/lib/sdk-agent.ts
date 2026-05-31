@@ -42,6 +42,8 @@ const SECTION_IDS = [
   "partie-ii",
   "conclusion",
   "abbreviations",
+  "liste-figures",
+  "liste-tableaux",
 ];
 
 // ─── SDKReportAgent ───────────────────────────────────────────────────────────
@@ -427,6 +429,36 @@ Génère un tableau JSON UNIQUEMENT (sans texte avant/après) avec ce format exa
 Chaque abréviation doit avoir "abbr" (le sigle) et "sig" (la signification complète en français).
 Inclus minimum 10 abréviations. Ne génère AUCUN texte en dehors du JSON.
 Enregistre dans abbreviations.md.`;
+
+      case "liste-figures":
+        return `${docNote}Lis partie-i.md et partie-ii.md (utilise Glob si tu n'es pas sûr des fichiers disponibles).
+Identifie TOUTES les références aux figures : "Figure N", "Fig. N", "Figure N —", etc.
+Génère une liste académique numérotée au format Markdown :
+
+## Liste des figures
+
+**Figure 1** — [Titre tel qu'il apparaît dans le texte]
+*Source : [source mentionnée, ou "Auteur propre" si absente]*
+
+**Figure 2** — ...
+
+Si aucune figure n'est mentionnée dans le texte : génère "## Liste des figures\n\n*(Aucune figure dans ce rapport)*"
+Enregistre dans liste-figures.md.`;
+
+      case "liste-tableaux":
+        return `${docNote}Lis partie-i.md et partie-ii.md (utilise Glob si tu n'es pas sûr des fichiers disponibles).
+Identifie TOUTES les références aux tableaux : "Tableau N", "Table N", "Tableau N —", etc.
+Génère une liste académique numérotée au format Markdown :
+
+## Liste des tableaux
+
+**Tableau 1** — [Titre tel qu'il apparaît dans le texte]
+*Source : [source mentionnée, ou "Données primaires" si absente]*
+
+**Tableau 2** — ...
+
+Si aucun tableau n'est mentionné dans le texte : génère "## Liste des tableaux\n\n*(Aucun tableau dans ce rapport)*"
+Enregistre dans liste-tableaux.md.`;
 
       default:
         return `${docNote}Rédige la section "${section}" du rapport.${opts?.extraContext ? `\n\nContexte supplémentaire : ${opts.extraContext}` : ""}\nEnregistre dans ${section}.md.`;
