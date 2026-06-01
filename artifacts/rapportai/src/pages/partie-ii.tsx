@@ -11,7 +11,7 @@ import { useGenerate } from "@/hooks/use-generate";
 import { useFileStore } from "@/lib/fileStore";
 import { getApprovedFigures } from "@/lib/figureStore";
 import { motion } from "framer-motion";
-import { AlertTriangle, RefreshCw } from "lucide-react";
+import { AlertTriangle, RefreshCw, Clock } from "lucide-react";
 import { API_BASE } from "@/lib/apiBase";
 
 const SESSION_KEY = "rapportai_session";
@@ -176,13 +176,18 @@ export default function PartieII() {
         role: "agent",
         content: (
           <div>
-            <p className="text-sm text-red-700 mb-2">Génération échouée.</p>
+            <p className="text-sm font-semibold text-red-700 mb-1">La génération a échoué</p>
+            <p className="text-xs text-gray-500 mb-3">
+              Cause possible : connexion réseau, serveur momentanément surchargé, ou session expirée.
+              En réessayant, une nouvelle session se crée automatiquement.
+            </p>
             <button
               onClick={() => retryFnRef.current?.()}
-              className="flex items-center gap-2 text-sm font-semibold text-violet-700 hover:text-violet-900 border border-violet-200 rounded-lg px-3 py-1.5 bg-violet-50 transition-colors"
+              className="flex items-center gap-2 text-sm font-semibold text-white border-0 rounded-lg px-4 py-2 transition-all"
+              style={{ background: "linear-gradient(135deg,#7c3aed,#a855f7)", boxShadow: "0 2px 8px rgba(124,58,237,0.35)" }}
             >
               <RefreshCw className="w-3.5 h-3.5" />
-              Réessayer
+              Réessayer la génération
             </button>
           </div>
         ),
@@ -304,7 +309,30 @@ export default function PartieII() {
         .filter((f) => f.placement === "Partie II")
         .map((f) => ({ figureNumber: f.figureNumber, title: f.title, source: f.source ?? "", author: f.author ?? "", caption: f.caption, placement: f.placement }));
 
-      push({ id: nextId(), role: "agent", content: "Je génère la Partie II..." });
+      push({
+        id: nextId(),
+        role: "agent",
+        content: (
+          <motion.div initial={{ opacity: 0, y: 4 }} animate={{ opacity: 1, y: 0 }} className="space-y-3">
+            <div className="flex items-start gap-3 p-4 rounded-xl bg-violet-50 border border-violet-100">
+              <div className="w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0"
+                   style={{ background: "linear-gradient(135deg,#7c3aed,#a855f7)" }}>
+                <Clock className="w-4 h-4 text-white" />
+              </div>
+              <div>
+                <p className="text-sm font-bold text-violet-900">Génération en cours — 5 à 10 minutes</p>
+                <p className="text-xs text-violet-700 mt-1">
+                  Je m'appuie sur ta Partie I pour assurer la cohérence, puis je construis chaque chapitre avec sources et analyse.
+                  {" "}<strong>Ne ferme pas cet onglet.</strong>
+                </p>
+              </div>
+            </div>
+            <p className="text-xs text-muted-foreground pl-1">
+              La progression s'affiche en temps réel dans le panneau de droite.
+            </p>
+          </motion.div>
+        ),
+      });
       setPhase("generating");
       if (injectedContext) updateReport({ pendingContextInjection: "" });
 
