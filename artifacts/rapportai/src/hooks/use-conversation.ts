@@ -275,10 +275,15 @@ export function useConversation({
     try {
       const serializable = messages
         .filter((m) => typeof m.content === "string")
-        .map((m) => ({ id: m.id, role: m.role, content: m.content as string }));
+        .map((m) => ({ id: m.id, role: m.role as "agent" | "user", content: m.content as string }));
       localStorage.setItem(STORAGE_KEY, JSON.stringify(serializable));
+      // Also persist to Zustand → DB via useReportSync debounce
+      const existing = useReportStore.getState().report.chatHistories ?? {};
+      useReportStore.getState().updateReport({
+        chatHistories: { ...existing, [String(step)]: serializable },
+      });
     } catch { /* quota/unavailable */ }
-  }, [messages, STORAGE_KEY]);
+  }, [messages, STORAGE_KEY, step]);
 
   const [isThinking, setIsThinking] = useState(false);
   const [generatedSections, setGeneratedSections] = useState<string[]>([]);

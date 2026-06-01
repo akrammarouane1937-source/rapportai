@@ -78,6 +78,9 @@ export interface Report {
   // Session
   sessionId?: string;
   sessionCreatedAt?: number;
+
+  // Chat histories per step — persisted to DB so conversations survive browser sessions
+  chatHistories: Record<string, Array<{id: string; role: "agent"|"user"; content: string}>>;
 }
 
 export const initialReportState: Report = {
@@ -135,6 +138,8 @@ export const initialReportState: Report = {
 
   sessionId: undefined,
   sessionCreatedAt: undefined,
+
+  chatHistories: {},
 };
 
 interface ReportStore {

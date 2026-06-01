@@ -140,12 +140,22 @@ export function hydrateRawFromZustand(r: Partial<Report>): void {
   if (r.conclusion)       patch.conclusion       = r.conclusion;
   if (r.bibliographieText) patch.bibliographieText = r.bibliographieText;
   if (r.problematique)    patch.problematique    = r.problematique;
-  if (Object.keys(patch).length === 0) return;
+  if (Object.keys(patch).length === 0 && !r.chatHistories) return;
   try {
     const current = getReport();
     localStorage.setItem(KEY, JSON.stringify({ ...current, ...patch }));
   } catch {
     // non-fatal
+  }
+  // Restore per-step chat histories to localStorage so use-conversation.ts initializers pick them up
+  if (r.chatHistories) {
+    for (const [stepKey, history] of Object.entries(r.chatHistories)) {
+      try {
+        if (Array.isArray(history) && history.length > 0) {
+          localStorage.setItem(`rapportai_chat_step${stepKey}`, JSON.stringify(history));
+        }
+      } catch { /* non-fatal */ }
+    }
   }
 }
 

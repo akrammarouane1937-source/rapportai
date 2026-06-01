@@ -19,6 +19,14 @@ description: How report data is saved/restored across sessions; where useReportS
 
 Both must stay in sync. `saveReport()` writes to `rapportai_v1` first, then calls `useReportStore.getState().updateReport()` to sync Zustand. Missing a field in the Zustand update = UI shows stale data.
 
+## Chat history persistence
+
+Step chat histories (`rapportai_chat_step2`, `step3`... `step9`) are now also saved to DB:
+- **Save**: `use-conversation.ts` messages effect writes to localStorage + Zustand `chatHistories` field → `useReportSync` debounce-saves to DB
+- **Restore**: `hydrateRawFromZustand` in `reportStore.ts` writes each step's history back to localStorage keys → next mount of a step page picks it up from localStorage
+
+The `Report.chatHistories` field is `Record<string, Array<{id, role, content}>>` — only text messages (ReactNode messages like ChoiceCard, GeneratedCard are filtered out since they can't be serialized).
+
 ## DB sync logic (use-report-sync.ts)
 
 `shouldHydrateFromServer`: restores from DB if local is empty OR server has more filled sections OR server is at a higher step. Safe for multi-device use.
