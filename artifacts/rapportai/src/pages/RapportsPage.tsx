@@ -3,6 +3,7 @@ import { motion, Reorder, AnimatePresence } from "framer-motion";
 import { FileText, Search, CheckCircle2, Clock, ChevronRight, LayoutGrid, GripVertical, Lock, ArrowUpDown, ListOrdered, ChevronDown, ChevronUp, ImageIcon } from "lucide-react";
 import { useLocation } from "wouter";
 import { Sidebar, SidebarSpacer } from "@/components/layout/Sidebar";
+import { useReportSync } from "@/hooks/use-report-sync";
 import { FloatingChat } from "@/components/dashboard/FloatingChat";
 import { useReportStore } from "@/lib/store";
 import { ReportToc } from "@/components/report/ReportToc";
@@ -308,6 +309,7 @@ interface RapportsPageProps {
 }
 
 export default function RapportsPage({ completedOnly = false }: RapportsPageProps) {
+  useReportSync();
   const { report, updateReport } = useReportStore();
   const [, navigate] = useLocation();
   const [search, setSearch] = useState("");

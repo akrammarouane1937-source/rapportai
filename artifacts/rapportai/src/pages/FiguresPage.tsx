@@ -3,6 +3,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import { ImageIcon, Trash2, Upload, X, Check, FileText, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Sidebar, SidebarSpacer } from "@/components/layout/Sidebar";
+import { useReportSync } from "@/hooks/use-report-sync";
 import {
   getApprovedFigures,
   addApprovedFigure,
@@ -516,6 +517,7 @@ function FigureCard({ fig, onRemove }: { fig: ApprovedFigure; onRemove: () => vo
 // ─── Main Page ────────────────────────────────────────────────────────────────
 
 export default function FiguresPage() {
+  useReportSync();
   const [figures, setFigures] = useState<ApprovedFigure[]>([]);
   const [showModal, setShowModal] = useState(false);
 

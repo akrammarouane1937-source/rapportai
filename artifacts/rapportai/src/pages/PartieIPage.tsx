@@ -10,6 +10,7 @@ import { ChatRevision } from "@/components/report/ChatRevision";
 import { useCheckpoint } from "@/lib/useCheckpoint";
 import { Button } from "@/components/ui/button";
 import { Sidebar } from "@/components/layout/Sidebar";
+import { useReportSync } from "@/hooks/use-report-sync";
 import { WordPreview } from "@/components/report/WordPreview";
 import { PageCard } from "@/components/report/PageCard";
 import { PaywallModal } from "@/components/report/PaywallModal";
@@ -47,6 +48,7 @@ function SourceChip({ label, onRemove }: { label: string; onRemove: () => void }
 type GenerationMode = "full" | "page";
 
 export default function PartieIPage() {
+  useReportSync();
   const [, setLocation] = useLocation();
   const report = getReport();
   const myPlan = getMyPlan();

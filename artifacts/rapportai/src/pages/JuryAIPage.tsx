@@ -7,6 +7,7 @@ import {
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Sidebar, SidebarSpacer } from "@/components/layout/Sidebar";
+import { useReportSync } from "@/hooks/use-report-sync";
 import { getReport } from "@/lib/reportStore";
 
 import { API_BASE as BASE_PATH } from "@/lib/apiBase";
@@ -196,6 +197,7 @@ function Bubble({ msg, studentName }: { msg: ChatMessage; studentName: string })
 
 /* ── Main page ─────────────────────────────────────────────────────────── */
 export default function JuryAIPage() {
+  useReportSync();
   const report       = getReport();
   const studentName  = report.studentName ?? "Étudiant(e)";
 

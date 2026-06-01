@@ -7,6 +7,7 @@ import {
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Sidebar, SidebarSpacer } from "@/components/layout/Sidebar";
+import { useReportSync } from "@/hooks/use-report-sync";
 import { getReport } from "@/lib/reportStore";
 import {
   getBibSources, addBibSource, removeBibSource, parseBib,
@@ -400,6 +401,7 @@ function SourcesView({
 // ─── Main page ────────────────────────────────────────────────────────────────
 
 export default function BibliothequeePage() {
+  useReportSync();
   const [sources, setSources] = useState<BibSource[]>(() => {
     const report = getReport();
     return getBibSources().map((s) => ({
