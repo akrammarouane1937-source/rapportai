@@ -423,9 +423,8 @@ router.post(
             try {
               const figuresDir = path.join(agent.workDir, "figures");
               mkdirSync(figuresDir, { recursive: true });
-              const convert = pdfFromBuffer(file.buffer, { density: 120, format: "png", width: 992, height: 1404 });
-              const pageIndices = Array.from({ length: 12 }, (_, i) => i + 1);
-              const allPages = await convert.bulk(pageIndices, { responseType: "buffer" });
+              const convert = pdfFromBuffer(file.buffer, { density: 150, format: "png", width: 1240, height: 1754 });
+              const allPages = await convert.bulk(-1, { responseType: "buffer" });
               for (let i = 0; i < allPages.length; i++) {
                 const buf = (allPages[i] as { buffer?: Buffer } | undefined)?.buffer;
                 if (!buf) continue;
@@ -795,9 +794,8 @@ router.post(
           try {
             const figuresDir = path.join(agent.workDir, "figures");
             mkdirSync(figuresDir, { recursive: true });
-            const convert = pdfFromBuffer(file.buffer, { density: 120, format: "png", width: 992, height: 1404 });
-            const pageIndices = Array.from({ length: 12 }, (_, i) => i + 1);
-            const allPages = await convert.bulk(pageIndices, { responseType: "buffer" });
+            const convert = pdfFromBuffer(file.buffer, { density: 150, format: "png", width: 1240, height: 1754 });
+            const allPages = await convert.bulk(-1, { responseType: "buffer" });
             for (let i = 0; i < allPages.length; i++) {
               const buf = (allPages[i] as { buffer?: Buffer } | undefined)?.buffer;
               if (!buf) continue;
@@ -1021,5 +1019,36 @@ router.delete("/session/:sessionId", (req: Request, res: Response) => {
   pageStateMap.delete(req.params.sessionId);
   res.json({ deleted: true });
 });
+
+// ─── POST /api/pdf-preview ────────────────────────────────────────────────────
+// Stateless — accepts a PDF buffer and returns base64 PNG images of the first
+// 3 pages at 150 Dpi so the converse/chat route can inject them as vision blocks.
+
+router.post(
+  "/pdf-preview",
+  upload.single("pdf"),
+  async (req: Request, res: Response): Promise<void> => {
+    const file = (req as Request & { file?: Express.Multer.File }).file;
+    if (!file) { res.status(400).json({ error: "Aucun fichier reçu." }); return; }
+    const ext = file.originalname.toLowerCase().split(".").pop() ?? "";
+    if (ext !== "pdf") { res.status(400).json({ error: "PDF requis." }); return; }
+    try {
+      const convert = pdfFromBuffer(file.buffer, { density: 150, format: "png", width: 1240, height: 1754 });
+      // Extract first 3 pages only — sufficient for vision context in chat steps
+      const pages = await convert.bulk([1, 2, 3], { responseType: "buffer" });
+      const images = pages
+        .map((p) => (p as { buffer?: Buffer } | undefined)?.buffer)
+        .filter((b): b is Buffer => !!b)
+        .map((buf, i) => ({
+          page: i + 1,
+          base64: `data:image/png;base64,${buf.toString("base64")}`,
+        }));
+      res.json({ images });
+    } catch (err) {
+      req.log.warn({ event: "pdf_preview_failed", error: String(err) });
+      res.json({ images: [] });
+    }
+  },
+);
 
 export default router;

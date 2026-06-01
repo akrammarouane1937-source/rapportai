@@ -76,6 +76,19 @@ async function processFiles(files: File[]): Promise<ContentBlock[]> {
         source: { type: "base64", media_type: "application/pdf", data },
         title: file.name,
       });
+      // Also extract first 3 pages as image blocks so Claude sees figures/charts visually
+      try {
+        const formData = new FormData();
+        formData.append("pdf", file, file.name);
+        const previewResp = await fetch(`${API_BASE}/pdf-preview`, { method: "POST", body: formData });
+        if (previewResp.ok) {
+          const { images } = await previewResp.json() as { images: Array<{ page: number; base64: string }> };
+          for (const img of images) {
+            const imgData = img.base64.split(",")[1] ?? "";
+            if (imgData) blocks.push({ type: "image", source: { type: "base64", media_type: "image/png", data: imgData } });
+          }
+        }
+      } catch { /* vision enhancement is best-effort */ }
     } else if (file.type.startsWith("image/")) {
       const data = await readAsBase64(file);
       blocks.push({

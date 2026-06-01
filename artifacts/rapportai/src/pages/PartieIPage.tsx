@@ -14,6 +14,7 @@ import { WordPreview } from "@/components/report/WordPreview";
 import { PageCard } from "@/components/report/PageCard";
 import { PaywallModal } from "@/components/report/PaywallModal";
 import { useGenerate, ensureSession } from "@/lib/useGenerate";
+import { addApprovedFigure, getApprovedFigures } from "@/lib/figureStore";
 import { usePageMode } from "@/lib/usePageMode";
 import { markdownToHtml } from "@/lib/markdownToHtml";
 import { saveReport, getReport } from "@/lib/reportStore";
@@ -260,6 +261,44 @@ export default function PartieIPage() {
         setPdfPages(data.pdfPages);
       }
       setUploadStatus("ready");
+
+      // Background: run figure detection (Claude Vision) and auto-persist to figureStore for Partie I
+      const capturedFile = file;
+      (async () => {
+        try {
+          const extractForm = new FormData();
+          extractForm.append("document", capturedFile, capturedFile.name);
+          const extractResp = await fetch(`${BASE_PATH}/api/figures/extract`, { method: "POST", body: extractForm });
+          if (!extractResp.ok) return;
+          type ExtractedFigure = { page: number; image_base64: string; type: string; auto_description: string; suggested_caption: string; suggested_source: string };
+          const extractData = await extractResp.json() as { figures: ExtractedFigure[] };
+          if (!extractData.figures.length) return;
+          const existing = getApprovedFigures();
+          const maxNum = existing.length > 0 ? Math.max(...existing.map((f) => f.figureNumber)) : 0;
+          extractData.figures.forEach((fig: ExtractedFigure, i: number) => {
+            addApprovedFigure({
+              id: `pdf-p1-${Date.now()}-${i}`,
+              figureNumber: maxNum + i + 1,
+              title: fig.suggested_caption,
+              caption: fig.suggested_caption,
+              type: "uploaded",
+              placement: "Partie I",
+              description: fig.auto_description,
+              sourceType: "document",
+              source: capturedFile.name,
+              author: "Document source",
+              documentTitle: capturedFile.name,
+              yearCreated: new Date().getFullYear().toString(),
+              formattedSource: fig.suggested_source,
+              pngBase64: fig.image_base64,
+              labels: [],
+              series: [],
+              width: 400,
+              height: 300,
+            });
+          });
+        } catch { /* non-blocking — figure extraction runs in background */ }
+      })();
     } catch (err) {
       setUploadStatus("error");
       setUploadError(err instanceof Error ? err.message : "Erreur d'upload");
