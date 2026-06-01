@@ -1,4 +1,5 @@
 import { useState, useCallback, useRef } from "react";
+import { fetchEventSource } from "@microsoft/fetch-event-source";
 import { API_BASE } from "@/lib/apiBase";
 import { useReportStore } from "@/lib/store";
 import { useFileStore } from "@/lib/fileStore";
@@ -374,41 +375,44 @@ export function useGenerate() {
           }
         } else {
           // fetch path — no files, no upload progress needed
-          const makeFetchRequest = (sid: string) =>
-            fetch(`${API_BASE}/api/session/${sid}/generate`, {
+          const SESSION_EXPIRED = "SESSION_EXPIRED_RETRY";
+          let activeSid = sessionId;
+
+          const doFetchEventSource = (sid: string) =>
+            fetchEventSource(`${API_BASE}/api/session/${sid}/generate`, {
               method: "POST",
               headers: { "Content-Type": "application/json", ...planHeaders },
               body: JSON.stringify({ section, ...reportData, extraContext: extraPrompt, figures, formatting }),
               signal: controller.signal,
+              openWhenHidden: true, // keep stream alive when student switches tab
+              async onopen(response) {
+                if (response.status === 404) throw new Error(SESSION_EXPIRED);
+                if (!response.ok) {
+                  let detail = `HTTP ${response.status}`;
+                  try { const t = await response.text(); if (t) detail += `: ${t.slice(0, 120)}`; } catch { /* ignore */ }
+                  throw new Error(detail);
+                }
+              },
+              onmessage(msg) {
+                if (msg.data) processLine(`data: ${msg.data}`);
+              },
+              onerror(err) {
+                throw err; // prevent fetchEventSource from retrying infinitely
+              },
             });
 
-          let response = await makeFetchRequest(sessionId);
-
-          if (response.status === 404) {
-            localStorage.removeItem(SESSION_KEY);
-            localStorage.removeItem(SESSION_TS_KEY);
-            const newId = await getOrCreateSession();
-            response = await makeFetchRequest(newId);
+          try {
+            await doFetchEventSource(activeSid);
+          } catch (err) {
+            if (err instanceof Error && err.message === SESSION_EXPIRED) {
+              localStorage.removeItem(SESSION_KEY);
+              localStorage.removeItem(SESSION_TS_KEY);
+              activeSid = await getOrCreateSession();
+              await doFetchEventSource(activeSid);
+            } else {
+              throw err;
+            }
           }
-
-          if (!response.ok) throw new Error(`HTTP ${response.status}`);
-          if (!response.body) throw new Error("Pas de réponse du serveur");
-
-          const reader = response.body.getReader();
-          const decoder = new TextDecoder();
-          let buffer = "";
-
-          while (true) {
-            const { value, done } = await reader.read();
-            if (done) break;
-
-            buffer += decoder.decode(value, { stream: true });
-            const lines = buffer.split("\n");
-            buffer = lines.pop() ?? "";
-
-            for (const line of lines) processLine(line);
-          }
-          if (buffer.trim()) processLine(buffer);
         }
 
       // ── Auto-summarize for orchestrator cross-section intelligence ───────────

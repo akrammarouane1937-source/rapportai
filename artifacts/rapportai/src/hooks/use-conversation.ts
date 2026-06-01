@@ -1,4 +1,5 @@
 import { useState, useCallback, useRef, useEffect, createElement, type ReactNode } from "react";
+import { fetchEventSource } from "@microsoft/fetch-event-source";
 import { API_BASE } from "@/lib/apiBase";
 import { useGenerate } from "./use-generate";
 import { useReportStore } from "@/lib/store";
@@ -358,7 +359,7 @@ export function useConversation({
           { role: "user", content: currentApiContent },
         ];
 
-        const res = await fetch(`${API_BASE}/api/converse`, {
+        await fetchEventSource(`${API_BASE}/api/converse`, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
@@ -368,30 +369,14 @@ export function useConversation({
             generatedSections,
           }),
           signal: ctrl.signal,
-        });
-
-        if (!res.ok) throw new Error(`HTTP ${res.status}`);
-        if (!res.body) throw new Error("No body");
-
-        const reader = res.body.getReader();
-        const decoder = new TextDecoder();
-        let buffer = "";
-
-        while (true) {
-          const { value, done } = await reader.read();
-          if (done) break;
-
-          buffer += decoder.decode(value, { stream: true });
-          const lines = buffer.split("\n");
-          buffer = lines.pop() ?? "";
-
-          for (const line of lines) {
-            if (!line.startsWith("data: ")) continue;
-            const raw = line.slice(6).trim();
-            if (!raw) continue;
-
+          openWhenHidden: true, // keep stream alive when student switches tab
+          async onopen(response) {
+            if (!response.ok) throw new Error(`HTTP ${response.status}`);
+          },
+          onmessage(msg) {
+            if (!msg.data) return;
             let data: Record<string, unknown>;
-            try { data = JSON.parse(raw); } catch { continue; }
+            try { data = JSON.parse(msg.data); } catch { return; }
 
             if (data.error) throw new Error(data.error as string);
 
@@ -417,8 +402,11 @@ export function useConversation({
                 pendingSectionContents.push(sc);
               }
             }
-          }
-        }
+          },
+          onerror(err) {
+            throw err; // prevent fetchEventSource from retrying infinitely
+          },
+        });
       } catch (err) {
         if ((err as { name?: string }).name === "AbortError") {
           setIsThinking(false);
