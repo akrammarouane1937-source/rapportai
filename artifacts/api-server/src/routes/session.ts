@@ -623,6 +623,7 @@ router.post(
       }
     } catch (err: unknown) {
       const message = err instanceof Error ? err.message : "Unknown error";
+      req.log.error({ event: "generate_failed", section, sessionId, error: message }, "Section generation error");
       metrics.record({
         sessionId:  sessionId,
         section,

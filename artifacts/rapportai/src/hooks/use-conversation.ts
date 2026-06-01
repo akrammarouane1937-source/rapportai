@@ -469,7 +469,15 @@ export function useConversation({
             continue;
           }
 
-          const result = await generate(section, report as Parameters<typeof generate>[1], context);
+          let genError = "";
+          const result = await generate(
+            section,
+            report as Parameters<typeof generate>[1],
+            context,
+            undefined,
+            undefined,
+            { onError: (msg: string) => { genError = msg; } }
+          );
 
           if (result) {
             setGeneratedSections((prev) => [...prev, section]);
@@ -482,9 +490,10 @@ export function useConversation({
             ]);
           } else {
             generationFailed = true;
+            const errorDetail = genError ? `\n\n> ⚠️ ${genError}` : "";
             setMessages((prev) => [
               ...prev,
-              { id: newId(), role: "agent", content: `**La génération de ${label} n'a pas abouti.** Dis-moi "réessaie" et je relance.` },
+              { id: newId(), role: "agent", content: `**La génération de ${label} n'a pas abouti.**${errorDetail}\n\nDis-moi "réessaie" et je relance.` },
             ]);
           }
         }
