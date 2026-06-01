@@ -686,6 +686,7 @@ export default function PartieIPage() {
                   wordCount={wordCount}
                   sectionId="partie-i"
                   blurred={paywallOpen}
+                  figurePlacement="Partie I"
                 />
                 <PaywallModal open={paywallOpen} />
               </div>

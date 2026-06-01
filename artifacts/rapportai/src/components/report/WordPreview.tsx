@@ -6,6 +6,7 @@ import { generateDocx, downloadBlob } from "@/lib/generateDocx";
 import { UpsellModal } from "@/components/report/UpsellModal";
 import { getMyPlan, incrementRevision, PLAN_LIMITS } from "@/lib/userPlan";
 import { getReport } from "@/lib/reportStore";
+import { getApprovedFigures } from "@/lib/figureStore";
 
 import { API_BASE as BASE_PATH } from "@/lib/apiBase";
 
@@ -19,6 +20,8 @@ interface WordPreviewProps {
   sectionId?: string;
   /** When provided, renders a TOC "page" before the main content pages */
   tocContent?: React.ReactNode;
+  /** When provided, renders approved figures for this placement after the content pages */
+  figurePlacement?: "Partie I" | "Partie II";
 }
 
 // Fun Claude Code-style status messages
@@ -690,6 +693,7 @@ export function WordPreview({
   onContentChange,
   sectionId,
   tocContent,
+  figurePlacement,
 }: WordPreviewProps) {
   const [revisionOpen, setRevisionOpen]   = useState(false);
   const [humanizeOpen, setHumanizeOpen]   = useState(false);
@@ -825,6 +829,36 @@ export function WordPreview({
                 <p className="text-[9pt] text-gray-400" style={{ fontFamily: "Times New Roman, serif" }}>
                   - {idx + 1} -
                 </p>
+              </div>
+            </div>
+          ))}
+
+          {/* Approved figures — one A4 card per figure, rendered after section content */}
+          {figurePlacement && getApprovedFigures().filter(f => f.placement === figurePlacement).map((fig) => (
+            <div
+              key={fig.id}
+              className="w-full max-w-[680px] bg-white flex-shrink-0"
+              style={{ padding: "56px 64px", boxShadow: "0 2px 24px rgba(0,0,0,0.14)", minHeight: "560px" }}
+            >
+              <div className="text-center mb-6 pb-3 border-b border-gray-100">
+                <p className="text-[9pt] text-gray-400" style={{ fontFamily: "Times New Roman, serif" }}>
+                  {report.theme ?? "RapportAI"} - {report.annee ?? "2024–2025"}
+                </p>
+              </div>
+              <div className="flex flex-col items-center gap-5 mt-8">
+                <img
+                  src={fig.pngBase64}
+                  alt={fig.title}
+                  style={{ maxWidth: "100%", maxHeight: 420, objectFit: "contain", border: "1px solid #f0f0f0" }}
+                />
+                <div className="text-center" style={{ fontFamily: "Times New Roman, serif" }}>
+                  <p style={{ fontSize: "11pt", fontWeight: 700, color: "#1a1a1a", margin: "0 0 4px" }}>
+                    Figure {fig.figureNumber} — {fig.title}
+                  </p>
+                  <p style={{ fontSize: "9pt", fontStyle: "italic", color: "#666", margin: 0 }}>
+                    {fig.formattedSource || (fig.source ? `Source : ${fig.source}` : "Source : [À compléter]")}
+                  </p>
+                </div>
               </div>
             </div>
           ))}

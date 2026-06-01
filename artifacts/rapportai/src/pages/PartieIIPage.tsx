@@ -630,6 +630,7 @@ export default function PartieIIPage() {
                 sectionTitle="Partie II"
                 wordCount={wordCount}
                 sectionId="partie-ii"
+                figurePlacement="Partie II"
               />
             ) : (
               <div className="h-full overflow-y-auto bg-[#f9f8ff] p-6">
