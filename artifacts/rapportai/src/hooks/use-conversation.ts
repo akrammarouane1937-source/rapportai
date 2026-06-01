@@ -1,4 +1,5 @@
 import { useState, useCallback, useRef, useEffect, createElement, type ReactNode } from "react";
+import { flushSync } from "react-dom";
 import { fetchEventSource } from "@microsoft/fetch-event-source";
 import { API_BASE } from "@/lib/apiBase";
 import { useGenerate } from "./use-generate";
@@ -382,14 +383,18 @@ export function useConversation({
 
             if (data.text) {
               streamingText += data.text as string;
-              if (!hasStartedStreaming) {
-                hasStartedStreaming = true;
-                setMessages((prev) => [...prev, { id: streamingId, role: "agent", content: streamingText }]);
-              } else {
-                setMessages((prev) =>
-                  prev.map((m) => m.id === streamingId ? { ...m, content: streamingText } : m)
-                );
-              }
+              // flushSync forces React 18 to render each token immediately
+              // instead of batching them — fixes the "text appears all at once" bug
+              flushSync(() => {
+                if (!hasStartedStreaming) {
+                  hasStartedStreaming = true;
+                  setMessages((prev) => [...prev, { id: streamingId, role: "agent", content: streamingText }]);
+                } else {
+                  setMessages((prev) =>
+                    prev.map((m) => m.id === streamingId ? { ...m, content: streamingText } : m)
+                  );
+                }
+              });
             }
 
             if (data.action) {

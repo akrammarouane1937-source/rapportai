@@ -10,6 +10,7 @@
     "typecheck": "tsc -p tsconfig.json --noEmit"
   },
   "dependencies": {
+    "@ai-sdk/anthropic": "^3.0.81",
     "@anthropic-ai/claude-agent-sdk": "0.2.138",
     "@anthropic-ai/claude-code": "2.1.138",
     "@anthropic-ai/sdk": "^0.78.0",
@@ -19,6 +20,7 @@
     "@workspace/api-zod": "workspace:*",
     "@workspace/db": "workspace:*",
     "@workspace/integrations-anthropic-ai": "workspace:*",
+    "ai": "^6.0.193",
     "cookie-parser": "^1.4.7",
     "cors": "^2",
     "drizzle-orm": "catalog:",

@@ -1,10 +1,9 @@
 import { Router, type Request, type Response } from "express";
+import Anthropic from "@anthropic-ai/sdk";
 
 const router = Router();
 
-const ANTHROPIC_API = "https://api.anthropic.com/v1/messages";
-
-// Strip emoji from streamed text — guaranteed fix regardless of model behaviour
+// Strip emoji from streamed text
 const EMOJI_RE =
   /[\u{1F600}-\u{1F64F}\u{1F300}-\u{1F5FF}\u{1F680}-\u{1F6FF}\u{1F700}-\u{1F77F}\u{1F780}-\u{1F7FF}\u{1F800}-\u{1F8FF}\u{1F900}-\u{1F9FF}\u{1FA00}-\u{1FA6F}\u{1FA70}-\u{1FAFF}\u{2600}-\u{26FF}\u{2700}-\u{27BF}\u{231A}-\u{231B}\u{23E9}-\u{23F3}\u{23F8}-\u{23FA}\u{25AA}-\u{25AB}\u{25B6}\u{25C0}\u{25FB}-\u{25FE}\u{2614}-\u{2615}\u{2648}-\u{2653}\u{267F}\u{2693}\u{26A1}\u{26AA}-\u{26AB}\u{26BD}-\u{26BE}\u{26C4}-\u{26C5}\u{26CE}\u{26D4}\u{26EA}\u{26F2}-\u{26F3}\u{26F5}\u{26FA}\u{26FD}\u{2702}\u{2705}\u{2708}-\u{270D}\u{270F}\u{2712}\u{2714}\u{2716}\u{271D}\u{2721}\u{2728}\u{2733}-\u{2734}\u{2744}\u{2747}\u{274C}\u{274E}\u{2753}-\u{2755}\u{2757}\u{2763}-\u{2764}\u{2795}-\u{2797}\u{27A1}\u{27B0}\u{27BF}\u{2934}-\u{2935}\u{2B05}-\u{2B07}\u{2B1B}-\u{2B1C}\u{2B50}\u{2B55}\u{3030}\u{303D}\u{3297}\u{3299}]/gu;
 function stripEmoji(t: string): string {
@@ -141,27 +140,46 @@ Si aucun tableau trouvé → "## Liste des tableaux\n\n*(Aucun tableau dans ce r
 ACTION OBLIGATOIRE dans la même réponse : generate_section("liste-tableaux") → step_complete.`,
 };
 
-const TOOLS = [
+// ─── Tool definitions ─────────────────────────────────────────────────────────
+
+const TOOLS: Anthropic.Tool[] = [
   {
     name: "generate_section",
-    description: "Déclenche la génération d'une section du rapport. Inclus dans 'context' TOUS les noms, préférences, fichiers fournis et détails mentionnés.",
+    description:
+      "Déclenche la génération d'une section du rapport. Inclus dans 'context' TOUS les noms, préférences, fichiers fournis et détails mentionnés.",
     input_schema: {
-      type: "object" as const,
+      type: "object",
       properties: {
-        section: { type: "string", description: "ID: page-de-garde | dedicaces | remerciements | resume | abstract | sommaire | introduction | conclusion | bibliographie | abbreviations" },
-        context: { type: "string", description: "Instructions complètes incluant noms, demandes spécifiques, structure du template si fourni." },
+        section: {
+          type: "string",
+          description:
+            "ID: page-de-garde | dedicaces | remerciements | resume | sommaire | introduction | conclusion | bibliographie | abbreviations | liste-figures | liste-tableaux",
+        },
+        context: {
+          type: "string",
+          description:
+            "Instructions complètes incluant noms, demandes spécifiques, structure du template si fourni.",
+        },
       },
       required: ["section", "context"],
     },
   },
   {
     name: "ask_user",
-    description: "Pose une question à l'étudiant avec des choix cliquables. Utilise UNIQUEMENT quand tu as 2 à 4 options courtes et claires — jamais pour des questions ouvertes. Exemple : proposer le plan avant de générer, choisir le ton des dédicaces, confirmer une direction.",
+    description:
+      "Pose une question à l'étudiant avec des choix cliquables. Utilise UNIQUEMENT quand tu as 2 à 4 options courtes et claires.",
     input_schema: {
-      type: "object" as const,
+      type: "object",
       properties: {
-        question: { type: "string", description: "La question courte à poser (sans emoji, max 1 phrase)." },
-        choices:  { type: "array", items: { type: "string" }, description: "2 à 4 options courtes et cliquables." },
+        question: {
+          type: "string",
+          description: "La question courte à poser (sans emoji, max 1 phrase).",
+        },
+        choices: {
+          type: "array",
+          items: { type: "string" },
+          description: "2 à 4 options courtes et cliquables.",
+        },
       },
       required: ["question", "choices"],
     },
@@ -170,25 +188,57 @@ const TOOLS = [
     name: "step_complete",
     description: "Appelle ceci quand toutes les sections requises ont été générées.",
     input_schema: {
-      type: "object" as const,
+      type: "object",
       properties: {
-        message: { type: "string", description: "Message de confirmation (texte brut, sans emojis)" },
+        message: {
+          type: "string",
+          description: "Message de confirmation (texte brut, sans emojis)",
+        },
       },
       required: ["message"],
     },
   },
 ];
 
+// ─── System prompt builder ────────────────────────────────────────────────────
+
+function buildSystem(step: number, profile: Record<string, string>, generatedSections: string[]): string {
+  const stepSystem = STEP_SYSTEMS[step] ?? "Tu es l'assistant de RapportAI. Aide l'étudiant en français.";
+  return `${stepSystem}
+
+━━━ PROFIL COMPLET DE L'ÉTUDIANT (DÉJÀ CONNU — NE PAS RE-DEMANDER) ━━━
+- Nom : ${profile.studentName ?? ""}
+- École : ${profile.school ?? ""}
+- Filière : ${profile.filiere ?? ""}
+- Type de rapport : ${profile.reportType ?? ""}
+- Thème : ${profile.theme ?? ""}
+- Année académique : ${profile.academicYear ?? ""}
+${profile.reportColor ? `- Couleur choisie pour le rapport : ${profile.reportColor}` : ""}
+${profile.encadrantPeda ? `- Encadrant pédagogique : ${profile.encadrantPeda}` : ""}
+${profile.encadrantPro ? `- Encadrant professionnel : ${profile.encadrantPro}` : ""}
+${profile.entreprise ? `- Entreprise / lieu de stage : ${profile.entreprise}` : ""}
+${profile.ville ? `- Ville : ${profile.ville}` : ""}
+${profile.dateDebutStage ? `- Début stage : ${profile.dateDebutStage}` : ""}
+${profile.dateFinStage ? `- Fin stage : ${profile.dateFinStage}` : ""}
+${profile.juryMember1 ? `- Jury 1 : ${profile.juryMember1}` : ""}
+${profile.juryMember2 ? `- Jury 2 : ${profile.juryMember2}` : ""}
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+RÈGLES ABSOLUES :
+1. Les informations du profil ci-dessus sont DÉJÀ CONNUES. Ne demande JAMAIS quelque chose qui est déjà dans le profil.
+2. Si l'étudiant joint un fichier (PDF, image) → lis-le vraiment et utilise-le.
+3. Après generate_section(), appelle IMMÉDIATEMENT step_complete() dans la même réponse.
+4. "génère", "vas-y", "ok", "peu importe" ou toute variante → génère MAINTENANT sans poser de questions.
+5. INTERDIT ABSOLU : emojis et symboles Unicode décoratifs — texte brut uniquement.
+
+Sections déjà générées : ${generatedSections.length > 0 ? generatedSections.join(", ") : "aucune"}
+
+Réponds toujours en français. Sois naturel et humain.`;
+}
 
 // ─── POST /api/converse/intent ────────────────────────────────────────────────
-// Lightweight (Haiku, non-streaming) endpoint that decides whether a student's
-// free-text input is:
-//   • a real answer  → { type: "answer", value: "<normalised value>" }
-//   • a skip intent  → { type: "skip" }
-//   • anything else  → { type: "reply", text: "<conversational reply>" }
-//
-// The frontend uses this for ALL text inputs in step-1 phases (theme, school,
-// filière, année). No client-side heuristics — Claude decides.
+
+const ANTHROPIC_API = "https://api.anthropic.com/v1/messages";
 
 const PHASE_QUESTIONS: Record<string, string> = {
   theme:   "C'est quoi le thème / sujet de ton rapport ?",
@@ -262,8 +312,7 @@ Jamais d'emojis. Jamais de listes.`;
     const raw = data.content.find((b) => b.type === "text")?.text?.trim() ?? "";
 
     if (raw.startsWith("ANSWER:")) {
-      const value = raw.slice(7).trim();
-      res.json({ type: "answer", value });
+      res.json({ type: "answer", value: raw.slice(7).trim() });
     } else if (raw === "SKIP") {
       res.json({ type: "skip" });
     } else {
@@ -286,6 +335,12 @@ type ApiMessage = {
   role: "user" | "assistant";
   content: string | ContentBlock[];
 };
+
+// ─── SSE helpers ──────────────────────────────────────────────────────────────
+
+function sseWrite(res: Response, data: Record<string, unknown>): void {
+  res.write(`data: ${JSON.stringify(data)}\n\n`);
+}
 
 // ─── POST /api/converse ───────────────────────────────────────────────────────
 
@@ -310,132 +365,76 @@ router.post("/converse", async (req: Request, res: Response) => {
   };
   const convoMessages = compressMessages(messages);
 
-  const stepSystem = STEP_SYSTEMS[step] ?? "Tu es l'assistant de RapportAI. Aide l'étudiant en français.";
-
-  const system = `${stepSystem}
-
-━━━ PROFIL COMPLET DE L'ÉTUDIANT (DÉJÀ CONNU — NE PAS RE-DEMANDER) ━━━
-- Nom : ${profile.studentName ?? ""}
-- École : ${profile.school ?? ""}
-- Filière : ${profile.filiere ?? ""}
-- Type de rapport : ${profile.reportType ?? ""}
-- Thème : ${profile.theme ?? ""}
-- Année académique : ${(profile as Record<string, string>).academicYear ?? ""}
-${(profile as Record<string, string>).reportColor ? `- Couleur choisie pour le rapport : ${(profile as Record<string, string>).reportColor}` : ""}
-${profile.encadrantPeda ? `- Encadrant pédagogique : ${profile.encadrantPeda}` : ""}
-${profile.encadrantPro ? `- Encadrant professionnel : ${profile.encadrantPro}` : ""}
-${profile.entreprise ? `- Entreprise / lieu de stage : ${profile.entreprise}` : ""}
-${(profile as Record<string, string>).ville ? `- Ville : ${(profile as Record<string, string>).ville}` : ""}
-${(profile as Record<string, string>).dateDebutStage ? `- Début stage : ${(profile as Record<string, string>).dateDebutStage}` : ""}
-${(profile as Record<string, string>).dateFinStage ? `- Fin stage : ${(profile as Record<string, string>).dateFinStage}` : ""}
-${(profile as Record<string, string>).juryMember1 ? `- Jury 1 : ${(profile as Record<string, string>).juryMember1}` : ""}
-${(profile as Record<string, string>).juryMember2 ? `- Jury 2 : ${(profile as Record<string, string>).juryMember2}` : ""}
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-
-RÈGLES ABSOLUES :
-1. Les informations du profil ci-dessus sont DÉJÀ CONNUES. Ne demande JAMAIS quelque chose qui est déjà dans le profil.
-2. Si l'étudiant joint un fichier (PDF, image) → lis-le vraiment et utilise-le.
-3. Après generate_section(), appelle IMMÉDIATEMENT step_complete() dans la même réponse.
-4. "génère", "vas-y", "ok", "peu importe" ou toute variante → génère MAINTENANT sans poser de questions.
-5. INTERDIT ABSOLU : emojis et symboles Unicode décoratifs — texte brut uniquement.
-
-Sections déjà générées : ${generatedSections.length > 0 ? generatedSections.join(", ") : "aucune"}
-
-Réponds toujours en français. Sois naturel et humain.`;
+  const system = buildSystem(step, profile, generatedSections);
+  const model = step === 5 ? "claude-sonnet-4-5" : "claude-haiku-4-5";
+  const maxTokens = step === 5 ? 2048 : 1500;
 
   res.setHeader("Content-Type", "text/event-stream");
   res.setHeader("Cache-Control", "no-cache");
   res.setHeader("Connection", "keep-alive");
   res.flushHeaders();
 
+  const anthropic = new Anthropic({ apiKey });
+
   try {
-    const anthropicRes = await fetch(ANTHROPIC_API, {
-      method: "POST",
-      headers: {
-        "anthropic-version": "2023-06-01",
-        "x-api-key": apiKey,
-        "content-type": "application/json",
-      },
-      body: JSON.stringify({
-        model: step === 5 ? "claude-sonnet-4-5" : "claude-haiku-4-5",
-        max_tokens: step === 5 ? 2048 : 1500,
-        stream: true,
-        system,
-        messages: convoMessages,
-        tools: TOOLS,
-        tool_choice: { type: "auto" },
-      }),
+    const stream = anthropic.messages.stream({
+      model,
+      max_tokens: maxTokens,
+      system,
+      tools: TOOLS,
+      messages: convoMessages as Anthropic.MessageParam[],
     });
 
-    if (!anthropicRes.ok) {
-      const errText = await anthropicRes.text();
-      res.write(`data: ${JSON.stringify({ error: `API error: ${errText.slice(0, 200)}` })}\n\n`);
-      res.end();
-      return;
-    }
+    const pendingActions: Array<Record<string, unknown>> = [];
+    let toolAccumulator: Record<number, { name: string; jsonStr: string }> = {};
 
-    const reader = anthropicRes.body!.getReader();
-    const decoder = new TextDecoder();
-    let buffer = "";
-    let currentToolName = "";
-    let currentToolInput = "";
-    let inToolUse = false;
+    for await (const event of stream) {
+      // Stream text token-by-token
+      if (
+        event.type === "content_block_delta" &&
+        event.delta.type === "text_delta"
+      ) {
+        const clean = stripEmoji(event.delta.text);
+        if (clean) sseWrite(res, { text: clean });
+      }
 
-    while (true) {
-      const { value, done } = await reader.read();
-      if (done) break;
-
-      buffer += decoder.decode(value, { stream: true });
-      const lines = buffer.split("\n");
-      buffer = lines.pop() ?? "";
-
-      for (const line of lines) {
-        if (!line.startsWith("data: ")) continue;
-        const raw = line.slice(6).trim();
-        if (!raw || raw === "[DONE]") continue;
-
-        let event: Record<string, unknown>;
-        try { event = JSON.parse(raw); } catch { continue; }
-
-        const type = event.type as string;
-
-        if (type === "content_block_start") {
-          const block = event.content_block as { type: string; name?: string };
-          if (block.type === "tool_use") {
-            inToolUse = true;
-            currentToolName = block.name ?? "";
-            currentToolInput = "";
-          }
-        }
-
-        if (type === "content_block_delta") {
-          const delta = event.delta as { type: string; text?: string; partial_json?: string };
-          if (delta.type === "text_delta" && delta.text) {
-            const clean = stripEmoji(delta.text);
-            if (clean) res.write(`data: ${JSON.stringify({ text: clean })}\n\n`);
-          }
-          if (delta.type === "input_json_delta" && delta.partial_json) {
-            currentToolInput += delta.partial_json;
-          }
-        }
-
-        if (type === "content_block_stop" && inToolUse) {
-          inToolUse = false;
-          let toolInput: Record<string, unknown> = {};
-          try { toolInput = JSON.parse(currentToolInput); } catch { /* malformed */ }
-
-          res.write(`data: ${JSON.stringify({ action: { type: currentToolName, ...toolInput } })}\n\n`);
-
-          currentToolName = "";
-          currentToolInput = "";
+      // Accumulate tool call JSON
+      if (
+        event.type === "content_block_start" &&
+        event.content_block.type === "tool_use"
+      ) {
+        toolAccumulator[event.index] = {
+          name: event.content_block.name,
+          jsonStr: "",
+        };
+      }
+      if (
+        event.type === "content_block_delta" &&
+        event.delta.type === "input_json_delta"
+      ) {
+        const acc = toolAccumulator[event.index];
+        if (acc) acc.jsonStr += event.delta.partial_json;
+      }
+      if (event.type === "content_block_stop") {
+        const acc = toolAccumulator[event.index];
+        if (acc) {
+          try {
+            const input = JSON.parse(acc.jsonStr || "{}") as Record<string, unknown>;
+            pendingActions.push({ type: acc.name, ...input });
+          } catch { /* malformed JSON */ }
+          delete toolAccumulator[event.index];
         }
       }
     }
 
-    res.write(`data: ${JSON.stringify({ done: true })}\n\n`);
+    // After stream: write collected tool actions then done
+    for (const action of pendingActions) {
+      sseWrite(res, { action });
+    }
+    sseWrite(res, { done: true });
   } catch (err) {
     const msg = err instanceof Error ? err.message : "Unknown error";
-    res.write(`data: ${JSON.stringify({ error: msg })}\n\n`);
+    sseWrite(res, { error: msg });
   } finally {
     res.end();
   }
