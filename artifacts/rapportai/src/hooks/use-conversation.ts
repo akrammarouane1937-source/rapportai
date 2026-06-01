@@ -80,7 +80,7 @@ async function processFiles(files: File[]): Promise<ContentBlock[]> {
       try {
         const formData = new FormData();
         formData.append("pdf", file, file.name);
-        const previewResp = await fetch(`${API_BASE}/pdf-preview`, { method: "POST", body: formData });
+        const previewResp = await fetch(`${API_BASE}/api/pdf-preview`, { method: "POST", body: formData });
         if (previewResp.ok) {
           const { images } = await previewResp.json() as { images: Array<{ page: number; base64: string }> };
           for (const img of images) {

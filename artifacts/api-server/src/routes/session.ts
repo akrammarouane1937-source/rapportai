@@ -17,7 +17,7 @@ import { guardSectionLimit, guardRevisionLimit, guardPayment } from "../lib/plan
 import { logger } from "../lib/logger";
 import { streamingHumanize } from "../lib/humanize-util";
 import { metrics, estimateCost, estimateTokens } from "../lib/metrics";
-import { writeFileSync, mkdirSync } from "fs";
+import { writeFileSync, mkdirSync, readdirSync, unlinkSync } from "fs";
 import path from "path";
 import sharp from "sharp";
 import { fromBuffer as pdfFromBuffer } from "pdf2pic";
@@ -423,6 +423,12 @@ router.post(
             try {
               const figuresDir = path.join(agent.workDir, "figures");
               mkdirSync(figuresDir, { recursive: true });
+              // Clear stale pages from a previous PDF upload before writing new ones
+              for (const f of readdirSync(figuresDir)) {
+                if (/^page-\d+\.png$/.test(f) || f === "manifest.json") {
+                  unlinkSync(path.join(figuresDir, f));
+                }
+              }
               const convert = pdfFromBuffer(file.buffer, { density: 150, format: "png", width: 1240, height: 1754 });
               const allPages = await convert.bulk(-1, { responseType: "buffer" });
               for (let i = 0; i < allPages.length; i++) {
@@ -794,6 +800,12 @@ router.post(
           try {
             const figuresDir = path.join(agent.workDir, "figures");
             mkdirSync(figuresDir, { recursive: true });
+            // Clear stale pages from a previous PDF upload before writing new ones
+            for (const f of readdirSync(figuresDir)) {
+              if (/^page-\d+\.png$/.test(f) || f === "manifest.json") {
+                unlinkSync(path.join(figuresDir, f));
+              }
+            }
             const convert = pdfFromBuffer(file.buffer, { density: 150, format: "png", width: 1240, height: 1754 });
             const allPages = await convert.bulk(-1, { responseType: "buffer" });
             for (let i = 0; i < allPages.length; i++) {
