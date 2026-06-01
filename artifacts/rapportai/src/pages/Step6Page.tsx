@@ -20,9 +20,13 @@ export default function Step6Page() {
   const [problematique, setProblematique] = useState(report.problematique ?? "");
   const [editingProb, setEditingProb] = useState(false);
   const [objectifs, setObjectifs] = useState("");
-  const [streamedContent, setStreamedContent] = useState("");
-  const [streamedWordCount, setStreamedWordCount] = useState(0);
-  const rawTextRef = useRef("");
+  const [streamedContent, setStreamedContent] = useState(() =>
+    report.introduction ? markdownToHtml(report.introduction) : ""
+  );
+  const [streamedWordCount, setStreamedWordCount] = useState(() =>
+    report.introduction ? report.introduction.split(/\s+/).filter(Boolean).length : 0
+  );
+  const rawTextRef = useRef(report.introduction ?? "");
 
   const onChunk = useCallback((chunk: string) => {
     rawTextRef.current += chunk;
