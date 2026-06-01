@@ -330,7 +330,11 @@ export class SDKReportAgent {
     const figImageNote = figImages.length > 0
       ? `\nImages PNG des pages du PDF disponibles (${figImages.length} page(s)) : ${figImages.join(", ")}. ` +
         `Utilise Read sur ces fichiers pour voir visuellement les graphiques, tableaux et schémas du document. ` +
-        `Intègre les figures pertinentes que tu identifies dans le texte avec une référence naturelle.\n`
+        `Quand tu références une figure extraite du PDF dans le texte, insère une ligne Markdown d'image IMMÉDIATEMENT après la phrase de référence, ` +
+        `en utilisant le format exact : ![Figure N](figures/page-X.png) où N est le numéro de la figure et X est le numéro de la page PDF. ` +
+        `Exemple : « Comme l'illustre la Figure 1 ci-dessous, [...] »\n![Figure 1](figures/page-2.png)\n` +
+        `*Figure 1 — Titre de la figure. Source : ...*\n` +
+        `Ne laisse jamais de référence textuelle sans son image Markdown correspondante.\n`
       : "";
 
     switch (section) {

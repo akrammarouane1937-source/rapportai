@@ -1,11 +1,136 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { motion, Reorder, AnimatePresence } from "framer-motion";
-import { FileText, Search, CheckCircle2, Clock, ChevronRight, LayoutGrid, GripVertical, Lock, ArrowUpDown, ListOrdered, ChevronDown, ChevronUp } from "lucide-react";
+import { FileText, Search, CheckCircle2, Clock, ChevronRight, LayoutGrid, GripVertical, Lock, ArrowUpDown, ListOrdered, ChevronDown, ChevronUp, ImageIcon } from "lucide-react";
 import { useLocation } from "wouter";
 import { Sidebar, SidebarSpacer } from "@/components/layout/Sidebar";
 import { FloatingChat } from "@/components/dashboard/FloatingChat";
 import { useReportStore } from "@/lib/store";
 import { ReportToc } from "@/components/report/ReportToc";
+import { getApprovedFigures, type ApprovedFigure } from "@/lib/figureStore";
+import { API_BASE } from "@/lib/apiBase";
+import { getReport } from "@/lib/reportStore";
+
+// ─── Figures annexe component ─────────────────────────────────────────────────
+
+function FiguresAnnexe({ sessionId: sessionIdProp, reportText }: { sessionId?: string; reportText: string }) {
+  const [open, setOpen] = useState(false);
+  const [figures, setFigures] = useState<ApprovedFigure[]>([]);
+
+  // Reload approved figures on mount and when store changes
+  useEffect(() => {
+    const load = () => setFigures(getApprovedFigures());
+    load();
+    window.addEventListener("rapportai:figures-changed", load);
+    return () => window.removeEventListener("rapportai:figures-changed", load);
+  }, []);
+
+  // Fall back to localStorage if Zustand hasn't synced sessionId yet
+  const sessionId = sessionIdProp ?? getReport().sessionId;
+
+  // Extract page-N.png references from report markdown text
+  const pageImageFilenames = [...new Set(
+    Array.from(reportText.matchAll(/!\[[^\]]*\]\(figures\/(page-\d+\.png)\)/g)).map(m => m[1])
+  )];
+  const pageImages = sessionId
+    ? pageImageFilenames.map(fn => ({
+        path: fn,
+        url: `${API_BASE}/api/session/${sessionId}/figures/${fn}`,
+      }))
+    : [];
+
+  const hasFigures = figures.length > 0 || pageImages.length > 0;
+  if (!hasFigures) return null;
+
+  return (
+    <div className="mt-4 rounded-2xl border border-gray-100 overflow-hidden">
+      <button
+        onClick={() => setOpen((v) => !v)}
+        className="w-full flex items-center gap-3 px-5 py-3.5 text-left hover:bg-gray-50 transition-colors"
+      >
+        <div className="w-7 h-7 rounded-lg flex items-center justify-center flex-shrink-0"
+             style={{ background: "linear-gradient(135deg,#7c3aed,#a855f7)" }}>
+          <ImageIcon className="w-3.5 h-3.5 text-white" />
+        </div>
+        <span className="flex-1 text-sm font-bold text-gray-800"
+              style={{ fontFamily: "'Plus Jakarta Sans', sans-serif" }}>
+          Figures du rapport
+        </span>
+        <span className="text-[11px] text-gray-400 font-medium mr-1">
+          {figures.length} figure{figures.length > 1 ? "s" : ""} approuvée{figures.length > 1 ? "s" : ""}
+        </span>
+        {open
+          ? <ChevronUp className="w-4 h-4 text-gray-300" />
+          : <ChevronDown className="w-4 h-4 text-gray-300" />}
+      </button>
+      <AnimatePresence>
+        {open && (
+          <motion.div
+            initial={{ height: 0, opacity: 0 }}
+            animate={{ height: "auto", opacity: 1 }}
+            exit={{ height: 0, opacity: 0 }}
+            transition={{ duration: 0.2 }}
+            className="overflow-hidden border-t border-gray-100"
+          >
+            <div className="p-4">
+              {figures.length > 0 && (
+                <>
+                  <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-3">
+                    Figures approuvées (intégrées au Word)
+                  </p>
+                  <div className="grid grid-cols-2 md:grid-cols-3 gap-3 mb-4">
+                    {figures.map((fig) => (
+                      <div key={fig.id} className="rounded-xl border border-gray-100 overflow-hidden bg-white">
+                        <img
+                          src={fig.pngBase64}
+                          alt={fig.title}
+                          className="w-full object-contain"
+                          style={{ maxHeight: 140, background: "#f9fafb" }}
+                        />
+                        <div className="px-2 py-1.5">
+                          <p className="text-[11px] font-semibold text-gray-700 truncate">
+                            Figure {fig.figureNumber} — {fig.title}
+                          </p>
+                          <p className="text-[10px] text-gray-400 truncate">{fig.formattedSource}</p>
+                          <span className="inline-block mt-0.5 text-[9px] px-1.5 py-0.5 rounded-full font-medium"
+                                style={{ background: "#f5f0ff", color: "#7c3aed" }}>
+                            {fig.placement}
+                          </span>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </>
+              )}
+              {pageImages.length > 0 && (
+                <>
+                  <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-3">
+                    Pages PDF référencées dans le texte
+                  </p>
+                  <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
+                    {pageImages.map((pg) => (
+                      <div key={pg.path} className="rounded-xl border border-gray-100 overflow-hidden bg-white">
+                        <img
+                          src={pg.url}
+                          alt={pg.path}
+                          className="w-full object-contain"
+                          style={{ maxHeight: 180, background: "#f9fafb" }}
+                          onError={(e) => { (e.currentTarget.parentElement as HTMLElement).style.display = "none"; }}
+                        />
+                        <div className="px-2 py-1.5">
+                          <p className="text-[11px] text-gray-500 truncate">{pg.path}</p>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </>
+              )}
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+    </div>
+  );
+}
 
 // ─── Section definitions ──────────────────────────────────────────────────────
 
@@ -389,9 +514,17 @@ export default function RapportsPage({ completedOnly = false }: RapportsPageProp
                   </div>
                 )}
 
+                {/* ── Figures du rapport collapsible ── */}
+                {!completedOnly && (
+                  <FiguresAnnexe
+                    sessionId={report.sessionId}
+                    reportText={[report.introduction, report.partieI, report.partieII, report.conclusion].join("\n")}
+                  />
+                )}
+
                 {/* ── Table des matières collapsible ── */}
                 {!completedOnly && (
-                  <div className="mt-6 rounded-2xl border border-gray-100 overflow-hidden">
+                  <div className="mt-4 rounded-2xl border border-gray-100 overflow-hidden">
                     <button
                       onClick={() => setTocOpen((v) => !v)}
                       className="w-full flex items-center gap-3 px-5 py-3.5 text-left hover:bg-gray-50 transition-colors"

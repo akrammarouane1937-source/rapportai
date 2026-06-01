@@ -17,7 +17,7 @@ import { guardSectionLimit, guardRevisionLimit, guardPayment } from "../lib/plan
 import { logger } from "../lib/logger";
 import { streamingHumanize } from "../lib/humanize-util";
 import { metrics, estimateCost, estimateTokens } from "../lib/metrics";
-import { writeFileSync, mkdirSync, readdirSync, unlinkSync } from "fs";
+import { writeFileSync, mkdirSync, readdirSync, unlinkSync, existsSync, readFileSync as fsReadFileSync } from "fs";
 import path from "path";
 import sharp from "sharp";
 import { fromBuffer as pdfFromBuffer } from "pdf2pic";
@@ -1022,6 +1022,35 @@ router.post("/session/:sessionId/complete", async (req: Request, res: Response) 
     }
   }
   res.json({ ok: true });
+});
+
+// ─── GET /api/session/:sessionId/figures/:filename ────────────────────────────
+// Serves extracted PDF page images (page-N.png) from the session work directory.
+// Used by the frontend to embed figures in the Mon Rapport preview and DOCX export.
+
+router.get("/session/:sessionId/figures/:filename", (req: Request, res: Response): void => {
+  const sessionId = req.params["sessionId"] as string;
+  const filename  = req.params["filename"]  as string;
+  // Only allow page-N.png and similar safe filenames (no path traversal)
+  if (!/^[\w.-]+\.png$/i.test(filename)) {
+    res.status(400).json({ error: "Nom de fichier invalide." });
+    return;
+  }
+  // Revive directly as SDKReportAgent so workDir is accessible
+  const agent = SDKReportAgent.reviveFromDisk(sessionId);
+  if (!agent) {
+    res.status(404).json({ error: "Session introuvable." });
+    return;
+  }
+  const filePath = path.join(agent.workDir, "figures", filename);
+  if (!existsSync(filePath)) {
+    res.status(404).json({ error: "Image introuvable." });
+    return;
+  }
+  const buf = fsReadFileSync(filePath);
+  res.setHeader("Content-Type", "image/png");
+  res.setHeader("Cache-Control", "private, max-age=3600");
+  res.send(buf);
 });
 
 // ─── DELETE /api/session/:sessionId ──────────────────────────────────────────

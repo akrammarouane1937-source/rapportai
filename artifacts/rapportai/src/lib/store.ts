@@ -74,6 +74,10 @@ export interface Report {
   uploadedFiles: UploadedFile[];
   abbreviationsGenerated: boolean;
   pendingContextInjection: string;
+
+  // Session
+  sessionId?: string;
+  sessionCreatedAt?: number;
 }
 
 export const initialReportState: Report = {
@@ -128,6 +132,9 @@ export const initialReportState: Report = {
   uploadedFiles: [],
   abbreviationsGenerated: false,
   pendingContextInjection: "",
+
+  sessionId: undefined,
+  sessionCreatedAt: undefined,
 };
 
 interface ReportStore {

@@ -99,6 +99,8 @@ export function saveReport(patch: Partial<ReportData>): void {
     if ("conclusion"        in patch) z.conclusion       = patch.conclusion       ?? "";
     if ("bibliographieText" in patch) z.bibliographieText = patch.bibliographieText ?? "";
     if ("problematique"     in patch) z.problematique    = patch.problematique    ?? "";
+    if ("sessionId"         in patch) z.sessionId        = patch.sessionId;
+    if ("sessionCreatedAt"  in patch) z.sessionCreatedAt = patch.sessionCreatedAt;
     if (Object.keys(z).length > 0) {
       useReportStore.getState().updateReport(z);
     }

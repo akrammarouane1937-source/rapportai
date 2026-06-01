@@ -25,6 +25,7 @@ import {
 import type { Report } from "./store";
 import { getApprovedFigures, type ApprovedFigure } from "./figureStore";
 import { useUserSettingsStore, type FormattingPrefs } from "./userSettingsStore";
+import { API_BASE } from "./apiBase";
 
 // ─── Constants (mutable — set from the user's mise en forme at export time) ────
 
@@ -157,8 +158,52 @@ function centerPara(text: string, size = BODY_PT, bold = false): Paragraph {
 // Matches agent-written figure/table captions: *Figure N — Titre. Source: ...*
 const CAPTION_RE = /^\*{1,2}((?:Figure|Tableau|Fig\.?|Tab\.?)\s+[\d.]+\s*[—–-].+)\*{1,2}$/i;
 
-// Matches markdown image lines: ![alt](path)
-const IMAGE_RE = /^!\[([^\]]*)\]\([^)]*\)$/;
+// Matches markdown image lines: ![alt](path) — captures both alt text and path
+const IMAGE_RE = /^!\[([^\]]*)\]\(([^)]*)\)$/;
+
+// Extract all figures/page-N.png paths referenced in markdown text (inline, not just line-start)
+function collectFigurePaths(md: string): string[] {
+  const paths: string[] = [];
+  const re = /!\[[^\]]*\]\((figures\/[^)]+)\)/g;
+  let m: RegExpExecArray | null;
+  while ((m = re.exec(md)) !== null) {
+    if (!paths.includes(m[1])) paths.push(m[1]);
+  }
+  return paths;
+}
+
+// Fetch a figure image from the session API and return as Uint8Array.
+// Returns null on any failure (network, 404, etc.)
+async function fetchFigureImage(sessionId: string, figurePath: string, basePath: string): Promise<Uint8Array | null> {
+  try {
+    // figurePath is e.g. "figures/page-1.png"
+    const filename = figurePath.split("/").pop();
+    if (!filename) return null;
+    const url = `${basePath}/api/session/${sessionId}/figures/${filename}`;
+    const resp = await fetch(url);
+    if (!resp.ok) return null;
+    const buf = await resp.arrayBuffer();
+    return new Uint8Array(buf);
+  } catch {
+    return null;
+  }
+}
+
+// Build an ImageRun paragraph from raw PNG bytes, centered, A4-safe size
+function imageRunPara(data: Uint8Array, maxW = MAX_FIG_W, maxH = MAX_FIG_H): Paragraph {
+  const { width, height } = scaleFigure(800, 600, maxW, maxH); // default to landscape figure size
+  return new Paragraph({
+    alignment: AlignmentType.CENTER,
+    spacing: { before: 360, after: 60 },
+    children: [
+      new ImageRun({
+        data,
+        transformation: { width, height },
+        type: "png",
+      }),
+    ],
+  });
+}
 
 function agentCaptionPara(text: string): Paragraph {
   // Strip leading/trailing asterisks already removed by regex group
@@ -187,7 +232,8 @@ function imagePlaceholderPara(alt: string): Paragraph {
   });
 }
 
-function markdownToParas(md: string): Paragraph[] {
+// imageMap: pre-fetched figure images keyed by their "figures/page-N.png" path
+function markdownToParas(md: string, imageMap?: Map<string, Uint8Array>): Paragraph[] {
   if (!md?.trim()) return [bodyPara("(Section non générée)")];
 
   const lines = md.split("\n");
@@ -227,7 +273,15 @@ function markdownToParas(md: string): Paragraph[] {
       } else if (IMAGE_RE.test(line)) {
         flushBuf();
         const imgMatch = line.match(IMAGE_RE);
-        paras.push(imagePlaceholderPara(imgMatch?.[1] ?? ""));
+        const altText = imgMatch?.[1] ?? "";
+        const imgPath = imgMatch?.[2] ?? "";
+        // Try to embed the actual image if we have it in the map
+        const imgData = imageMap?.get(imgPath);
+        if (imgData) {
+          paras.push(imageRunPara(imgData));
+        } else {
+          paras.push(imagePlaceholderPara(altText));
+        }
       } else {
         buf += (buf ? " " : "") + line;
       }
@@ -513,35 +567,35 @@ function buildSommaire(d: Report): Paragraph[] {
   return sommaireLines;
 }
 
-function buildIntroduction(d: Report): Paragraph[] {
+function buildIntroduction(d: Report, imageMap?: Map<string, Uint8Array>): Paragraph[] {
   return [
     heading1("Introduction Générale"),
     emptyLine(),
-    ...markdownToParas(d.introduction || ""),
+    ...markdownToParas(d.introduction || "", imageMap),
   ];
 }
 
-function buildPartieI(d: Report): Paragraph[] {
+function buildPartieI(d: Report, imageMap?: Map<string, Uint8Array>): Paragraph[] {
   return [
     heading1("Partie I"),
     emptyLine(),
-    ...markdownToParas(d.partieI || ""),
+    ...markdownToParas(d.partieI || "", imageMap),
   ];
 }
 
-function buildPartieII(d: Report): Paragraph[] {
+function buildPartieII(d: Report, imageMap?: Map<string, Uint8Array>): Paragraph[] {
   return [
     heading1("Partie II"),
     emptyLine(),
-    ...markdownToParas(d.partieII || ""),
+    ...markdownToParas(d.partieII || "", imageMap),
   ];
 }
 
-function buildConclusion(d: Report): Paragraph[] {
+function buildConclusion(d: Report, imageMap?: Map<string, Uint8Array>): Paragraph[] {
   return [
     heading1("Conclusion Générale"),
     emptyLine(),
-    ...markdownToParas(d.conclusion || ""),
+    ...markdownToParas(d.conclusion || "", imageMap),
   ];
 }
 
@@ -624,11 +678,11 @@ function base64ToUint8Array(b64: string): Uint8Array {
 const MAX_FIG_W = convertMillimetersToTwip(155);
 const MAX_FIG_H = convertMillimetersToTwip(100);
 
-function scaleFigure(w: number, h: number): { width: number; height: number } {
+function scaleFigure(w: number, h: number, maxW = MAX_FIG_W, maxH = MAX_FIG_H): { width: number; height: number } {
   const wTwip = w * 15; // rough px → twip (1px ≈ 15 twip at 96dpi)
   const hTwip = h * 15;
-  const scaleW = wTwip > MAX_FIG_W ? MAX_FIG_W / wTwip : 1;
-  const scaleH = hTwip > MAX_FIG_H ? MAX_FIG_H / hTwip : 1;
+  const scaleW = wTwip > maxW ? maxW / wTwip : 1;
+  const scaleH = hTwip > maxH ? maxH / hTwip : 1;
   const scale = Math.min(scaleW, scaleH);
   return { width: Math.round(wTwip * scale), height: Math.round(hTwip * scale) };
 }
@@ -877,10 +931,36 @@ let PARAGRAPH_STYLES = buildParagraphStyles();
 
 // ─── Main export ─────────────────────────────────────────────────────────────
 
+// Pre-fetch all figures/page-N.png images referenced in the report markdown.
+// Returns a Map<path, Uint8Array> used by markdownToParas to embed real images.
+async function prefetchFigureImages(data: Report): Promise<Map<string, Uint8Array>> {
+  const sessionId = data.sessionId;
+  const imageMap = new Map<string, Uint8Array>();
+  if (!sessionId) return imageMap;
+
+  // Collect all figure paths referenced across all sections
+  const allMd = [data.introduction, data.partieI, data.partieII, data.conclusion].join("\n");
+  const paths = collectFigurePaths(allMd);
+  if (paths.length === 0) return imageMap;
+
+  // Fetch all in parallel — silently skip failures (images may not exist)
+  await Promise.all(
+    paths.map(async (p) => {
+      const data2 = await fetchFigureImage(sessionId, p, API_BASE);
+      if (data2) imageMap.set(p, data2);
+    })
+  );
+
+  return imageMap;
+}
+
 export async function generateDocx(data: Report, formatting?: FormattingPrefs): Promise<Blob> {
   applyFormatting(formatting ?? useUserSettingsStore.getState().formatting);
   const header = buildHeader(data);
   const pageBase = { page: { margin: MARGIN } };
+
+  // Pre-fetch figure images so they can be embedded inline in the body sections
+  const imageMap = await prefetchFigureImages(data);
 
   const doc = new Document({
     features: { updateFields: true },  // forces Word to update TOC on open
@@ -924,12 +1004,12 @@ export async function generateDocx(data: Report, formatting?: FormattingPrefs): 
         headers: { default: header },
         footers: { default: buildFooter() },
         children: [
-          ...buildIntroduction(data),
-          ...buildPartieI(data),
+          ...buildIntroduction(data, imageMap),
+          ...buildPartieI(data, imageMap),
           ...buildFiguresSection("Partie I"),
-          ...buildPartieII(data),
+          ...buildPartieII(data, imageMap),
           ...buildFiguresSection("Partie II"),
-          ...buildConclusion(data),
+          ...buildConclusion(data, imageMap),
           // Back-matter in user-defined order (draggable in Mon Rapport)
           ...(data.sectionOrder?.length ? data.sectionOrder : ["bibliographie", "listeDesTableaux", "annexes"])
             .flatMap((id) => {
