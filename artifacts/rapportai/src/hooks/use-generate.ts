@@ -63,7 +63,7 @@ function cleanDetail(detail: string | undefined): string | undefined {
   return cleaned.length > 40 ? cleaned.slice(0, 40) + "…" : cleaned;
 }
 
-async function getOrCreateSession(): Promise<string> {
+async function getOrCreateSession(themeOverride?: string): Promise<string> {
   const stored = localStorage.getItem(SESSION_KEY);
   const ts = localStorage.getItem(SESSION_TS_KEY);
 
@@ -80,7 +80,7 @@ async function getOrCreateSession(): Promise<string> {
     school: report.school,
     filiere: report.filiere,
     reportType: report.reportType,
-    theme: report.theme,
+    theme: (report.theme?.trim() || themeOverride?.trim() || "Rapport académique"),
     annee: report.academicYear,
     problematique: report.problematique || undefined,
     encadrantPeda: report.encadrantPeda,
@@ -245,7 +245,7 @@ export function useGenerate() {
       let finalContent = "";
 
       try {
-        const sessionId = await getOrCreateSession();
+        const sessionId = await getOrCreateSession(extraPrompt);
 
         const planData = getMyPlan();
         const planHeaders: Record<string, string> = {
@@ -366,7 +366,7 @@ export function useGenerate() {
           if (result.status === 404) {
             localStorage.removeItem(SESSION_KEY);
             localStorage.removeItem(SESSION_TS_KEY);
-            const newId = await getOrCreateSession();
+            const newId = await getOrCreateSession(extraPrompt);
             result = await doXHR(newId, false);
           }
 
@@ -407,7 +407,7 @@ export function useGenerate() {
             if (err instanceof Error && err.message === SESSION_EXPIRED) {
               localStorage.removeItem(SESSION_KEY);
               localStorage.removeItem(SESSION_TS_KEY);
-              activeSid = await getOrCreateSession();
+              activeSid = await getOrCreateSession(extraPrompt);
               await doFetchEventSource(activeSid);
             } else {
               throw err;

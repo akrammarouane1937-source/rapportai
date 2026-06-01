@@ -61,10 +61,10 @@ function validateAndSanitizeIntake(profile: Record<string, unknown>): IntakeVali
   if (!name) profile.studentName = "Étudiant";
 
   const theme = (profile.theme as string | undefined)?.trim() ?? "";
-  if (!theme || theme.length < 3)
-    return { field: "theme", message: "Thème requis (minimum 3 caractères). Retourne à l'Étape 1 pour le compléter." };
   if (theme.length > 500)
     return { field: "theme", message: "Thème trop long (maximum 500 caractères)" };
+  // Use a safe default so session always starts — agent gets real theme from chat context
+  if (!theme || theme.length < 3) profile.theme = "Rapport académique";
 
   // Use safe defaults for missing optional profile fields so generation never blocks
   if (!(profile.school as string | undefined)?.trim())
