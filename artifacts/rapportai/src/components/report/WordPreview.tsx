@@ -76,6 +76,20 @@ const MOCK_CONTENT = `
 <p>Cette approche quantitative repose sur trois hypothèses fondamentales : les investisseurs sont rationnels et averses au risque, les marchés sont efficients au sens semi-fort, et les distributions de rendements peuvent être caractérisées par leur espérance et leur variance. Ces hypothèses, bien que simplificatrices, permettent de développer un cadre analytique rigoureux et opérationnel.</p>
 `;
 
+// ── Rewrite figures/page-N.png src to the session API URL ─────────────────────
+function rewriteFigureSrcs(html: string, sessionId: string | undefined, apiBase: string): string {
+  if (!sessionId) return html;
+  return html.replace(
+    /<img([^>]*?)src="(figures\/[^"]+)"([^>]*?)>/gi,
+    (_, before, figurePath, after) => {
+      const url = `${apiBase}/api/session/${sessionId}/${figurePath}`;
+      const style = `max-width:100%;height:auto;display:block;margin:20px auto;border:1px solid #e5e7eb;border-radius:4px`;
+      const onerror = `this.style.opacity='0.25';this.title='Image non disponible'`;
+      return `<img${before}src="${url}"${after} style="${style}" loading="lazy" onerror="${onerror}">`;
+    }
+  );
+}
+
 // ── Split HTML into ~N-word pages at h2 boundaries ────────────────────────────
 function splitIntoPages(html: string, wordsPerPage = 450): string[] {
   if (!html.trim()) return [""];
@@ -706,9 +720,9 @@ export function WordPreview({
   const openHumanize  = () => { setHumanizeOpen(true);  setRevisionOpen(false); setPlagiatOpen(false); };
   const openPlagiat   = () => { setPlagiatOpen(true);   setRevisionOpen(false); setHumanizeOpen(false); };
 
-  const html  = content || MOCK_CONTENT;
-  const pages = splitIntoPages(html);
   const report = getReport();
+  const html  = rewriteFigureSrcs(content || MOCK_CONTENT, report.sessionId, BASE_PATH);
+  const pages = splitIntoPages(html);
 
   const handleCopy = () => {
     navigator.clipboard.writeText(html.replace(/<[^>]+>/g, ""));

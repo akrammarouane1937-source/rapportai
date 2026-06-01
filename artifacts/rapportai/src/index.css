@@ -387,3 +387,27 @@
   font-family: "Courier New", monospace;
   font-size: 10pt;
 }
+
+.word-preview-content figure.md-figure {
+  display: block;
+  margin: 24px auto;
+  text-align: center;
+  page-break-inside: avoid;
+}
+
+.word-preview-content figure.md-figure img.md-img {
+  max-width: 100%;
+  height: auto;
+  display: block;
+  margin: 0 auto 10px;
+  border: 1px solid #e5e7eb;
+  border-radius: 4px;
+}
+
+.word-preview-content figure.md-figure figcaption {
+  font-family: "Times New Roman", serif;
+  font-size: 9.5pt;
+  font-style: italic;
+  color: #555;
+  margin-top: 6px;
+}

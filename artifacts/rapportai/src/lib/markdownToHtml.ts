@@ -80,6 +80,11 @@ export function markdownToHtml(md: string): string {
       flushParagraph();
       if (listType !== "ul") { flushList(); listType = "ul"; }
       listBuf.push(line.slice(2));
+    } else if (/^!\[([^\]]*)\]\(([^)]+)\)$/.test(line.trim())) {
+      // Block image: ![alt](src) on its own line → rendered as figure block
+      flushParagraph(); flushList();
+      const m = line.trim().match(/^!\[([^\]]*)\]\(([^)]+)\)$/)!;
+      out.push(`<figure class="md-figure"><img src="${m[2]}" alt="${m[1]}" class="md-img"><figcaption>${m[1]}</figcaption></figure>`);
     } else if (line === "") {
       flushParagraph();
       flushList();
