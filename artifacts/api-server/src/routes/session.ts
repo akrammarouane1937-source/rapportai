@@ -61,19 +61,18 @@ function validateAndSanitizeIntake(profile: Record<string, unknown>): IntakeVali
   if (!name) profile.studentName = "Étudiant";
 
   const theme = (profile.theme as string | undefined)?.trim() ?? "";
-  if (!theme || theme.length < 10)
-    return { field: "theme", message: "Thème trop vague (minimum 10 caractères)" };
+  if (!theme || theme.length < 3)
+    return { field: "theme", message: "Thème requis (minimum 3 caractères). Retourne à l'Étape 1 pour le compléter." };
   if (theme.length > 500)
     return { field: "theme", message: "Thème trop long (maximum 500 caractères)" };
 
+  // Use safe defaults for missing optional profile fields so generation never blocks
   if (!(profile.school as string | undefined)?.trim())
-    return { field: "school", message: "École requise" };
-
+    profile.school = "École supérieure";
   if (!(profile.filiere as string | undefined)?.trim())
-    return { field: "filiere", message: "Filière requise" };
-
+    profile.filiere = "Formation";
   if (!(profile.reportType as string | undefined)?.trim())
-    return { field: "reportType", message: "Type de rapport requis" };
+    profile.reportType = "PFE";
 
   // Sanitize in-place
   profile.studentName = sanitize(name);
@@ -528,12 +527,7 @@ router.post(
         const rawContent = partialSections[section] ?? "";
 
         if (!rawContent) {
-          const { findClaudeBinary } = await import("../lib/find-claude-binary");
-          const binary = findClaudeBinary();
-          const hint = binary
-            ? "Claude binary trouvé mais rien généré. Vérifiez ANTHROPIC_API_KEY sur Railway."
-            : "Claude Code CLI introuvable. Vérifiez l'installation de @anthropic-ai/claude-agent-sdk.";
-          res.write(`data: ${JSON.stringify({ error: hint })}\n\n`);
+          res.write(`data: ${JSON.stringify({ error: "L'agent n'a pas produit de contenu. Réessaie — si le problème persiste, reviens dans quelques minutes." })}\n\n`);
           return;
         }
 

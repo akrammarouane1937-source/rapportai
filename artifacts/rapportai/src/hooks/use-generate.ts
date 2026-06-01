@@ -104,8 +104,15 @@ async function getOrCreateSession(): Promise<string> {
     body: JSON.stringify(profile),
   });
 
-  if (!res.ok) throw new Error(`Session start failed: HTTP ${res.status}`);
-  const { sessionId } = await res.json();
+  if (!res.ok) {
+    let errMsg = `Erreur serveur (HTTP ${res.status})`;
+    try {
+      const body = await res.json() as { error?: string };
+      if (body.error) errMsg = body.error;
+    } catch { /* non-JSON response — keep generic msg */ }
+    throw new Error(errMsg);
+  }
+  const { sessionId } = await res.json() as { sessionId: string };
   localStorage.setItem(SESSION_KEY, sessionId);
   localStorage.setItem(SESSION_TS_KEY, String(Date.now()));
   return sessionId;
