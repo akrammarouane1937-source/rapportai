@@ -7,7 +7,9 @@ export function findClaudeBinary(): string | undefined {
     // Replit workspace pnpm store
     "/home/runner/workspace/node_modules/.pnpm/node_modules/.bin/claude",
     "/home/runner/workspace/node_modules/.bin/claude",
-    // Render pnpm virtual store
+    // Render — root node_modules/.bin (standard pnpm hoisting)
+    "/opt/render/project/src/node_modules/.bin/claude",
+    // Render — pnpm virtual store (alternate layout)
     "/opt/render/project/src/node_modules/.pnpm/node_modules/.bin/claude",
     // Railway / generic deployments
     "/app/node_modules/.bin/claude",
@@ -34,11 +36,11 @@ export function findClaudeBinary(): string | undefined {
 
   for (const root of scanRoots) {
     if (!existsSync(root)) continue;
-    for (const pattern of ["claude-agent-sdk-linux", "claude-code-linux", "claude-code"]) {
+    for (const pattern of ["claude-agent-sdk-linux", "claude-code-linux", "claude-code", "claude-agent-sdk"]) {
       try {
         const found = execSync(
           `find "${root}" -name 'claude' -type f 2>/dev/null | grep '${pattern}' | head -1`,
-          { encoding: "utf8", timeout: 3000 }
+          { encoding: "utf8", timeout: 5000 }
         ).trim();
         if (found) return found;
       } catch { /* ignore */ }

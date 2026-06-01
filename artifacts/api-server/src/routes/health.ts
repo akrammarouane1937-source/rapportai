@@ -17,7 +17,7 @@ router.get("/healthz", (_req, res) => {
 });
 
 // Diagnostic endpoint — call /api/diag from browser to see exactly what's missing
-router.get("/api/diag", (_req, res) => {
+router.get("/diag", (_req, res) => {
   const binary = findClaudeBinary();
 
   let claudeVersion: string | null = null;
@@ -34,6 +34,8 @@ router.get("/api/diag", (_req, res) => {
     claude_binary: binary ?? "NOT FOUND",
     claude_version: claudeVersion,
     anthropic_api_key: process.env.ANTHROPIC_API_KEY ? "✅ SET" : "❌ MISSING",
+    free_launch: process.env.FREE_LAUNCH === "true" ? "✅ ACTIVE (no paywall)" : "❌ INACTIVE (paywall on)",
+    clerk_secret: process.env.CLERK_SECRET_KEY ? "✅ SET" : "❌ MISSING",
     node_version: process.version,
     platform: process.platform,
     cwd: process.cwd(),
