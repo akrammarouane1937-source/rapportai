@@ -1,5 +1,6 @@
 import { useState, useRef, useEffect, useCallback } from "react";
 import { useSessionRecover } from "@/hooks/use-session-recover";
+import { useReportSync } from "@/hooks/use-report-sync";
 import { motion, AnimatePresence } from "framer-motion";
 import { Send, ArrowRight, ChevronDown, Square, Copy, Check } from "lucide-react";
 import { useLocation } from "wouter";
@@ -129,6 +130,7 @@ export default function DashboardPage() {
   const rawReport       = getReport();
 
   useSessionRecover(); // silently merge any server-side disk content into Zustand
+  useReportSync();     // restore from DB on login + save to DB on changes
 
   const [messages, setMessages] = useState<Message[]>([]);
   const [input, setInput]       = useState("");

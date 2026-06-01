@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef, type ReactNode } from "react";
+import { useState, useEffect, useRef, type ReactNode, useCallback } from "react";
 import { motion } from "framer-motion";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
@@ -439,6 +439,68 @@ export function StepTransitionCard({
           {nextLabel}
           <ChevronRight className="w-3.5 h-3.5" />
         </button>
+      </div>
+    </motion.div>
+  );
+}
+
+// ─── ChoiceCard ───────────────────────────────────────────────────────────────
+
+export function ChoiceCard({
+  question,
+  choices,
+  onChoice,
+}: {
+  question: string;
+  choices: string[];
+  onChoice: (choice: string) => void;
+}) {
+  const [selected, setSelected] = useState<string | null>(null);
+
+  const handleClick = useCallback(
+    (choice: string) => {
+      if (selected) return;
+      setSelected(choice);
+      onChoice(choice);
+    },
+    [selected, onChoice]
+  );
+
+  return (
+    <motion.div
+      initial={{ opacity: 0, y: 6 }}
+      animate={{ opacity: 1, y: 0 }}
+      className="rounded-xl border border-violet-200 bg-violet-50 p-4 space-y-3 max-w-xs"
+    >
+      <p className="text-sm font-medium text-violet-900 leading-snug">{question}</p>
+      <div className="space-y-2">
+        {choices.map((choice) => (
+          <button
+            key={choice}
+            onClick={() => handleClick(choice)}
+            disabled={!!selected}
+            className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-lg border text-sm text-left transition-all duration-150 ${
+              selected === choice
+                ? "border-violet-600 bg-violet-600 text-white font-semibold shadow-sm"
+                : selected
+                ? "border-gray-200 bg-white text-gray-300 cursor-not-allowed"
+                : "border-gray-200 bg-white text-gray-700 hover:border-violet-400 hover:bg-violet-50 cursor-pointer"
+            }`}
+          >
+            <span
+              className={`w-4 h-4 rounded-full border-2 flex-shrink-0 flex items-center justify-center transition-all ${
+                selected === choice
+                  ? "border-white"
+                  : "border-gray-300"
+              }`}
+            >
+              {selected === choice && (
+                <span className="w-2 h-2 rounded-full bg-white block" />
+              )}
+            </span>
+            {choice}
+          </button>
+        ))}
       </div>
     </motion.div>
   );

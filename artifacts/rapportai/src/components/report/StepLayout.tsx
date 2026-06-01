@@ -1,6 +1,7 @@
 import { ReactNode } from "react";
 import { Sidebar } from "@/components/layout/Sidebar";
 import { REPORT_STEPS, TOTAL_STEPS } from "@/lib/steps";
+import { useReportSync } from "@/hooks/use-report-sync";
 
 interface StepLayoutProps {
   stepId: number;
@@ -10,6 +11,7 @@ interface StepLayoutProps {
 }
 
 export function StepLayout({ stepId, children, fullHeight }: StepLayoutProps) {
+  useReportSync(); // restore from DB on login + save to DB on changes
   const step = REPORT_STEPS.find((s) => s.id === stepId);
   const progress = (stepId / TOTAL_STEPS) * 100;
 

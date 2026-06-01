@@ -197,6 +197,18 @@ const TOOLS = [
     },
   },
   {
+    name: "ask_user",
+    description: "Pose une question à l'étudiant avec des choix cliquables. Utilise UNIQUEMENT quand tu as 2 à 4 options courtes et claires — jamais pour des questions ouvertes. Exemple : proposer le plan avant de générer, choisir le ton des dédicaces, confirmer une direction.",
+    input_schema: {
+      type: "object" as const,
+      properties: {
+        question: { type: "string", description: "La question courte à poser (sans emoji, max 1 phrase)." },
+        choices:  { type: "array", items: { type: "string" }, description: "2 à 4 options courtes et cliquables." },
+      },
+      required: ["question", "choices"],
+    },
+  },
+  {
     name: "step_complete",
     description: "Appelle ceci quand toutes les sections requises ont été générées.",
     input_schema: {

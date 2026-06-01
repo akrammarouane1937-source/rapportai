@@ -3,7 +3,7 @@ import { API_BASE } from "@/lib/apiBase";
 import { useGenerate } from "./use-generate";
 import { useReportStore } from "@/lib/store";
 import { useFileStore } from "@/lib/fileStore";
-import { GeneratedCard } from "@/components/chat-panel";
+import { GeneratedCard, ChoiceCard } from "@/components/chat-panel";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -285,6 +285,8 @@ export function useConversation({
   const stepCompleteRef = useRef(false);
   const autoSentRef = useRef(false);
   const abortRef = useRef<AbortController | null>(null);
+  // Always-current ref to `send` so ChoiceCard callbacks don't go stale
+  const sendRef = useRef<(text: string) => void>(() => {});
 
   const { generate, abort: abortGen, isGenerating, toolCalls, thinkingText } = useGenerate();
 
@@ -482,6 +484,25 @@ export function useConversation({
           }
         }
 
+        if (action.type === "ask_user") {
+          const question = action.question as string;
+          const choices  = action.choices as string[];
+          if (question && Array.isArray(choices) && choices.length > 0) {
+            setMessages((prev) => [
+              ...prev,
+              {
+                id: newId(),
+                role: "agent",
+                content: createElement(ChoiceCard, {
+                  question,
+                  choices,
+                  onChoice: (c: string) => sendRef.current(c),
+                }),
+              },
+            ]);
+          }
+        }
+
         if (action.type === "step_complete" && !stepCompleteRef.current && !generationFailed) {
           stepCompleteRef.current = true;
           const msg = (action.message as string) || "Étape terminée";
@@ -493,6 +514,9 @@ export function useConversation({
     // eslint-disable-next-line react-hooks/exhaustive-deps
     [messages, isThinking, isGenerating, step, report, generatedSections, generate, onSectionGenerated, onStepComplete]
   );
+
+  // Keep sendRef always pointing to the latest send (so ChoiceCard callbacks never go stale)
+  useEffect(() => { sendRef.current = (text: string) => send(text); }, [send]);
 
   useEffect(() => {
     if (autoSend && !autoSentRef.current && messages.length <= 1) {
