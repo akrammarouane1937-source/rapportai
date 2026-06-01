@@ -1,0 +1,645 @@
+FINISH RAPPORTAI 15-STEP CHAT AGENTS TONIGHT — ALL 15 STEPS MUST WORK
+
+## CRITICAL CONSTRAINTS
+- Deadline: Complete ALL 15 steps tonight (Step 1 through Step 15 + RapportsPage)
+- AI chat must work like Claude Code: streaming responses, tool calls, clickable choice cards, no bugs
+- Use Vercel AI SDK (ai package) + @anthropic-ai/sdk — NOT claude-agent-sdk
+- All streaming must use useChat() hook — NO custom SSE, NO fetchEventSource
+- Each step must auto-advance when step_complete is called
+- Full chat history must persist across steps (fix context split bug)
+- 15 steps = 15 separate chat sessions (each step has its own chat)
+
+## TECH STACK (DO NOT CHANGE)
+- Backend: Node.js 24 / Express 5 / TypeScript — routes in artifacts/api-server/src/routes/
+- Frontend: React + Vite / TypeScript — pages in artifacts/rapportai/src/pages/
+- AI: Anthropic Claude (claude-3-haiku-4-5 for generation, claude-3-sonnet-4-5 for orchestration)
+- Streaming: Vercel AI SDK (streamText + useChat)
+- Auth: Clerk (already implemented, keep it)
+- DB: PostgreSQL + Drizzle ORM (already implemented, keep it)
+- State: Zustand store + localStorage (keep for report data, NOT for chat messages)
+
+## WHAT TO DELETE FIRST (These Cause Bugs)
+Delete these files completely before starting:
+1. artifacts/api-server/src/lib/claude-agent-sdk.ts (entire Claude Code SDK integration)
+2. artifacts/rapportai/src/hooks/use-conversation.ts (replace with useChat)
+3. artifacts/rapportai/src/hooks/use-generate.ts (replace with useChat)
+4. artifacts/rapportai/src/lib/fetchEventSource.ts (not needed)
+5. Any step page with custom SSE handlers (find and delete)
+
+## THE 15-STEP FLOW (All Must Have Chat)
+
+| Step | Page Name | Purpose | Has Chat? |
+|------|-----------|---------|-----------|
+| 1 | Step1Page | General info form | ❌ Pure frontend (no AI) |
+| 2 | Step2Page | Page de garde (cover page) | ✅ Chat + preview |
+| 3 | Step3Page | Dédicaces & Remerciements | ✅ Chat |
+| 4 | Step4Page | Résumé & Abstract | ✅ Chat |
+| 5 | Step5Page | Sommaire (table of contents) | ✅ Chat |
+| 6 | Step6Page | Introduction | ✅ Chat + streaming preview |
+| 7 | Step7Page | Partie I — Chapter 1 | ✅ Chat |
+| 8 | Step8Page | Partie I — Chapter 2 | ✅ Chat |
+| 9 | Step9Page | Partie II — Chapter 1 | ✅ Chat |
+| 10 | Step10Page | Partie II — Chapter 2 | ✅ Chat |
+| 11 | Step11Page | Partie III — Chapter 1 | ✅ Chat |
+| 12 | Step12Page | Partie III — Chapter 2 | ✅ Chat |
+| 13 | Step13Page | Conclusion | ✅ Chat |
+| 14 | Step14Page | Bibliographie | ✅ Chat |
+| 15 | Step15Page | Abréviations & Annexes | ✅ Chat |
+| — | RapportsPage | Mon Rapport: full document + export | ✅ View all sections |
+
+## PHASE 1: Backend — Replace /api/converse Route (2 hours)
+
+File: artifacts/api-server/src/routes/api/converse/route.ts
+
+REPLACE entire file with this pattern:
+
+```typescript
+import { Anthropic } from "@anthropic-ai/sdk";
+import { streamText, type CoreMessage } from "ai";
+import { z } from "zod";
+
+const anthropic = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
+
+// 15 STEPS SYSTEM PROMPTS — Each step has its own prompt
+const STEP_SYSTEMS: Record<string, string> = {
+  "step1": "Step 1 is pure form (no AI). This prompt should never be used.",
+  
+  "step2": `You are helping a Moroccan student create their PFE report cover page (Page de Garde).
+Ask for: university name, student name, supervisor name, topic, year.
+Generate a professional academic cover page in French.
+MUST call generate_section AND step_complete in the SAME tool_calls array.
+Example: tool_calls = [{name: "generate_section", sectionId: "page-de-garde", context: "..."}, {name: "step_complete", summary: "Cover page created"}]`,
+  
+  "step3": `You are helping write Dédicaces (dedications) & Remerciements (acknowledgments).
+Ask who to dedicate to (family, friends) and who to thank (supervisor, family, institution).
+Write heartfelt academic acknowledgments in French.
+MUST call generate_section AND step_complete in the SAME tool_calls array.`,
+  
+  "step4": `You are helping write Résumé (French summary) & Abstract (English summary).
+Ask for: main topic, methodology, key results, conclusion.
+Generate both summaries (French + English) in academic style.
+MUST call generate_section AND step_complete in the SAME tool_calls array.`,
+  
+  "step5": `You are generating the Sommaire (table of contents).
+Ask for: number of parts (Partie I, II, III), chapter titles per part.
+Generate a structured table of contents with page numbers (placeholder).
+MUST call generate_section AND step_complete in the SAME tool_calls array.`,
+  
+  "step6": `You are writing the Introduction section.
+Ask for: problem statement (problématique), objectives, methodology, plan.
+Write a full academic introduction in French (2-3 pages).
+MUST call generate_section AND step_complete in the SAME tool_calls array.`,
+  
+  "step7": `You are writing Partie I — Chapter 1 (Literature Review / State of Art).
+Ask for: key concepts, theories, previous studies to cover.
+Write a comprehensive literature review in French (5-8 pages).
+MUST call generate_section AND step_complete in the SAME tool_calls array.`,
+  
+  "step8": `You are writing Partie I — Chapter 2 (Methodology / Framework).
+Ask for: research methods, tools, frameworks used.
+Write detailed methodology section in French (4-6 pages).
+MUST call generate_section AND step_complete in the SAME tool_calls array.`,
+  
+  "step9": `You are writing Partie II — Chapter 1 (Analysis / Results Part 1).
+Ask for: data analyzed, findings, charts/tables to include.
+Write analysis section in French (5-8 pages).
+MUST call generate_section AND step_complete in the SAME tool_calls array.`,
+  
+  "step10": `You are writing Partie II — Chapter 2 (Analysis / Results Part 2).
+Ask for: additional findings, comparisons, case studies.
+Write second analysis section in French (5-8 pages).
+MUST call generate_section AND step_complete in the SAME tool_calls array.`,
+  
+  "step11": `You are writing Partie III — Chapter 1 (Implementation / Solution Part 1).
+Ask for: solution architecture, technologies, design decisions.
+Write implementation section in French (6-10 pages).
+MUST call generate_section AND step_complete in the SAME tool_calls array.`,
+  
+  "step12": `You are writing Partie III — Chapter 2 (Implementation / Solution Part 2).
+Ask for: code examples, testing, results, screenshots.
+Write second implementation section in French (6-10 pages).
+MUST call generate_section AND step_complete in the SAME tool_calls array.`,
+  
+  "step13": `You are writing the Conclusion section.
+Ask for: key findings, limitations, future work, recommendations.
+Write a strong academic conclusion in French (2-3 pages).
+MUST call generate_section AND step_complete in the SAME tool_calls array.`,
+  
+  "step14": `You are generating the Bibliographie (references).
+Ask for: sources used (books, articles, websites), citation style (APA/IEEE).
+Format references properly in French academic style.
+MUST call generate_section AND step_complete in the SAME tool_calls array.`,
+  
+  "step15": `You are creating Abréviations (abbreviations) & Annexes (appendices).
+Ask for: abbreviations used, supporting documents to include.
+Generate abbreviations list and suggest appendix structure.
+MUST call generate_section AND step_complete in the SAME tool_calls array.`
+};
+
+export async function POST(req: Request) {
+  try {
+    const { stepId, messages, report, sessionId } = await req.json();
+
+    // Convert ConvMsg to CoreMessage format
+    const coreMessages: CoreMessage[] = messages.map((m: any) => ({
+      role: m.role, // "user" | "assistant" | "system"
+      content: m.content
+    }));
+
+    const result = streamText({
+      model: anthropic.messages("claude-3-sonnet-20240229"),
+      messages: coreMessages,
+      system: STEP_SYSTEMS[stepId],
+      tools: {
+        generate_section: {
+          description: "Generate a report section using the generation agent",
+          parameters: z.object({
+            sectionId: z.string(),
+            context: z.string().optional()
+          }),
+          execute: async ({ sectionId, context }) => {
+            // Pass full chat history to generation agent (fixes Bug 1)
+            const fullContext = `
+CHAT HISTORY (last 5 turns):
+${messages.slice(-5).map((m: any) => `${m.role}: ${m.content}`).join('\n')}
+
+EXTRA CONTEXT: ${context || ''}
+CURRENT STEP: ${stepId}
+            `.trim();
+
+            const response = await fetch(`${process.env.BASE_URL}/api/session/${sessionId}/generate`, {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({ sectionId, context: fullContext })
+            });
+
+            const data = await response.json();
+            return { success: true, content: data.content };
+          }
+        },
+        ask_user: {
+          description: "Ask user to choose from options",
+          parameters: z.object({
+            question: z.string(),
+            choices: z.array(z.string())
+          }),
+          execute: async ({ question, choices }) => ({ question, choices })
+        },
+        step_complete: {
+          description: "Mark current step as complete and advance to next step",
+          parameters: z.object({
+            summary: z.string()
+          }),
+          execute: async ({ summary }) => ({ success: true, summary })
+        }
+      },
+      maxTokens: 4000
+    });
+
+    return result.toAIStreamResponse();
+  } catch (error) {
+    console.error("/api/converse error:", error);
+    return new Response(JSON.stringify({ error: "Stream failed" }), { status: 500 });
+  }
+}
+```
+
+## PHASE 2: Frontend — Replace useConversation Hook (1 hour)
+
+File: artifacts/rapportai/src/hooks/use-conversation.ts
+
+REPLACE entire file with:
+
+```typescript
+import { useChat } from "ai/react";
+import { useReportStore } from "@/store/report-store"; // Your existing Zustand store
+
+export function useConversation(stepId: string) {
+  const { setGeneratedSections, advanceStep } = useReportStore();
+
+  const {
+    messages,
+    input,
+    handleInputChange,
+    handleSubmit,
+    isLoading,
+    append, // For file uploads
+    stop
+  } = useChat({
+    api: "/api/converse",
+    body: { stepId }, // Sent with every request
+    onFinish: (message) => {
+      // Handle tool invocations automatically
+      if (message.toolInvocations) {
+        message.toolInvocations.forEach((tool: any) => {
+          if (tool.toolName === "generate_section" && tool.result?.content) {
+            setGeneratedSections({
+              [tool.args.sectionId]: tool.result.content
+            });
+          }
+          if (tool.toolName === "step_complete") {
+            advanceStep(); // Moves to next step (e.g., step2 → step3)
+          }
+        });
+      }
+    },
+    onError: (error) => {
+      console.error("Chat stream error:", error);
+      // Vercel SDK handles retries automatically
+    }
+  });
+
+  return {
+    messages,
+    input,
+    handleInputChange,
+    handleSubmit,
+    isLoading,
+    append,
+    stop
+  };
+}
+```
+
+## PHASE 3: Frontend — Create ALL 15 Step Pages (4 hours)
+
+For EACH of the 15 steps, create/update the page to use useConversation:
+
+### Template for ALL Chat-Based Steps (Steps 2-15)
+
+File pattern: artifacts/rapportai/src/pages/Step{N}Page.tsx
+
+```typescript
+import { useConversation } from "@/hooks/use-conversation";
+import { ChoiceCard } from "@/components/ChoiceCard";
+import { useReportStore } from "@/store/report-store";
+
+interface StepNPageProps {
+  stepId: string; // e.g., "step2", "step3", ..., "step15"
+  sectionId: string; // e.g., "page-de-garde", "remerciements", "resume", etc.
+  title: string; // Page title
+}
+
+export default function StepNPage({ stepId, sectionId, title }: StepNPageProps) {
+  const { messages, input, handleInputChange, handleSubmit, isLoading } = useConversation(stepId);
+  const { generatedSections } = useReportStore();
+
+  return (
+    <div className="step-container">
+      <h1>{title}</h1>
+      
+      <div className="chat-layout">
+        {/* LEFT: Chat */}
+        <div className="chat-panel">
+          <div className="messages">
+            {messages.map((msg) => (
+              <div key={msg.id} className={`message ${msg.role}`}>
+                <div className="message-content">
+                  {msg.content}
+                </div>
+                
+                {/* Render tool invocations (ask_user choices) */}
+                {msg.toolInvocations?.map((tool: any) => {
+                  if (tool.toolName === "ask_user" && tool.state === "result") {
+                    return (
+                      <ChoiceCard
+                        key={tool.toolCallId}
+                        question={tool.args.question}
+                        choices={tool.args.choices}
+                        onSelect={(choice) => {
+                          append({ role: "user", content: choice });
+                        }}
+                      />
+                    );
+                  }
+                })}
+              </div>
+            ))}
+            
+            {/* Loading indicator */}
+            {isLoading && (
+              <div className="loading">
+                <div className="spinner"></div>
+                <p>RapportAI travaille...</p>
+              </div>
+            )}
+          </div>
+
+          {/* Input form */}
+          <form onSubmit={handleSubmit} className="input-form">
+            <input
+              value={input}
+              onChange={handleInputChange}
+              placeholder={`Ask about ${title.toLowerCase()}...`}
+              disabled={isLoading}
+            />
+            <button type="submit" disabled={isLoading}>
+              {isLoading ? "..." : "Send"}
+            </button>
+          </form>
+        </div>
+
+        {/* RIGHT: Preview (if section exists) */}
+        <div className="preview-panel">
+          {generatedSections[sectionId] ? (
+            <div 
+              className="section-preview"
+              dangerouslySetInnerHTML={{ __html: generatedSections[sectionId] }}
+            />
+          ) : (
+            <div className="no-content">
+              <p>Generate content via chat to see preview here</p>
+            </div>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+}
+```
+
+### Create ALL 15 Pages (Copy Template, Change stepId/sectionId/title):
+
+```typescript
+// Step1Page.tsx — NO CHAT (pure form)
+export default function Step1Page() {
+  // Already exists — keep as pure form (no AI)
+  // User fills: university, faculty, topic, supervisor, year
+}
+
+// Step2Page.tsx — Page de Garde
+export default function Step2Page() {
+  return <StepNPage stepId="step2" sectionId="page-de-garde" title="Page de Garde (Cover Page)" />;
+}
+
+// Step3Page.tsx — Dédicaces & Remerciements
+export default function Step3Page() {
+  return <StepNPage stepId="step3" sectionId="dedicaces-remerciements" title="Dédicaces & Remerciements" />;
+}
+
+// Step4Page.tsx — Résumé & Abstract
+export default function Step4Page() {
+  return <StepNPage stepId="step4" sectionId="resume-abstract" title="Résumé & Abstract" />;
+}
+
+// Step5Page.tsx — Sommaire
+export default function Step5Page() {
+  return <StepNPage stepId="step5" sectionId="sommaire" title="Sommaire (Table of Contents)" />;
+}
+
+// Step6Page.tsx — Introduction
+export default function Step6Page() {
+  return <StepNPage stepId="step6" sectionId="introduction" title="Introduction" />;
+}
+
+// Step7Page.tsx — Partie I — Chapter 1
+export default function Step7Page() {
+  return <StepNPage stepId="step7" sectionId="partie1-chapitre1" title="Partie I — Chapitre 1 (Literature Review)" />;
+}
+
+// Step8Page.tsx — Partie I — Chapter 2
+export default function Step8Page() {
+  return <StepNPage stepId="step8" sectionId="partie1-chapitre2" title="Partie I — Chapitre 2 (Methodology)" />;
+}
+
+// Step9Page.tsx — Partie II — Chapter 1
+export default function Step9Page() {
+  return <StepNPage stepId="step9" sectionId="partie2-chapitre1" title="Partie II — Chapitre 1 (Analysis Part 1)" />;
+}
+
+// Step10Page.tsx — Partie II — Chapter 2
+export default function Step10Page() {
+  return <StepNPage stepId="step10" sectionId="partie2-chapitre2" title="Partie II — Chapitre 2 (Analysis Part 2)" />;
+}
+
+// Step11Page.tsx — Partie III — Chapter 1
+export default function Step11Page() {
+  return <StepNPage stepId="step11" sectionId="partie3-chapitre1" title="Partie III — Chapitre 1 (Implementation Part 1)" />;
+}
+
+// Step12Page.tsx — Partie III — Chapter 2
+export default function Step12Page() {
+  return <StepNPage stepId="step12" sectionId="partie3-chapitre2" title="Partie III — Chapitre 2 (Implementation Part 2)" />;
+}
+
+// Step13Page.tsx — Conclusion
+export default function Step13Page() {
+  return <StepNPage stepId="step13" sectionId="conclusion" title="Conclusion" />;
+}
+
+// Step14Page.tsx — Bibliographie
+export default function Step14Page() {
+  return <StepNPage stepId="step14" sectionId="bibliographie" title="Bibliographie (References)" />;
+}
+
+// Step15Page.tsx — Abréviations & Annexes
+export default function Step15Page() {
+  return <StepNPage stepId="step15" sectionId="abbreviations-annes" title="Abréviations & Annexes" />;
+}
+
+// RapportsPage.tsx — Full Document View
+export default function RapportsPage() {
+  const { generatedSections } = useReportStore();
+  
+  return (
+    <div className="full-report">
+      <h1>Mon Rapport Complet</h1>
+      {Object.entries(generatedSections).map(([sectionId, content]) => (
+        <div key={sectionId} className="report-section">
+          <h2>{sectionId}</h2>
+          <div dangerouslySetInnerHTML={{ __html: content }} />
+        </div>
+      ))}
+      <button onClick={exportToDOCX}>Export DOCX</button>
+      <button onClick={exportToPDF}>Export PDF</button>
+    </div>
+  );
+}
+```
+
+## PHASE 4: Create ChoiceCard Component (30 minutes)
+
+File: artifacts/rapportai/src/components/ChoiceCard.tsx
+
+```typescript
+import { useState } from "react";
+
+interface ChoiceCardProps {
+  question: string;
+  choices: string[];
+  onSelect: (choice: string) => void;
+}
+
+export function ChoiceCard({ question, choices, onSelect }: ChoiceCardProps) {
+  const [selected, setSelected] = useState<string | null>(null);
+
+  return (
+    <div className="choice-card">
+      <p className="question">{question}</p>
+      <div className="choices">
+        {choices.map((choice) => (
+          <button
+            key={choice}
+            onClick={() => {
+              setSelected(choice);
+              onSelect(choice);
+            }}
+            className={selected === choice ? "selected" : ""}
+          >
+            {choice}
+          </button>
+        ))}
+      </div>
+    </div>
+  );
+}
+```
+
+## PHASE 5: Update generate.ts to Accept Chat History (1 hour)
+
+File: artifacts/api-server/src/routes/api/session/[sessionId]/generate/route.ts
+
+```typescript
+export async function POST(req: Request, { params }: any) {
+  const { sessionId } = params;
+  const { sectionId, context } = await req.json();
+
+  // context now includes chat history (from converse.ts)
+  const systemPrompt = `
+You are generating section: ${sectionId}
+CONTEXT FROM CHAT HISTORY (user provided details in chat):
+${context}
+
+Generate the full section content in French (academic style for Moroccan students).
+Use proper academic formatting, headings, and citations.
+If the section is literature review, include references.
+If the section is methodology, be detailed about tools and methods.
+If the section is analysis, include data interpretation.
+If the section is implementation, include code examples and screenshots placeholders.
+  `.trim();
+
+  // Spawn Claude Haiku for fast generation
+  const response = await fetch("https://api.anthropic.com/v1/messages", {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      "X-API-Key": process.env.ANTHROPIC_API_KEY,
+      "anthropic-version": "2023-06-01"
+    },
+    body: JSON.stringify({
+      model: "claude-3-haiku-20240307",
+      messages: [{ role: "user", content: `Generate ${sectionId} section` }],
+      system: systemPrompt,
+      max_tokens: 4000
+    })
+  });
+
+  const data = await response.json();
+  const content = data.content.text;
+
+  // Return SSE with section_content event
+  return new Response(
+    `event: section_content\ndata: ${JSON.stringify({ content })}\n\n`,
+    { headers: { "Content-Type": "text/event-stream" } }
+  );
+}
+```
+
+## PHASE 6: Install Dependencies (5 minutes)
+
+Run these commands in Replit terminal:
+
+```bash
+# Backend
+cd artifacts/api-server
+npm install ai @anthropic-ai/sdk zod
+
+# Frontend
+cd artifacts/rapportai
+npm install ai @anthropic-ai/sdk react-markdown
+```
+
+## PHASE 7: Test ALL 15 Steps (3 hours)
+
+Test flow (end-to-end):
+
+1. **Step 1**: Fill general info form (no AI, pure frontend) ✅
+2. **Step 2**: Type "Create cover page for my PFE on AI" → streams answer + shows preview ✅
+3. **Step 3**: Type "Write remerciements for Dr. Ahmed and my family" → streams + advances ✅
+4. **Step 4**: Type "Write résumé in French and abstract in English" → streams + saves ✅
+5. **Step 5**: Type "Generate sommaire with 3 parts and 2 chapters each" → streams ✅
+6. **Step 6**: Type "Write introduction with problem statement on ML" → streams ✅
+7. **Step 7**: Type "Write literature review on deep learning" → streams ✅
+8. **Step 8**: Type "Write methodology for my CNN project" → streams ✅
+9. **Step 9**: Type "Analyze my dataset results part 1" → streams ✅
+10. **Step 10**: Type "Analyze comparisons and case studies part 2" → streams ✅
+11. **Step 11**: Type "Write implementation architecture part 1" → streams ✅
+12. **Step 12**: Type "Write code examples and testing part 2" → streams ✅
+13. **Step 13**: Type "Write conclusion with future work" → streams ✅
+14. **Step 14**: Type "Generate bibliography in APA style" → streams ✅
+15. **Step 15**: Type "Create abbreviations list and suggest annexes" → streams ✅
+16. **RapportsPage**: Click "Mon Rapport" → shows ALL 15 sections + export works ✅
+
+---
+
+## CRITICAL BUG FIXES (Same as Before — Must Implement for All 15 Steps)
+
+### Bug 1: Context Split
+- ✅ Pass full chat history (last 5 turns) to generate_section tool for ALL 15 steps
+
+### Bug 2: section_content vs data.text
+- ✅ In useConversation onFinish, read tool.result.content (not data.text)
+
+### Bug 3: step_complete Same Response
+- ✅ Add to ALL 15 STEP_SYSTEMS prompts: "MUST call generate_section AND step_complete in THE SAME tool_calls array"
+
+### Bug 4-10: All Other Bugs
+- ✅ Same fixes as before (delete custom SSE, remove emoji regex, add debounce, etc.)
+
+---
+
+## FINAL CHECKLIST (15 Steps Version)
+
+```bash
+# 1. Install dependencies
+cd artifacts/api-server && npm install ai @anthropic-ai/sdk zod
+cd ../rapportai && npm install ai @anthropic-ai/sdk react-markdown
+
+# 2. Delete buggy files
+rm artifacts/api-server/src/lib/claude-agent-sdk.ts
+rm artifacts/rapportai/src/hooks/use-conversation.ts
+rm artifacts/rapportai/src/hooks/use-generate.ts
+rm artifacts/rapportai/src/lib/fetchEventSource.ts
+
+# 3. Create new files
+# - artifacts/api-server/src/routes/api/converse/route.ts (with 15 STEP_SYSTEMS)
+# - artifacts/rapportai/src/hooks/use-conversation.ts (useChat version)
+# - artifacts/rapportai/src/components/ChoiceCard.tsx
+# - artifacts/rapportai/src/pages/Step1Page.tsx through Step15Page.tsx (15 pages)
+# - artifacts/rapportai/src/pages/RapportsPage.tsx
+
+# 4. Test all 15 steps
+# - Start Step 1 → progress through ALL 15 steps → RapportsPage
+# - Verify EACH step has working chat
+# - Verify EACH step streams correctly
+# - Verify EACH step advances automatically
+# - Verify ALL 15 sections save to store
+# - Verify RapportsPage shows full 15-section document
+```
+
+---
+
+## SUCCESS CRITERIA (15 Steps)
+
+✅ ALL 15 steps have working AI chat (Step 2-15, Step 1 is form-only)
+✅ Each step has its own chat session (15 separate chats total)
+✅ All chats stream token-by-token (no waiting)
+✅ All chats support clickable choice cards
+✅ All steps auto-advance when complete
+✅ ALL 15 sections persist after page refresh
+✅ Full report exports to DOCX/PDF with all 15 sections
+✅ NO bugs: no context split, no streaming hangs, no lost content
+
+---
+
+START NOW. Work through PHASE 1 → PHASE 7. Test after each phase. Call it done when ALL 15 steps work end-to-end.
