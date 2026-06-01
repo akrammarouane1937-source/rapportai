@@ -3,3 +3,9 @@
 - [Plan limits: pages not sections](plan-limits.md) — plans tracked in pages (250 words≈1 page), not sections; FREE_LAUNCH=true bypasses all limits; header is x-pages-generated
 - [SDK SECTION_IDS whitelist](sdk-section-ids.md) — every section the SDK agent writes must be in SECTION_IDS array (sdk-agent.ts) or getSections() never reads it
 - [FREE_LAUNCH env var required](free-launch.md) — must be set as a Replit shared env var; if missing, guardPayment blocks ALL SDK generations with payment_required
+- [Data persistence architecture](data-persistence.md) — useReportSync must be called in DashboardPage AND StepLayout, not just Layout; two localStorage keys; DB save/restore logic
+- [Interactive choice cards](interactive-choices.md) — ask_user tool in converse.ts emits SSE action; ChoiceCard in chat-panel.tsx; sendRef pattern in use-conversation.ts
+- [Step6 init bug pattern](step6-init-bug.md) — ALL step pages that have a streamed preview must init streamedContent/rawTextRef from getReport() on mount, not from empty string
+- [PDF figures in final report](pdf-figures-report.md) — task #67 merged: FiguresAnnexe in RapportsPage, session images served via /api/session/:id/figures/:filename, DOCX embeds images
+- [WordPreview A4 figure cards](wordpreview-figures.md) — figures rendered as A4 cards after section content in WordPreview.tsx; figurePlacement prop passed from PartieI/IIPage
+- [saveReport dual-write pattern](savereport-pattern.md) — saveReport() writes to both rapportai_v1 (raw localStorage) AND Zustand store; both must stay in sync; missing a field in one = data loss
