@@ -1,6 +1,7 @@
 import app from "./app";
 import { logger } from "./lib/logger";
 import { pool } from "@workspace/db";
+import { findClaudeBinary } from "./lib/find-claude-binary";
 
 async function runMigrations() {
   if (!process.env.DATABASE_URL) return;
@@ -70,6 +71,30 @@ if (Number.isNaN(port) || port <= 0) {
   throw new Error(`Invalid PORT value: "${rawPort}"`);
 }
 
+function logStartupDiagnostics() {
+  const hasAnthropicKey = !!process.env.ANTHROPIC_API_KEY;
+  const hasClerkSecret = !!process.env.CLERK_SECRET_KEY;
+  const hasDb = !!process.env.DATABASE_URL;
+  const claudeBinary = findClaudeBinary();
+
+  logger.info({
+    env: {
+      ANTHROPIC_API_KEY: hasAnthropicKey ? "✅ set" : "❌ MISSING — generation will fail",
+      CLERK_SECRET_KEY: hasClerkSecret ? "✅ set" : "❌ MISSING — auth will fail",
+      DATABASE_URL: hasDb ? "✅ set" : "❌ MISSING — DB unavailable",
+      CLAUDE_BINARY: claudeBinary ?? "❌ NOT FOUND — generation will fail",
+      FREE_LAUNCH: process.env.FREE_LAUNCH ?? "not set",
+    },
+  }, "Startup diagnostics");
+
+  if (!hasAnthropicKey) {
+    logger.error("ANTHROPIC_API_KEY is not set — add it to your environment variables on Render/Railway");
+  }
+  if (!claudeBinary) {
+    logger.error("Claude binary not found — @anthropic-ai/claude-code may not be installed");
+  }
+}
+
 runMigrations().then(() => {
   app.listen(port, (err) => {
     if (err) {
@@ -77,5 +102,6 @@ runMigrations().then(() => {
       process.exit(1);
     }
     logger.info({ port }, "Server listening");
+    logStartupDiagnostics();
   });
 });
