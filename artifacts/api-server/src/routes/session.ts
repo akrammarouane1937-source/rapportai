@@ -19,6 +19,8 @@ import { streamingHumanize } from "../lib/humanize-util";
 import { metrics, estimateCost, estimateTokens } from "../lib/metrics";
 import { writeFileSync, mkdirSync } from "fs";
 import path from "path";
+import sharp from "sharp";
+import { fromBuffer as pdfFromBuffer } from "pdf2pic";
 
 // ─── Input sanitization + prompt injection prevention ────────────────────────
 
@@ -407,6 +409,7 @@ router.post(
 
     // Save any uploaded files to the agent's work directory so SDK agents can Read them.
     // Binary formats (Excel, Word) are converted to text; text-based files pass through as-is.
+    const pdfPageThumbs: Array<{ page: number; base64: string; sourceName: string }> = [];
     const uploadedFiles = req.files as Express.Multer.File[] | undefined;
     if (uploadedFiles?.length) {
       const imageExts = new Set(["png", "jpg", "jpeg", "gif", "webp", "bmp", "svg"]);
@@ -415,6 +418,26 @@ router.post(
         if (imageExts.has(ext) || ext === "pdf") {
           // Keep binary as-is — agent reads images/PDFs natively
           agent.uploadDocument(file.originalname, file.buffer);
+          // For PDFs: extract pages as PNG so the agent can use vision on charts/figures
+          if (ext === "pdf") {
+            try {
+              const figuresDir = path.join(agent.workDir, "figures");
+              mkdirSync(figuresDir, { recursive: true });
+              const convert = pdfFromBuffer(file.buffer, { density: 120, format: "png", width: 992, height: 1404 });
+              const pageIndices = Array.from({ length: 12 }, (_, i) => i + 1);
+              const allPages = await convert.bulk(pageIndices, { responseType: "buffer" });
+              for (let i = 0; i < allPages.length; i++) {
+                const buf = (allPages[i] as { buffer?: Buffer } | undefined)?.buffer;
+                if (!buf) continue;
+                writeFileSync(path.join(figuresDir, `page-${i + 1}.png`), buf);
+                const thumb = await sharp(buf).resize({ width: 160, withoutEnlargement: true }).png({ compressionLevel: 9 }).toBuffer();
+                pdfPageThumbs.push({ page: i + 1, base64: `data:image/png;base64,${thumb.toString("base64")}`, sourceName: file.originalname });
+              }
+              writeFileSync(path.join(figuresDir, "manifest.json"), JSON.stringify({ source: file.originalname, pages: allPages.length }, null, 2), "utf-8");
+            } catch (err) {
+              req.log.warn({ event: "pdf_vision_extract_failed", error: String(err) });
+            }
+          }
         } else {
           try {
             const text = await extractText(file.buffer, file.originalname);
@@ -469,6 +492,11 @@ router.post(
     res.setHeader("Cache-Control", "no-cache");
     res.setHeader("Connection", "keep-alive");
     res.flushHeaders(); // Flush immediately so client sees headers before first event
+
+    // Send extracted PDF page thumbnails to frontend (if any) — enables visual preview
+    if (pdfPageThumbs.length > 0) {
+      res.write(`data: ${JSON.stringify({ pdf_pages: pdfPageThumbs })}\n\n`);
+    }
 
     // partialSections accumulates whatever the agent writes to disk — used for
     // partial recovery if the agent hits its turn limit mid-generation
@@ -761,11 +789,34 @@ router.post(
           markCanevasUploaded(sessionId, file.originalname);
         }
 
+        // For PDFs: extract pages as PNG for agent vision + return thumbnails to frontend
+        const docPdfPages: Array<{ page: number; base64: string; sourceName: string }> = [];
+        if (ext === "pdf") {
+          try {
+            const figuresDir = path.join(agent.workDir, "figures");
+            mkdirSync(figuresDir, { recursive: true });
+            const convert = pdfFromBuffer(file.buffer, { density: 120, format: "png", width: 992, height: 1404 });
+            const pageIndices = Array.from({ length: 12 }, (_, i) => i + 1);
+            const allPages = await convert.bulk(pageIndices, { responseType: "buffer" });
+            for (let i = 0; i < allPages.length; i++) {
+              const buf = (allPages[i] as { buffer?: Buffer } | undefined)?.buffer;
+              if (!buf) continue;
+              writeFileSync(path.join(figuresDir, `page-${i + 1}.png`), buf);
+              const thumb = await sharp(buf).resize({ width: 160, withoutEnlargement: true }).png({ compressionLevel: 9 }).toBuffer();
+              docPdfPages.push({ page: i + 1, base64: `data:image/png;base64,${thumb.toString("base64")}`, sourceName: file.originalname });
+            }
+            writeFileSync(path.join(figuresDir, "manifest.json"), JSON.stringify({ source: file.originalname, pages: allPages.length }, null, 2), "utf-8");
+          } catch (err) {
+            req.log.warn({ event: "pdf_vision_extract_failed_doc", error: String(err) });
+          }
+        }
+
         res.json({
           success: true,
           filename: file.originalname,
           chars: text.length,
           preview: text.slice(0, 500),
+          ...(docPdfPages.length > 0 ? { pdfPages: docPdfPages } : {}),
         });
       }
     } catch (err: unknown) {

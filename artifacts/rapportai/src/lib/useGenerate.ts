@@ -175,6 +175,7 @@ type SSEMessage = {
   toolUseId?: string;
   paused?: boolean;
   sections?: Record<string, string>;
+  pdf_pages?: Array<{ page: number; base64: string; sourceName: string }>;
 };
 
 const TOOL_STATUS: Record<string, string> = {
@@ -196,6 +197,7 @@ async function readSSE(
     onToolCall?: (status: string) => void;
     onActivity?: (item: ActivityItem) => void;
     onPaywall?: () => void;
+    onPdfPages?: (pages: Array<{ page: number; base64: string; sourceName: string }>) => void;
     paywallWords?: number;
     ctrl: AbortController;
     wordCountRef: { current: number };
@@ -206,7 +208,7 @@ async function readSSE(
   if (!resp.body) throw new Error("No response body");
 
   const {
-    onChunk, onDone, onQuestion, onToolCall, onActivity, onPaywall, paywallWords,
+    onChunk, onDone, onQuestion, onToolCall, onActivity, onPaywall, onPdfPages, paywallWords,
     ctrl, wordCountRef, paywallTriggeredRef, sessionId,
   } = handlers;
 
@@ -253,6 +255,12 @@ async function readSSE(
           }
           onDone();
           return;
+        }
+
+        // PDF page thumbnails from vision extraction
+        if (msg.pdf_pages) {
+          onPdfPages?.(msg.pdf_pages);
+          continue;
         }
 
         // Tool call — surface as French status + activity item
@@ -306,6 +314,7 @@ export function useGenerate(opts: {
   const [error, setError] = useState<string | null>(null);
   const [pendingQuestion, setPendingQuestion] = useState<AgentQuestion | null>(null);
   const [activityLog, setActivityLog] = useState<ActivityItem[]>([]);
+  const [pdfPages, setPdfPages] = useState<Array<{ page: number; base64: string; sourceName: string }>>([]);
   const abortRef = useRef<AbortController | null>(null);
   const wordCountRef = useRef(0);
   const paywallTriggeredRef = useRef(false);
@@ -407,6 +416,7 @@ export function useGenerate(opts: {
           onPaywall,
           onToolCall: setStreamingStatus,
           onActivity: (item) => setActivityLog((prev) => [...prev, item]),
+          onPdfPages: (pages) => setPdfPages(pages),
           onQuestion: (q) => {
             setPendingQuestion(q);
             onQuestion?.(q);
@@ -483,5 +493,5 @@ export function useGenerate(opts: {
     setIsStreaming(false);
   }, []);
 
-  return { generate, abort, answerQuestion, isStreaming, streamingStatus, error, pendingQuestion, activityLog, clearActivity };
+  return { generate, abort, answerQuestion, isStreaming, streamingStatus, error, pendingQuestion, activityLog, clearActivity, pdfPages, clearPdfPages: () => setPdfPages([]) };
 }

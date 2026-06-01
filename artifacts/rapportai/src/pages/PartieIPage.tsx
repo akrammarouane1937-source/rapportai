@@ -69,6 +69,7 @@ export default function PartieIPage() {
   const [uploadStatus, setUploadStatus] = useState<"idle" | "uploading" | "ready" | "error">("idle");
   const [uploadProgress, setUploadProgress] = useState(0);
   const [uploadError, setUploadError] = useState<string | null>(null);
+  const [pdfPages, setPdfPages] = useState<Array<{ page: number; base64: string; sourceName: string }>>([]);
   const [wordCount, setWordCount] = useState(() =>
     report.partieI ? report.partieI.split(/\s+/).filter(Boolean).length : 0
   );
@@ -254,6 +255,10 @@ export default function PartieIPage() {
         const err = await resp.json<{ error?: string }>();
         throw new Error(err.error ?? `HTTP ${resp.status}`);
       }
+      const data = await resp.json<{ success: boolean; pdfPages?: Array<{ page: number; base64: string; sourceName: string }> }>();
+      if (data.pdfPages && data.pdfPages.length > 0) {
+        setPdfPages(data.pdfPages);
+      }
       setUploadStatus("ready");
     } catch (err) {
       setUploadStatus("error");
@@ -421,7 +426,7 @@ export default function PartieIPage() {
                           )}
                         </div>
                         <span className="text-sm font-medium text-gray-700 truncate max-w-[160px]">{uploadedFile.name}</span>
-                        <button onClick={(e) => { e.stopPropagation(); setUploadedFile(null); setUploadStatus("idle"); setUploadError(null); }}
+                        <button onClick={(e) => { e.stopPropagation(); setUploadedFile(null); setUploadStatus("idle"); setUploadError(null); setPdfPages([]); }}
                           className="text-gray-400 hover:text-gray-600 flex-shrink-0"><X className="w-4 h-4" /></button>
                       </div>
                       {uploadStatus === "uploading" && (
@@ -439,6 +444,18 @@ export default function PartieIPage() {
                         </div>
                       )}
                       {uploadStatus === "ready" && <p className="text-xs text-green-600 font-medium">✓ Document prêt. L'IA va le lire.</p>}
+                      {uploadStatus === "ready" && pdfPages.length > 0 && (
+                        <div className="w-full mt-1.5">
+                          <p className="text-xs text-blue-600 font-medium mb-1">L'IA voit {pdfPages.length} page(s) du PDF</p>
+                          <div className="flex gap-1 overflow-x-auto pb-1">
+                            {pdfPages.map((p) => (
+                              <div key={p.page} className="flex-shrink-0 rounded overflow-hidden border border-blue-100" style={{ width: 34, height: 48 }}>
+                                <img src={p.base64} alt={`Page ${p.page}`} className="w-full h-full object-cover" />
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      )}
                       {uploadStatus === "error" && <p className="text-xs text-red-500">{uploadError}</p>}
                     </div>
                   ) : (

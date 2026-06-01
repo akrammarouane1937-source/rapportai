@@ -128,6 +128,20 @@ export class SDKReportAgent {
     }
   }
 
+  // List PNG page images extracted from uploaded PDFs (stored in figures/ subdirectory)
+  listFigureImages(): string[] {
+    try {
+      const figuresDir = path.join(this.workDir, "figures");
+      if (!existsSync(figuresDir)) return [];
+      return readdirSync(figuresDir)
+        .filter((f) => /^page-\d+\.png$/.test(f))
+        .sort((a, b) => parseInt(a.match(/\d+/)?.[0] ?? "0", 10) - parseInt(b.match(/\d+/)?.[0] ?? "0", 10))
+        .map((f) => `figures/${f}`);
+    } catch {
+      return [];
+    }
+  }
+
   // Read all written sections from disk
   getSections(): Record<string, string> {
     const sections: Record<string, string> = {};
@@ -312,6 +326,13 @@ export class SDKReportAgent {
             : "")
         : "";
 
+    const figImages = this.listFigureImages();
+    const figImageNote = figImages.length > 0
+      ? `\nImages PNG des pages du PDF disponibles (${figImages.length} page(s)) : ${figImages.join(", ")}. ` +
+        `Utilise Read sur ces fichiers pour voir visuellement les graphiques, tableaux et schémas du document. ` +
+        `Intègre les figures pertinentes que tu identifies dans le texte avec une référence naturelle.\n`
+      : "";
+
     switch (section) {
       case "partie-i": {
         const figsI = (opts?.figures ?? []).filter(f => f.placement === "Partie I");
@@ -322,7 +343,7 @@ export class SDKReportAgent {
         const contextPacketI = opts?.extraContext
           ? `\n\n## CONTEXTE INJECTÉ PAR L'ORCHESTRATEUR\n${opts.extraContext}\n---\n`
           : "";
-        return `${docNote}${contextPacketI}Lis sommaire.md pour extraire la structure exacte de la Partie I (chapitres et sections).
+        return `${docNote}${figImageNote}${contextPacketI}Lis sommaire.md pour extraire la structure exacte de la Partie I (chapitres et sections).
 Génère ensuite la Partie I complète en suivant cette structure. Ne modifie aucun titre, n'ajoute aucun chapitre.
 La Partie I est le cadre THÉORIQUE : elle doit poser les fondements conceptuels que la Partie II empirique va tester ou appliquer.
 Problématique : ${prob} | Style de citation : ${style}${figNoteI}
@@ -338,7 +359,7 @@ Enregistre dans partie-i.md une fois terminé.`;
         const contextPacket = opts?.extraContext
           ? `\n\n## CONTEXTE INJECTÉ PAR L'ORCHESTRATEUR\n${opts.extraContext}\n---\n`
           : "";
-        return `${docNote}${contextPacket}Lis sommaire.md pour extraire la structure exacte de la Partie II (chapitres et sections).
+        return `${docNote}${figImageNote}${contextPacket}Lis sommaire.md pour extraire la structure exacte de la Partie II (chapitres et sections).
 Lis aussi partie-i.md. Les références croisées vers Partie I sont OBLIGATOIRES. Chaque chapitre de la Partie II doit s'ancrer dans le cadre théorique établi en Partie I.
 Génère ensuite la Partie II complète en suivant la structure du sommaire.
 Problématique : ${prob} | Style de citation : ${style}${figNoteII}
