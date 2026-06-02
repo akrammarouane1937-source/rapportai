@@ -34,6 +34,9 @@ router.post("/revise", async (req: Request, res: Response) => {
   res.setHeader("Content-Type", "text/event-stream");
   res.setHeader("Cache-Control", "no-cache");
   res.setHeader("Connection", "keep-alive");
+  res.setHeader("X-Accel-Buffering", "no");
+  res.flushHeaders();
+  res.socket?.setNoDelay(true);
 
   // Use the session directory if available — gives the agent access to all uploaded files,
   // the real profile.json, and all previously generated sections.
