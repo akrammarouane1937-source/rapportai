@@ -17,6 +17,8 @@ import Step4Page from "@/pages/step-4";
 import Step5Page from "@/pages/step-5";
 import Step6Page from "@/pages/step-6";
 import Step9Page from "@/pages/step-9";
+import Step10Page from "@/pages/step-10";
+import Step11Page from "@/pages/step-11";
 import Step2Page from "@/pages/step-2";
 import Step3Page from "@/pages/step-3";
 import PartieIPage from "@/pages/partie-i";
@@ -297,6 +299,12 @@ function ClerkProviderWithRoutes() {
             </Route>
             <Route path="/rapport/step-9">
               <ProtectedRoute component={Step9Page} />
+            </Route>
+            <Route path="/rapport/step-10">
+              <ProtectedRoute component={Step10Page} />
+            </Route>
+            <Route path="/rapport/step-11">
+              <ProtectedRoute component={Step11Page} />
             </Route>
             <Route path="/rapport/partie-i">
               <ProtectedRoute component={PartieIPage} />

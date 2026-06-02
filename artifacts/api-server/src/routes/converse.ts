@@ -1,9 +1,11 @@
 import { Router, type Request, type Response } from "express";
-import Anthropic from "@anthropic-ai/sdk";
+import { createAnthropic } from "@ai-sdk/anthropic";
+import { streamText, jsonSchema, convertToModelMessages, type UIMessage } from "ai";
 
 const router = Router();
 
-// Strip emoji from streamed text
+// ─── Strip emoji from text (for intent route) ─────────────────────────────────
+
 const EMOJI_RE =
   /[\u{1F600}-\u{1F64F}\u{1F300}-\u{1F5FF}\u{1F680}-\u{1F6FF}\u{1F700}-\u{1F77F}\u{1F780}-\u{1F7FF}\u{1F800}-\u{1F8FF}\u{1F900}-\u{1F9FF}\u{1FA00}-\u{1FA6F}\u{1FA70}-\u{1FAFF}\u{2600}-\u{26FF}\u{2700}-\u{27BF}\u{231A}-\u{231B}\u{23E9}-\u{23F3}\u{23F8}-\u{23FA}\u{25AA}-\u{25AB}\u{25B6}\u{25C0}\u{25FB}-\u{25FE}\u{2614}-\u{2615}\u{2648}-\u{2653}\u{267F}\u{2693}\u{26A1}\u{26AA}-\u{26AB}\u{26BD}-\u{26BE}\u{26C4}-\u{26C5}\u{26CE}\u{26D4}\u{26EA}\u{26F2}-\u{26F3}\u{26F5}\u{26FA}\u{26FD}\u{2702}\u{2705}\u{2708}-\u{270D}\u{270F}\u{2712}\u{2714}\u{2716}\u{271D}\u{2721}\u{2728}\u{2733}-\u{2734}\u{2744}\u{2747}\u{274C}\u{274E}\u{2753}-\u{2755}\u{2757}\u{2763}-\u{2764}\u{2795}-\u{2797}\u{27A1}\u{27B0}\u{27BF}\u{2934}-\u{2935}\u{2B05}-\u{2B07}\u{2B1B}-\u{2B1C}\u{2B50}\u{2B55}\u{3030}\u{303D}\u{3297}\u{3299}]/gu;
 function stripEmoji(t: string): string {
@@ -140,14 +142,13 @@ Si aucun tableau trouvé → "## Liste des tableaux\n\n*(Aucun tableau dans ce r
 ACTION OBLIGATOIRE dans la même réponse : generate_section("liste-tableaux") → step_complete.`,
 };
 
-// ─── Tool definitions ─────────────────────────────────────────────────────────
+// ─── Tool definitions (static tools — no execute, handled by frontend) ────────
 
-const TOOLS: Anthropic.Tool[] = [
-  {
-    name: "generate_section",
+const TOOLS = {
+  generate_section: {
     description:
       "Déclenche la génération d'une section du rapport. Inclus dans 'context' TOUS les noms, préférences, fichiers fournis et détails mentionnés.",
-    input_schema: {
+    inputSchema: jsonSchema<{ section: string; context: string }>({
       type: "object",
       properties: {
         section: {
@@ -162,13 +163,12 @@ const TOOLS: Anthropic.Tool[] = [
         },
       },
       required: ["section", "context"],
-    },
+    }),
   },
-  {
-    name: "ask_user",
+  ask_user: {
     description:
       "Pose une question à l'étudiant avec des choix cliquables. Utilise UNIQUEMENT quand tu as 2 à 4 options courtes et claires.",
-    input_schema: {
+    inputSchema: jsonSchema<{ question: string; choices: string[] }>({
       type: "object",
       properties: {
         question: {
@@ -182,12 +182,11 @@ const TOOLS: Anthropic.Tool[] = [
         },
       },
       required: ["question", "choices"],
-    },
+    }),
   },
-  {
-    name: "step_complete",
+  step_complete: {
     description: "Appelle ceci quand toutes les sections requises ont été générées.",
-    input_schema: {
+    inputSchema: jsonSchema<{ message: string }>({
       type: "object",
       properties: {
         message: {
@@ -196,14 +195,19 @@ const TOOLS: Anthropic.Tool[] = [
         },
       },
       required: ["message"],
-    },
+    }),
   },
-];
+} as const;
 
 // ─── System prompt builder ────────────────────────────────────────────────────
 
-function buildSystem(step: number, profile: Record<string, string>, generatedSections: string[]): string {
-  const stepSystem = STEP_SYSTEMS[step] ?? "Tu es l'assistant de RapportAI. Aide l'étudiant en français.";
+function buildSystem(
+  step: number,
+  profile: Record<string, string>,
+  generatedSections: string[],
+): string {
+  const stepSystem =
+    STEP_SYSTEMS[step] ?? "Tu es l'assistant de RapportAI. Aide l'étudiant en français.";
   return `${stepSystem}
 
 ━━━ PROFIL COMPLET DE L'ÉTUDIANT (DÉJÀ CONNU — NE PAS RE-DEMANDER) ━━━
@@ -241,10 +245,10 @@ Réponds toujours en français. Sois naturel et humain.`;
 const ANTHROPIC_API = "https://api.anthropic.com/v1/messages";
 
 const PHASE_QUESTIONS: Record<string, string> = {
-  theme:   "C'est quoi le thème / sujet de ton rapport ?",
-  school:  "Ton école ou université ?",
+  theme: "C'est quoi le thème / sujet de ton rapport ?",
+  school: "Ton école ou université ?",
   filiere: "Ta filière ? (tu peux dire 'passer' si tu ne sais pas encore)",
-  annee:   "Année académique ? (ex: 2025–2026)",
+  annee: "Année académique ? (ex: 2025–2026)",
 };
 
 router.post("/converse/intent", async (req: Request, res: Response) => {
@@ -255,7 +259,10 @@ router.post("/converse/intent", async (req: Request, res: Response) => {
   };
 
   const apiKey = process.env.ANTHROPIC_API_KEY;
-  if (!apiKey) { res.status(500).json({ type: "reply", text: "Erreur de configuration." }); return; }
+  if (!apiKey) {
+    res.status(500).json({ type: "reply", text: "Erreur de configuration." });
+    return;
+  }
 
   const question = PHASE_QUESTIONS[phase] ?? "Ta réponse ?";
 
@@ -306,7 +313,7 @@ Jamais d'emojis. Jamais de listes.`;
       return;
     }
 
-    const data = await anthropicRes.json() as {
+    const data = (await anthropicRes.json()) as {
       content: Array<{ type: string; text: string }>;
     };
     const raw = data.content.find((b) => b.type === "text")?.text?.trim() ?? "";
@@ -323,120 +330,61 @@ Jamais d'emojis. Jamais de listes.`;
   }
 });
 
-// ─── Message types ────────────────────────────────────────────────────────────
-
-type ContentBlock =
-  | { type: "text"; text: string }
-  | { type: "image"; source: { type: "base64"; media_type: string; data: string } }
-  | { type: "document"; source: { type: "base64"; media_type: string; data: string }; title?: string }
-  | { type: "document"; source: { type: "text"; data: string }; title?: string };
-
-type ApiMessage = {
-  role: "user" | "assistant";
-  content: string | ContentBlock[];
-};
-
-// ─── SSE helpers ──────────────────────────────────────────────────────────────
-
-function sseWrite(res: Response, data: Record<string, unknown>): void {
-  res.write(`data: ${JSON.stringify(data)}\n\n`);
-}
-
 // ─── POST /api/converse ───────────────────────────────────────────────────────
 
 router.post("/converse", async (req: Request, res: Response) => {
-  const { messages, step, profile = {}, generatedSections = [] } = req.body as {
-    messages: ApiMessage[];
+  const {
+    messages: uiMessages = [],
+    step,
+    profile = {},
+    generatedSections = [],
+  } = req.body as {
+    messages: UIMessage[];
     step: number;
     profile: Record<string, string>;
     generatedSections: string[];
   };
 
   const apiKey = process.env.ANTHROPIC_API_KEY;
-  if (!apiKey) { res.status(500).json({ error: "ANTHROPIC_API_KEY not configured" }); return; }
+  if (!apiKey) {
+    res.status(500).json({ error: "ANTHROPIC_API_KEY not configured" });
+    return;
+  }
 
-  // Keep context bounded: first 4 turns (key data) + last 16
-  const compressMessages = (msgs: ApiMessage[]) => {
-    if (!Array.isArray(msgs) || msgs.length <= 20) return msgs;
-    const head = msgs.slice(0, 4);
-    const tail = msgs.slice(-16);
+  // Convert UIMessages → ModelMessages
+  let modelMessages = convertToModelMessages(uiMessages);
+
+  // Compress history: keep first 4 turns + last 16 to bound context size
+  if (modelMessages.length > 20) {
+    const head = modelMessages.slice(0, 4);
+    const tail = modelMessages.slice(-16);
     const headSet = new Set(head);
-    return [...head, ...tail.filter((m) => !headSet.has(m))];
-  };
-  const convoMessages = compressMessages(messages);
+    modelMessages = [...head, ...tail.filter((m) => !headSet.has(m))];
+  }
 
   const system = buildSystem(step, profile, generatedSections);
   const model = step === 5 ? "claude-sonnet-4-5" : "claude-haiku-4-5";
   const maxTokens = step === 5 ? 2048 : 1500;
 
-  res.setHeader("Content-Type", "text/event-stream");
-  res.setHeader("Cache-Control", "no-cache");
-  res.setHeader("Connection", "keep-alive");
-  res.flushHeaders();
-
-  const anthropic = new Anthropic({ apiKey });
-
   try {
-    const stream = anthropic.messages.stream({
-      model,
-      max_tokens: maxTokens,
+    const anthropic = createAnthropic({ apiKey });
+
+    // streamText with static tools (no execute) — tool calls are sent to frontend via UIMessageStream
+    const result = streamText({
+      model: anthropic(model),
       system,
+      messages: modelMessages,
       tools: TOOLS,
-      messages: convoMessages as Anthropic.MessageParam[],
+      maxTokens,
     });
 
-    const pendingActions: Array<Record<string, unknown>> = [];
-    let toolAccumulator: Record<number, { name: string; jsonStr: string }> = {};
-
-    for await (const event of stream) {
-      // Stream text token-by-token
-      if (
-        event.type === "content_block_delta" &&
-        event.delta.type === "text_delta"
-      ) {
-        const clean = stripEmoji(event.delta.text);
-        if (clean) sseWrite(res, { text: clean });
-      }
-
-      // Accumulate tool call JSON
-      if (
-        event.type === "content_block_start" &&
-        event.content_block.type === "tool_use"
-      ) {
-        toolAccumulator[event.index] = {
-          name: event.content_block.name,
-          jsonStr: "",
-        };
-      }
-      if (
-        event.type === "content_block_delta" &&
-        event.delta.type === "input_json_delta"
-      ) {
-        const acc = toolAccumulator[event.index];
-        if (acc) acc.jsonStr += event.delta.partial_json;
-      }
-      if (event.type === "content_block_stop") {
-        const acc = toolAccumulator[event.index];
-        if (acc) {
-          try {
-            const input = JSON.parse(acc.jsonStr || "{}") as Record<string, unknown>;
-            pendingActions.push({ type: acc.name, ...input });
-          } catch { /* malformed JSON */ }
-          delete toolAccumulator[event.index];
-        }
-      }
-    }
-
-    // After stream: write collected tool actions then done
-    for (const action of pendingActions) {
-      sseWrite(res, { action });
-    }
-    sseWrite(res, { done: true });
+    result.pipeUIMessageStreamToResponse(res);
   } catch (err) {
     const msg = err instanceof Error ? err.message : "Unknown error";
-    sseWrite(res, { error: msg });
-  } finally {
-    res.end();
+    req.log?.error({ err }, "converse error");
+    if (!res.headersSent) {
+      res.status(500).json({ error: msg });
+    }
   }
 });
 

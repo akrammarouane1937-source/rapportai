@@ -42,8 +42,8 @@ const SECTION_STEPS: Record<string, number> = {
   "partie-i":       7,
   "partie-ii":      8,
   "conclusion":     9,
-  "liste-figures":  99,
-  "liste-tableaux": 99,
+  "liste-figures":  10,
+  "liste-tableaux": 11,
 };
 
 // Custom components for the cover page — no inline <style> tag, no broken images
