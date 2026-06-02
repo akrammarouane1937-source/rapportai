@@ -378,7 +378,11 @@ router.post("/converse", async (req: Request, res: Response) => {
       maxTokens,
     });
 
-    // Patch res.write to flush after every chunk (fixes Replit proxy buffering)
+    // Disable nginx/proxy buffering + Nagle's algorithm so chunks reach the browser immediately
+    res.setHeader("X-Accel-Buffering", "no");
+    res.socket?.setNoDelay(true);
+
+    // Patch res.write to flush after every chunk (belt-and-suspenders for any residual buffering)
     const _origWrite = res.write.bind(res);
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     (res as any).write = (...args: any[]): boolean => {

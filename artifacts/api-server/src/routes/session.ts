@@ -74,9 +74,11 @@ function validateAndSanitizeIntake(profile: Record<string, unknown>): IntakeVali
   if (!(profile.reportType as string | undefined)?.trim())
     profile.reportType = "PFE";
 
-  // Sanitize in-place
-  profile.studentName = sanitize(name);
-  profile.theme       = sanitize(theme);
+  // Sanitize in-place — read back from profile.xxx so the defaults set above are preserved.
+  // Do NOT use the local `name`/`theme` variables here — they may be empty strings that
+  // would overwrite the "Étudiant" / "Rapport académique" fallbacks just assigned above.
+  profile.studentName = sanitize(profile.studentName as string);
+  profile.theme       = sanitize(profile.theme as string);
   if (profile.problematique)
     profile.problematique = sanitize((profile.problematique as string).slice(0, 800));
   if (profile.encadrantPeda)
@@ -495,7 +497,9 @@ router.post(
     res.setHeader("Content-Type", "text/event-stream");
     res.setHeader("Cache-Control", "no-cache");
     res.setHeader("Connection", "keep-alive");
+    res.setHeader("X-Accel-Buffering", "no"); // disable nginx proxy buffering
     res.flushHeaders(); // Flush immediately so client sees headers before first event
+    res.socket?.setNoDelay(true); // disable Nagle's algorithm
 
     // Patch res.write to flush after every chunk (fixes Replit proxy buffering).
     // Covers both inline writes and writes inside streamToSSE/streamingHumanize.
@@ -715,7 +719,9 @@ router.post(
     res.setHeader("Content-Type", "text/event-stream");
     res.setHeader("Cache-Control", "no-cache");
     res.setHeader("Connection", "keep-alive");
+    res.setHeader("X-Accel-Buffering", "no"); // disable nginx proxy buffering
     res.flushHeaders();
+    res.socket?.setNoDelay(true); // disable Nagle's algorithm
 
     // Patch res.write to flush after every chunk (fixes Replit proxy buffering).
     const _origWriteRev = res.write.bind(res);
@@ -951,7 +957,9 @@ router.post(
     res.setHeader("Content-Type", "text/event-stream");
     res.setHeader("Cache-Control", "no-cache");
     res.setHeader("Connection", "keep-alive");
+    res.setHeader("X-Accel-Buffering", "no"); // disable nginx proxy buffering
     res.flushHeaders();
+    res.socket?.setNoDelay(true); // disable Nagle's algorithm
 
     // Patch res.write to flush after every chunk (fixes Replit proxy buffering).
     const _origWritePg = res.write.bind(res);

@@ -589,7 +589,9 @@ router.post("/chat", async (req: Request, res: Response) => {
   res.setHeader("Content-Type", "text/event-stream");
   res.setHeader("Cache-Control", "no-cache");
   res.setHeader("Connection", "keep-alive");
+  res.setHeader("X-Accel-Buffering", "no"); // disable nginx proxy buffering
   res.flushHeaders();
+  res.socket?.setNoDelay(true); // disable Nagle's algorithm
 
   // Patch res.write to flush after every chunk (fixes Replit proxy buffering).
   // This covers both inline writes and writes inside streamApiCall.
