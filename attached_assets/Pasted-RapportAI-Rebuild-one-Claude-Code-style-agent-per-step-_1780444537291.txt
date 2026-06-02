@@ -1,0 +1,46 @@
+RapportAI — Rebuild: one Claude-Code-style agent per step
+Context
+RapportAI is a SaaS that generates academic reports (PFE / rapport de stage / mémoire) for Moroccan students. Two services: React/Vite frontend (artifacts/rapportai) + Express backend (artifacts/api-server). The backend already uses the Claude Agent SDK (query() in artifacts/api-server/src/lib/sdk-agent.ts), which gives an agent real file tools inside a per-session working directory. Uploaded PDFs are already rasterized to page PNGs in the session figures/ dir (pipeline in routes/session.ts).
+
+THE CORE CHANGE — collapse two agents into ONE per step
+Today every step has two stacked agents: a thin chat agent (routes/converse.ts, Vercel AI SDK) that only decides when to call generate_section, which hands off to a separate hidden generation agent (lib/sdk-agent.ts, Claude Agent SDK). This split is the source of the complexity, the robotic feel, and the failures.
+
+Replace it with ONE Claude-Code-style agent per step, built on the Claude Agent SDK we already have. The chat is the agent: it talks to the student naturally AND directly uses real tools. Remove the generate_section / step_complete orchestration layer.
+
+How each step agent must behave (this is the product)
+Own per-step system prompt. DON'T write new prompts from scratch — merge what exists: take the detailed lib/skills/<section>-system.md (+ <section>-skills.md) generation prompt, strip the scaffolding from the matching converse.ts STEP_SYSTEMS chat prompt, and combine into ONE clean natural prompt per step. Preserve the good academic content.
+Talks like Claude/ChatGPT. No scripted opening message ("Bonjour, nous sommes à l'étape X"). No command-phrases ("dis ok pour générer", "dis réessaie", "dis reset"). No confirmation gates. It just helps and does the work.
+Real tools (like Claude Code): Read, Write, Edit, Glob, Grep, WebSearch, WebFetch, plus a screenshot/crop tool (below).
+Full memory. Already knows the entire student profile + all previously generated sections; never re-asks known info.
+Full visibility (like Claude Code reading a folder). Can Read every uploaded document, every previous section, and every uploaded figure in the working dir.
+Writes the report INTO the Word preview, NOT the chat. The agent writes/edits the section .md file, which renders in the right-hand Word preview. The chat shows only: the conversation + a short live activity trace ("je rédige l'introduction…") + a one-line confirmation. Never dump section content as a chat message (remove the current GeneratedCard snippet in hooks/use-conversation.ts).
+Respects Mise en forme. Reads the user's formatting settings (police, interligne, marges, style de citation — wired via buildSystemPrompt + lib/formatting.ts) and produces the section already formatted to them.
+Surgical edits. When the student asks to change part of a section, the agent uses the Edit tool to change only that part of the .md file — never regenerates the whole section (saves cost).
+Screenshot → figures. The agent can crop/screenshot a region of an uploaded document's page image (PDF pages are already PNGs in the session figures/ dir; use sharp, already a dependency, to crop) and embed it as a real figure in the report, with source + caption. Essential for the Partie I and Partie II agents.
+Reliable. Generation must basically never "fail." Investigate the current empty/"failed" path in routes/session.ts + lib/sdk-agent.ts (validation too strict? maxTurns hit? agent didn't Write the file?) and relax validation so a real section is never rejected. Retries must be automatic and silent — never a phrase the user has to type.
+Model routing (cost): keep Sonnet for heavy steps (Partie I/II, introduction, conclusion), Haiku for light steps.
+Make Partie I & Partie II conversational
+Today partie-i.tsx / partie-ii.tsx are form pages (button-triggered), not chats. Convert them to the same one-agent conversational model as the other steps (this is where the screenshot→figures capability matters most).
+
+Also
+Dashboard "godfather" agent (routes/chat.ts): align it to the same natural philosophy — aware of the whole report, routes/helps across steps, no scripted phrases.
+Cleanup: delete dead duplicate pages — capital-named Step1Page.tsx…Step9Page.tsx, PartieIPage.tsx, PartieIIPage.tsx (App.tsx imports the lowercase step-* / partie-*; the capitals are dead and cause "I fixed it but nothing changed"). Pick ONE generation path (keep session.ts + sdk-agent.ts; remove redundant per-section routes sommaire.ts/introduction.ts/partie-i.ts/etc. if unused).
+Remove JuryAI (not MVP): its sidebar item + route + page.
+Primary files
+routes/converse.ts, lib/sdk-agent.ts, lib/agents/sectionConfigs.ts, routes/session.ts, lib/skills/*-system.md + *-skills.md, lib/formatting.ts, hooks/use-conversation.ts, hooks/use-generate.ts + lib/useGenerate.ts, pages/step-*.tsx, pages/partie-i.tsx / partie-ii.tsx, routes/chat.ts, App.tsx.
+
+Order of work — SEQUENTIAL. Do NOT parallelize (all of this touches the same chat→generation flow; parallel work will conflict). Confirm each phase works on deploy before the next.
+Foundation: collapse to one per-step Agent SDK agent — merged natural prompts, all tools, full visibility, content-to-preview-only, mise en forme, reliable generation. Convert Partie I/II to conversational.
+Capabilities: surgical edits (Edit tool) + screenshot/crop→figures tool (Partie I/II).
+Finish: dashboard agent alignment + cleanup (dead files, one path) + remove JuryAI.
+Definition of done (verify by clicking)
+Open any step → no robotic opening message; you can just talk.
+Ask the agent a question instead of answering → it replies naturally, doesn't skip ahead.
+It generates without any "say ok / réessaie" prompt; the section appears in the Word preview, not as a wall of text in the chat.
+Change the font + citation style in Mise en forme → regenerate → the output reflects it.
+Ask to change one paragraph → only that paragraph changes (no full regen).
+Upload a PDF with a chart in Partie I → the agent can pull that figure into the report.
+Generate every section end-to-end → nothing "fails."
+Rules
+Sequential only — finish and verify each phase before the next.
+If you touch a file not listed here, flag it before changing it, and report what changed at the end of each phase.
