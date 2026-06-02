@@ -139,7 +139,7 @@ export default function DashboardPage() {
   const bottomRef               = useRef<HTMLDivElement>(null);
   const textareaRef             = useRef<HTMLTextAreaElement>(null);
   const abortRef                = useRef<AbortController | null>(null);
-  const proactiveShownRef       = useRef(false);
+  const proactiveShownRef       = useRef(!!sessionStorage.getItem("rapportai_proactive_shown"));
   const showGreeting            = messages.length === 0;
   const hasReport               = !!(report.theme || report.school);
   const placeholder             = useAnimatedPlaceholder(showGreeting && !input, hasReport);
@@ -191,6 +191,7 @@ export default function DashboardPage() {
   useEffect(() => {
     if (proactiveShownRef.current || completedCount === 0 || !hasReport) return;
     proactiveShownRef.current = true;
+    sessionStorage.setItem("rapportai_proactive_shown", "1");
     const sectionList = [
       { key: "pageDeGarde", label: "Page de garde" }, { key: "dedicaces", label: "Dédicaces" },
       { key: "resumeFr", label: "Résumé" }, { key: "sommaire", label: "Sommaire" },

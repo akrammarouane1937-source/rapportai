@@ -389,6 +389,7 @@ router.post(
       formatting?: Record<string, unknown>;
     };
     const { section, problematique, extraContext, formatting } = rawBody;
+    const incomingTheme = (rawBody as unknown as { theme?: string }).theme?.trim();
     // figures arrives as a JSON string in FormData, as an array in JSON body
     let figures: { figureNumber: number; title: string; source: string; author: string; caption: string; placement: string }[] | undefined;
     if (Array.isArray(rawBody.figures)) {
@@ -463,6 +464,13 @@ router.post(
     if (problematique) {
       patchMemory(sessionId, (m) => { m.report.problematique = problematique; });
       agent.patchProfile({ problematique });
+    }
+
+    // Sync theme: if frontend has a real theme but session was created with the placeholder,
+    // update profile.json and student_memory.json so agents use the correct theme.
+    if (incomingTheme && incomingTheme.length >= 3 && incomingTheme !== "Rapport académique") {
+      agent.patchProfile({ theme: incomingTheme });
+      patchMemory(sessionId, (m) => { m.report.title = incomingTheme; });
     }
 
     // Mise en forme can change between session start and generation — keep the

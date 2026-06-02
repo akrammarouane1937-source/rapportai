@@ -208,14 +208,16 @@ function buildSystem(
 ): string {
   const stepSystem =
     STEP_SYSTEMS[step] ?? "Tu es l'assistant de RapportAI. Aide l'étudiant en français.";
-  return `${stepSystem}
+  const hasRealTheme = !!(profile.theme && profile.theme.trim() && profile.theme.trim() !== "Rapport académique");
 
+  return `${stepSystem}
+${!hasRealTheme ? `\nATTENTION : Le thème de l'étudiant est VIDE. S'il manque dans le profil, demande-le en UNE question courte et naturelle. NE génère JAMAIS de message d'erreur de validation. NE mentionne JAMAIS "minimum 3 caractères" ou règles de validation.\n` : ""}
 ━━━ PROFIL COMPLET DE L'ÉTUDIANT (DÉJÀ CONNU — NE PAS RE-DEMANDER) ━━━
 - Nom : ${profile.studentName ?? ""}
 - École : ${profile.school ?? ""}
 - Filière : ${profile.filiere ?? ""}
 - Type de rapport : ${profile.reportType ?? ""}
-- Thème : ${profile.theme ?? ""}
+- Thème : ${hasRealTheme ? profile.theme : "(non renseigné — à demander)"}
 - Année académique : ${profile.academicYear ?? ""}
 ${profile.reportColor ? `- Couleur choisie pour le rapport : ${profile.reportColor}` : ""}
 ${profile.encadrantPeda ? `- Encadrant pédagogique : ${profile.encadrantPeda}` : ""}
