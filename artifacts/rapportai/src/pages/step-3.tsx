@@ -5,7 +5,7 @@ import { ChatMessage, StepTransitionCard, AgentSteps } from "@/components/chat-p
 import { PreviewPanel } from "@/components/preview-panel";
 import { ChatInput } from "@/components/chat-input";
 import { useReportStore } from "@/lib/store";
-import { useConversation } from "@/hooks/use-conversation";
+import { useStepAgent } from "@/hooks/use-step-agent";
 
 const stripTitle = (text: string, title: string) =>
   text.replace(new RegExp(`^#{0,3}\\s*${title}\\s*\\n+`, "i"), "").trim();
@@ -16,7 +16,7 @@ export default function Step3() {
   const [stepDone, setStepDone] = useState(() => !!(report.dedicaces || report.remerciements));
   const bottomRef = useRef<HTMLDivElement>(null);
 
-  const { messages, send, abort, isThinking, isGenerating, toolCalls, thinkingText } = useConversation({
+  const { messages, send, abort, isThinking, isGenerating, toolCalls, thinkingText } = useStepAgent({
     step: 3,
     autoSend: "Démarre.",
     onSectionGenerated: (section, content) => {

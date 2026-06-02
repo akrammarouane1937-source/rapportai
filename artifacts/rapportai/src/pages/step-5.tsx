@@ -5,7 +5,7 @@ import { ChatMessage, StepTransitionCard, AgentSteps } from "@/components/chat-p
 import { PreviewPanel } from "@/components/preview-panel";
 import { ChatInput } from "@/components/chat-input";
 import { useReportStore } from "@/lib/store";
-import { useConversation } from "@/hooks/use-conversation";
+import { useStepAgent } from "@/hooks/use-step-agent";
 import { FileText, Sparkles } from "lucide-react";
 
 // ─── Choice phase shown before the conversation starts ───────────────────────
@@ -70,7 +70,7 @@ export default function Step5() {
   const bottomRef = useRef<HTMLDivElement>(null);
 
   // No autoSend — we call send() directly when the user picks a path.
-  const { messages, send, abort, isThinking, isGenerating, toolCalls, thinkingText } = useConversation({
+  const { messages, send, abort, isThinking, isGenerating, toolCalls, thinkingText } = useStepAgent({
     step: 5,
     onSectionGenerated: (section, content) => {
       if (section === "sommaire") {

@@ -19,6 +19,7 @@ import referralRouter from "./referral";
 import planApprovalRouter from "./plan-approval";
 import adminRouter from "./admin";
 import meRouter from "./me";
+import agentRouter from "./agent";
 // ─── Section agents (each has explicit system prompt + tools) ─────────────────
 import introductionRouter from "./introduction";
 import dedicacesRouter from "./dedicaces";
@@ -53,6 +54,7 @@ router.use(referralRouter);
 router.use(planApprovalRouter);
 router.use(adminRouter);
 router.use(meRouter);
+router.use(agentRouter);
 // Section agents
 router.use(introductionRouter);
 router.use(dedicacesRouter);

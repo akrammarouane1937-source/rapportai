@@ -5,7 +5,7 @@ import { ChatMessage, StepTransitionCard, AgentSteps } from "@/components/chat-p
 import { PreviewPanel } from "@/components/preview-panel";
 import { ChatInput } from "@/components/chat-input";
 import { useReportStore, type Report } from "@/lib/store";
-import { useConversation } from "@/hooks/use-conversation";
+import { useStepAgent } from "@/hooks/use-step-agent";
 
 /**
  * Build the silent first message sent to the Introduction agent.
@@ -50,7 +50,7 @@ export default function Step6() {
     contextMessageRef.current = buildIntroContext(report);
   }
 
-  const { messages, send, abort, isThinking, isGenerating, toolCalls, thinkingText } = useConversation({
+  const { messages, send, abort, isThinking, isGenerating, toolCalls, thinkingText } = useStepAgent({
     step: 6,
     autoSend: contextMessageRef.current,
     onSectionGenerated: (section, content) => {

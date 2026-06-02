@@ -5,7 +5,7 @@ import { ChatMessage, StepTransitionCard, AgentSteps } from "@/components/chat-p
 import { PreviewPanel } from "@/components/preview-panel";
 import { ChatInput } from "@/components/chat-input";
 import { useReportStore } from "@/lib/store";
-import { useConversation } from "@/hooks/use-conversation";
+import { useStepAgent } from "@/hooks/use-step-agent";
 import { useOptionalUser as useUser } from "@/lib/useOptionalClerk";
 
 function capitalizeName(name: string): string {
@@ -23,7 +23,7 @@ export default function Step2Page() {
     user?.fullName || user?.firstName || report.studentName || ""
   );
 
-  const { messages, send, abort, isThinking, isGenerating, toolCalls, thinkingText } = useConversation({
+  const { messages, send, abort, isThinking, isGenerating, toolCalls, thinkingText } = useStepAgent({
     step: 2,
     autoSend: "Démarre.",
     onSectionGenerated: (section, content) => {

@@ -1,6 +1,6 @@
 import { useState, useRef, useEffect } from "react";
 import { useReportStore, type Report } from "@/lib/store";
-import { useConversation } from "@/hooks/use-conversation";
+import { useStepAgent } from "@/hooks/use-step-agent";
 import { Layout } from "@/components/layout";
 import { ChatMessage, AgentSteps } from "@/components/chat-panel";
 import { PreviewPanel } from "@/components/preview-panel";
@@ -40,7 +40,7 @@ export default function Step9() {
     ? `\n\nTon rapport : **${wc.toLocaleString("fr-FR")} mots** (~${pages} pages).`
     : "";
 
-  const { messages, send, abort, isThinking, isGenerating, toolCalls, thinkingText } = useConversation({
+  const { messages, send, abort, isThinking, isGenerating, toolCalls, thinkingText } = useStepAgent({
     step: 9,
     autoSend: "Démarre.",
     onSectionGenerated: (section, content) => {

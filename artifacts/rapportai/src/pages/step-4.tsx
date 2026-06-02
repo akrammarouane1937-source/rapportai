@@ -5,7 +5,7 @@ import { ChatMessage, StepTransitionCard, AgentSteps } from "@/components/chat-p
 import { PreviewPanel } from "@/components/preview-panel";
 import { ChatInput } from "@/components/chat-input";
 import { useReportStore } from "@/lib/store";
-import { useConversation } from "@/hooks/use-conversation";
+import { useStepAgent } from "@/hooks/use-step-agent";
 
 const stripTitle = (text: string, title: string) =>
   text.replace(new RegExp(`^#{0,3}\\s*${title}\\s*\\n+`, "i"), "").trim();
@@ -19,7 +19,7 @@ export default function Step4() {
   // Only gate if no résumé has been generated yet AND both parties aren't ready
   const isLocked = !report.resumeFr && (!report.partieI || !report.partieII);
 
-  const { messages, send, abort, isThinking, isGenerating, toolCalls, thinkingText } = useConversation({
+  const { messages, send, abort, isThinking, isGenerating, toolCalls, thinkingText } = useStepAgent({
     step: 4,
     autoSend: isLocked ? undefined : "Démarre.",
     onSectionGenerated: (section, content) => {

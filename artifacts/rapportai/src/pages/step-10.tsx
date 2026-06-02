@@ -1,6 +1,6 @@
 import { useState, useRef, useEffect } from "react";
 import { useReportStore } from "@/lib/store";
-import { useConversation } from "@/hooks/use-conversation";
+import { useStepAgent } from "@/hooks/use-step-agent";
 import { Layout } from "@/components/layout";
 import { ChatMessage, AgentSteps } from "@/components/chat-panel";
 import { ChatInput } from "@/components/chat-input";
@@ -16,7 +16,7 @@ export default function Step10() {
     : "";
 
   const { messages, send, abort, isThinking, isGenerating, toolCalls, thinkingText } =
-    useConversation({
+    useStepAgent({
       step: 10,
       autoSend: "Génère la liste des figures.",
       onSectionGenerated: (section, content) => {

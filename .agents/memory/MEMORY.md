@@ -1,2 +1,1 @@
-- [Vercel AI SDK tool call pattern](ai-sdk-tool-call-pattern.md) — onToolCall must return void; use addToolOutputRef wired after useChat to send results
-- [AI SDK package split](ai-sdk-package-split.md) — Chat class is in @ai-sdk/react v3, NOT in ai v6; transport/types stay in ai
+- [Unified Agent Endpoint](agent-endpoint.md) — Phase 1: /api/agent/:step/stream replaces Vercel AI SDK converse.ts with Haiku coordinator + Claude Agent SDK generation in one SSE endpoint.
