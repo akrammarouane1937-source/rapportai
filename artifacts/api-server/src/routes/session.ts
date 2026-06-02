@@ -497,6 +497,16 @@ router.post(
     res.setHeader("Connection", "keep-alive");
     res.flushHeaders(); // Flush immediately so client sees headers before first event
 
+    // Patch res.write to flush after every chunk (fixes Replit proxy buffering).
+    // Covers both inline writes and writes inside streamToSSE/streamingHumanize.
+    const _origWrite = res.write.bind(res);
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    (res as any).write = (...args: any[]): boolean => {
+      const r = _origWrite(...args);
+      (res as unknown as { flush?: () => void }).flush?.();
+      return r as boolean;
+    };
+
     // Send extracted PDF page thumbnails to frontend (if any) — enables visual preview
     if (pdfPageThumbs.length > 0) {
       res.write(`data: ${JSON.stringify({ pdf_pages: pdfPageThumbs })}\n\n`);
@@ -706,6 +716,15 @@ router.post(
     res.setHeader("Cache-Control", "no-cache");
     res.setHeader("Connection", "keep-alive");
     res.flushHeaders();
+
+    // Patch res.write to flush after every chunk (fixes Replit proxy buffering).
+    const _origWriteRev = res.write.bind(res);
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    (res as any).write = (...args: any[]): boolean => {
+      const r = _origWriteRev(...args);
+      (res as unknown as { flush?: () => void }).flush?.();
+      return r as boolean;
+    };
 
     try {
       // Write attached files to an isolated subdirectory — never touches core session files
@@ -932,6 +951,16 @@ router.post(
     res.setHeader("Content-Type", "text/event-stream");
     res.setHeader("Cache-Control", "no-cache");
     res.setHeader("Connection", "keep-alive");
+    res.flushHeaders();
+
+    // Patch res.write to flush after every chunk (fixes Replit proxy buffering).
+    const _origWritePg = res.write.bind(res);
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    (res as any).write = (...args: any[]): boolean => {
+      const r = _origWritePg(...args);
+      (res as unknown as { flush?: () => void }).flush?.();
+      return r as boolean;
+    };
 
     const docs = agent.getDocumentNames();
     const docNote = docs.length > 0 ? `Documents disponibles : ${docs.join(", ")}.\n` : "";

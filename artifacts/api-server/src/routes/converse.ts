@@ -378,6 +378,15 @@ router.post("/converse", async (req: Request, res: Response) => {
       maxTokens,
     });
 
+    // Patch res.write to flush after every chunk (fixes Replit proxy buffering)
+    const _origWrite = res.write.bind(res);
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    (res as any).write = (...args: any[]): boolean => {
+      const r = _origWrite(...args);
+      (res as unknown as { flush?: () => void }).flush?.();
+      return r as boolean;
+    };
+
     result.pipeUIMessageStreamToResponse(res);
   } catch (err) {
     const msg = err instanceof Error ? err.message : "Unknown error";

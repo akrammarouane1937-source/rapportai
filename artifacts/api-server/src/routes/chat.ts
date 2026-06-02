@@ -591,6 +591,16 @@ router.post("/chat", async (req: Request, res: Response) => {
   res.setHeader("Connection", "keep-alive");
   res.flushHeaders();
 
+  // Patch res.write to flush after every chunk (fixes Replit proxy buffering).
+  // This covers both inline writes and writes inside streamApiCall.
+  const _origWrite = res.write.bind(res);
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  (res as any).write = (...args: any[]): boolean => {
+    const r = _origWrite(...args);
+    (res as unknown as { flush?: () => void }).flush?.();
+    return r as boolean;
+  };
+
   const chatSanitize = (v: string | undefined, max = 300) =>
     (v ?? "").trim().slice(0, max).replace(/ignore\s+(all\s+)?previous\s+instructions/gi, "[supprimé]")
              .replace(/ignore\s+(all\s+)?above\s+instructions/gi, "[supprimé]")
