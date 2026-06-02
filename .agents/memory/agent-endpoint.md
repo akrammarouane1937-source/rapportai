@@ -1,35 +1,24 @@
 ---
-name: Unified Agent Endpoint (Phase 1)
-description: Architecture of the new /api/agent/:step/stream endpoint replacing the two-agent Vercel AI SDK system.
+name: Unified Agent Endpoint
+description: Architectural decision for /api/agent/:step/stream — Haiku coordinator decides chat vs generate, Claude Agent SDK does the generation.
 ---
 
-# Unified Agent Endpoint
+# Unified Agent Endpoint Architecture
 
-**Why:** The old system had two separate roundtrips (converse.ts for chat → frontend triggers generate.ts for generation). This caused the GeneratedCard pattern and the complex phase-based state machine in partie-i/ii.
+**Why two phases (coordinator + generation):** The Claude Agent SDK takes 5-10 minutes for Partie I/II. A fast Haiku coordinator (~500ms) gives the user an immediate conversational response before the long generation starts, so the UI never goes blank. This was explicitly designed in Phase 1.
 
-**New architecture:**
-- `POST /api/agent/:step/stream` in `artifacts/api-server/src/routes/agent.ts`
-- Step "2"–"11", "partie-i", "partie-ii" are valid step values
-- Haiku coordinator (non-streaming, max 1200 tokens) decides: `chat | generate | complete`
-- If generate: runs `agent.streamSection()` sequentially per section, reads .md files, humanizes, emits `file_written` SSE event
-- SSE events: `{ type: "text"|"tool_call"|"file_written"|"step_done"|"done"|"error" }`
-- History compressed to first 2 + last 6 turns before sending to coordinator
+**Coordinator output format (MUST match):**
+```
+ACTION: chat|generate|complete
+SECTIONS: section-id1,section-id2   # only for generate
+CONTEXT: <text for extraContext>     # only for generate
+RESPONSE: <text shown to student>
+```
 
-**Frontend hook:** `useStepAgent` in `artifacts/rapportai/src/hooks/use-step-agent.ts`
-- Drop-in replacement for `useConversation` (same return signature)
-- Persists chat history to `rapportai_chat_step${step}` in localStorage
-- Uses `fetchEventSource` for SSE
-- `file_written` event → calls `onSectionGenerated(section, content)` callback
-- `step_done` event → calls `onStepComplete()` callback
+**Session reliability rule:** If `action === "generate"` but no agent session is found (expired/restarted server), emit a clear "Session expirée, recharge la page" error — never silently skip generation. User's chat history is safe in localStorage.
 
-**How to apply:**
-- All step pages (step-2 through step-11, partie-i, partie-ii) now use `useStepAgent` instead of `useConversation`
-- `onSectionGenerated` callback still used per step for custom store updates (e.g., step-4 splits resume/abstract)
-- `autoSend` option works the same as before (silent initial message)
-- Old `useConversation` / `converse.ts` still exist and are NOT removed (backward compat)
+**File uploads:** Files attached to ChatInput are uploaded to the session workDir via `POST /api/session/:id/upload-document` BEFORE the SSE stream opens. The Claude Agent SDK's Read tool then finds them during generation.
 
-**Gotchas:**
-- Coordinator output must strictly follow `ACTION: / SECTIONS: / CONTEXT: / RESPONSE:` format
-- `step` param in the route is `string | string[]` due to Express types — always cast with `Array.isArray(step) ? step[0] : step`
-- Session store set requires `as any` cast because SDKReportAgent and AgentSession aren't formally typed as subclass
-- `streamingHumanize` requires a callback even when not streaming: call with `() => {}`
+**History strategy:** First 2 + last 6 turns sent to the coordinator (max 8 turns). Middle turns are dropped — acceptable for the coordinator's routing decision.
+
+**Step parameter:** `req.params.step` from Express is typed as `string | string[]` — always cast with `Array.isArray(step) ? step[0] : step` before use.

@@ -336,6 +336,18 @@ router.post("/agent/:step/stream", async (req: Request, res: Response) => {
     }
 
     // ── 5. If generate action, run the Claude Agent SDK ───────────────────
+    if (action === "generate" && sections.length > 0 && !agent) {
+      // Session not found — user must reload to get a fresh session
+      sseWrite(res, {
+        type: "text",
+        content:
+          "Ta session a expiré. Recharge la page et réessaie — tes réponses sont sauvegardées localement.",
+      });
+      sseWrite(res, { type: "done" });
+      res.end();
+      return;
+    }
+
     if (action === "generate" && sections.length > 0 && agent) {
       // Patch the agent profile with latest data from the frontend
       if (profile && typeof profile === "object") {

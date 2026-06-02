@@ -189,6 +189,21 @@ export function useStepAgent({
       try {
         const sessionId = await getOrCreateSession();
 
+        // Upload any attached files to the session workDir before generation
+        if (_files && _files.length > 0) {
+          for (const file of _files) {
+            try {
+              const fd = new FormData();
+              fd.append("file", file);
+              await fetch(`${API_BASE}/api/session/${sessionId}/upload-document`, {
+                method: "POST",
+                body: fd,
+                signal: ctrl.signal,
+              });
+            } catch { /* non-blocking — agent will still generate without files */ }
+          }
+        }
+
         const report = useReportStore.getState().report;
         const profile = {
           studentName:    report.studentName,
