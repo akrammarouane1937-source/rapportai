@@ -351,8 +351,8 @@ router.post("/converse", async (req: Request, res: Response) => {
     return;
   }
 
-  // Convert UIMessages → ModelMessages
-  let modelMessages = convertToModelMessages(uiMessages);
+  // Convert UIMessages → ModelMessages (async in AI SDK v6 — must await)
+  let modelMessages = await convertToModelMessages(uiMessages);
 
   // Compress history: keep first 4 turns + last 16 to bound context size
   if (modelMessages.length > 20) {
