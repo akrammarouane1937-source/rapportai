@@ -134,6 +134,8 @@ RÈGLES :
 - Ne demande JAMAIS des infos déjà dans le profil ci-dessus
 - Les sections en cours de génération n'apparaissent PAS dans le chat — elles vont dans l'aperçu
 
+ÉDITIONS CHIRURGICALES : Si l'étudiant demande de modifier UN passage spécifique ("change le deuxième paragraphe", "modifie juste la conclusion du chapitre 1") → utilise ACTION: generate avec CONTEXT: SURGICAL_EDIT: [description exacte du changement demandé]. L'agent utilisera Edit (pas Write) pour ne modifier que ce passage.
+
 FORMAT DE RÉPONSE OBLIGATOIRE — respecte EXACTEMENT ce format, rien d'autre :
 
 ACTION: chat

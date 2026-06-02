@@ -1,1 +1,2 @@
-- [Unified Agent Endpoint](agent-endpoint.md) — Phase 1: /api/agent/:step/stream replaces Vercel AI SDK converse.ts with Haiku coordinator + Claude Agent SDK generation in one SSE endpoint.
+- [Unified Agent Endpoint](agent-endpoint.md) — Haiku coordinator decides chat/generate/complete; Claude Agent SDK runs generation; session expiry emits user-friendly error.
+- [Phase 2 — Edit tool + crop_figure](phase2-edit-crop.md) — Edit added to all section configs; crop_figure uses Python PIL not sharp; PDF figures embedded via jsPDF.addImage with pre-fetched base64.

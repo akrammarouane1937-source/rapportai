@@ -115,38 +115,52 @@ Where applicable, anchor theoretical concepts to the Moroccan context (Bourse de
 
 ---
 
-## STEP 5 — Figures
+## STEP 5 — Figures et éditions chirurgicales
+
+### Figures
 
 Partie I = theoretical. Figures here are screenshots of conceptual models from uploaded documents — not data charts (those belong in Partie II).
 
-**When the student uploaded PDF documents:**
+**When PDF page images are available in `figures/` (page-N.png):**
 
-Scan for `.pdf` files. If a PDF contains a figure relevant to the current section (a theoretical model, framework diagram, schema), screenshot that page:
+Use `PIL.Image` to check dimensions and crop the exact region containing the figure:
 
 ```bash
-mkdir -p figures
 python3 -c "
-from pdf2image import convert_from_path
-pages = convert_from_path('paper.pdf', dpi=150)
-pages[2].save('figures/fig_1_1.png', 'PNG')
+from PIL import Image
+import os
+# Check page dimensions first
+img = Image.open('figures/page-3.png')
+print('Size:', img.size)  # (width, height)
+# Then crop the relevant region (left, upper, right, lower)
+cropped = img.crop((80, 150, 920, 520))
+os.makedirs('figures', exist_ok=True)
+cropped.save('figures/fig_1_1.png')
 print('saved figures/fig_1_1.png')
 "
 ```
 
-Reference in Markdown:
+Reference in Markdown (IMMEDIATELY after the sentence that cites the figure):
 ```markdown
-![Description](figures/fig_1_1.png)
+![Description du schéma conceptuel](figures/fig_1_1.png)
 *Figure 1.1 — [Titre]. Source : [Auteur(s), Année], p. [N].*
 ```
 
-Only screenshot pages containing a **directly relevant figure**. Not pages of running text.
+Only crop pages containing a **directly relevant figure** (conceptual model, framework diagram, schema). Not pages of running text.
 
-If pdf2image fails → placeholder immediately, no retry.
+If PIL fails → placeholder immediately, no retry.
 
-**When no PDF uploaded or no relevant figure found:**
+**When no figures/ images are available:**
 ```markdown
 *[Figure 1.1 — [Description précise du visuel recommandé]. Source : [Auteur, Année].]*
 ```
+
+### Éditions chirurgicales
+
+**Quand `partie-i.md` existe déjà et que la demande porte sur UN passage :**
+1. Lis d'abord `partie-i.md` avec Read pour localiser précisément le passage à modifier
+2. Utilise **Edit** (pas Write) pour ne modifier QUE ce passage
+3. N'utilise Write que si une régénération complète est explicitement demandée
 
 ---
 

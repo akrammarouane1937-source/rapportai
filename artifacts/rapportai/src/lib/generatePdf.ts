@@ -1,5 +1,6 @@
 import type { ReportData } from "./reportStore";
 import { jsPDF } from "jspdf";
+import { API_BASE } from "./apiBase";
 
 interface TocEntry {
   title: string;
@@ -25,6 +26,57 @@ const MARGIN_T = 25;
 const PAGE_W   = 210;
 const PAGE_H   = 297;
 const USABLE_W = PAGE_W - MARGIN_L - MARGIN_R;
+
+// ─── Figure image helpers (mirrors generateDocx.ts approach) ─────────────────
+// Figures referenced as ![alt](figures/name.png) in section markdown are
+// fetched from the session API and embedded inline in the PDF.
+// Strategy: pre-fetch all images BEFORE rendering (async), then embed
+// synchronously during renderSections (jsPDF.addImage is sync).
+
+function collectFigurePathsPdf(md: string): string[] {
+  const paths: string[] = [];
+  const re = /!\[[^\]]*\]\((figures\/[^)]+)\)/g;
+  let m: RegExpExecArray | null;
+  while ((m = re.exec(md)) !== null) {
+    if (!paths.includes(m[1])) paths.push(m[1]);
+  }
+  return paths;
+}
+
+async function fetchFigureBase64(sessionId: string, figurePath: string): Promise<string | null> {
+  try {
+    const filename = figurePath.split("/").pop();
+    if (!filename) return null;
+    const url = `${API_BASE}/api/session/${sessionId}/figures/${filename}`;
+    const resp = await fetch(url);
+    if (!resp.ok) return null;
+    const buf = await resp.arrayBuffer();
+    const bytes = new Uint8Array(buf);
+    let binary = "";
+    bytes.forEach((b) => { binary += String.fromCharCode(b); });
+    return btoa(binary);
+  } catch {
+    return null;
+  }
+}
+
+async function prefetchFigureImagesPdf(
+  sessionId: string | undefined,
+  sections: SectionData[],
+): Promise<Map<string, string>> {
+  const map = new Map<string, string>();
+  if (!sessionId) return map;
+  const allMd = sections.map((s) => s.content).join("\n");
+  const paths = collectFigurePathsPdf(allMd);
+  if (paths.length === 0) return map;
+  await Promise.all(
+    paths.map(async (p) => {
+      const b64 = await fetchFigureBase64(sessionId, p);
+      if (b64) map.set(p, b64);
+    }),
+  );
+  return map;
+}
 
 const SECTION_COLORS: Record<string, RGB> = {
   "Résumé":              [99,  102, 241],
@@ -60,6 +112,7 @@ function renderSections(
   doc: jsPDF,
   sections: SectionData[],
   annexeItems: AnnexeItem[],
+  figureMap?: Map<string, string>,
 ): TocEntry[] {
   let y = MARGIN_T;
   const entries: TocEntry[] = [];
@@ -133,6 +186,31 @@ function renderSections(
           checkY(6);
           doc.text(l, MARGIN_L + 5, y);
           y += 6;
+        }
+
+      } else if (/^!\[[^\]]*\]\(figures\/[^)]+\)$/.test(line)) {
+        // Markdown image referencing a session figure — embed inline if available
+        flushBuf();
+        const imgMatch = line.match(/^!\[[^\]]*\]\((figures\/[^)]+)\)$/);
+        if (imgMatch) {
+          const imgPath = imgMatch[1];
+          const b64 = figureMap?.get(imgPath);
+          if (b64) {
+            // Default display dimensions: max 130mm wide, 85mm tall (portrait A4 safe)
+            const imgW = Math.min(USABLE_W - baseIndent, 130);
+            const imgH = 85;
+            checkY(imgH + 10);
+            doc.addImage(b64, "PNG", MARGIN_L + (USABLE_W - imgW) / 2, y, imgW, imgH);
+            y += imgH + 5;
+          } else {
+            // Image not available — render caption-style placeholder
+            checkY(10);
+            doc.setFont("helvetica", "italic");
+            doc.setFontSize(10);
+            doc.setTextColor(140, 140, 140);
+            doc.text(`[${imgPath}]`, MARGIN_L + baseIndent, y);
+            y += 7;
+          }
         }
 
       } else if (line === "") {
@@ -396,6 +474,14 @@ export async function generatePdf(report: ReportData): Promise<void> {
   //
   // offset = tocPageCount  (because 2 + tocPageCount = N+2)
 
+  // Pre-fetch figure images from session API (async) so they can be embedded
+  // synchronously during renderSections. Pass 1 (measurement) skips images
+  // (acceptable — minor TOC offset for image-heavy sections); Pass 3 embeds.
+  const figureMap = await prefetchFigureImagesPdf(
+    (report as unknown as { sessionId?: string }).sessionId,
+    sections,
+  );
+
   const scratch1 = new jsPDF({ orientation: "portrait", unit: "mm", format: "a4" });
   const rawEntries = renderSections(scratch1, sections, annexeItems);
 
@@ -428,7 +514,7 @@ export async function generatePdf(report: ReportData): Promise<void> {
   // Sanity-check: pages consumed by TOC should equal what we measured.
   // (getPageCount - 1 cover - 1 for the addPage call that put us on the TOC)
   // Content rendering starts here regardless.
-  renderSections(doc, sections, annexeItems);
+  renderSections(doc, sections, annexeItems, figureMap);
 
   const filename = `${(report.theme ?? "rapport")
     .replace(/[^a-zA-Z0-9À-ɏ\s]/g, "")
@@ -472,6 +558,11 @@ export async function generatePdfBlobUrl(report: ReportData): Promise<string> {
 
   const annexeItems = extendedReport2.annexeItems ?? [];
 
+  const figureMap2 = await prefetchFigureImagesPdf(
+    (report as unknown as { sessionId?: string }).sessionId,
+    sections,
+  );
+
   const scratch1 = new jsPDF({ orientation: "portrait", unit: "mm", format: "a4" });
   const rawEntries = renderSections(scratch1, sections, annexeItems);
   const tocPageCount = measureTocPageCount(rawEntries);
@@ -481,7 +572,7 @@ export async function generatePdfBlobUrl(report: ReportData): Promise<string> {
   renderCoverPage(doc, report);
   doc.addPage();
   renderTocPage(doc, tocEntries);
-  renderSections(doc, sections, annexeItems);
+  renderSections(doc, sections, annexeItems, figureMap2);
 
   return doc.output("bloburl") as unknown as string;
 }

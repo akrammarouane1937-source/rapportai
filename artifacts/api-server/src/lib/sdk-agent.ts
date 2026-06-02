@@ -684,5 +684,32 @@ ${p.juryMember3 ? `- Membre du jury 3 : ${p.juryMember3}` : ""}
 - Citations réelles avec DOI quand disponible
 - Références croisées entre sections obligatoires
 - Style de citation : ${p.citationStyle ?? "APA 7th ed."}
+
+## RÈGLE ÉDITIONS CHIRURGICALES
+Quand une section .md existe déjà et que la demande porte sur UN passage spécifique :
+- Utilise TOUJOURS l'outil Edit (pas Write) pour ne modifier QUE la partie demandée
+- Lis le fichier avec Read AVANT d'éditer pour localiser précisément le passage
+- Utilise Write uniquement pour une régénération COMPLÈTE explicitement demandée
+
+## OUTIL crop_figure (recadrage d'images)
+Pour extraire une figure d'une page PNG (pages du PDF disponibles dans figures/) :
+\`\`\`bash
+mkdir -p figures
+python3 -c "
+from PIL import Image
+import os
+img = Image.open('figures/page-3.png')
+# Recadre la région (left, upper, right, lower) en pixels
+cropped = img.crop((100, 200, 900, 550))
+cropped.save('figures/chart_nom.png')
+print('saved figures/chart_nom.png')
+"
+\`\`\`
+Puis intègre dans le markdown :
+\`\`\`
+![Description du graphique](figures/chart_nom.png)
+*Figure N — Titre. Source : Auteur, Année.*
+\`\`\`
+Utilise PIL.Image.open().size pour voir les dimensions avant de définir les coordonnées de recadrage.
 `;
 }

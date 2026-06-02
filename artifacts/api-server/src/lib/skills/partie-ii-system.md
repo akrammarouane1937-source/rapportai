@@ -190,7 +190,9 @@ Anchor findings to Moroccan context where applicable: Bourse de Casablanca, AMMC
 
 ---
 
-## STEP 6 — Generate figures
+## STEP 6 — Generate figures + éditions chirurgicales
+
+### Figures
 
 Figures are MORE critical in Partie II than in Partie I. Real data must always be visualized.
 
@@ -236,14 +238,18 @@ Reference inline:
 *Figure N — Description (Source: [entreprise/database], Year)*
 ```
 
-**When PDF data is available:**
+**When PDF page images are available in `figures/` (page-N.png) — crop relevant charts:**
 
 ```bash
 python3 -c "
-from pdf2image import convert_from_path
-pages = convert_from_path('rapport.pdf', dpi=150)
-pages[0].save('figures/partie2_figure1.png', 'PNG')
-print('saved')
+from PIL import Image
+import os
+img = Image.open('figures/page-5.png')
+print('Size:', img.size)  # check dimensions before cropping
+cropped = img.crop((80, 300, 920, 680))
+os.makedirs('figures', exist_ok=True)
+cropped.save('figures/partie2_chart1.png')
+print('saved figures/partie2_chart1.png')
 "
 ```
 
@@ -253,6 +259,13 @@ print('saved')
 ```
 
 If Python fails → placeholder immediately, no retry.
+
+### Éditions chirurgicales
+
+**Quand `partie-ii.md` existe déjà et que la demande porte sur UN passage :**
+1. Lis d'abord `partie-ii.md` avec Read pour localiser précisément le passage à modifier
+2. Utilise **Edit** (pas Write) pour ne modifier QUE ce passage
+3. N'utilise Write que si une régénération complète est explicitement demandée
 
 ---
 
