@@ -2,7 +2,6 @@ import { Router, type IRouter } from "express";
 import healthRouter from "./health";
 import generateRouter from "./generate";
 import sessionRouter from "./session";
-import juryRouter from "./jury";
 import figuresRouter from "./figures";
 import figuresExtractRouter from "./figures-extract";
 import shareRouter from "./share";
@@ -20,24 +19,12 @@ import planApprovalRouter from "./plan-approval";
 import adminRouter from "./admin";
 import meRouter from "./me";
 import agentRouter from "./agent";
-// ─── Section agents (each has explicit system prompt + tools) ─────────────────
-import introductionRouter from "./introduction";
-import dedicacesRouter from "./dedicaces";
-import remerciementsRouter from "./remerciements";
-import resumeRouter from "./resume";
-import sommaireRouter from "./sommaire";
-import partieIRouter from "./partie-i";
-import partieIIRouter from "./partie-ii";
-import conclusionRouter from "./conclusion";
-import bibliographieRouter from "./bibliographie";
-import annexesRouter from "./annexes";
 
 const router: IRouter = Router();
 
 router.use(healthRouter);
 router.use(generateRouter);
 router.use(sessionRouter);
-router.use(juryRouter);
 router.use(figuresRouter);
 router.use(figuresExtractRouter);
 router.use(shareRouter);
@@ -55,16 +42,5 @@ router.use(planApprovalRouter);
 router.use(adminRouter);
 router.use(meRouter);
 router.use(agentRouter);
-// Section agents
-router.use(introductionRouter);
-router.use(dedicacesRouter);
-router.use(remerciementsRouter);
-router.use(resumeRouter);
-router.use(sommaireRouter);
-router.use(partieIRouter);
-router.use(partieIIRouter);
-router.use(conclusionRouter);
-router.use(bibliographieRouter);
-router.use(annexesRouter);
 
 export default router;

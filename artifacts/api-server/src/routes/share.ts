@@ -33,7 +33,7 @@ router.post("/share", (req: Request, res: Response) => {
 
 /** GET /api/share/:id — retrieve stored report data */
 router.get("/share/:id", (req: Request, res: Response) => {
-  const entry = shares.get(req.params.id);
+  const entry = shares.get(req.params.id as string);
   if (!entry || Date.now() - entry.createdAt > TTL_MS) {
     res.status(404).json({ error: "Lien expiré ou introuvable." });
     return;

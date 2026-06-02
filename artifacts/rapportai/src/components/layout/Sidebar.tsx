@@ -3,7 +3,7 @@ import { useLocation } from "wouter";
 import { useOptionalUser as useUser, useOptionalClerk as useClerk } from "@/lib/useOptionalClerk";
 import {
   Home, LayoutGrid, ListChecks, ImageIcon, BookOpen,
-  MessageSquare, Settings, LogOut, Search, Plus,
+  Settings, LogOut, Search, Plus,
   FileInput, GraduationCap, BookMarked, ChevronDown, Zap, FileText,
 } from "lucide-react";
 import { UpsellModal } from "@/components/report/UpsellModal";
@@ -18,7 +18,6 @@ const NAV_ITEMS = [
   { icon: ListChecks,    label: "Sections terminées",  path: "/sections-terminees", proFeature: "" },
   { icon: ImageIcon,     label: "Figures",             path: "/figures",            proFeature: "" },
   { icon: BookOpen,      label: "Bibliothèque",        path: "/bibliotheque",       proFeature: "" },
-  { icon: MessageSquare, label: "JuryAI",              path: "/juryai",             proFeature: "juryai" },
   { icon: FileText,      label: "Mise en forme",       path: "/mise-en-forme",      proFeature: "" },
   { icon: Settings,      label: "Paramètres",          path: "/parametres",         proFeature: "" },
 ];

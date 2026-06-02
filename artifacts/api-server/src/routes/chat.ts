@@ -60,7 +60,6 @@ const SECTION_PATHS: Record<string, string> = {
   partieII:     "/rapport/partie-ii",
   conclusion:   "/rapport/step-9",
   rapports:     "/rapports",
-  juryai:       "/juryai",
   figures:      "/figures",
   export:       "/rapport/step-9",
 };
@@ -94,7 +93,7 @@ CRITICAL — context_injection rules (use the summaries from your context when a
   • For conclusion: inject = "Résumé Partie I : [...]. Résumé Partie II : [...]. Problématique : [...]. La conclusion doit synthétiser ces apports et y répondre directement."
   • For introduction: inject = "Plan du sommaire : [sommaire summary]. L'intro doit poser la problématique et annoncer exactement ce plan."
   • For resumeFr: inject = "[intro + parts summaries]. Le résumé doit refléter fidèlement ces sections."
-  • For juryai / rapports / figures: no context_injection needed.
+  • For rapports / figures: no context_injection needed.
 
 If summaries aren't available yet, build context_injection from the section previews in your context.`,
     input_schema: {
@@ -102,7 +101,7 @@ If summaries aren't available yet, build context_injection from the section prev
       properties: {
         section: {
           type: "string",
-          description: "One of: pageDeGarde | dedicaces | resumeFr | sommaire | introduction | partieI | partieII | conclusion | juryai | rapports | figures | export",
+          description: "One of: pageDeGarde | dedicaces | resumeFr | sommaire | introduction | partieI | partieII | conclusion | rapports | figures | export",
         },
         context_injection: {
           type: "string",
@@ -315,7 +314,7 @@ Avant de naviguer vers chaque agent, construis un **context_injection** contenan
 - Pour **conclusion** → inject = "Résumé Partie I : [...]. Résumé Partie II : [...]. Problématique : [...]. La conclusion doit synthétiser ces apports et répondre directement à la problématique."
 - Pour **introduction** → inject = "Plan du sommaire : [résumé sommaire]. L'intro doit poser la problématique et annoncer exactement ce plan."
 - Pour **resumeFr** → inject = "[résumé intro + parties]. Le résumé doit refléter fidèlement ces sections."
-- Pour **juryai / rapports / figures** → pas de context_injection nécessaire.
+- Pour **rapports / figures** → pas de context_injection nécessaire.
 
 ## TES 6 MISSIONS PRINCIPALES
 
@@ -325,7 +324,7 @@ Dès que l'étudiant veut travailler sur une section → appelle **navigate_to_s
 - Partie II avec Partie I existante → context_injection avec résumé de Partie I
 - Conclusion → context_injection avec synthèse des parties existantes
 - Introduction → context_injection avec le plan du sommaire si disponible
-- Soutenance, jury → navigate vers juryai
+- Soutenance, préparation orale → génère des questions de jury basées sur le contenu réel du rapport (use read_full_section)
 
 ### 2. Analyse de cohérence (analyze_coherence)
 Quand l'étudiant demande si son rapport est cohérent → appelle **analyze_coherence** directement.
@@ -350,9 +349,10 @@ Quand l'étudiant demande "qu'est-ce qui manque" :
 
 ### 6. Préparation soutenance
 Quand l'étudiant veut préparer sa soutenance :
-- Si tu as accès aux sections → génère 4-6 questions difficiles que le jury posera, basées sur les VRAIS points faibles du contenu (use read_full_section si besoin)
-- Termine toujours par navigate_to_section("juryai") pour la simulation complète
+- Lis d'abord les sections avec read_full_section ou read_multiple_sections
+- Génère 4-6 questions difficiles que le jury posera, basées sur les VRAIS points faibles du contenu
 - Anticipe les questions sur la méthodologie, les limites, les résultats empiriques
+- Propose des reformulations pour les passages qui pourraient être remis en question
 
 ## VALIDATION : CE QUE TU COMMUNIQUES À L'ÉTUDIANT
 
@@ -598,9 +598,9 @@ router.post("/chat", async (req: Request, res: Response) => {
   const _origWrite = res.write.bind(res);
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   (res as any).write = (...args: any[]): boolean => {
-    const r = _origWrite(...args);
+    const r = (_origWrite as (...a: unknown[]) => boolean)(...args);
     (res as unknown as { flush?: () => void }).flush?.();
-    return r as boolean;
+    return r;
   };
 
   const chatSanitize = (v: string | undefined, max = 300) =>
