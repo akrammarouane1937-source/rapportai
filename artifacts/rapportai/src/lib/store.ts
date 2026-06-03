@@ -169,7 +169,16 @@ export const useReportStore = create<ReportStore>()(
       },
       resetReport: () => {
         try {
-          [1, 2, 3, 4, 5, 6, 9].forEach((s) =>
+          // Clear new-format keys (rapportai:chat-history:step-*)
+          [2, 3, 4, 5, 6, 9, 10, 11, "partie-i", "partie-ii"].forEach((s) =>
+            localStorage.removeItem(`rapportai:chat-history:step-${s}`)
+          );
+          // Clear legacy numeric-step keys (rapportai_chat_step*)
+          [1, 2, 3, 4, 5, 6, 9, 10, 11].forEach((s) =>
+            localStorage.removeItem(`rapportai_chat_step${s}`)
+          );
+          // Clear legacy string-step keys (rapportai_chat_steppartie-i, etc.)
+          ["partie-i", "partie-ii"].forEach((s) =>
             localStorage.removeItem(`rapportai_chat_step${s}`)
           );
         } catch { /* localStorage unavailable — non-fatal */ }

@@ -23,7 +23,7 @@ export interface ConvMsg {
 }
 
 interface UseConversationOpts {
-  step: number;
+  step: number | string;
   initialMessage?: string;
   autoSend?: string;
   onSectionGenerated: (section: string, content: string) => void;
@@ -281,7 +281,7 @@ export function useConversation({
 }: UseConversationOpts) {
   const { report } = useReportStore();
 
-  const STORAGE_KEY = `rapportai_chat_step${step}`;
+  const STORAGE_KEY = `rapportai:chat-history:step-${step}`;
 
   // ── Refs for dynamic values (stale-closure prevention) ───────────────────
   const stepRef = useRef(step);
@@ -341,7 +341,8 @@ export function useConversation({
           id: m.id,
           role: m.role as "agent" | "user",
           content: m.content as string,
-        }));
+        }))
+        .slice(-20); // keep last 20 messages to avoid localStorage bloat
       localStorage.setItem(STORAGE_KEY, JSON.stringify(serializable));
       const existing = useReportStore.getState().report.chatHistories ?? {};
       useReportStore.getState().updateReport({

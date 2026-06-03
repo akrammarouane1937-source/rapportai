@@ -33,7 +33,7 @@ interface UseStepAgentOptions {
   onStepComplete?: () => void;
 }
 
-const CHAT_LS_PREFIX = "rapportai_chat_step";
+const CHAT_LS_PREFIX = "rapportai:chat-history:step-";
 
 let msgCounter = 0;
 function nextId(): string { return `sa-${++msgCounter}`; }
@@ -143,11 +143,11 @@ export function useStepAgent({
   const autoSentRef   = useRef(false);
   const streamingIdRef = useRef<string | null>(null);
 
-  // Persist messages to localStorage whenever they change
+  // Persist messages to localStorage whenever they change (capped at last 20)
   const messagesRef = useRef(messages);
   messagesRef.current = messages;
   useEffect(() => {
-    try { localStorage.setItem(lsKey, JSON.stringify(messages)); } catch { /* quota */ }
+    try { localStorage.setItem(lsKey, JSON.stringify(messages.slice(-20))); } catch { /* quota */ }
   }, [messages, lsKey]);
 
   const abort = useCallback(() => {
