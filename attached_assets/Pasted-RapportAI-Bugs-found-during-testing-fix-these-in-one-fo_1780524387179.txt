@@ -1,0 +1,27 @@
+RapportAI — Bugs found during testing (fix these in one focused pass)
+
+Context: We rebuilt the chat to one Claude Agent SDK agent per step (routes/agent.ts + lib/sdk-agent.ts, frontend hooks/use-step-agent.ts). During testing we found the bugs below. Fix them carefully; if you touch a file not listed, flag it; run pnpm run typecheck before done.
+
+🔴 CRITICAL
+
+Export TOC uses generic titles, not the generated sommaire. The exported Word doc shows "Partie I : Revue de Littérature / Chapitre 1 / Chapitre 2" instead of the real generated plan. generateDocx builds the table of contents from default placeholder fields (partieITitle, partieIChapters) instead of report.sommaire. Fix: build the exported TOC by parsing the actual generated report.sommaire so the export matches the preview.
+
+Mise en forme content settings don't reach the agents. The frontend sends formatting (use-step-agent.ts ~line 90), but routes/agent.ts never applies it. Fix: before agent.streamSection(), add if (req.body.formatting) agent.patchProfile({ formatting: req.body.formatting }); so buildSystemPrompt injects it via buildFormattingPromptBlock. Also add a short formatting summary into buildCoordinatorSystem. (Visual formatting already applies at export via generateDocx.)
+
+Content must appear in the preview BY DEFAULT — users won't type "generate." The agent should write the section to its .md file proactively once it has enough context (it usually does, from memory), so the preview populates immediately and edits update it. Remove the "propose in chat, wait for 'ok', then generate" flow — write to the file first, discuss/edit from there.
+
+🟠 HIGH
+
+Preview isn't paginated. It shows one long page; split it into A4 pages with page numbers, mirroring the Word export (each Partie/Chapitre starts a new page).
+
+Sommaire output truncates. The plan cut off mid-sentence ("…apprentissage automatique en"). Fix: raise max_tokens for the sommaire so the full plan renders.
+
+Sommaire structure must be complete. It must follow the full Moroccan PFE structure, in order: Remerciements → Liste des abréviations → Liste des tableaux et figures → Sommaire → Introduction générale → Partie I (Chapitres and Sections, specific titles) → Partie II (Chapitres + Sections) → Conclusion générale → Bibliographie → Annexes. Use #/##/###/#### for Partie/Chapitre/Section/Sous-section so the export paginates and styles correctly. (Deeper prompt enrichment will follow separately.)
+
+🟡 MEDIUM
+
+Student name not capitalized — shows "ahmed", should be "Ahmed" (capitalize on the page de garde and everywhere it appears).
+
+Possible duplicate "Table des Matières" in the export — verify and dedupe.
+
+Theme sync — confirm the theme entered in step 1 reaches every step agent so it never re-asks info already in the profile.

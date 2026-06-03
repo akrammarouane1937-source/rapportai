@@ -46,25 +46,33 @@ Tu as tout dans le profil. Pose max UNE question sur les mots-clés spécifiques
 "non", "peu importe", "génère", "réessaie" → génère directement.
 SECTIONS: resume (génère les deux automatiquement)`,
 
-  "5": `Tu es RapportAI. Mission : co-construire et générer le sommaire.
-RÈGLE PRINCIPALE : si un plan a déjà été proposé dans l'historique ET que l'étudiant dit "ok", "c'est bon", "génère", "parfait", "oui", "nickel", "vas-y", "réessaie", "lance" → génère IMMÉDIATEMENT.
-Si aucun plan n'a encore été proposé → propose d'abord un plan en texte dans RESPONSE (format ci-dessous) et termine par "Ce plan te convient ? Dis-moi si tu veux modifier, ou dis 'ok' pour générer."
+  "5": `Tu es RapportAI. Mission : générer le sommaire complet du rapport.
+RÈGLE PRINCIPALE : génère IMMÉDIATEMENT dès le premier message — ne propose pas d'abord, écris directement dans le fichier, l'étudiant peut modifier ensuite.
 
-FORMAT DU PLAN :
-Partie I — [Titre]
-  Chapitre 1 : [Titre]
-    - Section 1.1 : [Titre]
-    - Section 1.2 : [Titre]
-  Chapitre 2 : [Titre]
-    - Section 2.1 : [Titre]
-Partie II — [Titre]
-  Chapitre 1 : [Titre]
-  Chapitre 2 : [Titre]
-Conclusion générale
-Bibliographie
+FORMAT OBLIGATOIRE pour le CONTEXT (titres en markdown #/##/###/#### — JAMAIS de texte générique comme "Chapitre 1") :
+# Remerciements
+# Liste des abréviations
+# Liste des tableaux et figures
+# Introduction générale
+## Partie I — [Titre théorique contextualisé au thème]
+### Chapitre 1 : [Titre spécifique]
+#### Section 1.1 : [Titre]
+#### Section 1.2 : [Titre]
+### Chapitre 2 : [Titre spécifique]
+#### Section 2.1 : [Titre]
+#### Section 2.2 : [Titre]
+## Partie II — [Titre empirique/appliqué contextualisé]
+### Chapitre 1 : [Titre spécifique]
+#### Section 1.1 : [Titre]
+#### Section 1.2 : [Titre]
+### Chapitre 2 : [Titre spécifique]
+#### Section 2.1 : [Titre]
+# Conclusion générale
+# Bibliographie
+# Annexes
 
-Si modification demandée → intègre, repropose le plan ajusté, attends validation.
-Quand l'étudiant approuve → ACTION: generate, SECTIONS: sommaire, CONTEXT: [plan complet validé]`,
+Après génération, annonce brièvement ce que tu as créé et propose des ajustements.
+"réessaie", "vas-y", "génère", "modifie [X]" → intègre et regénère IMMÉDIATEMENT.`,
 
   "6": `Tu es RapportAI. Mission : introduction générale.
 Si le thème est dans le profil → génère IMMÉDIATEMENT dès le premier message.
@@ -116,7 +124,7 @@ function buildCoordinatorSystem(step: string, profile: Record<string, unknown>):
   return `${stepSystem}
 
 ━━━ PROFIL ÉTUDIANT (DÉJÀ CONNU — NE PAS RE-DEMANDER) ━━━
-- Nom : ${profile.studentName ?? ""}
+- Nom : ${typeof profile.studentName === "string" ? profile.studentName.replace(/\b\w/g, (c) => c.toUpperCase()) : ""}
 - École : ${profile.school ?? ""}
 - Filière : ${profile.filiere ?? ""}
 - Type : ${profile.reportType ?? ""}
@@ -353,9 +361,14 @@ router.post("/agent/:step/stream", async (req: Request, res: Response) => {
     if (action === "generate" && sections.length > 0 && agent) {
       // Patch the agent profile with latest data from the frontend
       if (profile && typeof profile === "object") {
-        const profileFields: Record<string, string> = {};
+        const profileFields: Record<string, unknown> = {};
         for (const [k, v] of Object.entries(profile)) {
           if (typeof v === "string" && v.trim()) profileFields[k] = v;
+          else if (typeof v === "number") profileFields[k] = v;
+        }
+        // formatting is an object — patch it explicitly so it isn't dropped
+        if (profile.formatting && typeof profile.formatting === "object") {
+          profileFields.formatting = profile.formatting;
         }
         agent.patchProfile(profileFields as Parameters<typeof agent.patchProfile>[0]);
       }

@@ -202,8 +202,8 @@ export class SDKReportAgent {
       : `${baseSystem}${knowledgeBase}`;
 
     // Heavy sections need Sonnet quality; light sections use Haiku to cut costs ~5x
-    // Sommaire is intentionally excluded — it only formats an already-approved plan, Haiku is sufficient
-    const HEAVY_SECTIONS = new Set(["partie-i", "partie-ii", "introduction", "conclusion"]);
+    // Sommaire uses Sonnet — its plan must cover the full report structure without truncation
+    const HEAVY_SECTIONS = new Set(["partie-i", "partie-ii", "introduction", "conclusion", "sommaire"]);
     const sectionModel = HEAVY_SECTIONS.has(section)
       ? "claude-sonnet-4-5"
       : "claude-haiku-4-5";

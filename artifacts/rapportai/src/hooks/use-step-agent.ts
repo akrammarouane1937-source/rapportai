@@ -205,8 +205,10 @@ export function useStepAgent({
         }
 
         const report = useReportStore.getState().report;
+        const formatting = useUserSettingsStore.getState().formatting;
+        const rawName = report.studentName ?? "";
         const profile = {
-          studentName:    report.studentName,
+          studentName:    rawName.replace(/\b\w/g, (c) => c.toUpperCase()),
           school:         report.school,
           filiere:        report.filiere,
           reportType:     report.reportType,
@@ -223,6 +225,7 @@ export function useStepAgent({
           partieIChapters: report.partieIChapters,
           partieIIChapters: report.partieIIChapters,
           problematique:  report.problematique,
+          formatting,
         };
 
         await fetchEventSource(`${API_BASE}/api/agent/${step}/stream`, {

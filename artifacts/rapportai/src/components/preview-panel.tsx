@@ -91,8 +91,12 @@ function splitIntoPages(text: string, wordsPerPage = 420): string[] {
   let current = "";
   let count = 0;
   for (const para of paragraphs) {
-    const w = para.trim().split(/\s+/).filter(Boolean).length;
-    if (count + w > wordsPerPage && current) {
+    const trimmed = para.trim();
+    const w = trimmed.split(/\s+/).filter(Boolean).length;
+    // # and ## headings (Partie/Chapitre) start a new page when there's enough content already
+    const isMajorHeading = /^#{1,2}\s/.test(trimmed);
+    const shouldBreak = (count + w > wordsPerPage && current) || (isMajorHeading && current && count > 60);
+    if (shouldBreak) {
       pages.push(current.trim());
       current = para;
       count = w;

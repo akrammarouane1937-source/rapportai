@@ -522,47 +522,68 @@ function buildAbreviations(d: Report): Paragraph[] {
   ];
 }
 
-// Sommaire — front matter only, brief overview from plan data (NO page numbers, NO TOC field)
-// Shows: Introduction, Partie I (title + chapter count), Partie II, Conclusion, Bibliographie, TDM
+// Parse sommaire markdown (#/##/###/#### headers) into a hierarchy of {level, text} entries.
+// Falls back to generic structure if sommaire is empty or unparseable.
+function parseSommaireMarkdown(md: string): Array<{ level: number; text: string }> {
+  if (!md?.trim()) return [];
+  const entries: Array<{ level: number; text: string }> = [];
+  for (const raw of md.split("\n")) {
+    const m = raw.match(/^(#{1,4})\s+(.+)/);
+    if (m) entries.push({ level: m[1].length, text: m[2].trim() });
+  }
+  return entries;
+}
+
+// Sommaire — front matter overview. Uses the AI-generated sommaire markdown when available;
+// falls back to generic structure from partieI/II title fields.
 function buildSommaire(d: Report): Paragraph[] {
-  const sommaireLines: Paragraph[] = [
-    heading1("Sommaire"),
-    emptyLine(),
-    bodyPara("Introduction Générale", { indent: { firstLine: 0 } }),
-  ];
+  const sommaireLines: Paragraph[] = [heading1("Sommaire"), emptyLine()];
 
-  const partieITitle  = d.partieITitle  || "Partie I : Revue de Littérature";
-  const partieIITitle = d.partieIITitle || "Partie II : Étude Empirique";
+  const parsed = parseSommaireMarkdown(d.sommaire || "");
 
-  // Partie I — bold title
-  sommaireLines.push(new Paragraph({
-    spacing: PARA_SPACING,
-    children: [new TextRun({ text: partieITitle, font: FONT, size: BODY_PT, bold: true })],
-  }));
-  for (let i = 1; i <= (d.partieIChapters || 2); i++) {
+  if (parsed.length > 0) {
+    // Render the real AI-generated plan
+    const indents = [0, 0, convertMillimetersToTwip(8), convertMillimetersToTwip(16), convertMillimetersToTwip(24)];
+    for (const { level, text } of parsed) {
+      const indent = indents[Math.min(level, 4)] ?? 0;
+      const bold = level <= 2;
+      sommaireLines.push(new Paragraph({
+        indent: { left: indent, firstLine: 0 },
+        spacing: { ...LINE_SPACING, before: level <= 2 ? 120 : 60, after: level <= 2 ? 60 : 30 },
+        children: [new TextRun({ text, font: FONT, size: BODY_PT, bold })],
+      }));
+    }
+  } else {
+    // Fallback: build from partieI/II title fields
+    const partieITitle  = d.partieITitle  || "Partie I : Revue de Littérature";
+    const partieIITitle = d.partieIITitle || "Partie II : Étude Empirique";
+
+    sommaireLines.push(bodyPara("Introduction Générale", { indent: { firstLine: 0 } }));
     sommaireLines.push(new Paragraph({
-      indent: { left: convertMillimetersToTwip(12) },
-      spacing: { ...LINE_SPACING, before: 60, after: 60 },
-      children: [new TextRun({ text: `Chapitre ${i}`, font: FONT, size: BODY_PT })],
+      spacing: PARA_SPACING,
+      children: [new TextRun({ text: partieITitle, font: FONT, size: BODY_PT, bold: true })],
     }));
-  }
-
-  // Partie II — bold title
-  sommaireLines.push(new Paragraph({
-    spacing: PARA_SPACING,
-    children: [new TextRun({ text: partieIITitle, font: FONT, size: BODY_PT, bold: true })],
-  }));
-  for (let i = 1; i <= (d.partieIIChapters || 2); i++) {
+    for (let i = 1; i <= (d.partieIChapters || 2); i++) {
+      sommaireLines.push(new Paragraph({
+        indent: { left: convertMillimetersToTwip(12), firstLine: 0 },
+        spacing: { ...LINE_SPACING, before: 60, after: 60 },
+        children: [new TextRun({ text: `Chapitre ${i}`, font: FONT, size: BODY_PT })],
+      }));
+    }
     sommaireLines.push(new Paragraph({
-      indent: { left: convertMillimetersToTwip(12) },
-      spacing: { ...LINE_SPACING, before: 60, after: 60 },
-      children: [new TextRun({ text: `Chapitre ${i}`, font: FONT, size: BODY_PT })],
+      spacing: PARA_SPACING,
+      children: [new TextRun({ text: partieIITitle, font: FONT, size: BODY_PT, bold: true })],
     }));
+    for (let i = 1; i <= (d.partieIIChapters || 2); i++) {
+      sommaireLines.push(new Paragraph({
+        indent: { left: convertMillimetersToTwip(12), firstLine: 0 },
+        spacing: { ...LINE_SPACING, before: 60, after: 60 },
+        children: [new TextRun({ text: `Chapitre ${i}`, font: FONT, size: BODY_PT })],
+      }));
+    }
+    sommaireLines.push(bodyPara("Conclusion Générale", { indent: { firstLine: 0 } }));
+    sommaireLines.push(bodyPara("Bibliographie",       { indent: { firstLine: 0 } }));
   }
-
-  sommaireLines.push(bodyPara("Conclusion Générale",        { indent: { firstLine: 0 } }));
-  sommaireLines.push(bodyPara("Bibliographie",              { indent: { firstLine: 0 } }));
-  sommaireLines.push(bodyPara("Table des Matières",         { indent: { firstLine: 0 } }));
 
   return sommaireLines;
 }
