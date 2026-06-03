@@ -11,6 +11,7 @@ import { getReport } from "@/lib/reportStore";
 import { API_BASE } from "@/lib/apiBase";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
+import ReportProgressCard from "@/components/ReportProgressCard";
 
 type SectionSummary = { content: string; wordCount: number };
 
@@ -459,7 +460,9 @@ export default function DashboardPage() {
       <Sidebar />
       <SidebarSpacer />
 
-      <main className="flex-1 flex flex-col min-h-0 min-w-0 overflow-y-auto">
+      <main className="flex-1 flex min-h-0 min-w-0 overflow-hidden">
+      {/* ── Main chat column ── */}
+      <div className="flex-1 flex flex-col min-h-0 min-w-0 overflow-y-auto">
 
         {/* ── Workspace name (top center, like Replit) ── */}
         {showGreeting && (
@@ -662,9 +665,9 @@ export default function DashboardPage() {
           </div>
         </div>
 
-        {/* ── Recent sections (bottom, like Replit's recent projects) ── */}
+        {/* ── Recent sections (greeting only) ── */}
         {showGreeting && recentSections.length > 0 && (
-          <div className="flex-shrink-0 px-6 pb-8 mt-8">
+          <div className="flex-shrink-0 px-6 pb-8 mt-6">
             <div className="max-w-2xl mx-auto">
               <div className="flex items-center justify-between mb-3">
                 <span className="text-sm font-semibold text-gray-700" style={{ fontFamily: "'Plus Jakarta Sans', sans-serif" }}>
@@ -702,6 +705,17 @@ export default function DashboardPage() {
             </div>
           </div>
         )}
+
+      </div>{/* end main chat column */}
+
+      {/* ── Persistent right panel: progress card ── */}
+      {completedCount > 0 && (
+        <aside className="hidden xl:flex flex-col w-80 flex-shrink-0 border-l border-gray-200 bg-white overflow-y-auto">
+          <div className="p-4">
+            <ReportProgressCard />
+          </div>
+        </aside>
+      )}
 
       </main>
     </div>
