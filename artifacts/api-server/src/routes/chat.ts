@@ -260,7 +260,7 @@ function buildCoherencePayload(
 // Loaded from lib/skills/chat-system.md — edit that file to change the prompt.
 
 const CHAT_SYSTEM_PROMPT = readFileSync(
-  join(process.cwd(), "src/lib/skills/chat-system.md"),
+  join(__dirname, "../src/lib/skills/chat-system.md"),
   "utf-8"
 );
 
