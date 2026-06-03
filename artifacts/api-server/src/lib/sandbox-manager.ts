@@ -138,9 +138,9 @@ export class SandboxSession {
 
       // Stream output lines as SSE events
       for await (const log of runCmd.logs()) {
-        if (log.source === "stdout" && log.message) {
+        if (log.stream === "stdout" && log.data) {
           try {
-            const msg = JSON.parse(log.message) as {
+            const msg = JSON.parse(log.data) as {
               type: string; content?: string; name?: string; subtype?: string;
             };
             if (msg.type === "text" && msg.content) {

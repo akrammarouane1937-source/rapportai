@@ -377,7 +377,7 @@ router.post("/converse", async (req: Request, res: Response) => {
       system,
       messages: modelMessages,
       tools: TOOLS,
-      maxTokens,
+      maxOutputTokens: maxTokens,
     });
 
     // Disable nginx/proxy buffering + Nagle's algorithm so chunks reach the browser immediately
@@ -388,9 +388,9 @@ router.post("/converse", async (req: Request, res: Response) => {
     const _origWrite = res.write.bind(res);
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     (res as any).write = (...args: any[]): boolean => {
-      const r = _origWrite(...args);
+      const r = (_origWrite as (...a: unknown[]) => boolean)(...args);
       (res as unknown as { flush?: () => void }).flush?.();
-      return r as boolean;
+      return r;
     };
 
     result.pipeUIMessageStreamToResponse(res);

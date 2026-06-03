@@ -16,7 +16,7 @@ Réponds UNIQUEMENT avec un objet JSON valide, sans texte avant ou après, sans 
 // Generates a structured plan (outline) for student review before generation starts.
 
 router.get("/session/:sessionId/plan", async (req: Request, res: Response) => {
-  const { sessionId } = req.params;
+  const sessionId = req.params.sessionId as string;
   const agent = sessionStore.get(sessionId);
   if (!agent) { res.status(404).json({ error: "Session not found" }); return; }
 
@@ -32,7 +32,7 @@ router.get("/session/:sessionId/plan", async (req: Request, res: Response) => {
   const apiKey = process.env.ANTHROPIC_API_KEY;
   if (!apiKey) { res.status(500).json({ error: "ANTHROPIC_API_KEY not configured" }); return; }
 
-  const profile = agent.profile;
+  const profile = (agent as unknown as { profile: Record<string, unknown> }).profile;
   const prompt = `Profil étudiant :
 - Nom : ${profile.studentName}
 - École : ${profile.school}
@@ -126,7 +126,7 @@ Génère un plan détaillé JSON avec cette structure :
     }
 
     // Cache the plan in memory
-    patchMemory(sessionId, { report: { ...memory.report, generated_plan: plan } });
+    patchMemory(sessionId, (m) => { m.report.generated_plan = plan; });
 
     logger.info({ event: "plan_generated", sessionId }, "Plan generated");
     res.json({ plan, approved: false });
@@ -140,7 +140,7 @@ Génère un plan détaillé JSON avec cette structure :
 // Student approves (or adjusts) the plan before generation starts.
 
 router.post("/session/:sessionId/approve", (req: Request, res: Response) => {
-  const { sessionId } = req.params;
+  const sessionId = req.params.sessionId as string;
   const { approved, adjustments } = req.body as {
     approved: boolean;
     adjustments?: Record<string, unknown>;
@@ -153,12 +153,9 @@ router.post("/session/:sessionId/approve", (req: Request, res: Response) => {
     ? { ...memory.report.generated_plan as object, ...adjustments }
     : memory.report.generated_plan;
 
-  patchMemory(sessionId, {
-    report: {
-      ...memory.report,
-      plan_approved: approved,
-      generated_plan: updatedPlan,
-    },
+  patchMemory(sessionId, (m) => {
+    m.report.plan_approved = approved;
+    m.report.generated_plan = updatedPlan;
   });
 
   logger.info({ event: "plan_approved", sessionId, approved }, "Plan approval recorded");

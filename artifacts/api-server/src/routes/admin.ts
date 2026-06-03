@@ -82,7 +82,7 @@ router.get("/admin/reports", (req: Request, res: Response) => {
 router.get("/admin/reports/:sessionId", (req: Request, res: Response) => {
   if (!requireAdmin(req, res)) return;
 
-  const { sessionId } = req.params;
+  const sessionId = req.params.sessionId as string;
   const dir = path.join(SESSIONS_ROOT, sessionId);
   if (!existsSync(dir)) { res.status(404).json({ error: "Session not found" }); return; }
 

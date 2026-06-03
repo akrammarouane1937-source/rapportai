@@ -350,7 +350,7 @@ router.post("/session/start", (req: Request, res: Response) => {
     agent.loadSections(profile.existingSections);
   }
 
-  sessionStore.set(agent);
+  sessionStore.set(agent as unknown as Parameters<typeof sessionStore.set>[0]);
 
   // Write student_memory.json — all agents read this before acting
   createMemory(sessionId, {
@@ -361,7 +361,7 @@ router.post("/session/start", (req: Request, res: Response) => {
     reportType:    profile.reportType,
     theme:         profile.theme,
     problematique: profile.problematique,
-    motsCles:      profile.motsCles,
+    motsCles:      (profile as unknown as { motsCles?: string[] }).motsCles,
     encadrantPeda: profile.encadrantPeda,
     encadrantPro:  profile.encadrantPro,
     entreprise:    profile.entreprise,
@@ -380,7 +380,7 @@ router.post(
   guardPayment,
   guardSectionLimit,
   async (req: Request, res: Response) => {
-    const { sessionId } = req.params;
+    const sessionId = req.params.sessionId as string;
     const rawBody = req.body as {
       section: string;
       problematique?: string;
@@ -514,9 +514,9 @@ router.post(
     const _origWrite = res.write.bind(res);
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     (res as any).write = (...args: any[]): boolean => {
-      const r = _origWrite(...args);
+      const r = (_origWrite as (...a: unknown[]) => boolean)(...args);
       (res as unknown as { flush?: () => void }).flush?.();
-      return r as boolean;
+      return r;
     };
 
     // Send extracted PDF page thumbnails to frontend (if any) — enables visual preview
@@ -675,7 +675,7 @@ router.post(
 // ─── GET /api/session/:sessionId/state ───────────────────────────────────────
 
 router.get("/session/:sessionId/state", (req: Request, res: Response) => {
-  const agent = sessionStore.get(req.params.sessionId) as SDKReportAgent | undefined;
+  const agent = sessionStore.get(req.params.sessionId as string) as SDKReportAgent | undefined;
   if (!agent) {
     res.status(404).json({ error: "Session introuvable ou expirée." });
     return;
@@ -698,7 +698,7 @@ router.post(
   "/session/:sessionId/revise",
   guardRevisionLimit,
   async (req: Request, res: Response) => {
-    const { sessionId } = req.params;
+    const sessionId = req.params.sessionId as string;
     type RevisionFileBlock = {
       type: "image" | "document";
       name: string;
@@ -735,9 +735,9 @@ router.post(
     const _origWriteRev = res.write.bind(res);
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     (res as any).write = (...args: any[]): boolean => {
-      const r = _origWriteRev(...args);
+      const r = (_origWriteRev as (...a: unknown[]) => boolean)(...args);
       (res as unknown as { flush?: () => void }).flush?.();
-      return r as boolean;
+      return r;
     };
 
     try {
@@ -788,7 +788,7 @@ router.post(
   "/session/:sessionId/upload-document",
   upload.single("file"),
   async (req: Request, res: Response) => {
-    const { sessionId } = req.params;
+    const sessionId = req.params.sessionId as string;
     const file = (req as Request & { file?: Express.Multer.File }).file;
 
     if (!file) {
@@ -870,7 +870,7 @@ router.post(
 // theoretical_framework, citationStyle, etc.
 
 router.patch("/session/:sessionId/memory", (req: Request, res: Response) => {
-  const { sessionId } = req.params;
+  const sessionId = req.params.sessionId as string;
   const fields = req.body as Record<string, unknown>;
 
   const memory = readMemory(sessionId);
@@ -887,7 +887,7 @@ router.patch("/session/:sessionId/memory", (req: Request, res: Response) => {
     ];
     for (const key of reportFields) {
       if (fields[key] !== undefined) {
-        (m.report as Record<string, unknown>)[key] = fields[key];
+        (m.report as unknown as Record<string, unknown>)[key] = fields[key];
       }
     }
 
@@ -908,7 +908,7 @@ router.patch("/session/:sessionId/memory", (req: Request, res: Response) => {
     const interactionFields = ["dedicaces_text", "remerciements_text", "resume_fr", "abstract_en", "abreviations"];
     for (const key of interactionFields) {
       if (fields[key] !== undefined) {
-        (m.interaction_history as Record<string, unknown>)[key] = fields[key];
+        (m.interaction_history as unknown as Record<string, unknown>)[key] = fields[key];
       }
     }
 
@@ -934,7 +934,7 @@ const PAGE_MODE_SECTIONS = new Set(["partie-i", "partie-ii"]);
 router.post(
   "/session/:sessionId/next-page",
   async (req: Request, res: Response) => {
-    const { sessionId } = req.params;
+    const sessionId = req.params.sessionId as string;
     const { sectionId, page, reset } = req.body as {
       sectionId: string;
       page?: number;
@@ -973,9 +973,9 @@ router.post(
     const _origWritePg = res.write.bind(res);
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     (res as any).write = (...args: any[]): boolean => {
-      const r = _origWritePg(...args);
+      const r = (_origWritePg as (...a: unknown[]) => boolean)(...args);
       (res as unknown as { flush?: () => void }).flush?.();
-      return r as boolean;
+      return r;
     };
 
     const docs = agent.getDocumentNames();
@@ -1029,7 +1029,7 @@ Contexte supplémentaire : ${JSON.stringify({ page: pageNum, mode: "page" })}`;
 // Returns the current page counters for this session (for UI state restore).
 
 router.get("/session/:sessionId/page-state", (req: Request, res: Response) => {
-  const { sessionId } = req.params;
+  const sessionId = req.params.sessionId as string;
   const state = pageStateMap.get(sessionId);
   res.json({
     "partie-i":  state?.get("partie-i")  ?? 0,
@@ -1052,7 +1052,7 @@ router.post("/session/:sessionId/complete", async (req: Request, res: Response) 
     try {
       const { onReportCompleted } = await import("../lib/referral");
       await onReportCompleted(clerkId, {
-        reportId:      req.params.sessionId,
+        reportId:      req.params.sessionId as string,
         subject,
         wordCount:     word_count,
         sectionsCount: sections_count,
@@ -1096,8 +1096,8 @@ router.get("/session/:sessionId/figures/:filename", (req: Request, res: Response
 // ─── DELETE /api/session/:sessionId ──────────────────────────────────────────
 
 router.delete("/session/:sessionId", (req: Request, res: Response) => {
-  sessionStore.delete(req.params.sessionId);
-  pageStateMap.delete(req.params.sessionId);
+  sessionStore.delete(req.params.sessionId as string);
+  pageStateMap.delete(req.params.sessionId as string);
   res.json({ deleted: true });
 });
 

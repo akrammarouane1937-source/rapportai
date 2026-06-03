@@ -106,7 +106,7 @@ class MetricsStore {
       });
     }
 
-    this.checkAlerts(event);
+    this.checkAlerts(full);
   }
 
   private checkAlerts(latest: AgentEvent) {

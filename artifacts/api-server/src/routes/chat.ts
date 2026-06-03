@@ -1,4 +1,6 @@
 import { Router, type Request, type Response } from "express";
+import { readFileSync } from "node:fs";
+import { join } from "node:path";
 
 const router = Router();
 const ANTHROPIC_API = "https://api.anthropic.com/v1/messages";
@@ -255,8 +257,15 @@ function buildCoherencePayload(
 }
 
 // ─── System prompts ───────────────────────────────────────────────────────────
+// Loaded from lib/skills/chat-system.md — edit that file to change the prompt.
 
-const ORCHESTRATOR_SYSTEM = `Tu es RapportAI Orchestrateur, le coordinateur principal du système de génération de rapports académiques pour les étudiants marocains et francophones (PFE, mémoire, rapport de stage).
+const CHAT_SYSTEM_PROMPT = readFileSync(
+  join(process.cwd(), "src/lib/skills/chat-system.md"),
+  "utf-8"
+);
+
+/* eslint-disable @typescript-eslint/no-unused-vars */
+const _LEGACY_ORCHESTRATOR_SYSTEM_INLINE = `Tu es RapportAI Orchestrateur, le coordinateur principal du système de génération de rapports académiques pour les étudiants marocains et francophones (PFE, mémoire, rapport de stage).
 
 ## TON IDENTITÉ
 
@@ -438,26 +447,7 @@ Tu parles à un étudiant dans un chat, pas dans un rapport Word. Tes réponses 
 - ✅ "Il te manque 4 sections clés. Je te recommande de commencer par le Sommaire — c'est lui qui structure tout le reste. On y va ?"
 `;
 
-const JURY_SYSTEM = `Tu es une simulation de jury académique marocain évaluant une soutenance.
-
-**Panel jury :**
-- **Pr. Hassan Benali** : Président, théorie et rigueur académique, formel et exigeant
-- **Dr. Fatima Zahra Alaoui** : Experte méthodologie, analytique et constructive
-- **M. Youssef El Mansouri** : Professionnel industrie, pragmatique, orienté résultats
-
-**Règles strictes :**
-- UNE seule question par tour, 3 phrases max
-- Toujours identifier le locuteur : **Pr. Benali :** / **Dr. Alaoui :** / **M. El Mansouri :**
-- Alterne les membres tour par tour
-- Questions basées sur le contenu réel du rapport (utilise le contexte disponible)
-- Après 8 réponses de l'étudiant → évaluation finale obligatoire
-
-**Évaluation finale :**
-\`\`\`
-**Points forts :** [2–3 points spécifiques au rapport]
-**Points à améliorer :** [2–3 points spécifiques]
-**Mention proposée :** [Passable / Assez bien / Bien / Très bien / Excellent]
-\`\`\``;
+/* eslint-enable @typescript-eslint/no-unused-vars */
 
 // ─── Streaming API call ───────────────────────────────────────────────────────
 
@@ -653,7 +643,7 @@ router.post("/chat", async (req: Request, res: Response) => {
 ${nextKey ? `**Prochaine section recommandée :** ${SECTION_LABELS[nextKey] ?? nextKey}` : "**Rapport complet ✅**"}${summaryContext}${sectionContext}`;
 
   const isJury = mode === "jury";
-  const systemPrompt = (isJury ? JURY_SYSTEM : ORCHESTRATOR_SYSTEM) + contextBlock;
+  const systemPrompt = CHAT_SYSTEM_PROMPT + contextBlock;
   const tools = isJury ? [] : ORCHESTRATOR_TOOLS;
 
   let currentMessages: ChatMessage[] = rawMessages.map((m) => ({

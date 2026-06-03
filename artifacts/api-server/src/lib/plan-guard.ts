@@ -68,7 +68,7 @@ export async function guardPayment(req: Request, res: Response, next: NextFuncti
   }
   if (req.planId === "free") { next(); return; }
 
-  const reportId = req.params.sessionId;
+  const reportId = req.params.sessionId as string;
   if (!reportId) { next(); return; }
 
   try {
