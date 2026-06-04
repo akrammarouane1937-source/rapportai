@@ -43,7 +43,7 @@ interface PageDetection {
 
 async function detectFiguresOnPage(pageImageBuffer: Buffer, pageNumber: number): Promise<PageDetection> {
   const response = await anthropic.messages.create({
-    model: "claude-opus-4-7",
+    model: "claude-sonnet-4-5",
     max_tokens: 1000,
     messages: [{
       role: "user",

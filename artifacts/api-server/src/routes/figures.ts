@@ -1,6 +1,5 @@
 import { Router, type Request, type Response } from "express";
-import { query } from "@anthropic-ai/claude-agent-sdk";
-import { findClaudeBinary } from "../lib/find-claude-binary";
+import { anthropic } from "@workspace/integrations-anthropic-ai";
 
 const router = Router();
 
@@ -39,8 +38,6 @@ router.post("/figures/analyze", async (req: Request, res: Response) => {
   const filiere = ctx.filiere    ?? "gestion";
   const type    = ctx.reportType ?? "rapport de fin d'études";
 
-  const claudeBinary = findClaudeBinary();
-
   const dataSection = hasData
     ? `Données importées : ${body.rowCount ?? "?"} lignes.\nColonnes : ${body.columns.join(", ")}\n\nAperçu (5 premières lignes) :\n${body.preview}`
     : `Aucune donnée importée. Suggère quelles figures l'étudiant DEVRAIT créer, précise les données à collecter dans "suggested_data".`;
@@ -67,22 +64,16 @@ Retourne UNIQUEMENT un tableau JSON valide (zéro texte avant ou après) :
 ]`;
 
   try {
-    let fullText = "";
+    const response = await anthropic.messages.create({
+      model: "claude-haiku-4-5",
+      max_tokens: 1024,
+      messages: [{ role: "user", content: prompt }],
+    });
 
-    for await (const message of query({
-      prompt,
-      options: {
-        maxTurns: 1,
-        allowedTools: [],
-        ...(claudeBinary ? { pathToClaudeCodeExecutable: claudeBinary } : {}),
-      },
-    })) {
-      if (message.type === "assistant") {
-        for (const block of message.message.content) {
-          if (block.type === "text") fullText += block.text;
-        }
-      }
-    }
+    const fullText = response.content
+      .filter((b) => b.type === "text")
+      .map((b) => (b as { type: "text"; text: string }).text)
+      .join("");
 
     const jsonMatch = fullText.match(/\[[\s\S]*\]/);
     let figures: FigureSuggestion[] = [];

@@ -79,13 +79,13 @@ async function prefetchFigureImagesPdf(
 }
 
 const SECTION_COLORS: Record<string, RGB> = {
+  "Dédicaces":           [168, 85,  247],
+  "Remerciements":       [139, 92,  246],
   "Résumé":              [99,  102, 241],
   "Introduction":        [124, 58,  237],
   "Partie I":            [37,  99,  235],
   "Partie II":           [8,   145, 178],
   "Conclusion":          [5,   150, 105],
-  "Apports et Limites":  [217, 119, 6  ],
-  "Perspectives":        [217, 119, 6  ],
   "Bibliographie":       [107, 114, 128],
 };
 
@@ -433,15 +433,24 @@ function renderCoverPage(doc: jsPDF, report: ReportData): void {
   );
 }
 
-export async function generatePdf(report: ReportData): Promise<void> {
+// ─── Shared PDF builder ───────────────────────────────────────────────────────
+// Single source of truth for both generatePdf and generatePdfBlobUrl.
+async function buildPdfDoc(report: ReportData): Promise<jsPDF> {
+  const ext = report as unknown as {
+    listeDesFigures?: string;
+    listeDesTableaux?: string;
+    annexeItems?: AnnexeItem[];
+    sessionId?: string;
+  };
+
   const sections: SectionData[] = [
-    { title: "Résumé",             content: report.resume        ?? "" },
-    { title: "Introduction",       content: report.introduction  ?? "" },
-    { title: "Partie I",           content: report.partieI       ?? "" },
-    { title: "Partie II",          content: report.partieII      ?? "" },
-    { title: "Conclusion",         content: report.conclusion    ?? "" },
-    { title: "Apports et Limites", content: report.apports       ?? "" },
-    { title: "Perspectives",       content: report.perspectives  ?? "" },
+    { title: "Dédicaces",     content: report.dedicaces     ?? "" },
+    { title: "Remerciements", content: report.remerciements ?? "" },
+    { title: "Résumé",        content: report.resume        ?? "" },
+    { title: "Introduction",  content: report.introduction  ?? "" },
+    { title: "Partie I",      content: report.partieI       ?? "" },
+    { title: "Partie II",     content: report.partieII      ?? "" },
+    { title: "Conclusion",    content: report.conclusion    ?? "" },
   ].filter((s) => s.content.trim());
 
   const bibText = report.bibliographieText?.trim()
@@ -450,72 +459,34 @@ export async function generatePdf(report: ReportData): Promise<void> {
             .map((e) => `${e.author} (${e.year}). ${e.title}. ${e.journal}`)
             .join("\n\n")
         : "");
-  if (bibText) {
-    sections.push({ title: "Références bibliographiques", content: bibText });
-  }
+  if (bibText) sections.push({ title: "Références bibliographiques", content: bibText });
+  if (ext.listeDesFigures?.trim())  sections.push({ title: "Liste des figures",  content: ext.listeDesFigures });
+  if (ext.listeDesTableaux?.trim()) sections.push({ title: "Liste des tableaux", content: ext.listeDesTableaux });
 
-  const extendedReport = report as unknown as { listeDesFigures?: string; listeDesTableaux?: string; annexeItems?: AnnexeItem[] };
-  if (extendedReport.listeDesFigures?.trim()) {
-    sections.push({ title: "Liste des figures", content: extendedReport.listeDesFigures });
-  }
-  if (extendedReport.listeDesTableaux?.trim()) {
-    sections.push({ title: "Liste des tableaux", content: extendedReport.listeDesTableaux });
-  }
+  const annexeItems = ext.annexeItems ?? [];
 
-  const annexeItems = extendedReport.annexeItems ?? [];
+  // Pass 1 — measure raw page positions (no images needed for layout measurement)
+  const scratch = new jsPDF({ orientation: "portrait", unit: "mm", format: "a4" });
+  const rawEntries = renderSections(scratch, sections, annexeItems);
 
-  // ── Pass 1: measure content page numbers ──────────────────────────────────
-  //
-  // renderSections always calls newPage() before the first section.
-  // On a fresh scratch doc (starts at page 1), first content lands on page 2.
-  // We must add an offset equal to the number of TOC pages so that in the
-  // final doc (cover=1, TOC=pages 2..N+1, content starts at page N+2) the
-  // entries target the correct pages.
-  //
-  // offset = tocPageCount  (because 2 + tocPageCount = N+2)
-
-  // Pre-fetch figure images from session API (async) so they can be embedded
-  // synchronously during renderSections. Pass 1 (measurement) skips images
-  // (acceptable — minor TOC offset for image-heavy sections); Pass 3 embeds.
-  const figureMap = await prefetchFigureImagesPdf(
-    (report as unknown as { sessionId?: string }).sessionId,
-    sections,
-  );
-
-  const scratch1 = new jsPDF({ orientation: "portrait", unit: "mm", format: "a4" });
-  const rawEntries = renderSections(scratch1, sections, annexeItems);
-
-  // ── Pass 2: measure TOC page count ────────────────────────────────────────
-  //
-  // TOC pagination depends only on entry count / title length, not on the
-  // stored page numbers, so we can measure it using rawEntries as-is.
-
+  // Pass 2 — measure TOC page count (depends only on entry count, not page numbers)
   const tocPageCount = measureTocPageCount(rawEntries);
+  const tocEntries: TocEntry[] = rawEntries.map((e) => ({ ...e, page: e.page + tocPageCount }));
 
-  // Adjust every entry: page = rawPage + tocPageCount
-  const tocEntries: TocEntry[] = rawEntries.map((e) => ({
-    ...e,
-    page: e.page + tocPageCount,
-  }));
-
-  // ── Pass 3: build real PDF ─────────────────────────────────────────────────
-  //
-  // Page 1:            cover
-  // Pages 2..N+1:      TOC  (tocPageCount pages, links verified correct)
-  // Pages N+2 onwards: content (matches adjusted tocEntries exactly)
+  // Pass 3 — fetch images, build real PDF
+  const figureMap = await prefetchFigureImagesPdf(ext.sessionId, sections);
 
   const doc = new jsPDF({ orientation: "portrait", unit: "mm", format: "a4" });
-
   renderCoverPage(doc, report);
-
   doc.addPage();
   renderTocPage(doc, tocEntries);
-
-  // Sanity-check: pages consumed by TOC should equal what we measured.
-  // (getPageCount - 1 cover - 1 for the addPage call that put us on the TOC)
-  // Content rendering starts here regardless.
   renderSections(doc, sections, annexeItems, figureMap);
 
+  return doc;
+}
+
+export async function generatePdf(report: ReportData): Promise<void> {
+  const doc = await buildPdfDoc(report);
   const filename = `${(report.theme ?? "rapport")
     .replace(/[^a-zA-Z0-9À-ɏ\s]/g, "")
     .trim()
@@ -524,55 +495,7 @@ export async function generatePdf(report: ReportData): Promise<void> {
   doc.save(filename);
 }
 
-// Re-export for potential preview use (returns a blob URL instead of saving)
 export async function generatePdfBlobUrl(report: ReportData): Promise<string> {
-  // Reuse generatePdf logic but capture output as blob URL
-  // This is a lightweight wrapper — the main implementation lives above.
-  const sections: SectionData[] = [
-    { title: "Résumé",             content: report.resume        ?? "" },
-    { title: "Introduction",       content: report.introduction  ?? "" },
-    { title: "Partie I",           content: report.partieI       ?? "" },
-    { title: "Partie II",          content: report.partieII      ?? "" },
-    { title: "Conclusion",         content: report.conclusion    ?? "" },
-    { title: "Apports et Limites", content: report.apports       ?? "" },
-    { title: "Perspectives",       content: report.perspectives  ?? "" },
-  ].filter((s) => s.content.trim());
-
-  const bibText = report.bibliographieText?.trim()
-    || ((report.bibliographie ?? []).length > 0
-        ? (report.bibliographie ?? [])
-            .map((e) => `${e.author} (${e.year}). ${e.title}. ${e.journal}`)
-            .join("\n\n")
-        : "");
-  if (bibText) {
-    sections.push({ title: "Références bibliographiques", content: bibText });
-  }
-
-  const extendedReport2 = report as unknown as { listeDesFigures?: string; listeDesTableaux?: string; annexeItems?: AnnexeItem[] };
-  if (extendedReport2.listeDesFigures?.trim()) {
-    sections.push({ title: "Liste des figures", content: extendedReport2.listeDesFigures });
-  }
-  if (extendedReport2.listeDesTableaux?.trim()) {
-    sections.push({ title: "Liste des tableaux", content: extendedReport2.listeDesTableaux });
-  }
-
-  const annexeItems = extendedReport2.annexeItems ?? [];
-
-  const figureMap2 = await prefetchFigureImagesPdf(
-    (report as unknown as { sessionId?: string }).sessionId,
-    sections,
-  );
-
-  const scratch1 = new jsPDF({ orientation: "portrait", unit: "mm", format: "a4" });
-  const rawEntries = renderSections(scratch1, sections, annexeItems);
-  const tocPageCount = measureTocPageCount(rawEntries);
-  const tocEntries: TocEntry[] = rawEntries.map((e) => ({ ...e, page: e.page + tocPageCount }));
-
-  const doc = new jsPDF({ orientation: "portrait", unit: "mm", format: "a4" });
-  renderCoverPage(doc, report);
-  doc.addPage();
-  renderTocPage(doc, tocEntries);
-  renderSections(doc, sections, annexeItems, figureMap2);
-
+  const doc = await buildPdfDoc(report);
   return doc.output("bloburl") as unknown as string;
 }
