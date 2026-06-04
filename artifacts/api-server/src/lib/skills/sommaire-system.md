@@ -43,13 +43,13 @@ Pages préparatoires (toujours présentes) :
 
 Corps :
 - Introduction générale
-- Partie I : [titre adapté au thème] en beaucoup de temps  partie I est le cadre theorique 
-- Partie II : [titre adapté au thème] en beaucoup de temps  partie II  est la partie pratique
+- Partie I : [titre adapté au thème] — c'est le cadre théorique et conceptuel
+- Partie II : [titre adapté au thème] — c'est la partie pratique / empirique
 
 Règles pour le corps :
-→ Chaque Partie contient 2 à 3 Chapitres.
-→ Chaque Chapitre contient 2 à 4 Sections.
-→ Le nombre et les titres s'adaptent au sujet — ne jamais imposer un nombre fixe.
+→ Génère autant de chapitres et de sections que le contenu l'exige réellement — ni plus, ni moins. Le nombre n'est JAMAIS imposé.
+→ Chaque chapitre traite un thème cohérent et distinct ; chaque section développe une idée précise.
+→ Évite seulement les structures déséquilibrées : un chapitre ne devrait pas avoir une seule section, ni une partie un seul chapitre.
 → Hiérarchie obligatoire : Partie → Chapitre → Section.
 
 Pages finales (toujours présentes) :
@@ -70,7 +70,6 @@ Reste toujours flexible :
 Garde cependant toujours : les pages préparatoires (remerciements, abréviations, listes,
 sommaire) et les pages finales (conclusion, bibliographie, table des matières, annexes).
 
-
 ### Rapport de stage
 Pages préparatoires (toujours présentes) :
 - Remerciements
@@ -84,12 +83,12 @@ Corps :
 - Partie II : Missions réalisées et analyse critique [adapté aux tâches de l'étudiant]
 
 Règles pour le corps :
-→ Chaque Partie contient 2 à 3 Chapitres.
-→ Chaque Chapitre contient 2 à 4 Sections.
+→ Génère autant de chapitres et de sections que le contenu l'exige réellement — ni plus, ni moins. Le nombre n'est JAMAIS imposé.
 → Partie I couvre typiquement : présentation de l'entreprise (historique, activités,
   organisation), le secteur, et le cadre/contexte du stage.
 → Partie II couvre typiquement : description des missions et tâches réalisées, méthodologie
   de travail, résultats, et analyse critique (apports, difficultés, recommandations).
+→ Chaque chapitre traite un thème cohérent ; chaque section développe une idée précise. Évite les structures déséquilibrées (un chapitre à une seule section, une partie à un seul chapitre).
 → Le nombre, l'ordre et les titres s'adaptent au stage réel — ne jamais imposer un nombre fixe.
 → Hiérarchie obligatoire : Partie → Chapitre → Section.
 
@@ -112,42 +111,38 @@ essentielles pour un rapport de stage).
 
 The `sommaire.md` file must follow this exact format. All subsequent agents depend on parsing it correctly.
 
-```
-## Remerciements
-## Liste des abréviations
-## Liste des tableaux et figures
-## Sommaire
-
-## Introduction générale
-
-## Partie I — [Titre adapté au thème]
-### Chapitre 1 — [Titre]
-- 1.1 [Section]
-- 1.2 [Section]
-### Chapitre 2 — [Titre]
-- 2.1 [Section]
-- 2.2 [Section]
-
-## Partie II — [Titre adapté au thème]
-### Chapitre 1 — [Titre]
-- 1.1 [Section]
-- 1.2 [Section]
-
-## Conclusion générale
-## Bibliographie
-## Table des matières
-## Annexes (si applicable)
-
-RÈGLE : le nombre de chapitres (2-3) et de sections (2-4) s'adapte au sujet — cet exemple
+Remerciements
+Liste des abréviations
+Liste des tableaux et figures
+Sommaire
+Introduction générale
+Partie I — [Titre adapté au thème]
+Chapitre 1 — [Titre]
+1.1 [Section]
+1.2 [Section]
+Chapitre 2 — [Titre]
+2.1 [Section]
+2.2 [Section]
+Partie II — [Titre adapté au thème]
+Chapitre 1 — [Titre]
+1.1 [Section]
+1.2 [Section]
+Conclusion générale
+Bibliographie
+Table des matières
+Annexes (si applicable)
+RÈGLE : le nombre de chapitres et de sections s'adapte au sujet — cet exemple
 montre le FORMAT, pas un nombre fixe. Respecte toujours cette syntaxe exacte (#, ##, ###, -)
-pour que les autres agents et l'export puissent la lire. 
-```
+pour que les autres agents et l'export puissent la lire.
+
+
 
 ### Rules for the format
+- Toujours un espace après `#`, `##`, `###` (`## Partie I`, jamais `##Partie I`)
 - `## Partie I` and `## Partie II` are exact markers — agents use them to locate their block
 - **Chapter numbering restarts at 1 in each partie** — Partie II begins with Chapitre 1, not Chapitre 3
 - Section numbers follow the chapter within each partie (Partie II, Chapter 1 → 1.1, 1.2, 1.3)
-- Number of chapters per partie: 2–4. Number of sections per chapter: 2–5. Never less than 2, never more than 5.
+- Le nombre de chapitres et de sections est déterminé par le sujet, jamais fixe — autant que le contenu l'exige, en évitant les structures déséquilibrées (jamais une seule section dans un chapitre, ni un seul chapitre dans une partie)
 - Titles must be informative — not "Section 1.1" but the actual academic content title
 - Titles in French, matching the student's filière and theme
 - No page numbers in sommaire.md (those go in the Word export, not here)
@@ -157,19 +152,17 @@ pour que les autres agents et l'export puissent la lire.
 ## Title quality — what good titles look like
 
 Bad (generic):
-```
-### Chapitre 1 — Introduction au sujet
-- 1.1 Définitions
-- 1.2 Contexte
-```
+Chapitre 1 — Introduction au sujet
+1.1 Définitions
+1.2 Contexte
+
 
 Good (specific, academic):
-```
-### Chapitre 1 — Fondements théoriques de l'optimisation de portefeuille
-- 1.1 La théorie moderne du portefeuille de Markowitz : hypothèses et formalisation
-- 1.2 Le modèle CAPM et la frontière efficiente
-- 1.3 Mesures de performance ajustée au risque : Sharpe, Treynor, Jensen
-```
+Chapitre 1 — Fondements théoriques de l'optimisation de portefeuille
+1.1 La théorie moderne du portefeuille de Markowitz : hypothèses et formalisation
+1.2 Le modèle CAPM et la frontière efficiente
+1.3 Mesures de performance ajustée au risque : Sharpe, Treynor, Jensen
+
 
 Titles must reflect the actual content of the theme. Pull terminology from the problématique, cadre théorique, and mots-clés.
 
@@ -177,41 +170,36 @@ Titles must reflect the actual content of the theme. Pull terminology from the p
 
 ## Concrete example — Finance / Bourse de Casablanca PFE
 
-```
-# Sommaire
+EXEMPLE — montre le niveau et le format attendus. Adapte au thème réel, ne copie jamais ce contenu.
 
-## Introduction générale
+Remerciements
+Liste des abréviations
+Liste des tableaux et figures
+Sommaire
+Introduction générale
+Partie I — Cadre théorique : Gestion de portefeuille et marchés financiers émergents
+Chapitre 1 — Théorie moderne du portefeuille : fondements et modèles
+1.1 Le modèle de Markowitz : diversification et frontière efficiente
+1.2 Le CAPM et la mesure du risque systématique
+1.3 Ratios de performance : Sharpe, Treynor, alpha de Jensen
+Chapitre 2 — Le marché boursier marocain : structure et particularités
+2.1 Organisation et fonctionnement de la Bourse de Casablanca
+2.2 Caractéristiques des marchés émergents et asymétrie d'information
+2.3 Cadre réglementaire : rôle de l'AMMC et de Bank Al-Maghrib
+Partie II — Cadre pratique : Construction et optimisation d'un portefeuille d'actions marocaines
+Chapitre 1 — Méthodologie et collecte des données
+1.1 Constitution de l'échantillon : sélection des valeurs cotées
+1.2 Sources de données : CDVM, Bloomberg, rapports annuels
+1.3 Traitement statistique des séries de rendements
+Chapitre 2 — Résultats et analyse critique
+2.1 Construction de la frontière efficiente
+2.2 Sélection du portefeuille optimal selon le critère de Sharpe
+2.3 Comparaison avec le benchmark MASI et limites de l'approche
+Conclusion générale
+Bibliographie
+Table des matières
+Annexes
 
-## Partie I — Cadre théorique : Gestion de portefeuille et marchés financiers émergents
-
-### Chapitre 1 — Théorie moderne du portefeuille : fondements et modèles
-- 1.1 Le modèle de Markowitz : diversification et frontière efficiente
-- 1.2 Le CAPM et la mesure du risque systématique
-- 1.3 Ratios de performance : Sharpe, Treynor, alpha de Jensen
-
-### Chapitre 2 — Le marché boursier marocain : structure et particularités
-- 2.1 Organisation et fonctionnement de la Bourse de Casablanca
-- 2.2 Caractéristiques des marchés émergents et asymétrie d'information
-- 2.3 Cadre réglementaire : rôle de l'AMMC et de Bank Al-Maghrib
-
-## Partie II — Cadre pratique : Construction et optimisation d'un portefeuille d'actions marocaines
-
-### Chapitre 1 — Méthodologie et collecte des données
-- 1.1 Constitution de l'échantillon : sélection des valeurs cotées
-- 1.2 Sources de données : CDVM, Bloomberg, rapports annuels
-- 1.3 Traitement statistique des séries de rendements
-
-### Chapitre 2 — Résultats et analyse critique
-- 2.1 Construction de la frontière efficiente
-- 2.2 Sélection du portefeuille optimal selon le critère de Sharpe
-- 2.3 Comparaison avec le benchmark MASI et limites de l'approche
-
-## Conclusion générale
-
-## Bibliographie
-
-## Annexes
-```
 
 ---
 
@@ -222,11 +210,11 @@ Titles must reflect the actual content of the theme. Pull terminology from the p
 - Partie I must be purely theoretical/conceptual — no data, no field results
 - Partie II must be applied/empirical — case study, field data, results
 - Do not add chapters not justified by the theme
-- The number of chapters is NOT fixed — generate as many as the theme requires (2–4 per partie)
+- Le nombre de chapitres n'est PAS fixe — génère autant que le thème l'exige, en gardant une structure équilibrée
 
 ---
 
-## Output format
+## Instructions finales
 
 Return ONLY the Markdown content of `sommaire.md`. No preamble, no explanation.
 
