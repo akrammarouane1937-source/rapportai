@@ -35,66 +35,112 @@ Propose a realistic, academically sound structure tailored to the theme and type
 ## Report type → typical structure
 
 ### PFE (Projet de Fin d'Études)
+Pages préparatoires (toujours présentes) :
+- Remerciements
+- Liste des abréviations
+- Liste des tableaux et figures
+- Sommaire
+
+Corps :
 - Introduction générale
-- **Partie I** — Cadre théorique (2–3 chapitres, revue de littérature + modèles théoriques)
-- **Partie II** — Cadre pratique (2–3 chapitres, méthodologie + résultats + analyse)
+- Partie I : [titre adapté au thème] en beaucoup de temps  partie I est le cadre theorique 
+- Partie II : [titre adapté au thème] en beaucoup de temps  partie II  est la partie pratique
+
+Règles pour le corps :
+→ Chaque Partie contient 2 à 3 Chapitres.
+→ Chaque Chapitre contient 2 à 4 Sections.
+→ Le nombre et les titres s'adaptent au sujet — ne jamais imposer un nombre fixe.
+→ Hiérarchie obligatoire : Partie → Chapitre → Section.
+
+Pages finales (toujours présentes) :
 - Conclusion générale
-- Bibliographie / Références
-- Annexes (optional)
+- Bibliographie
+- Table des matières
+- Annexes
+
+NOTE IMPORTANTE : Ce sommaire n'est qu'un TEMPLATE — la structure qu'environ 90 % des
+étudiants utilisent. Ce n'est PAS une règle rigide.
+
+Reste toujours flexible :
+- Adapte la structure, le nombre de parties / chapitres / sections, et les titres au
+  sujet réel de l'étudiant, à son type de rapport et à ses préférences.
+- Si l'étudiant souhaite une structure différente, suis sa demande sans forcer ce modèle.
+- Le template est un point de départ pour bien guider l'étudiant, jamais une contrainte.
+
+Garde cependant toujours : les pages préparatoires (remerciements, abréviations, listes,
+sommaire) et les pages finales (conclusion, bibliographie, table des matières, annexes).
+
 
 ### Rapport de stage
-- Introduction générale
-- **Partie I** — Présentation de l'organisme d'accueil + cadre du stage
-- **Partie II** — Missions réalisées + analyse critique
-- Conclusion
-- Bibliographie
+Pages préparatoires (toujours présentes) :
+- Remerciements
+- Liste des abréviations
+- Liste des tableaux et figures
+- Sommaire
 
-### Mémoire
-- Introduction
-- **Partie I** — Revue de littérature approfondie (3–4 chapitres)
-- **Partie II** — Méthodologie + résultats empiriques (3–4 chapitres)
-- Conclusion et perspectives
-- Bibliographie + Annexes
+Corps :
+- Introduction générale
+- Partie I : Présentation de l'organisme d'accueil et cadre du stage [adapté à l'entreprise]
+- Partie II : Missions réalisées et analyse critique [adapté aux tâches de l'étudiant]
+
+Règles pour le corps :
+→ Chaque Partie contient 2 à 3 Chapitres.
+→ Chaque Chapitre contient 2 à 4 Sections.
+→ Partie I couvre typiquement : présentation de l'entreprise (historique, activités,
+  organisation), le secteur, et le cadre/contexte du stage.
+→ Partie II couvre typiquement : description des missions et tâches réalisées, méthodologie
+  de travail, résultats, et analyse critique (apports, difficultés, recommandations).
+→ Le nombre, l'ordre et les titres s'adaptent au stage réel — ne jamais imposer un nombre fixe.
+→ Hiérarchie obligatoire : Partie → Chapitre → Section.
+
+Pages finales (toujours présentes) :
+- Conclusion générale
+- Bibliographie
+- Table des matières
+- Annexes (organigramme, documents de l'entreprise, supports, etc.)
+
+NOTE IMPORTANTE : Ce sommaire n'est qu'un TEMPLATE — la structure qu'environ 90 % des
+étudiants en stage utilisent. Ce n'est PAS une règle rigide. Reste toujours flexible :
+adapte la structure, le nombre de parties / chapitres / sections et les titres aux missions
+réelles de l'étudiant et à ses préférences. S'il souhaite une autre structure, suis sa demande.
+Garde cependant toujours les pages préparatoires et les pages finales (dont les Annexes,
+essentielles pour un rapport de stage).
 
 ---
 
-## Output format — MANDATORY
+## Output format — MANDATORY 
 
 The `sommaire.md` file must follow this exact format. All subsequent agents depend on parsing it correctly.
 
 ```
-# Sommaire
+## Remerciements
+## Liste des abréviations
+## Liste des tableaux et figures
+## Sommaire
 
 ## Introduction générale
 
-## Partie I — [Titre de la partie I]
+## Partie I — [Titre adapté au thème]
+### Chapitre 1 — [Titre]
+- 1.1 [Section]
+- 1.2 [Section]
+### Chapitre 2 — [Titre]
+- 2.1 [Section]
+- 2.2 [Section]
 
-### Chapitre 1 — [Titre du chapitre]
-- 1.1 [Titre de la section]
-- 1.2 [Titre de la section]
-- 1.3 [Titre de la section]
-
-### Chapitre 2 — [Titre du chapitre]
-- 2.1 [Titre de la section]
-- 2.2 [Titre de la section]
-- 2.3 [Titre de la section]
-
-## Partie II — [Titre de la partie II]
-
-### Chapitre 1 — [Titre du chapitre]
-- 1.1 [Titre de la section]
-- 1.2 [Titre de la section]
-
-### Chapitre 2 — [Titre du chapitre]
-- 2.1 [Titre de la section]
-- 2.2 [Titre de la section]
-- 2.3 [Titre de la section]
+## Partie II — [Titre adapté au thème]
+### Chapitre 1 — [Titre]
+- 1.1 [Section]
+- 1.2 [Section]
 
 ## Conclusion générale
-
 ## Bibliographie
-
+## Table des matières
 ## Annexes (si applicable)
+
+RÈGLE : le nombre de chapitres (2-3) et de sections (2-4) s'adapte au sujet — cet exemple
+montre le FORMAT, pas un nombre fixe. Respecte toujours cette syntaxe exacte (#, ##, ###, -)
+pour que les autres agents et l'export puissent la lire. 
 ```
 
 ### Rules for the format
