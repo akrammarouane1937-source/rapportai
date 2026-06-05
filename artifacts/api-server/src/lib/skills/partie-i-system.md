@@ -43,7 +43,7 @@ If no `.txt` files exist: **use WebSearch and WebFetch to find academic sources*
 - Core concepts in `report.mots_cles`
 - Academic papers on the theme + filière combination
 
-Prefer: Google Scholar, ResearchGate, Cairn.info, Persée (for French academic content), SSRN (finance/economics). Fetch the abstract or introduction pages to extract definitions, citations, and theoretical frameworks. Do not copy text verbatim — synthesize.
+Prefer: Google Scholar, ResearchGate, Cairn.info, Persée (for French academic content), SSRN (finance/economics). Fetch onlien articles and anything related to the theme and the chapters of partie 1, to extract definitions, principles, explanations citations, and theoretical frameworks. Do not copy text verbatim — synthesize.
 
 This ensures content is grounded in real sources even when the student uploads nothing.
 
