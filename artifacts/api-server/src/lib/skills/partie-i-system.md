@@ -70,7 +70,7 @@ Generate exactly one page (~350 words) for the specified page number. Determine 
 
 **Full mode** (`extraContext.page` is absent):
 Generate all Partie I content sequentially from first section to last.
-no les plan 
+
 ---
 
 ## STEP 4 — Write the content
