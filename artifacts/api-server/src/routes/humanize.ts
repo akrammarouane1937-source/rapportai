@@ -21,7 +21,7 @@ interface HumanizeBody {
 const ALLOWED_TOOLS = ["Read", "Write", "Edit", "Grep", "Glob"];
 const MAX_TURNS = 8;
 
-// ─── System prompt — loaded from file (humanize-system.md v2.6.0) ────────────
+// ─── System prompt + skills — loaded from files ───────────────────────────────
 
 const SYSTEM_PROMPT_PATH = path.join(process.cwd(), "src/lib/skills/humanize-system.md");
 const SYSTEM_PROMPT = existsSync(SYSTEM_PROMPT_PATH)
@@ -341,6 +341,9 @@ Provide:
 If the input text is empty:
 <error>Aucun texte fourni. Veuillez coller le texte à transformer.</error>`;
 
+const SKILLS_PATH = path.join(process.cwd(), "src/lib/skills/humanize-skills.md");
+const SKILLS_CONTENT = existsSync(SKILLS_PATH) ? readFileSync(SKILLS_PATH, "utf-8") : "";
+
 // ─── POST /humanize ───────────────────────────────────────────────────────────
 
 router.post("/humanize", async (req: Request, res: Response) => {
@@ -364,7 +367,7 @@ router.post("/humanize", async (req: Request, res: Response) => {
 
   try {
     for await (const message of query({
-      prompt: `Humanise ce texte pour le rendre indétectable par les outils anti-IA. IMPORTANT : conserve TOUT le contenu, chaque paragraphe, chaque argument, chaque exemple — ne supprime et ne résume rien. Le texte de sortie doit faire au minimum 95% des mots du texte d'entrée.\n\n${content}`,
+      prompt: `${SKILLS_CONTENT ? `${SKILLS_CONTENT}\n\n---\n\n` : ""}Humanise ce texte pour le rendre indétectable par les outils anti-IA. IMPORTANT : conserve TOUT le contenu, chaque paragraphe, chaque argument, chaque exemple — ne supprime et ne résume rien. Le texte de sortie doit faire au minimum 95% des mots du texte d'entrée.\n\n${content}`,
       options: {
         systemPrompt: SYSTEM_PROMPT,
         maxTurns: MAX_TURNS,
