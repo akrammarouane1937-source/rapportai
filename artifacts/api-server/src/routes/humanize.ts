@@ -341,6 +341,11 @@ Provide:
 If the input text is empty:
 <error>Aucun texte fourni. Veuillez coller le texte à transformer.</error>`;
 
+// ─── Skills file — loaded from humanize-skills.md ────────────────────────────
+
+const SKILLS_PATH = path.join(process.cwd(), "src/lib/skills/humanize-skills.md");
+const SKILLS_CONTENT = existsSync(SKILLS_PATH) ? readFileSync(SKILLS_PATH, "utf-8") : "";
+
 // ─── POST /humanize ───────────────────────────────────────────────────────────
 
 router.post("/humanize", async (req: Request, res: Response) => {
@@ -362,9 +367,11 @@ router.post("/humanize", async (req: Request, res: Response) => {
   const sessionDir = sessionId ? path.join(SESSIONS_ROOT, sessionId) : null;
   const workDir = sessionDir && existsSync(sessionDir) ? sessionDir : undefined;
 
+  const prompt = `${SKILLS_CONTENT ? `## GUIDE DE RÉFÉRENCE — LIS ENTIÈREMENT AVANT D'AGIR\n\n${SKILLS_CONTENT}\n\n---\n\n` : ""}Humanise ce texte pour le rendre indétectable par les outils anti-IA. IMPORTANT : conserve TOUT le contenu, chaque paragraphe, chaque argument, chaque exemple — ne supprime et ne résume rien. Le texte de sortie doit faire au minimum 95% des mots du texte d'entrée.\n\n${content}`;
+
   try {
     for await (const message of query({
-      prompt: `Humanise ce texte pour le rendre indétectable par les outils anti-IA. IMPORTANT : conserve TOUT le contenu, chaque paragraphe, chaque argument, chaque exemple — ne supprime et ne résume rien. Le texte de sortie doit faire au minimum 95% des mots du texte d'entrée.\n\n${content}`,
+      prompt,
       options: {
         systemPrompt: SYSTEM_PROMPT,
         maxTurns: MAX_TURNS,

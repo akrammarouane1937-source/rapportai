@@ -1,5 +1,5 @@
 import { Router, type Request, type Response } from "express";
-import { readFileSync } from "node:fs";
+import { existsSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 
 const router = Router();
@@ -263,6 +263,9 @@ const CHAT_SYSTEM_PROMPT = readFileSync(
   join(__dirname, "../src/lib/skills/chat-system.md"),
   "utf-8"
 );
+
+const chatSkillsPath = join(__dirname, "../src/lib/skills/chat-skills.md");
+const CHAT_SKILLS = existsSync(chatSkillsPath) ? readFileSync(chatSkillsPath, "utf-8") : "";
 
 /* eslint-disable @typescript-eslint/no-unused-vars */
 const _LEGACY_ORCHESTRATOR_SYSTEM_INLINE = `Tu es RapportAI Orchestrateur, le coordinateur principal du système de génération de rapports académiques pour les étudiants marocains et francophones (PFE, mémoire, rapport de stage).
@@ -643,7 +646,7 @@ router.post("/chat", async (req: Request, res: Response) => {
 ${nextKey ? `**Prochaine section recommandée :** ${SECTION_LABELS[nextKey] ?? nextKey}` : "**Rapport complet ✅**"}${summaryContext}${sectionContext}`;
 
   const isJury = mode === "jury";
-  const systemPrompt = CHAT_SYSTEM_PROMPT + contextBlock;
+  const systemPrompt = CHAT_SYSTEM_PROMPT + (CHAT_SKILLS ? `\n\n---\n## KNOWLEDGE BASE\n${CHAT_SKILLS}` : "") + contextBlock;
   const tools = isJury ? [] : ORCHESTRATOR_TOOLS;
 
   let currentMessages: ChatMessage[] = rawMessages.map((m) => ({
