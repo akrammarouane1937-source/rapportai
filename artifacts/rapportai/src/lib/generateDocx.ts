@@ -249,18 +249,17 @@ function markdownToParas(md: string, imageMap?: Map<string, Uint8Array>): Paragr
   for (const raw of lines) {
     const line = raw.trimEnd();
 
-    if (line.startsWith("#### ")) {
+    // Heading detection — tolerant of a missing space after the hashes
+    // (e.g. "##Titre" as well as "## Titre") so raw "#" never leaks into the doc.
+    const headingMatch = line.match(/^(#{1,4})\s*(\S.*)$/);
+    if (headingMatch) {
       flushBuf();
-      paras.push(heading4(line.slice(5).trim()));
-    } else if (line.startsWith("### ")) {
-      flushBuf();
-      paras.push(heading3(line.slice(4).trim()));
-    } else if (line.startsWith("## ")) {
-      flushBuf();
-      paras.push(heading2(line.slice(3).trim()));
-    } else if (line.startsWith("# ")) {
-      flushBuf();
-      paras.push(heading1(line.slice(2).trim(), false));
+      const level = headingMatch[1].length;
+      const text = headingMatch[2].trim();
+      if (level === 4) paras.push(heading4(text));
+      else if (level === 3) paras.push(heading3(text));
+      else if (level === 2) paras.push(heading2(text));
+      else paras.push(heading1(text, false));
     } else if (line === "") {
       flushBuf();
     } else {
