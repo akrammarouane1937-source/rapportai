@@ -5,13 +5,16 @@ import { logger } from "./logger";
 
 const client = new Anthropic();
 
-// Every content section is humanized — no exceptions.
-// "abbreviations" (JSON array) and "keywords", "problematique", "contexte"
-// (short utility outputs) are excluded — they are structured/non-prose data.
+// Only PROSE sections are humanized. Structured sections are excluded because
+// humanizing them can corrupt their format or data:
+// - sommaire: parseable ##/### structure read by Partie I/II agents + the export TOC
+// - page-de-garde: student name, school, encadrants, dates — must stay exact
+// - bibliographie: citations (author, year, DOI) must stay exact
+// - abbreviations/keywords/problematique/contexte: structured utility data
 const HUMANIZE_SECTIONS = new Set([
   "introduction", "partie-i", "partie-ii", "conclusion",
   "resume", "abstract", "dedicaces", "remerciements",
-  "bibliographie", "sommaire", "page-de-garde", "section",
+  "section",
 ]);
 
 // Max words per chunk — Haiku handles 2000 words comfortably in one shot
