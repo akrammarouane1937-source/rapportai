@@ -1,8 +1,22 @@
 import { Router, type Request, type Response } from "express";
 import { createAnthropic } from "@ai-sdk/anthropic";
 import { streamText, jsonSchema, convertToModelMessages, type UIMessage } from "ai";
+import { existsSync, readFileSync } from "fs";
+import path from "path";
 
 const router = Router();
+
+// ─── Load sommaire system + skills files once at startup ─────────────────────
+
+const SKILLS_DIR = path.join(process.cwd(), "src/lib/skills");
+
+function loadMd(filename: string): string {
+  const p = path.join(SKILLS_DIR, filename);
+  return existsSync(p) ? readFileSync(p, "utf-8") : "";
+}
+
+const SOMMAIRE_SYSTEM = loadMd("sommaire-system.md");
+const SOMMAIRE_SKILLS = loadMd("sommaire-skills.md");
 
 // ─── Strip emoji from text (for intent route) ─────────────────────────────────
 
@@ -55,31 +69,14 @@ Si un plan a déjà été proposé dans la conversation ET que l'étudiant dit "
 
 Si aucun plan n'a encore été proposé → propose d'abord le plan en texte dans le chat.
 
-━━ FORMAT DU PLAN (texte dans le chat) ━━
-
-Partie I — [Titre]
-  Chapitre 1 : [Titre]
-    - Section 1 : [Titre]
-    - Section 2 : [Titre]
-    - Section 3 : [Titre]
-  Chapitre 2 : [Titre]
-    - Section 1 : [Titre]
-    - Section 2 : [Titre]
-Partie II — [Titre]
-  Chapitre 1 : [Titre]
-    - ...
-  Chapitre 2 : [Titre]
-    - ...
-Conclusion générale
-Bibliographie
-
-Termine ta proposition par : "Ce plan te convient ? Dis-moi si tu veux modifier, ou dis 'ok' pour générer."
-
 ━━ APRÈS APPROBATION ━━
 generate_section("sommaire") avec context = le plan complet validé. Puis step_complete dans la MÊME réponse.
 
 ━━ SI MODIFICATION ━━
-Intègre la modification, repropose le plan ajusté, attends validation.`,
+Intègre la modification, repropose le plan ajusté, attends validation.
+
+${SOMMAIRE_SYSTEM ? `━━ GUIDE DE GÉNÉRATION ━━\n${SOMMAIRE_SYSTEM}` : ""}
+${SOMMAIRE_SKILLS ? `━━ BASE DE CONNAISSANCES ━━\n${SOMMAIRE_SKILLS}` : ""}`,
 
   6: `Tu es RapportAI. Tu génères l'introduction générale du rapport.
 
