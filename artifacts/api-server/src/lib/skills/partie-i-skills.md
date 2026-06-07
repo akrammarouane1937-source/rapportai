@@ -24,6 +24,11 @@ allowed-tools:
 This file provides worked examples of what good Partie I output looks like.
 All rules, steps, and structure are in `partie-i-system.md` — do not repeat them here.
 
+> ⚠️ **IMPORTANT — These examples are FORMAT and STYLE references only.**
+> The domain content (finance, banking, OPCVM…) is illustrative and must NEVER be reused or mixed into a student's report.
+> Every report must be written entirely from the student's own context: `sommaire.md`, `student_memory.json`, uploaded `.txt` documents, and WebSearch results for their specific topic.
+> A student writing about génie civil gets génie civil content. A student writing about marketing gets marketing content. The examples below only show how to write — not what to write.
+
 ---
 
 ## Example 0 — Section-by-section approval flow
