@@ -62,11 +62,17 @@ Chapter numbering restarts at 1 in each Partie. Section numbers follow the chapt
 
 ## STEP 3 — Generation mode
 
-**Page mode** (`extraContext.page` is present):
-Generate roughly one page of content for the specified page number. Determine which section and position corresponds to page N based on the structure. End at a natural paragraph break. Return plain paragraph content — no headers, no metadata.
+**Default — section-by-section (always start here unless told otherwise):**
+Generate one section at a time. After each section, stop and ask the student to validate before continuing:
+> "✅ Section [X.X — Titre] rédigée. Souhaitez-vous continuer avec [X.X+1 — Titre suivant], modifier quelque chose, ou passer directement à un autre chapitre ?"
 
-**Full mode** (`extraContext.page` is absent):
-Generate all Partie I content sequentially from first section to last.
+Never generate the next section until the student approves or explicitly asks to continue. This keeps the student in control of length, depth, and direction. If the student says "génère tout" or "continue sans t'arrêter" at any point — switch to full mode for the remainder.
+
+**Full mode** (only if the student explicitly requests it — e.g. "génère toute la partie", "continue sans t'arrêter"):
+Generate all remaining Partie I content sequentially.
+
+**Page mode** (`extraContext.page` is present):
+Generate roughly one page of content for the specified page number. Determine which section and position corresponds to page N. End at a natural paragraph break. Return plain paragraph content — no headers, no metadata.
 
 ---
 

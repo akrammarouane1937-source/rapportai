@@ -3,9 +3,9 @@ name: rapportai-partie-i
 description: >
   Generates Partie I of the report — adaptive to report type: theoretical framework for PFE/mémoire,
   host organisation presentation for stage/PFA. Reads sommaire.md to extract the exact Partie I
-  structure. Generates content page by page or in full mode. Crops relevant figures from uploaded
-  PDFs using PIL. Trigger when section is "partie-i" or when the student requests "rédiger la
-  partie I", "écrire la partie 1", "cadre théorique", "présentation de l'entreprise".
+  structure. Generates content section by section (default) or in full mode. Crops relevant figures
+  from uploaded PDFs using PIL. Trigger when section is "partie-i" or when the student requests
+  "rédiger la partie I", "écrire la partie 1", "cadre théorique", "présentation de l'entreprise".
   Requires sommaire.md to exist — errors immediately if missing.
   Do NOT use for Partie II — that is a separate agent.
 allowed-tools:
@@ -19,204 +19,79 @@ allowed-tools:
   - WebSearch
 ---
 
-# RapportAI — Partie I Agent
+# Partie I Agent — Skills & Examples
 
-Generates the first body section of the report from sommaire structure + uploaded documents.
-The nature of Partie I is determined by the report type and sommaire — not assumed.
-Dynamic structure. Page-by-page or full mode. PIL for figure crops.
-
----
-
-## Hard Prerequisite
-
-`sommaire.md` must exist before this agent runs.
-If missing → `<error>Le sommaire est requis…</error>` — stop immediately.
+This file provides worked examples of what good Partie I output looks like.
+All rules, steps, and structure are in `partie-i-system.md` — do not repeat them here.
 
 ---
 
-## Nature of Partie I — determined by sommaire, not assumed
+## Example 0 — Section-by-section approval flow
 
-| Report type | Typical Partie I |
-|---|---|
-| PFE / mémoire | Cadre théorique — théories, concepts, revue de littérature |
-| Rapport de stage / PFA | Présentation de l'organisme d'accueil et cadre du stage |
+This is the default conversation pattern. Never generate the full Partie I in one shot unless the student asks.
 
-**Rule**: always follow what the `## Partie I` block of `sommaire.md` actually says.
-If it says "Présentation de l'entreprise" → write that, never impose theory.
-**The sommaire and the student's preferences always win.**
+**Agent after writing Section 1.1:**
+> ✅ **Section 1.1 — Le risque de marché : définitions et cadre conceptuel** rédigée (~650 mots).
+> Souhaitez-vous continuer avec **1.2 — Les instruments de mesure du risque**, modifier quelque chose dans cette section, ou passer directement à un autre chapitre ?
 
----
+**Student:** "Continue."
 
-## Generation Modes
+**Agent writes 1.2, then:**
+> ✅ **Section 1.2 — Les instruments de mesure du risque** rédigée (~700 mots).
+> Souhaitez-vous continuer avec **1.3 — Le cadre réglementaire marocain (AMMC)**, ou ajuster quelque chose ?
 
-| Mode | Trigger | Output |
-|---|---|---|
-| **Page mode** | `extraContext.page` is present | ~one page, no headers, no metadata |
-| **Full mode** | `extraContext.page` absent | Complete Partie I sequentially |
+**Student:** "Génère tout le reste sans t'arrêter."
+
+**Agent:** switches to full mode, generates all remaining sections sequentially without stopping.
 
 ---
 
-## Document Priority
+## Example 1 — PFE/Mémoire (cadre théorique)
 
-| Priority | Source | Use |
-|---|---|---|
-| 1 | Canevas (`canevas*.txt`) | Required structure — follow strictly |
-| 2 | Academic papers / articles | Theory, definitions, citations (PFE/mémoire) |
-| 3 | Company documents / data | Company facts, org charts, data (stage) |
-| 4 | Student notes / plan | Orientation and emphasis |
+**Context:** PFE Finance, ENCG Casablanca. Theme: *La gestion des risques dans les OPCVM marocains*. Section 1.1 — *Le risque de marché : définitions et cadre conceptuel*. Citation style: APA. No uploaded figures.
 
-No `.txt` files → **WebSearch + WebFetch** before writing.
-Search: key authors from `cadre théorique`, `mots_cles`, theme + filière.
-Prefer: Google Scholar, Cairn.info, Persée, ResearchGate, SSRN.
-Synthesize — never copy verbatim.
+**Output:**
 
----
+### 1.1 Le risque de marché : définitions et cadre conceptuel
 
-## Structure Rules
+Le risque de marché désigne la probabilité de subir des pertes financières résultant de variations défavorables des prix d'actifs cotés — cours boursiers, taux d'intérêt, taux de change ou prix des matières premières. Pour les organismes de placement collectif en valeurs mobilières (OPCVM), ce risque constitue la principale source d'exposition, dans la mesure où leurs portefeuilles sont directement valorisés aux prix de marché selon le principe de la valeur liquidative quotidienne.
 
-- Extracted from `sommaire.md` `## Partie I` block — authoritative, do not modify
-- Chapter numbering restarts at 1 in each Partie
-- Section numbers follow chapter: Ch. 1 → 1.1, 1.2 / Ch. 2 → 2.1, 2.2
+La littérature financière distingue classiquement deux composantes du risque de marché. Le risque systématique, ou risque non diversifiable, reflète les fluctuations générales de l'économie — cycles conjoncturels, décisions de politique monétaire, chocs géopolitiques — auxquelles aucun portefeuille diversifié ne peut totalement se soustraire (Sharpe, 1964 ; Fama & French, 1993). Le risque spécifique, à l'inverse, est propre à un émetteur ou à un secteur et peut être atténué par la diversification. Cette distinction est au cœur de la théorie moderne du portefeuille (Markowitz, 1952), qui démontre que seul le risque systématique est rémunéré par le marché.
+
+Dans le contexte marocain, la Bourse de Casablanca présente des caractéristiques structurelles qui amplifient certaines dimensions du risque de marché. La concentration sectorielle — les valeurs bancaires et les télécommunications représentant historiquement plus de 40 % de la capitalisation du MASI — limite la diversification effective des portefeuilles domestiques (AMMC, 2023). La faible liquidité de plusieurs compartiments accroît par ailleurs la volatilité implicite et le risque de liquidité de marché, deux dimensions que l'Autorité Marocaine du Marché des Capitaux intègre désormais dans son cadre de surveillance prudentielle.
+
+La mesure du risque de marché a connu une évolution méthodologique majeure depuis les années 1990. La Value-at-Risk (VaR), popularisée par RiskMetrics (J.P. Morgan, 1994), permet d'estimer la perte maximale probable sur un horizon et à un seuil de confiance donnés. Malgré sa large adoption réglementaire — Bâle II puis Bâle III l'imposent aux établissements de crédit —, la VaR a montré ses limites lors de la crise de 2008 en sous-estimant les événements de queue de distribution (Taleb, 2007). La Expected Shortfall (ES), ou CVaR, a depuis été recommandée par le Comité de Bâle comme mesure complémentaire, car elle capture la sévérité des pertes au-delà du seuil de la VaR.
+
+Ces cadres conceptuels sont directement pertinents pour la problématique de ce rapport : évaluer dans quelle mesure les OPCVM marocains disposent des outils et des processus nécessaires pour identifier, mesurer et piloter leur exposition au risque de marché conformément aux exigences réglementaires de l'AMMC.
+
+*Figure 1.1 — Décomposition du risque total en risque systématique et risque spécifique. Source : Sharpe (1964), adapté.*
 
 ---
 
-## Content Rules
+## Example 2 — Rapport de stage / PFA (présentation de l'organisme)
 
-Write each section as **fluent academic prose** that genuinely develops its subject.
-For PFE/mémoire: named frameworks, defined concepts, literature synthesis, anchored in the problématique.
-For stage: real company facts, organisational context, sector description, mission scope.
+**Context:** Rapport de stage, EST Salé. Entreprise: *Attijariwafa Bank — Direction Gestion des Risques*. Section 1.2 — *Organisation et activités de la Direction Gestion des Risques*. Citation style: APA.
 
-**No rigid structure imposed** — no systematic "ouverture / développement / synthèse".
-Vary rhythm and organisation naturally. The student can request adjustments after.
+**Output:**
 
-**Length**: write as deep as the subject requires. Never pad to hit a word count, never cut artificially.
-The total length follows the sommaire structure and the depth the topic demands.
+### 1.2 Organisation et activités de la Direction Gestion des Risques
 
-**Moroccan anchoring**: when relevant, anchor concepts in Moroccan context (Bourse de Casablanca, AMMC, Bank Al-Maghrib, HCP, sectoral data, Moroccan regulation). Differentiates the report from generic content.
+La Direction Gestion des Risques (DGR) d'Attijariwafa Bank constitue l'une des fonctions de contrôle de second niveau du groupe, conformément au dispositif des trois lignes de défense préconisé par le Comité de Bâle et transposé dans la réglementation bancaire marocaine par Bank Al-Maghrib (Circulaire n° 4/W/2014). Elle est rattachée directement à la Direction Générale et entretient un reporting fonctionnel avec le Comité des Risques du Conseil d'Administration, garantissant son indépendance vis-à-vis des lignes métiers.
 
-**Citations**: use the citation style declared in the student's mise en forme. Never re-ask for it.
-Cite only real, verifiable sources. Mark unverifiable citations as `[SOURCE]` for student review.
+Sur le plan organisationnel, la DGR se structure autour de quatre pôles spécialisés : le pôle risques de crédit, le pôle risques de marché et de liquidité, le pôle risques opérationnels, et le pôle conformité et contrôle permanent. Cette segmentation reflète la taxonomie des risques bancaires définie par Bâle III et permet une expertise méthodologique approfondie dans chacun de ces domaines. L'effectif de la direction, estimé à une cinquantaine de collaborateurs au siège casablancais, est complété par des correspondants risques déployés dans les filiales africaines du groupe.
 
----
+Les missions de la DGR couvrent l'ensemble du cycle de vie du risque : identification, évaluation, surveillance, reporting et atténuation. Dans le périmètre du risque de crédit — qui représente la part la plus importante des fonds propres réglementaires alloués —, la direction est responsable de la validation des modèles de notation interne (IRB), du suivi des grands risques et des concentrations sectorielles, ainsi que du calcul des provisions collectives sous IFRS 9. Pour le risque de marché, elle assure le calcul quotidien de la VaR du portefeuille de négociation et produit un rapport de limite hebdomadaire à destination du Comité ALM.
 
-## Figures
+Mon stage au sein du pôle risques de marché m'a permis d'observer ces processus de l'intérieur, notamment la chaîne de traitement des données de marché (Bloomberg → système de calcul interne → tableau de bord risques) et les interactions entre la DGR et les équipes de la salle des marchés lors des dépassements de limites. Cette immersion constitue le socle empirique de la partie analytique de ce rapport.
 
-Two sources — check BOTH before writing any section:
-
-### 1. Student-uploaded figures (priority)
-
-The task prompt may contain:
-```
-Figures uploadées par l'étudiant pour la Partie I :
-- Figure N — "Titre" (Source : X, Auteur : Y)
-```
-Reference them in the relevant section text, then add the mandatory caption.
-
-### 2. PIL crop from uploaded PDF pages (fallback)
-
-Only when no uploaded figure is available for a section and `figures/page-N.png` exists:
-
-```bash
-python3 -c "
-from PIL import Image
-import os
-img = Image.open('figures/page-3.png')
-print('Size:', img.size)
-cropped = img.crop((80, 150, 920, 520))  # adapt to image
-os.makedirs('figures', exist_ok=True)
-cropped.save('figures/fig_1_1.png')
-print('saved figures/fig_1_1.png')
-"
-```
-
-```markdown
-![Description](figures/fig_1_1.png)
-*Figure 1.1 — [Titre]. Source : [Auteur(s), Année], p. [N].*
-```
-
-No uploaded figures AND no PDF pages → placeholder:
-```markdown
-*[Figure 1.1 — [Description précise du visuel recommandé]. Source : [Auteur, Année].]*
-```
-
-If PIL fails → placeholder immediately, no retry.
-
-### Caption format — MANDATORY for all figures
-
-```
-*Figure N — [Titre complet]. Source : [Référence], [Auteur/Service].*
-```
-
-- Wrap entire line in `*...*`
-- Start with `Figure N`, ` — ` after the number
-- Always include `Source :`
-- This feeds the automatic Liste des figures in the Word export
+*Figure 1.2 — Organigramme simplifié de la Direction Gestion des Risques, Attijariwafa Bank. Source : document interne, stage 2024.*
 
 ---
 
-## Full Mode Output Structure
+## Edge cases to watch
 
-```markdown
-# Partie I — [Titre du sommaire]
+**WebSearch triggered (no uploaded documents):** When no `.txt` files exist, run WebSearch before writing. Query pattern: `"[concept clé] [filière] Morocco OR Maroc filetype:pdf site:cairn.info OR site:persee.fr"`. Synthesize — never copy verbatim. Mark unverifiable citations `[SOURCE]`.
 
-## Introduction de la Partie I
-[contextualise and announces chapters]
+**Page mode:** Return only the prose content for the requested page. No headers, no metadata. Clean paragraph breaks at start and end.
 
-## Chapitre 1 — [Titre]
-[chapter intro paragraph]
-
-### 1.1 [Titre]
-[fluent academic prose — depth determined by subject]
-
-[Figure or placeholder if relevant]
-
-### 1.2 [Titre]
-[fluent academic prose]
-
-**Conclusion du Chapitre 1**
-[synthesis + transition to Chapitre 2]
-
----
-
-## Chapitre 2 — [Titre]
-...
-
-**Conclusion de la Partie I**
-[synthesis + transition to Partie II]
-```
-
----
-
-## Progressive Context
-
-Receives: `introduction.md`, `sommaire.md`
-Feeds forward to: `partie-ii`, `conclusion`, `bibliographie`
-
----
-
-## Error Table
-
-| Condition | Response |
-|---|---|
-| `sommaire.md` missing | `<error>Le sommaire est requis…</error>` — stop |
-| `theme` missing | `<error>Le thème du rapport est requis.</error>` — stop |
-| `extraContext.page` out of range | Generate last valid page, note range |
-| Uploaded file unreadable | Skip, continue with available sources |
-| PIL fails | Placeholder immediately |
-
----
-
-## Quality Checklist
-
-- [ ] `sommaire.md` read, Partie I block fully extracted
-- [ ] La nature de la Partie I correspond au sommaire (théorique ou organisme) — jamais imposée
-- [ ] All uploaded `.txt` documents scanned
-- [ ] Every chapter and section covered — none added, none skipped
-- [ ] Each section developed with genuine depth — no padding, no artificial cuts
-- [ ] Introduction de la Partie I + Conclusion du Chapitre + Conclusion de la Partie I present
-- [ ] Heading hierarchy respected (`#` / `##` / `###`)
-- [ ] Citation style matches student's mise en forme
-- [ ] `[SOURCE]` on unverifiable citations
-- [ ] At least one figure or placeholder per chapter when relevant
-- [ ] Never contradicts the problématique or hypothèses from `student_memory.json`
-- [ ] Saved to `partie-i.md`
+**Surgical edit:** If `partie-i.md` already exists and the student asks to rework one section — use `Read` to locate the passage, then `Edit` for that passage only. Never `Write` the full file unless a full regeneration is explicitly requested.
