@@ -21,12 +21,20 @@ Si toutes ces infos sont déjà dans le profil → passe directement au TEMPS 2.
 TEMPS 2 — Générer la page de garde
 Deux chemins :
 
-PATH A — Template uploadé (template-screenshot.png ou fichier .docx présent)
-- Lis le template visuellement avec Read
-- Remplis TOUS les placeholders avec les données réelles de l'étudiant
-- Les logos sont déjà dans le template — ne cherche pas de logos
-- Respecte exactement la mise en page, les couleurs et la typographie du template
-- Enregistre dans page-de-garde.md
+PATH A — Template uploadé
+Déclenché si l'un de ces fichiers est présent dans le dossier de session :
+- `template-screenshot.png` / `template-screenshot.jpg` / `template-screenshot.jpeg` → Read directement (image)
+- `template.pdf` / `template-page-de-garde.pdf` → Read directement (Claude lit les PDFs nativement)
+- `template-text.txt` → Read pour extraire la structure textuelle des placeholders
+- `template.docx` → NE PAS tenter de Read visuellement (format non supporté). Utilise `template-text.txt` si disponible, sinon passe en PATH B et signale une seule fois : "Le fichier .docx ne peut pas être lu visuellement — uploadez une capture d'écran ou un PDF pour que je reproduise exactement votre template."
+
+Quand le template est lisible (image ou PDF) :
+1. Lis le fichier avec Read — observe TOUT : positions des éléments, couleurs exactes (hex si visible), typographie, séparateurs, logos présents, labels exacts des champs
+2. Extrait : ordre des éléments de haut en bas, couleur dominante (header, séparateurs, titre), labels mot-pour-mot ("Réalisé par :" vs "Présenté par :" vs "Étudiant :"), présence/absence de logos
+3. Remplis TOUS les placeholders avec les données réelles de l'étudiant
+4. Les logos sont déjà dans le template — ne cherche pas de logos externes
+5. Reproduis exactement la mise en page, les couleurs et la typographie du template
+6. Enregistre dans page-de-garde.md
 
 PATH B — Pas de template
 - Cherche DEUX logos via WebSearch + WebFetch :

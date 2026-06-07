@@ -54,29 +54,34 @@ Rules:
 
 ### PATH A — Template uploaded
 
-Triggered when: `template-screenshot.jpg` OR `template-text.txt` OR any `.docx` file exists in the session folder.
+**Triggered when** any of these files exist after Glob:
 
-Steps:
-1. `Glob` — list ALL files in the directory
-2. If `template-screenshot.jpg` exists → `Read` it to understand the EXACT visual layout:
-   - Element order (logo positions, title placement, separators, typography)
-   - All fields present and their exact labels
-   - Borders, decorative elements, spacing style
-   - **Color palette** — note the EXACT colors used (header bars, separators, title text). These are the ONLY colors to use in output.
-3. If `template-text.txt` exists → `Read` it to extract:
-   - Exact placeholder names and their positions
-   - Field labels word-for-word
-4. Reproduce the EXACT SAME structure as the template — same order, same separators, same labels, **same colors**
-5. Fill ALL placeholders with real student data from the profile
-6. **LOGOS**: Only include a logo if it is VISUALLY PRESENT in the template screenshot or explicitly mentioned in template-text.txt. NEVER invent or assume a logo exists. If no logo is visible → no logo in output.
-7. Do NOT search for external logos — logos are already embedded in the template if they exist
-8. `Write` page-de-garde.md with the reproduced and filled content
+| Fichier détecté | Action |
+|---|---|
+| `template-screenshot.png/jpg/jpeg` | Read → lecture visuelle directe |
+| `template.pdf` ou `template-page-de-garde.pdf` | Read → lecture visuelle directe (Claude lit les PDFs nativement) |
+| `template-text.txt` | Read → extraction structurelle (labels, ordre des champs, placeholders) |
+| `template.docx` | ⚠️ Ne PAS tenter Read visuel — .docx non supporté. Si template-text.txt dispo → utilise-le. Sinon → PATH B + message unique à l'étudiant : "Uploadez une capture d'écran ou un PDF de votre template pour que je reproduise exactement la mise en page." |
 
-**Critical rules for PATH A:**
-- The output must be structurally identical to the template. Do NOT reorder fields, add new sections, or remove existing ones.
-- Use the template's colors ONLY — never substitute your own color choices (no purple, no blue, no other default).
-- Only include a logo if it is actually visible in the template. Do NOT write "Le logo [école] est présent" if no logo was visible.
-- The student's school verified this exact format — any structural change will be rejected.
+Steps (pour image ou PDF) :
+1. `Glob` — lister tous les fichiers du dossier de session
+2. `Read` le fichier template (image ou PDF) — observer TOUT :
+   - **Ordre des éléments** de haut en bas (logos, école, filière, titre, séparateurs, champs, année)
+   - **Couleurs exactes** : header bars, séparateurs, texte titre — noter les codes hex si visibles
+   - **Labels mot-pour-mot** : "Réalisé par :" vs "Présenté par :" vs "Étudiant :" — reproduire exactement
+   - **Logos** : présents/absents, position gauche/droite/centré
+   - **Séparateurs et bordures** : ligne simple, double, épaisseur, couleur
+3. Reproduire la structure IDENTIQUE — même ordre, mêmes séparateurs, mêmes labels, mêmes couleurs
+4. Remplir TOUS les placeholders avec les données réelles de l'étudiant depuis profile.json
+5. **LOGOS** : inclure un logo UNIQUEMENT s'il est visuellement présent dans le template. Jamais inventer ni supposer.
+6. Ne PAS chercher de logos externes — ils sont déjà dans le template s'ils existent
+7. `Write` page-de-garde.md
+
+**Règles critiques PATH A :**
+- Structure identique au template — ne pas réordonner les champs, ne pas ajouter de sections, ne pas en supprimer
+- Couleurs du template UNIQUEMENT — jamais substituer ses propres couleurs (pas de violet #7c3aed, pas de bleu arbitraire)
+- Un logo non visible dans le template = pas de logo dans l'output
+- Le format a été validé par l'école — tout écart sera rejeté
 
 ### PATH B — No template
 
@@ -159,7 +164,7 @@ If a logo was not found: `<!-- logo-ecole: not found -->` as a note.
 
 ## Quality Checklist
 
-- [ ] Glob run first — checked for template files
+- [ ] Glob run first — checked for all template formats (png/jpg/pdf/txt/docx)
 - [ ] Missing info collected in ONE message (or skipped if all present)
 - [ ] PATH A or PATH B chosen correctly based on template presence
 - [ ] PATH A: output is structurally identical to template (same order, same labels)
