@@ -64,23 +64,62 @@ Chaque exemple montre le niveau et le style attendus. **Le domaine (finance, ban
 
 ---
 
-### Exemple 1 — PFE / Mémoire (cadre théorique)
+### Exemple 1 — PFE / Mémoire (cadre théorique) — extrait réel
 
-**Contexte :** PFE Finance, ENCG Casablanca. Thème : *La gestion des risques dans les OPCVM marocains*. Section 1.1. Style APA. Aucune figure uploadée.
+**Contexte :** PFE Finance. Thème : *L'impact des cycles économiques sur les méthodes d'évaluation des entreprises*.
+
+> ⚠️ Cet extrait est un exemple de **niveau, style et structure**. La profondeur, la longueur des sections, la place des figures et la façon de rédiger dépendent entièrement du sujet, de sa complexité et du plan de l'étudiant. Ne reproduis jamais ce contenu — écris depuis le contexte réel de l'étudiant.
 
 ---
 
-Le risque de marché désigne la probabilité de subir des pertes financières résultant de variations défavorables des prix d'actifs cotés — cours boursiers, taux d'intérêt, taux de change ou prix des matières premières. Pour les organismes de placement collectif en valeurs mobilières (OPCVM), ce risque constitue la principale source d'exposition, dans la mesure où leurs portefeuilles sont directement valorisés aux prix de marché selon le principe de la valeur liquidative quotidienne.
+**Introduction de la Partie I**
 
-La littérature financière distingue classiquement deux composantes du risque de marché. Le risque systématique, ou risque non diversifiable, reflète les fluctuations générales de l'économie — cycles conjoncturels, décisions de politique monétaire, chocs géopolitiques — auxquelles aucun portefeuille diversifié ne peut totalement se soustraire (Sharpe, 1964 ; Fama & French, 1993). Le risque spécifique, à l'inverse, est propre à un émetteur ou à un secteur et peut être atténué par la diversification. Cette distinction est au cœur de la théorie moderne du portefeuille (Markowitz, 1952), qui démontre que seul le risque systématique est rémunéré par le marché.
+Ce rapport s'articule autour de deux concepts fondamentaux : les cycles économiques et les méthodes d'évaluation. Dans la première section, nous nous concentrerons sur les cycles économiques, plus précisément sur leur définition et sur la littérature qui les sous-tend. Dans la deuxième section, nous analyserons les méthodes d'évaluation et présenterons brièvement leur contexte bibliographique.
 
-Dans le contexte marocain, la Bourse de Casablanca présente des caractéristiques structurelles qui amplifient certaines dimensions du risque de marché. La concentration sectorielle — les valeurs bancaires et les télécommunications représentant historiquement plus de 40 % de la capitalisation du MASI — limite la diversification effective des portefeuilles domestiques (AMMC, 2023). La faible liquidité de plusieurs compartiments accroît par ailleurs la volatilité implicite, deux dimensions que l'AMMC intègre désormais dans son cadre de surveillance prudentielle.
+---
 
-La mesure du risque de marché a connu une évolution méthodologique majeure depuis les années 1990. La Value-at-Risk (VaR), popularisée par RiskMetrics (J.P. Morgan, 1994), permet d'estimer la perte maximale probable sur un horizon et à un seuil de confiance donnés. Malgré sa large adoption réglementaire — Bâle II puis Bâle III l'imposent aux établissements de crédit —, la VaR a montré ses limites lors de la crise de 2008 en sous-estimant les événements de queue de distribution (Taleb, 2007). La Expected Shortfall (ES), ou CVaR, a depuis été recommandée par le Comité de Bâle comme mesure complémentaire.
+**1.1.1 Les cycles économiques**
 
-Ces cadres conceptuels sont directement pertinents pour la problématique de ce rapport : évaluer dans quelle mesure les OPCVM marocains disposent des outils nécessaires pour identifier, mesurer et piloter leur exposition au risque de marché conformément aux exigences de l'AMMC.
+*Définition*
 
-*Figure 1.1 — Décomposition du risque total en risque systématique et risque spécifique. Source : Sharpe (1964), adapté.*
+Un cycle économique désigne les fluctuations qu'une économie subit au fil du temps. Il se compose de périodes de croissance économique et de prospérité relativement rapides, communément appelées expansion économique, et de périodes d'inactivité relative, de déclin et de dépression, généralement appelées contractions ou récessions (Zarnowitz, 1991). Le terme le plus courant pour décrire une croissance fulgurante du PIB réel est la « phase d'expansion », tandis que lorsqu'il se contracte, on parle de « récession » (Arnold, 2002).
+
+Les cycles économiques sont mesurés par deux composantes : le PIB réel (PIB ajusté de l'inflation) (axe des Y) et le temps (axe des X) (généralement mesuré en années).
+
+*Figure 1 — Cycles économiques. Source : Investopedia.*
+
+Comme le montre le graphique, tous les cycles économiques se caractérisent par plusieurs étapes. Pourtant, au fil du temps, économistes et analystes des cycles économiques ont débattu de ces étapes (Heilemann et Weihs, 2007). Dans ce rapport, nous présenterons brièvement ces étapes :
+
+- **Phase d'expansion :** Il s'agit généralement de la phase la plus longue du cycle économique. À ce stade, les indicateurs macroéconomiques liés à l'emploi, à la demande et à l'offre de biens et services augmentent de manière soutenue. Cette phase se caractérise notamment par une forte vélocité de la masse monétaire et une vague d'investissements.
+- **Point de surchauffe (peak) :** Les indicateurs économiques atteignent un niveau de saturation et ne peuvent plus progresser. En raison de l'inflation et de la flambée des prix, les consommateurs commencent à réorganiser leur budget, ce qui entraîne un ralentissement de la demande.
+- **Phase de récession :** La demande chute rapidement, les ventes s'effondrent, la production ralentit, et par conséquent, les revenus stagnent ou se détériorent.
+- **Phase de dépression :** Sous l'effet du repli de la demande et de l'offre, la croissance économique tombe en dessous de son rythme de croisière. Le chômage augmente, les faillites se multiplient.
+- **Point bas (Trough) :** C'est le niveau de saturation négatif pour une économie — tous les indicateurs positifs sont en chute libre.
+- **Phase de reprise (Recovery) :** Les prix bas stimulent la demande, ce qui relance la production, l'emploi et l'investissement. Cette phase annonce la fin d'un cycle et le début d'un nouveau.
+
+La théorie autrichienne des cycles économiques (ABCT) est l'une des théories consacrées à l'explication des cycles économiques. Elle met l'accent sur les signaux du marché et la manière dont ils communiquent des informations décentralisées aux entrepreneurs. Elle suppose que les banques centrales faussent ces signaux de prix, conduisant les entrepreneurs à prendre des décisions biaisées concernant leurs investissements — phénomène décrit par l'ABCT comme « mal-investissement ». L'ABCT décrit essentiellement les cycles économiques comme un processus d'apparition de grappes d'erreurs entrepreneuriales aboutissant à des investissements inappropriés (Rothbard, 2000).
+
+---
+
+**1.1.2 Les méthodes de valorisation**
+
+Lors de l'évaluation d'une entreprise, différentes approches sont utilisées par les praticiens du secteur ; le point commun entre toutes ces méthodes est qu'elles se basent sur les caractéristiques financières de l'entreprise avec le même objectif : mettre une étiquette de prix sur cette dernière.
+
+*Figure 2 — Méthodes d'évaluation. Source : CFI, Cours: Business Valuation.*
+
+- **Approche par les coûts (méthode patrimoniale) :** Cette approche considère que seuls comptent les actifs et les passifs de l'entreprise. Elle consiste à agréger l'ensemble des actifs détenus, les réévaluer à leur valeur de marché actuelle, puis soustraire les dettes à leur valeur de marché.
+- **Approche par le marché (valeur relative) :** Elle s'appuie sur des données accessibles concernant des entreprises comparables et des transactions antérieures, en utilisant des multiples boursiers tels que : VE/EBITDA, VE/CA, PER (DAMODARAN, 2012).
+- **Flux de trésorerie actualisés (DCF) :** L'idée derrière le modèle DCF est que la valeur intrinsèque d'une entreprise est étroitement liée à sa capacité à générer des flux de trésorerie futurs positifs. Les professionnels prévoient les flux de trésorerie non endettés de l'entreprise et utilisent le coût moyen pondéré du capital (CMPC) pour les actualiser (ASQUITH, 2016).
+
+Selon Damodaran (2000), « toutes les valorisations sont biaisées, la seule question est de savoir dans quelle mesure et dans quelle direction. »
+
+---
+
+**1.2.1 Au regard de l'investissement**
+
+La plupart des investisseurs recherchent des informations fiables pour décider s'il convient d'acheter ou de vendre les actions d'une entreprise. Ils sont parfaitement conscients que la performance d'un actif dépend en partie de la position du capital dans le cycle économique. Prenons l'exemple de l'investissement réalisé par Blackstone dans Hilton en 2007 — en pleine dépression économique. Blackstone a établi sa valorisation en sachant qu'au moment où l'économie repartirait, la restructuration de la dette de Hilton serait terminée. En décembre 2013, Hilton a levé 2,3 milliards de dollars lors de son introduction en bourse.
+
+*Figure 4 — Performance sectorielle au cours des différentes étapes du cycle économique. Source : Fidelity (2019).*
 
 ---
 
