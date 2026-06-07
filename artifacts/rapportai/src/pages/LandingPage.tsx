@@ -13,6 +13,8 @@ import {
   Timer,
   Users,
   Star,
+  Mail,
+  Loader2,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
@@ -139,6 +141,83 @@ function LaunchBanner() {
   );
 }
 
+// ─── Waitlist Form ────────────────────────────────────────────────────────────
+
+const WAITLIST_ID = "cmq3mia4w028v01qtcjh9d94e";
+
+function WaitlistForm() {
+  const [email, setEmail] = useState("");
+  const [name, setName]   = useState("");
+  const [status, setStatus] = useState<"idle" | "loading" | "success" | "error">("idle");
+  const [errorMsg, setErrorMsg] = useState("");
+
+  async function handleSubmit(e: React.FormEvent) {
+    e.preventDefault();
+    if (!email.trim()) return;
+    setStatus("loading");
+    try {
+      const res = await fetch(`https://api.freewaitlists.com/waitlists/${WAITLIST_ID}`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email: email.trim(), meta: { name: name.trim(), source: "landing-page" } }),
+      });
+      if (!res.ok) throw new Error("Erreur serveur");
+      setStatus("success");
+    } catch {
+      setErrorMsg("Une erreur s'est produite. Réessaie.");
+      setStatus("error");
+    }
+  }
+
+  if (status === "success") {
+    return (
+      <motion.div
+        initial={{ opacity: 0, scale: 0.95 }}
+        animate={{ opacity: 1, scale: 1 }}
+        className="flex flex-col items-center gap-3 bg-green-50 border border-green-200 rounded-2xl px-8 py-6 max-w-md mx-auto"
+      >
+        <CheckCircle2 className="w-10 h-10 text-green-500" />
+        <p className="text-lg font-bold text-green-700">Tu es sur la liste !</p>
+        <p className="text-sm text-green-600 text-center">On te contacte dès que RapportAI est disponible pour toi.</p>
+      </motion.div>
+    );
+  }
+
+  return (
+    <form onSubmit={handleSubmit} className="flex flex-col gap-3 w-full max-w-md mx-auto">
+      <input
+        type="text"
+        placeholder="Ton prénom (optionnel)"
+        value={name}
+        onChange={e => setName(e.target.value)}
+        className="w-full h-12 px-4 rounded-xl border border-border bg-white text-sm focus:outline-none focus:ring-2 focus:ring-primary/40"
+      />
+      <div className="flex gap-2">
+        <div className="relative flex-1">
+          <Mail className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+          <input
+            type="email"
+            required
+            placeholder="ton@email.com"
+            value={email}
+            onChange={e => setEmail(e.target.value)}
+            className="w-full h-12 pl-10 pr-4 rounded-xl border border-border bg-white text-sm focus:outline-none focus:ring-2 focus:ring-primary/40"
+          />
+        </div>
+        <Button
+          type="submit"
+          disabled={status === "loading"}
+          className="h-12 px-6 rounded-xl bg-primary hover:bg-primary-dark text-white font-bold shadow-[0_4px_24px_rgba(124,58,237,0.25)] flex-shrink-0"
+        >
+          {status === "loading" ? <Loader2 className="w-4 h-4 animate-spin" /> : "Rejoindre →"}
+        </Button>
+      </div>
+      {status === "error" && <p className="text-sm text-red-500 text-center">{errorMsg}</p>}
+      <p className="text-xs text-muted-foreground text-center">Gratuit · Pas de spam · Accès prioritaire</p>
+    </form>
+  );
+}
+
 export default function LandingPage() {
   const [isScrolled, setIsScrolled] = useState(false);
   const { timeLeft, slotsLeft } = useLaunchBanner();
@@ -207,22 +286,20 @@ export default function LandingPage() {
               3 mois de rédaction. 30 minutes avec RapportAI.
             </motion.p>
             
-            <motion.div 
+            <motion.div
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.5, delay: 0.2 }}
-              className="flex flex-col sm:flex-row items-center justify-center gap-4"
+              className="w-full"
             >
-              <Link href="/sign-up">
-                <Button size="lg" className="w-full sm:w-auto text-lg h-14 px-8 rounded-full bg-primary hover:bg-primary-dark shadow-[0_4px_24px_rgba(124,58,237,0.25)] text-white">
-                  Générer mon rapport <ArrowRight className="w-5 h-5 ml-2" />
-                </Button>
-              </Link>
-              <Link href="/demo">
-                <Button size="lg" variant="outline" className="w-full sm:w-auto text-lg h-14 px-8 rounded-full border-border hover:bg-muted text-foreground">
-                  Voir la démo
-                </Button>
-              </Link>
+              <WaitlistForm />
+              <div className="mt-4 flex justify-center">
+                <Link href="/demo">
+                  <button className="text-sm text-muted-foreground hover:text-foreground underline underline-offset-4 transition-colors">
+                    Voir la démo d'abord →
+                  </button>
+                </Link>
+              </div>
             </motion.div>
           </div>
         </section>
