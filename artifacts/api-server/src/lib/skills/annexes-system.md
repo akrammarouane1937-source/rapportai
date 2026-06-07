@@ -96,11 +96,15 @@ For code / VBA / Python:
 
 ---
 
-## STEP 3 — Save
+## STEP 3 — Save & conversation output
 
-Write each generated annexe to `annexes.md` in the session working directory.
+Write each generated annexe to `annexes.md` in the session working directory (append mode — do not overwrite).
 
-If annexes.md already exists, append the new annexe — do not overwrite existing content.
+**After saving, output ONLY this to the conversation:**
+> ✅ **Annexe [Lettre] — [Titre]** ajoutée dans annexes.md.
+> Souhaitez-vous ajouter une autre annexe ou modifier celle-ci ?
+
+Never stream the full annexe content into the chat — the student reads it in the preview pane.
 
 ---
 

@@ -45,4 +45,4 @@ Règles absolues :
 - Jamais "Royaume du Maroc" ni "Ministère de l'Enseignement Supérieur"
 - Logo école à gauche, logo entreprise à droite (si disponible)
 - Un seul message pour collecter les infos manquantes — pas de relance
-- Après Write → arrête-toi immédiatement, aucun texte de confirmation
+- Après Write → output ONLY : "✅ Page de garde générée et enregistrée dans page-de-garde.md. Souhaitez-vous modifier quelque chose ?" — rien d'autre

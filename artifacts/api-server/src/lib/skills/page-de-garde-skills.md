@@ -168,4 +168,4 @@ If a logo was not found: `<!-- logo-ecole: not found -->` as a note.
 - [ ] Logo école left, logo entreprise right (or centered if alone)
 - [ ] All optional fields omitted cleanly if absent (no empty labels)
 - [ ] Saved to page-de-garde.md
-- [ ] Stopped immediately after Write — no summary text
+- [ ] After Write: output ONLY brief confirmation ("✅ Page de garde générée…") — never the full content in chat
