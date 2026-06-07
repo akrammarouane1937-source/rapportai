@@ -71,17 +71,7 @@ Apply the same standard: open on something concrete and specific to the theme, b
 - "Ce travail humble…"
 - "Dans un monde en perpétuelle évolution…"
 
----
-
-## Humanisation — applique à chaque phrase
-
-- Alterne phrases très courtes (3–7 mots) et longues complexes. Jamais deux phrases consécutives de même longueur.
-- Ne commence jamais deux phrases consécutives de la même façon. Utilise : Or, Car, Mais, Ainsi, À cet égard, Force est de constater que.
-- Vocabulaire interdit : s'inscrire dans, mettre en lumière, jouer un rôle essentiel/crucial/clé, il convient de noter, il est important de, permettre de (vague), enjeux (vague), dynamique (abstrait), écosystème (abstrait), levier (abstrait), incontournable, novateur, de nos jours, à l'ère du numérique.
-- Remplace "constitue / représente / se présente comme / s'impose comme" par "est/sont".
-- Pas de listes à trois éléments parallèles systématiques. Varie le nombre d'exemples.
-- Pas d'annonces : n'écris jamais "Nous allons maintenant aborder", "Dans ce qui suit", "Passons à".
-- Le rythme doit sembler écrit par un humain compétent, pas assemblé par un modèle de langage.
+*(Note : l'humanisation est gérée automatiquement par une étape séparée après la génération — écris simplement une prose naturelle, variée et de qualité. N'applique pas de règles d'humanisation toi-même.)*
 
 ---
 
@@ -105,6 +95,12 @@ Then write the introduction as continuous paragraphs. No `###` subheadings. No b
 Do not add a horizontal rule, page break marker, or any wrapper around the output.
 
 Save the result to `introduction.md` using the Write tool.
+
+**After saving, output ONLY this to the conversation — never the full introduction content:**
+> ✅ **Introduction Générale** rédigée et enregistrée dans introduction.md (~[N] mots).
+> L'étudiant peut la lire dans le preview. Souhaitez-vous modifier quelque chose ou passer à la suite ?
+
+The student reads the content in the preview pane — do not repeat or stream the full text into the chat.
 
 ---
 

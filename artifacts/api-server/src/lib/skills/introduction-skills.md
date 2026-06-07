@@ -1,209 +1,135 @@
 ---
-name: introduction-skills
-agent: Introduction AI — RapportAI
-description: "Domain knowledge for the Introduction Generator agent. Read this before writing. Covers structure rules, field handling, tone, banned phrases, progressive context, and the quality checklist."
-version: 1.0
+name: rapportai-introduction
+description: >
+  Base de connaissances pour l'agent Introduction : exemples de référence, anti-patterns,
+  et guide de style. Lis ce fichier AVANT de générer l'introduction.
+  Les règles et le format exact sont définis dans le system prompt ; ce fichier montre
+  le NIVEAU attendu et comment adapter selon le type de rapport et la filière.
+allowed-tools:
+  - Read
+  - Write
+  - Edit
+  - Bash
+  - Glob
+  - Grep
+  - WebFetch
+  - WebSearch
 ---
 
-# Introduction AI — Knowledge Base
-## RapportAI Platform · Introduction Générale Generator
+# RapportAI — Introduction : base de connaissances
 
----
-
-## 0. HOW TO USE THIS FILE
-
-Read this file in full before generating. It is your single source of truth for:
-- What data to read and how to handle missing fields (§1)
-- The exact structure of a Moroccan academic introduction (§2)
-- Field-by-field handling rules (§3)
-- Tone and language rules (§4)
-- Output format rules (§5)
-- Progressive context — what feeds in, what feeds forward (§6)
-- Quality checklist — run before outputting (§7)
-
----
-
-## 1. DATA SOURCES AND FIELD HANDLING
-
-The agent reads from files on disk — not from a JSON payload. Read in this order:
-
-1. `profile.json` — student identity
-2. `student_memory.json` — enriched session state
-3. `INSTRUCTIONS.md` — report-level directives
-4. `resume.md` — if present, for terminology alignment only
-
-**Key fields and where to find them:**
-
-| Field | Source file | Key |
-|---|---|---|
-| Thème du rapport | profile.json | `theme` |
-| Type de rapport | profile.json | `reportType` |
-| École | profile.json | `school` |
-| Filière | profile.json | `filiere` |
-| Encadrant pédagogique | profile.json | `encadrantPeda` |
-| Ville | profile.json | `ville` |
-| Entreprise | profile.json | `entreprise` |
-| Problématique | student_memory.json | `report.problematique` |
-| Mots-clés | student_memory.json | `report.mots_cles` |
-| Objectifs | student_memory.json | `report.objectifs` |
-| Approche méthodologique | student_memory.json | `report.theoretical_framework.methodology` |
-| Style de citation | student_memory.json | `writing_profile.citation_style` |
+Ce fichier complète le system prompt. Il contient des exemples de prose académique,
+les erreurs à éviter, et les critères de qualité.
+Inspire-toi du niveau et du style — **n'utilise jamais le contenu domaine de ces exemples**.
+Chaque introduction doit être écrite depuis le contexte réel de l'étudiant : `profile.json`, `student_memory.json`, documents uploadés.
 
 ---
 
-## 2. STRUCTURE OF A MOROCCAN ACADEMIC INTRODUCTION
+## ═══ RÈGLE D'OR — le contenu vient toujours de l'étudiant ═══
 
-A correct Moroccan academic introduction has exactly five elements in continuous prose. No headers. No bullets. No subheadings.
-
-### 2.1 Contexte général (2–3 paragraphs)
-
-Opens on a **specific, substantive idea** directly related to the theme — never a vague generality about the world or technology in general.
-
-Build stakes progressively: macro context → sector/industry → specific problem space. By the end of the context block, the reader should feel the problématique is inevitable.
-
-**Good opening (specific):**
-> "La gestion du risque de portefeuille constitue l'un des défis centraux des marchés financiers émergents, où la volatilité structurelle et l'asymétrie d'information créent des conditions d'investissement fondamentalement différentes des marchés développés."
-
-**Bad opening (vague):**
-> "De nos jours, le monde connaît des mutations profondes dans tous les secteurs."
-
-If `entreprise` is provided, reference it in the context: the student's work takes place within this organizational setting, which adds specificity.
-
-### 2.2 Problématique
-
-The research question emerges **as a logical consequence** of the context — not as a separate announcement.
-
-- Use the `problematique` from memory if provided: reformulate into academic French if needed, preserve meaning entirely
-- If empty: derive from theme + filière
-- Standard Moroccan formula (acceptable but not mandatory): *"C'est dans ce contexte que se pose la problématique suivante : Dans quelle mesure [theme] peut-il [action] dans le contexte [local/marocain] ?"*
-- Research sub-questions may follow, introduced naturally or as a short ✓ list
-
-### 2.3 Objectifs (embedded in prose)
-
-Never a numbered list. Embed with action verbs:
-
-> "L'objectif de ce travail est d'analyser les mécanismes de [X], d'évaluer l'impact de [Y] et de proposer un cadre opérationnel adapté au contexte marocain."
-
-Use `report.objectifs` from memory if provided. If empty: derive 3–5 objectives from the theme.
-
-### 2.4 Méthodologie (1 paragraph)
-
-Describe the research approach and key tools/frameworks.
-
-Use `theoretical_framework.methodology` from memory. If absent, infer:
-
-| Theme type | Inferred approach |
-|---|---|
-| Finance, gestion, RH, marketing | Quantitative (questionnaire, données historiques) or Mixte |
-| Sciences sociales, éducation | Qualitative (entretiens, analyse de contenu) |
-| Informatique, génie logiciel | Développement logiciel (méthode Agile, UML, architecture) |
-| Sciences expérimentales | Expérimental ou quantitatif |
-
-### 2.5 Annonce du plan (1 paragraph)
-
-Closes the introduction. Announces the report structure. Vary the formula — do not always use the same phrasing.
-
-**Varied formulas (rotate):**
-- "Ce travail s'articule autour de [N] parties. La première partie est consacrée à… La seconde partie traite de…"
-- "Pour répondre à cette problématique, notre travail est organisé en [N] parties : la première aborde… tandis que la seconde…"
-- "Afin d'atteindre ces objectifs, ce rapport est structuré en [N] parties. Nous consacrons la première à… et la seconde à…"
-
-**Be precise**: downstream agents (Partie I, Partie II, Conclusion) will be held to the structure announced here.
+1. Le thème, la problématique, les objectifs → lus depuis `student_memory.json` + `profile.json`.
+2. L'introduction est en **prose continue** — zéro sous-titre, zéro liste, zéro numérotation.
+3. Les cinq éléments (contexte → problématique → objectifs → méthodologie → plan) sont **tissés naturellement** dans les paragraphes — jamais annoncés.
+4. Ces exemples montrent comment écrire — jamais quoi écrire.
+5. L'introduction est générée **en une seule passe** (pas de section-par-section) et sauvegardée dans `introduction.md`. Seule une confirmation courte va dans le chat.
 
 ---
 
-## 3. FIELD HANDLING RULES
+## Exemples de prose académique (bibliothèque de référence)
 
-| Field state | Agent behavior |
-|---|---|
-| `problematique` is non-empty | Use as semantic foundation; reformulate into academic French if needed |
-| `problematique` is empty | Derive from theme + filière using standard Moroccan formula |
-| `objectifs` is non-empty | Embed in prose; do not list |
-| `objectifs` is empty | Generate 3–5 from theme |
-| `approche_methodologique` is set | Use it verbatim in the méthodologie paragraph |
-| `approche_methodologique` is empty | Infer from theme type (see §2.4 table) |
-| `resume` exists | Align terminology — never copy sentences |
-| `entreprise` is set | Reference it in Contexte Général |
-| `mots_cles` is set | Use them as key terms woven into the introduction |
+> ⚠️ Ces extraits sont des exemples de **niveau, style et structure uniquement**. Ne reproduis jamais ce contenu — adapte au thème réel de l'étudiant.
 
 ---
 
-## 4. TONE AND LANGUAGE RULES
+### Exemple 1 — PFE Finance (mémoire de recherche) — extrait réel
 
-### 4.1 Register
-
-- French, formal academic register (registre soutenu) throughout
-- Never use "je" — use "nous" or impersonal constructions
-- "nous avons" is acceptable; prefer "cette étude vise à", "le présent travail analyse"
-- Vary sentence length: alternate short sentences (8–12 words) with developed ones (20–35 words)
-
-### 4.2 Report type adaptation
-
-| Report type | Tone and framing |
-|---|---|
-| PFE Ingénieur | Most formal; technical vocabulary; engineering/scientific framing |
-| Mémoire Master | Analytical; theoretical references welcome; slightly more conceptual |
-| Rapport de stage | Professional experience foregrounded; references to company context; slightly less theoretical |
-
-### 4.3 Banned phrases
-
-Never use these Moroccan academic clichés:
-
-| Banned phrase | Why |
-|---|---|
-| "Dans le cadre de ce modeste travail…" | Self-deprecating; unprofessional |
-| "De nos jours, le monde connaît des mutations profondes…" | Vague, overused opening |
-| "Il est indéniable que…" | Hollow intensifier |
-| "À l'ère du numérique…" | Cliché unless directly and specifically relevant |
-| "Ce travail humble…" | Unprofessional self-deprecation |
-| "Dans un monde en perpétuelle évolution…" | Vague, meaningless |
-| "Notre humble contribution…" | Self-deprecating |
-| "Ce rapport a pour but de…" as an opening line | Too abrupt — context must come first |
+**Contexte :** PFE Finance, ISCAE. Thème : *L'impact des cycles économiques sur les méthodes d'évaluation des entreprises*.
 
 ---
 
-## 5. OUTPUT FORMAT RULES
+La formule utilisée pour calculer le PIB démontre clairement que chaque entreprise contribue à l'économie, tout en étant elle-même soumise à ses dynamiques. En effet, les cycles économiques sont mesurés par la croissance du PIB, ce qui implique automatiquement que les entreprises représentent un canal de transmission des forces et des faiblesses d'une économie. Or, si les entreprises sont sensibles aux cycles économiques, les méthodes utilisées pour les évaluer le sont-elles tout autant ?
 
-- Start with exactly: `## Introduction Générale`
-- Continuous paragraphs only — no `###` subheadings
-- No bullet points, no numbered lists
-- Research questions may appear as a `✓` list at the end of the problématique paragraph only
-- No preamble before the heading
-- No explanation or metadata after the content
-- No horizontal rules or page break markers
-- Save to `introduction.md` with the Write tool
+L'évaluation des entreprises est un exercice délicat qui mobilise des hypothèses sur la croissance future des revenus, la structure du capital et le niveau des taux d'actualisation — trois paramètres directement influencés par la position dans le cycle. Un analyste qui valorise une entreprise en phase d'expansion sans corriger ses projections pour tenir compte du retournement probable introduit un biais systématique dans son estimation. Ce biais n'est pas marginal : il peut conduire à des décisions d'investissement profondément erronées, comme l'illustre la série de surévaluations observées avant les crises de 2001 et 2008.
 
----
+C'est dans ce contexte que se pose la problématique suivante : dans quelle mesure les cycles économiques influencent-ils la pertinence des méthodes d'évaluation des entreprises, et comment intégrer cette dimension cyclique dans un modèle DCF applicable au marché boursier marocain ?
 
-## 6. PROGRESSIVE CONTEXT
+Pour répondre à cette question, ce travail poursuit trois objectifs complémentaires : analyser les caractéristiques et les mécanismes des cycles économiques dans la littérature financière ; examiner les méthodes d'évaluation les plus utilisées par les praticiens, en particulier le DCF et les multiples de valorisation ; et proposer une application empirique sur RISMA, premier groupe hôtelier coté à la Bourse de Casablanca, pour mesurer l'impact réel des phases cycliques sur la valeur d'entreprise estimée.
 
-**Feeds in (optional — read only if the file already exists on disk):**
-- `resume.md` — if it exists, align terminology only, do not copy sentences. It may not exist yet if generated after the introduction.
+Sur le plan méthodologique, cette étude mobilise une approche quantitative. Elle s'appuie sur les données financières historiques de RISMA (2016–2024), sur la datation des cycles économiques marocains par les méthodes de Bry-Boschan et Hamilton, et sur la modélisation DCF sous deux scénarios : un premier sans correction cyclique, un second intégrant les taux de croissance de l'EBITDA propres à chaque phase du cycle.
 
-**Feeds forward:**
-- `partie-i.md`, `partie-ii.md`, `conclusion.md` — these agents will read `introduction.md` before writing
-- The plan announced in §2.5 determines what Partie I and Partie II must cover
-- Be precise and consistent: if you announce "Partie I : Cadre théorique et méthodologie", Partie I must match
+Ce travail s'articule autour de deux parties. La première est consacrée au cadre théorique : elle présente les cycles économiques, leurs étapes et leurs théories explicatives, puis analyse les méthodes de valorisation les plus répandues dans la pratique financière. La seconde partie constitue le cadre pratique de l'étude : elle présente l'organisme d'accueil, puis développe les deux scénarios de valorisation de RISMA avec leurs résultats et leur interprétation.
 
 ---
 
-## 7. QUALITY CHECKLIST
+### Exemple 2 — Rapport de stage (présentation organisme + mission)
 
-Run through this before outputting:
+**Contexte :** Rapport de stage, EST Salé. Filière : Gestion des entreprises. Entreprise : *Banque Populaire — Direction Commerciale*.
 
-- [ ] Read profile.json ✓
-- [ ] Read student_memory.json ✓
-- [ ] Read INSTRUCTIONS.md ✓
-- [ ] Read resume.md if it exists ✓
-- [ ] No `###` subheadings anywhere in the output
-- [ ] No bullet points or numbered lists (except ✓ research questions)
-- [ ] Opens on a specific, substantive idea — not a vague generality
-- [ ] Contexte général: 2–3 paragraphs, builds toward the problématique
-- [ ] Problématique feels like a logical consequence of the context
-- [ ] Objectifs embedded in prose with action verbs — not listed
-- [ ] Méthodologie: one paragraph, approach + tools/frameworks
-- [ ] Annonce du plan: names main parts, varied formula
-- [ ] No banned clichés (§4.3)
-- [ ] Word count between 400–750
-- [ ] Pure Markdown output starting with `## Introduction Générale`
-- [ ] Saved to introduction.md with Write tool
+---
+
+Le secteur bancaire marocain a connu, au cours des deux dernières décennies, une transformation structurelle profonde : bancarisation croissante, montée en puissance des services numériques, durcissement du cadre prudentiel sous l'impulsion de Bank Al-Maghrib. Dans ce mouvement, la relation client est devenue un terrain de compétition aussi stratégique que la solidité bilancielle. Les établissements qui maîtrisent leurs processus de fidélisation et de prospection maintiennent un avantage durable ; ceux qui les négligent voient leur part de marché s'éroder, même en période de croissance du crédit.
+
+C'est dans cette réalité sectorielle que s'inscrit mon stage de six semaines au sein de la Direction Commerciale de la Banque Populaire de Salé. Rattachée au Groupe Banque Populaire, premier réseau bancaire du Maroc avec plus de 7 millions de clients, cette agence gère un portefeuille de clients particuliers et professionnels dans un environnement urbain dense, soumis à une concurrence directe d'Attijariwafa Bank et du CIH. Ma mission principale a consisté à participer à la campagne de relance des comptes dormants et à observer les outils de suivi de la relation client utilisés par l'équipe commerciale.
+
+Ce rapport poursuit plusieurs objectifs : décrire le fonctionnement de la Direction Commerciale et son positionnement dans la structure du groupe ; analyser les processus de gestion de la relation client mis en œuvre ; et évaluer l'efficacité des outils CRM utilisés en agence, notamment dans le cadre de la campagne de réactivation à laquelle j'ai contribué.
+
+Sur le plan méthodologique, ce travail repose sur l'observation directe des pratiques en agence, sur des entretiens informels avec les chargés de clientèle et le directeur d'agence, et sur l'analyse des tableaux de bord commerciaux auxquels j'ai eu accès. Ces sources primaires sont complétées par la documentation interne de la banque et les publications sectorielles de Bank Al-Maghrib.
+
+Ce rapport est organisé en deux parties. La première présente la Banque Populaire et son agence de Salé : historique, structure, offre de services et environnement concurrentiel. La seconde analyse le déroulement du stage, les missions réalisées et les enseignements tirés, avec un regard critique sur les pratiques observées en matière de gestion de la relation client.
+
+---
+
+## Anti-patterns — à éviter absolument
+
+❌ **Ouvrir sur une généralité vague** : "De nos jours, le monde connaît des mutations profondes…"
+   ✅ Ouvrir sur une idée concrète et spécifique au thème — voir exemples ci-dessus.
+
+❌ **Annoncer les cinq éléments comme des rubriques** : "Dans cette introduction, nous allons d'abord présenter le contexte, puis la problématique…"
+   ✅ Tisser les éléments dans la prose — le lecteur les ressent, ne les voit pas étiquetés.
+
+❌ **Lister les objectifs** : "1. Analyser… 2. Évaluer… 3. Proposer…"
+   ✅ Intégrer en prose avec verbes d'action : "Ce travail vise à analyser… et à évaluer…"
+
+❌ **Phrases clichées marocaines** : "Dans le cadre de ce modeste travail…", "Ce travail humble…", "Notre humble contribution…"
+   ✅ Registre professionnel — aucune fausse modestie.
+
+❌ **Annoncer le plan mécaniquement** : "Ce rapport se compose de deux parties : la première partie et la deuxième partie."
+   ✅ Varier les formules — nommer les titres réels des parties, décrire brièvement leur contenu.
+
+❌ **Dépasser 750 mots ou rester sous 400** : trop court = manque de contexte ; trop long = empiète sur le corps du rapport.
+   ✅ Viser 450–650 mots — dense et complet, pas délayé.
+
+❌ **Écrire l'introduction sans lire le sommaire** si `sommaire.md` existe.
+   ✅ L'annonce du plan (§ final) doit correspondre exactement aux titres des parties dans `sommaire.md`.
+
+❌ **Streamer l'introduction dans le chat** après l'avoir sauvegardée.
+   ✅ Envoyer uniquement la confirmation courte dans le chat — le contenu est dans le preview.
+
+---
+
+## ═══ RAPPEL FINAL ═══
+
+Ces exemples ne sont que des modèles de niveau et de style. Le contenu réel dépend TOUJOURS :
+- du thème réel et de la filière de l'étudiant,
+- de sa problématique dans `student_memory.json`,
+- de ses objectifs et de son approche méthodologique,
+- du plan dans `sommaire.md` pour l'annonce des parties.
+
+---
+
+## Quality checklist (vérifie avant de sauvegarder)
+
+- [ ] `profile.json` et `student_memory.json` lus
+- [ ] `sommaire.md` lu si disponible — annonce du plan conforme aux titres réels
+- [ ] Aucun sous-titre `###` dans le contenu de l'introduction
+- [ ] Aucune liste à puces ou numérotée (sauf ✓ questions de recherche si explicitement demandé)
+- [ ] Ouverture sur une idée concrète et spécifique — pas une généralité
+- [ ] Contexte : 2–3 paragraphes, monte en puissance vers la problématique
+- [ ] Problématique : conséquence logique du contexte, pas une annonce abrupte
+- [ ] Objectifs : prose avec verbes d'action, pas de liste
+- [ ] Méthodologie : un paragraphe, approche + outils/données
+- [ ] Annonce du plan : titres réels des parties, formule variée
+- [ ] Aucune phrase bannie (§ Tone rules du system prompt)
+- [ ] 400–750 mots
+- [ ] Sauvegardé dans `introduction.md`
+- [ ] Seule une confirmation courte envoyée dans le chat
