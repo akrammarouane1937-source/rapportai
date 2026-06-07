@@ -442,10 +442,15 @@ Feeds forward to: `conclusion`, `bibliographie`
 
 ---
 
-## Save
+## Save & conversation output
 
-Save the complete result to `partie-ii.md` using the Write tool.
-In page mode: append each page using the Edit tool — do not overwrite.
+Save the section to `partie-ii.md` using Write (full mode) or Edit (page mode / append).
+
+**After saving, output ONLY this to the conversation — never the full section content:**
+> ✅ **Section [X.X — Titre]** rédigée et enregistrée dans partie-ii.md (~[N] mots).
+> L'étudiant peut la lire dans le preview. Souhaitez-vous continuer avec **[prochaine section]**, modifier quelque chose, ou passer à un autre chapitre ?
+
+The student reads the content in the preview pane — do not repeat or stream the full text into the chat.
 
 ---
 

@@ -186,10 +186,15 @@ Feeds forward to: `partie-ii` (receives partie-i.md as context), `conclusion`, `
 
 ---
 
-## Save
+## Save & conversation output
 
-Save the complete result to `partie-i.md` using the Write tool.
-In page mode: append each page using the Edit tool — do not overwrite.
+Save the section to `partie-i.md` using Write (full mode) or Edit (page mode / append).
+
+**After saving, output ONLY this to the conversation — never the full section content:**
+> ✅ **Section [X.X — Titre]** rédigée et enregistrée dans partie-i.md (~[N] mots).
+> L'étudiant peut la lire dans le preview. Souhaitez-vous continuer avec **[prochaine section]**, modifier quelque chose, ou passer à un autre chapitre ?
+
+The student reads the content in the preview pane — do not repeat or stream the full text into the chat.
 
 *(Note : l'humanisation du texte est gérée automatiquement par une étape séparée après la génération. Tu n'as pas à appliquer de règles d'humanisation toi-même — écris simplement une prose naturelle, variée et de qualité.)*
 
