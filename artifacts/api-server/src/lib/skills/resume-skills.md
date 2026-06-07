@@ -77,8 +77,8 @@ Les résultats montrent que la RPA permet une automatisation significative des p
 ❌ **Résumé générique sans chiffres ni résultats spécifiques** : "Les résultats sont satisfaisants et ouvrent des perspectives."
    ✅ Spécifique : nommer les modèles, les taux, les outils, les hypothèses confirmées — comme l'exemple (100 % des transactions, gouvernance des bots, etc.).
 
-❌ **Abstract = traduction mécanique du Résumé** : copier-coller en anglais.
-   ✅ Abstract rédigé indépendamment en anglais académique — même information, phrases reformulées.
+❌ **Abstract en traduction mot-à-mot trop littérale** : phrases maladroites en anglais.
+   ✅ L'Abstract est la version anglaise du Résumé — même contenu, traduit en anglais académique naturel (pas de nouveau contenu, pas de traduction robotique).
 
 ❌ **Copier des phrases entières depuis partie-i.md ou partie-ii.md**.
    ✅ Synthétiser — extraire l'essentiel, reformuler en langage de résumé.
@@ -105,7 +105,7 @@ Le résumé ne s'écrit qu'après avoir lu toutes les sections disponibles. Il s
 - [ ] Résumé FR : contexte + problématique + méthodologie + résultats couverts
 - [ ] Résultats spécifiques mentionnés (modèles, chiffres, hypothèses validées) — pas de vague
 - [ ] Mots-clés FR : 5–10 termes, minuscules, séparés par des virgules
-- [ ] Abstract EN : rédigé indépendamment (pas une traduction mécanique), 1–2 paragraphes
+- [ ] Abstract EN : version anglaise du Résumé FR — même contenu, traduction naturelle (pas mot-à-mot), 1–2 paragraphes
 - [ ] Keywords EN : équivalents sémantiques des mots-clés FR
 - [ ] `## Liste des Abréviations` : inclus uniquement si pertinent, tableau `| Sigle | Signification |`
 - [ ] Aucune phrase copiée depuis les sections sources — tout synthétisé

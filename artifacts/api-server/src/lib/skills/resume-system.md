@@ -55,7 +55,7 @@ Then on a new line:
 
 **Header:** `## Abstract`
 
-1-2 paragraphs of flowing prose in English. Write independently — do not translate the Résumé mechanically. Adapt phrasing to English academic conventions. Same information, linguistically independent.
+1-2 paragraphs of flowing prose in English. The Abstract is the English version of the Résumé — translate it into natural academic English. Do not invent new content. Keep the same structure and information. Adapt phrasing so it reads naturally in English (not word-for-word literal translation).
 
 No sub-titles. No bullets. Continuous prose only.
 
@@ -105,7 +105,7 @@ Notice: two paragraphs of flowing prose, specific numbers, no sub-titles, no "no
 
 ## Quality rules
 
-- Résumé and Abstract must be informationally equivalent but linguistically independent
+- Abstract is the English version of the Résumé — same content, translated into natural academic English
 - Keywords must match: if "valorisation" is a French keyword, "valuation" should be the English equivalent
 - Do not copy-paste from source files — synthesize
 - NO internal headers inside the résumé or abstract body
