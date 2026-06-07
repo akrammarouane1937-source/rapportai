@@ -129,11 +129,17 @@ When triggered, **run these searches before writing that section:**
 
 ## STEP 4 — Determine generation mode
 
-**Page mode** (`extraContext.page` is present):
-Generate exactly one page (~350 words) for the specified page number. Determine which section and position within it corresponds to page N. End at a clean paragraph break. No headers, no metadata.
+**Default — section-by-section (always start here unless told otherwise):**
+Generate one section at a time. After each section, stop and ask the student to validate before continuing:
+> "✅ Section [X.X — Titre] rédigée. Souhaitez-vous continuer avec [X.X+1 — Titre suivant], modifier quelque chose, ou passer directement à un autre chapitre ?"
 
-**Full mode** (`extraContext.page` is absent):
-Generate all Partie II content sequentially from first section to last.
+Never generate the next section until the student approves or explicitly asks to continue. If the student says "génère tout" or "continue sans t'arrêter" — switch to full mode for the remainder.
+
+**Full mode** (only if the student explicitly requests it):
+Generate all remaining Partie II content sequentially.
+
+**Page mode** (`extraContext.page` is present):
+Generate exactly one page (~350 words) for the specified page number. End at a clean paragraph break. No headers, no metadata.
 
 ---
 
@@ -149,11 +155,136 @@ Write as a practitioner-researcher conducting and reporting an investigation:
 
 ### The four content types in Partie II
 
-**1. Présentation de l'organisme d'accueil (preamble — always present, never in sommaire)**
-A brief fixed block that opens every Partie II before Chapitre 1. Not a full chapter. Written from WebSearch findings (see STEP 3). Covers in ~350 words: what the company does, its sector, key figures, when it was founded, why the student is there. Followed immediately by the fiche signalétique table figure. Optional: org chart or sector chart if data allows.
+**1. Présentation de l'organisme d'accueil**
+Appears wherever the sommaire places it — as a dedicated chapter, as the first section of Chapitre 1, or with a different title. The sommaire is authoritative. Written from WebSearch findings (see STEP 3). Covers: what the company does, its sector, key figures, date of creation, why the student is there. Always includes the fiche signalétique table. Optional: org chart or sector chart if data allows.
 
-**2. Méthodologie**
-How the study was conducted. Choice of method (quantitative, qualitative, mixed, financial modeling, développement logiciel). Data collection instruments (questionnaire, interview, financial database, code). Sample size and selection rationale. Validity and reliability considerations.
+**2. Méthodologie de recherche**
+
+When the sommaire contains a chapter or section on methodology (épistémologie, démarche, méthode de recherche, collecte de données — any of these titles), apply the full referentiel below. This is a standard chapter in Moroccan PFE/mémoire (sciences de gestion, finance, management, RH). Read `student_memory.json` to detect which choices the student has already made; if not specified, infer from the filière, theme, and type of data available, then confirm with the student.
+
+---
+
+### Référentiel méthodologique — connaissance à mobiliser
+
+#### A. Épistémologie — les trois paradigmes
+
+Épistémologie = la vision philosophique de la réalité que le chercheur adopte. En sciences de gestion marocaines, trois paradigmes dominent :
+
+| Paradigme | Vision de la réalité | Approche typique | Raisonnement | Exemple de PFE |
+|---|---|---|---|---|
+| **Positivisme** | La réalité existe objectivement, indépendamment de l'observateur. On peut la mesurer. | Quantitative | Déductif / Hypothético-déductif | Finance, comptabilité, logistique quantitative |
+| **Interprétativisme** | La réalité est subjective — elle dépend des perceptions des acteurs. On cherche à comprendre les significations. | Qualitative | Inductif / Abductif | RH, management, comportement organisationnel |
+| **Constructivisme** | La réalité se construit socialement. Le chercheur participe à la construction. | Qualitative / Mixte | Abductif | Innovation, entrepreneuriat, design organisationnel |
+
+**Comment identifier le paradigme de l'étudiant :**
+- PFE finance/quanti avec données chiffrées → positivisme par défaut
+- PFE avec entretiens et analyse de discours → interprétativisme
+- PFE avec co-construction de solution → constructivisme
+- Si `student_memory.json` ne précise pas → inférer du thème et confirmer avec l'étudiant
+
+**Comment écrire la section "paradigme adopté" :**
+Justifie le choix par rapport au sujet et à la nature des données. Ne récite pas le tableau — argumente. Exemple : "Notre recherche adopte une posture positiviste dans la mesure où elle vise à tester empiriquement une relation entre [X] et [Y] à partir de données financières objectives. Ce positionnement nous conduit naturellement vers une approche hypothético-déductive."
+
+---
+
+#### B. Types de recherche
+
+| Type | Quand l'utiliser | Signal dans le sommaire |
+|---|---|---|
+| **Exploratoire** | Peu de littérature sur le sujet. On explore pour comprendre un phénomène nouveau. | "Exploration de…", sujet émergent, pas d'hypothèses formelles |
+| **Descriptif** | On veut décrire une réalité existante sans expliquer les causes. | "État des lieux de…", "Analyse descriptive de…" |
+| **Explicatif / Causal** | On cherche des relations de cause à effet, on teste des hypothèses. | Hypothèses formelles dans `student_memory.json`, régressions, tests statistiques |
+
+La plupart des PFE combinent : exploratoire (littérature) + descriptif (état des lieux) + explicatif (test d'hypothèses). Précise la combinaison choisie.
+
+---
+
+#### C. Approche de recherche
+
+| Approche | Nature des données | Outil d'analyse | Profondeur vs généralisation |
+|---|---|---|---|
+| **Quantitative** | Chiffres, statistiques, questionnaires avec échelles (Likert), données financières | SPSS, Excel, Python (statistiques descriptives, corrélations, régressions) | Généralisable, moins de profondeur |
+| **Qualitative** | Discours, entretiens, observations, documents textuels | NVIVO, analyse de contenu, codage thématique | Profonde, non généralisable |
+| **Mixte (hybride)** | Les deux combinés | Les deux outils | Profondeur + validation quantitative |
+
+**Comment justifier l'approche :**
+Ne pas juste nommer l'approche — justifier par la nature de la problématique et des données disponibles. Exemple : "La nature des données collectées — questionnaires Likert administrés à N répondants — oriente vers une approche quantitative permettant de tester statistiquement nos hypothèses."
+
+---
+
+#### D. Raisonnement de recherche
+
+| Raisonnement | Direction | Logique | Courant avec |
+|---|---|---|---|
+| **Déductif** ▽ | Général → Particulier | Théorie → Hypothèses → Test → Conclusion | Positivisme, quantitatif |
+| **Inductif** △ | Particulier → Général | Observations → Patterns → Théorie | Interprétativisme, qualitatif |
+| **Abductif** △ | Observation inattendue → Meilleure explication | Observation → Hypothèse explicative → Vérification | Constructivisme, exploratoire |
+| **Hypothético-déductif** | Général → Particulier (avec formalisation d'hypothèses) | Cadre théorique → Hypothèses formalisées → Test empirique → Confirmation/infirmation | Le plus courant en sciences de gestion marocaines |
+
+**Hypothético-déductif en détail** (le plus fréquent à expliquer) :
+1. On part d'un cadre théorique existant (Partie I)
+2. On formule des hypothèses de recherche dérivées de ce cadre
+3. On collecte des données empiriques
+4. On teste les hypothèses statistiquement ou qualitativement
+5. On confirme, infirme, ou nuance chaque hypothèse
+
+---
+
+#### E. Méthodes de collecte de données
+
+| Méthode | Description | Avantages | Limites | Outil d'analyse |
+|---|---|---|---|---|
+| **Questionnaire** | Formulaire standardisé (Likert, QCM, échelles) distribué à un échantillon | Généralisable, traitable statistiquement | Superficiel, biais de désirabilité | SPSS → statistiques descriptives |
+| **Observation directe** | Observer les acteurs sur le terrain sans interférer | Données comportementales réelles | Difficile à quantifier, présence du chercheur | Notes de terrain, analyse qualitative |
+| **Entretien directif** | Questions fermées très structurées, comme un questionnaire oral | Comparable entre répondants | Peu de profondeur | Analyse statistique si codé |
+| **Entretien semi-directif** | Guide de thèmes avec questions ouvertes — le répondant développe librement | Profondeur, richesse du discours | Long à analyser | NVIVO → analyse de contenu |
+| **Entretien libre / non-directif** | Un sujet lancé, le répondant guide l'échange | Très profond, découverte | Difficile à analyser, peu comparable | NVIVO → analyse de contenu |
+
+**L'entretien semi-directif** est le plus courant dans les PFE qualitatifs marocains. Préciser : nombre d'entretiens, profil des répondants, durée moyenne, mode (présentiel / téléphone / visio).
+
+**Le questionnaire** : préciser la taille de l'échantillon, le mode de diffusion (Google Forms, terrain), le taux de retour, l'échelle utilisée.
+
+---
+
+#### F. Méthodes d'analyse des données
+
+| Outil | Approche | Méthode | Ce qu'elle produit |
+|---|---|---|---|
+| **SPSS** | Quantitative | Statistiques descriptives (fréquences, moyennes, écarts-types), statistiques inférentielles (corrélations, régressions, tests t, ANOVA) | Tableaux de fréquences, coefficients de corrélation, résultats de régression |
+| **Excel / Python** | Quantitative | Même logique que SPSS, plus flexible pour les données financières | Graphiques, tableaux, modèles |
+| **NVIVO** | Qualitative | Analyse de contenu thématique : codage des verbatims, identification des thèmes récurrents, saturation théorique | Grille de thèmes, verbatims représentatifs, carte conceptuelle |
+| **Analyse de contenu manuelle** | Qualitative | Même logique sans logiciel — grille de codage construite manuellement | Thèmes, sous-thèmes, fréquences d'apparition |
+
+**Statistiques descriptives (SPSS)** : Tri à plat (fréquences et pourcentages pour chaque question), tri croisé (relation entre deux variables catégorielles), moyenne et écart-type (variables continues).
+
+**Analyse de contenu (NVIVO / manuelle)** : 
+1. Retranscription des entretiens
+2. Lecture flottante pour s'imprégner
+3. Construction d'une grille de codage (thèmes a priori + thèmes émergents)
+4. Codage des verbatims
+5. Identification des thèmes dominants et des saturation
+
+---
+
+#### G. Structure type d'un chapitre méthodologie (Maroc, sciences de gestion)
+
+Quand le sommaire contient un chapitre méthodologie, il suit généralement cette structure — **à respecter telle que définie dans le sommaire** :
+
+```
+Section X.1 — Épistémologie
+  X.1.1 — Présentation des paradigmes épistémologiques (positivisme, interprétativisme, constructivisme)
+  X.1.2 — Paradigme épistémologique adopté (justification)
+
+Section X.2 — Méthodologie de recherche
+  X.2.1 — Type, approche et raisonnement de recherche
+  X.2.2 — Méthodes de collecte et d'analyse des données
+```
+
+**Ce que l'agent doit faire section par section :**
+- X.1.1 : Présenter les 3 paradigmes académiquement, les définir avec auteurs (Guba & Lincoln, 1994 ; Miles & Huberman, 1994 ; Le Moigne, 1990) [SOURCE si non vérifiable]
+- X.1.2 : Justifier le paradigme choisi par rapport au sujet — 1 paragraphe d'argumentation, pas une liste
+- X.2.1 : Présenter le type (exploratoire/descriptif/explicatif) + approche (quanti/quali/mixte) + raisonnement (déductif/inductif/hypothético-déductif) avec justification pour chacun
+- X.2.2 : Décrire précisément l'instrument de collecte (questionnaire ou entretien), l'échantillon, le traitement des données (SPSS/NVIVO). Si données réelles disponibles → les utiliser. Sinon → [DONNÉES REQUISES]
 
 **3. Résultats et analyse**
 Present findings systematically. Each result must be: described → quantified if possible → visualized (figure) → interpreted through a Partie I framework. Never present a result without analysis.
@@ -171,16 +302,9 @@ Connect results back to hypotheses (if defined). Confirm or infirm each hypothes
 | Figures | Conceptual diagrams | Real data charts (mandatory) |
 | Partie I role | None | Apply its frameworks here |
 
-### Section length targets
+### Longueur — pilotée par le sujet, jamais par un nombre fixe
 
-| Element | Words |
-|---|---|
-| Each section (1.1, 1.2…) | 600–900 |
-| Chapter introduction | 80–120 |
-| Chapter conclusion/transition | 80–120 |
-| Partie II introduction | 80–120 |
-| Partie II conclusion | 150–200 |
-| **Total** | **6,000–10,000** |
+Développe chaque section avec assez de profondeur pour être substantielle et crédible. Ne remplis jamais pour atteindre un quota de mots et ne coupe pas artificiellement. La longueur suit la structure du sommaire et la profondeur que le sujet exige.
 
 ### Citation format
 Apply the style from `profile.json` → `citationStyle`. Mark unverifiable citations as `[SOURCE]`.
@@ -307,14 +431,7 @@ If Python fails → placeholder immediately, no retry.
 
 ---
 
-## HUMANIZATION — apply to every sentence
-
-- Mix very short sentences (3–7 words) with long complex ones. No two consecutive sentences the same length.
-- Never start two consecutive sentences the same way. Use: Or, Car, Mais, Ainsi, À cet égard, Force est de constater que.
-- **Banned vocabulary:** s'inscrire dans, mettre en lumière, jouer un rôle essentiel/crucial/clé, il convient de noter, il est important de, permettre de (vague filler), enjeux (vague), dynamique (abstract), écosystème (abstract), incontournable, novateur, de nos jours, dans ce contexte, dans cette optique, au cœur de
-- Replace *constitue / représente / se présente comme* → est/sont
-- No signposting. No generic positive conclusions.
-- The rhythm must feel written by a knowledgeable practitioner-researcher, not assembled by a language model.
+*(Note : l'humanisation est gérée automatiquement par une étape séparée après la génération. Écris une prose naturelle et variée — ne réapplique pas de règles d'humanisation.)*
 
 ---
 
@@ -358,8 +475,7 @@ In page mode: append each page using the Edit tool — do not overwrite.
 - [ ] Figures generated or `[DONNÉES REQUISES]` placeholders inserted
 - [ ] Each hypothesis addressed in discussion (if defined)
 - [ ] Chapter numbering starts at 1 (independent of Partie I)
-- [ ] Each section 600–900 words with Opening → Development → Synthesis
+- [ ] Each section developed with genuine depth — no padding, no artificial cuts
 - [ ] Conclusion de la Partie II transitions to Conclusion Générale
-- [ ] Humanization rules applied — no banned vocabulary
 - [ ] [SOURCE] markers on unverifiable citations
 - [ ] Saved to partie-ii.md
