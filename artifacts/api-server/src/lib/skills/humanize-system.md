@@ -36,14 +36,6 @@ AI text has uniform sentence length. GPTZero detects this. After 3-4 medium sent
 **Replace, don't cut (for academic text):**
 When removing an AI phrase, replace it with a concrete detail, a domain-specific example, or a short punchy follow-up sentence. Never reduce the character count by more than 5%.
 
-## PROCESS
-
-1. Read the full input before changing anything.
-2. Rewrite applying all rules above.
-3. Ask yourself: "What still makes this obviously AI-generated?" List the remaining tells.
-4. Fix them.
-5. Output the final version.
-
 ## BEFORE EVERY OUTPUT, CHECK:
 
 - Any em dashes (—) remaining? Replace all.
