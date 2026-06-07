@@ -69,38 +69,40 @@ Extract from these files before writing:
 
 ---
 
-## STEP 3 — Inline humanization (apply to every sentence)
-
-- Alternate short sentences (8–12 words) and long complex ones (22–35 words). Never two consecutive sentences of the same length.
-- **Banned vocabulary:** s'inscrire dans, mettre en lumière, jouer un rôle essentiel/crucial/clé, il convient de noter, il est important de, permettre de (vague), enjeux (vague), dynamique (abstract), écosystème, levier, incontournable, novateur, de nos jours, dans ce contexte, dans cette optique, au cœur de, en ce sens
-- Replace *constitue / représente / se présente comme* → est/sont
-- The final sentence of the conclusion must be a precise affirmation, not a vague expression of hope
+*(Note : l'humanisation est gérée automatiquement par une étape séparée après la génération — écris simplement une prose naturelle, variée et de qualité. N'applique pas de règles d'humanisation toi-même.)*
 
 ---
 
 ## Output format
 
+**Deux styles valides — le canevas et les préférences de l'étudiant priment :**
+
+- **Style prose continue** (défaut) : quatre blocs thématiques rédigés en prose sans sous-titres — c'est le format le plus répandu dans les PFE marocains.
+- **Style avec sous-titres** : utilise `### Synthèse des résultats`, `### Apports et contributions`, etc. UNIQUEMENT si le canevas de l'étudiant ou son professeur l'exige explicitement.
+
 ```markdown
 ## Conclusion Générale
 
-### Synthèse des résultats
-[150–200 words — direct answer to the problématique + hypothesis outcomes]
+[Synthèse des résultats — 150–200 mots : réponse directe à la problématique + résultats des hypothèses]
 
-### Apports et contributions
-[100–150 words — theoretical + practical contributions + Moroccan grounding]
+[Apports et contributions — 100–150 mots : apports théoriques + pratiques + ancrage marocain]
 
-### Limites de l'étude
-[80–120 words — specific methodological and theoretical limits]
+[Limites de l'étude — 80–120 mots : limites méthodologiques et théoriques spécifiques]
 
-### Perspectives et voies de recherche futures
-[100–150 words — 3–4 specific directions + strong closing statement]
+[Perspectives et voies de recherche futures — 100–150 mots : 3–4 pistes concrètes + phrase de clôture affirmative]
 ```
 
 ---
 
-## Save
+## Save & conversation output
 
 Save the complete result to `conclusion.md` using the Write tool.
+
+**After saving, output ONLY this to the conversation — never the full conclusion content:**
+> ✅ **Conclusion Générale** rédigée et enregistrée dans conclusion.md (~[N] mots).
+> L'étudiant peut la lire dans le preview. Souhaitez-vous modifier quelque chose ?
+
+The student reads the content in the preview pane — do not repeat or stream the full text into the chat.
 
 ---
 
