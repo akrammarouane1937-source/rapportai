@@ -1,207 +1,143 @@
 ---
 name: rapportai-partie-ii
 description: >
-  Generates the Partie II (cadre pratique) of a Moroccan academic report — methodology,
-  case study, empirical results, applied analysis. Trigger when /api/session/:id/partie-ii is
-  called, when the student clicks "Générer" on the Partie II page, or when the user says
-  "génère la partie 2", "écris le cadre pratique", "rédige la deuxième partie".
-  Requires both sommaire.md AND partie-i.md to exist — errors immediately if either is missing.
-  Applies Partie I theoretical frameworks to real company/field data from uploaded documents.
-  Company data (.txt extracted files) is the PRIMARY source — inverted priority vs Partie I.
-  Supports page-by-page (extraContext.page = N) and full generation modes.
-  Do NOT use for Partie I (cadre théorique) — separate agent.
+  Base de connaissances pour l'agent Partie II : exemples de référence, anti-patterns,
+  et flow d'approbation section par section. Lis ce fichier AVANT de générer la Partie II.
+  Les règles et le format exact sont définis dans le system prompt ; ce fichier montre
+  le NIVEAU attendu et comment adapter selon le type de rapport et la filière.
+  Requiert sommaire.md ET partie-i.md — erreur immédiate si l'un est manquant.
 allowed-tools: Read, Write, Edit, Bash, Glob, Grep, WebFetch, WebSearch
 ---
 
-# RapportAI — Partie II Generator (Cadre Pratique)
+# RapportAI — Partie II : base de connaissances
 
-Generates the applied body of the report: methodology, field investigation, results, discussion.
-Anchored in Partie I frameworks. Built on uploaded company data. Figures mandatory when data exists.
-
----
-
-## Hard Prerequisites (both required)
-
-1. `sommaire.md` must exist
-2. `partie-i.md` must exist and be non-empty
-
-Missing either → error immediately, stop.
+Ce fichier complète le system prompt. Il contient des exemples de prose académique appliquée,
+le flow d'approbation section par section, et les erreurs à éviter.
+Inspire-toi du niveau et du style — **n'utilise jamais le contenu domaine de ces exemples**.
+Chaque rapport doit être écrit depuis le contexte réel de l'étudiant : `sommaire.md`, `partie-i.md`, `student_memory.json`, données uploadées.
 
 ---
 
-## Key Difference from Partie I
+## ═══ RÈGLE D'OR — le contenu vient toujours de l'étudiant ═══
 
-| Dimension | Partie I | Partie II |
-|---|---|---|
-| Nature | Cadre théorique | Cadre pratique |
-| Content | Theory, frameworks, literature | Methodology, results, analysis |
-| Primary source | Academic papers | Company data / field data |
-| Document priority | Canevas → papers → data | Data → canevas → methodology papers |
-| Figures | Conceptual diagrams | Real data charts (mandatory) |
-| Citations | Literature | Literature + internal sources |
-| Partie I role | None | Bridge — apply its frameworks here |
+1. La structure → lue depuis le bloc `## Partie II` de `sommaire.md` — autoritaire.
+2. Les frameworks théoriques → relus depuis `partie-i.md` — à appliquer ici, pas à réexpliquer.
+3. Les données → documents uploadés par l'étudiant ou WebSearch sur son terrain réel.
+4. Ces exemples montrent comment écrire — jamais quoi écrire.
+5. C'est une CONVERSATION : génère section par section, attends la validation, adapte-toi aux retours.
+6. Le plan de l'étudiant (free/starter/pro) fixe la limite de pages — pas toi.
 
 ---
 
-## Document Priority Hierarchy (Partie II)
+## Flow d'approbation — section par section (défaut)
 
-1. **Company / field data** — Excel, financial reports, surveys, operational data — PRIMARY
-2. **Canevas** — professor's structure — follow strictly if present
-3. **Methodology papers** — empirical methods guidance
-4. **Student notes** — company context, observations
+Ne jamais générer toute la Partie II d'un coup sauf si l'étudiant le demande explicitement.
 
-No data uploaded → generate with `[DONNÉES REQUISES]` placeholders.
+**Après chaque section, s'arrêter et demander :**
+> ✅ **Section [X.X — Titre]** rédigée et enregistrée dans partie-ii.md (~[N] mots).
+> Souhaitez-vous continuer avec **[X.X+1 — Titre suivant]**, modifier quelque chose, ou passer à un autre chapitre ?
 
----
+**Si l'étudiant dit "continue" ou "génère tout le reste"** → passer en mode complet pour la suite.
 
-## Connecting to Partie I
+**Exemple de conversation :**
 
-Every chapter must explicitly anchor its content to Partie I:
-- "Comme établi dans le cadre théorique, [concept] se définit comme…"
-- "Conformément au modèle de [Author, Year] présenté en Partie I…"
-- "L'application de ce cadre à [entreprise] révèle que…"
-
-Do not re-explain theory — reference and apply.
-
----
-
-## Four Content Types
-
-| Type | Typical placement | Focus |
-|---|---|---|
-| Présentation du terrain | Per sommaire | Company researched via WebSearch/WebFetch — fiche signalétique, historique, secteur, structure org, missions. Figures mandatory. Structure driven by sommaire, not forced. |
-| Méthodologie | Chapter 1–2 | Method choice, instruments, sample, validity |
-| Résultats et analyse | Chapter 2–3 | Findings + visualization + interpretation |
-| Discussion | Final chapter | Hypothesis testing, implications, comparison with Partie I |
-
-Every result must be: described → quantified → visualized → interpreted.
+> Agent : ✅ Section 1.1 — Présentation de l'entreprise rédigée (~580 mots). Continuer avec 1.2 — Méthodologie de l'étude ?
+>
+> Étudiant : Oui continue.
+>
+> Agent : ✅ Section 1.2 rédigée (~720 mots). Continuer avec 2.1 — Résultats de l'enquête ?
+>
+> Étudiant : Génère tout le reste d'un coup.
+>
+> Agent : → passe en mode complet pour les sections restantes.
 
 ---
 
-## Generation Modes
+## Exemples de prose académique appliquée (bibliothèque de référence)
 
-| Mode | Trigger | Output |
-|---|---|---|
-| Page mode | `extraContext.page` present | ~350 words for page N |
-| Full mode | `extraContext.page` absent | Complete Partie II sequentially |
+Chaque exemple montre le niveau et le style attendus. **Le domaine est illustratif — n'en réutilise aucun contenu. Adapte au thème réel de l'étudiant.**
 
 ---
 
-## Figure Generation
+### Exemple 1 — [À REMPLACER PAR UN EXTRAIT RÉEL]
 
-Two sources of figures — handle BOTH:
-
-### 1. Student-uploaded figures (priority)
-
-The task prompt will contain a list like:
-```
-Figures uploadées par l'étudiant pour la Partie II :
-- Figure N — "Titre" (Source : X, Auteur : Y)
-  Légende : ...
-```
-
-For each uploaded figure, integrate it in the relevant section:
-- Reference it in the text: "La Figure N présente [description liée au contenu de la section]."
-- Caption mandatory:
-```markdown
-*Figure N — [Titre]. Source : [Source], [Auteur].*
-```
-- Do NOT invent data for these figures — they are real visuals provided by the student.
-
-### 2. Agent-generated charts (when data exists in uploaded docs)
-
-When company/field data is available and no uploaded figure covers it:
-
-**Chart type selection:**
-- Comparisons → bar chart
-- Trends over time → line chart
-- Distributions → bar or histogram (avoid pie charts)
-- Correlations → scatter plot
-- Structured results → table rendered as figure
-
-**Reference format — always include source and author:**
-```markdown
-![Figure N — Title](figures/partie2_figureN.png)
-*Figure N — Description. Source : [entreprise/base de données], [Auteur/Service], [Année].*
-```
-
-**No data and no uploaded figure:**
-```markdown
-*Figure N — [Description]. Source : [à préciser], [Auteur/Service].*
-```
-
-### Caption format — MANDATORY for all figures
-
-Every figure caption MUST follow this exact format so it feeds the automatic Table of Figures in the Word export:
-
-```
-*Figure N — [Titre complet]. Source : [Référence], [Auteur/Service], [Année].*
-```
-
-- Wrap the entire line in single asterisks `*...*`
-- Start with `Figure N` (N = sequential number across the whole report)
-- Use ` — ` (space dash dash space) after the number
-- Always include `Source :` and the author/origin/year
-- This is the only way the caption appears in the Liste des figures automatically — no other format works
+> Akram fournira un extrait réel d'une Partie II de PFE/mémoire ici.
 
 ---
 
-## Length Targets
+### Exemple 2 — Chapitre Méthodologie (sciences de gestion)
 
-| Element | Words |
-|---|---|
-| Each section | 600–900 |
-| Chapter intro | 80–120 |
-| Chapter conclusion | 80–120 |
-| Partie II conclusion | 150–200 |
-| Total | 6,000–10,000 |
+**Contexte :** PFE Management, ENCG. Section méthodologie — approche quantitative, questionnaire Likert, SPSS.
+
+> ⚠️ Niveau et style uniquement — ne reproduis pas ce contenu pour un autre sujet.
 
 ---
 
-## Chapter Numbering
+La présente recherche s'inscrit dans une démarche hypothético-déductive : partant du cadre théorique élaboré en Partie I, nous avons formulé trois hypothèses de recherche que nous soumettons à une vérification empirique. Ce positionnement nous oriente naturellement vers une approche quantitative, la nature des données collectées — des mesures d'attitudes et de perceptions sur échelle de Likert — se prêtant à un traitement statistique permettant de tester la significativité des relations identifiées.
 
-Partie II restarts at Chapitre 1, Section 1.1 — fully independent of Partie I numbering.
-This is the Moroccan academic standard.
+Sur le plan épistémologique, notre étude adopte une posture positiviste. La réalité que nous cherchons à appréhender — l'impact de [variable X] sur [variable Y] au sein des entreprises marocaines du secteur [Z] — est considérée comme objectivement mesurable, indépendamment de la subjectivité du chercheur. Cette posture est cohérente avec l'usage d'un questionnaire standardisé et d'outils statistiques éprouvés.
 
----
+L'instrument de collecte retenu est un questionnaire auto-administré, composé de [N] items répartis en [M] dimensions, chacune mesurant un construit théorique défini en Partie I. L'échelle de Likert à 5 points (1 = Pas du tout d'accord ; 5 = Tout à fait d'accord) a été privilégiée pour sa capacité à capturer l'intensité des perceptions tout en restant accessible aux répondants. Le questionnaire a été diffusé via Google Forms auprès d'un échantillon de [N] professionnels du secteur, sélectionnés selon un échantillonnage raisonné. Le taux de retour s'est établi à [X]%, soit [N] questionnaires exploitables.
 
-## Humanization Block
+Le traitement des données a été réalisé sous SPSS version [X]. Nous avons procédé dans un premier temps à un tri à plat afin de décrire le profil de l'échantillon et les distributions de réponses pour chaque item. Dans un second temps, des analyses bivariées (corrélations de Pearson, tests de Chi-deux) ont permis d'explorer les relations entre les variables. Enfin, une régression linéaire multiple a été conduite pour tester le pouvoir explicatif des variables indépendantes sur la variable dépendante, conformément aux hypothèses formulées.
 
-- Vary sentence length aggressively (short + long mixed)
-- No two consecutive sentences starting the same way
-- Banned: *s'inscrire dans, mettre en lumière, jouer un rôle essentiel, il convient de noter, il est important de, permettre de (filler), enjeux (vague), dynamique (abstract), écosystème (abstract), incontournable, novateur, de nos jours*
-- Replace *constitue/représente/se présente comme* → est/sont
-- No signposting. No generic positive conclusions.
+*Figure 1.X — Répartition de l'échantillon par secteur d'activité. Source : enquête de l'auteur, [année].*
+
+[DONNÉES REQUISES — insérer ici le graphique SPSS ou les données réelles]
 
 ---
 
-## Progressive Context
+## Anti-patterns — à éviter absolument
 
-Receives: `introduction.md`, `sommaire.md`, `partie-i.md`
-Feeds forward to: `conclusion`, `bibliographie`
+❌ **Générer toute la Partie II d'un coup** sans validation intermédiaire.
+   ✅ Section par section — attendre l'approbation avant de continuer.
+
+❌ **Réexpliquer la théorie de la Partie I** au lieu de l'appliquer.
+   ✅ Référencer brièvement ("Comme établi en Partie I…") puis appliquer au terrain réel.
+
+❌ **Inventer des données** quand aucun fichier n'est uploadé.
+   ✅ Écrire `[DONNÉES REQUISES — à compléter par l'étudiant]` et continuer.
+
+❌ **Imposer la structure du référentiel méthodologique** si l'étudiant a une structure différente.
+   ✅ Le sommaire et les préférences de l'étudiant priment toujours sur le modèle majoritaire.
+
+❌ **Présenter un résultat sans analyse** ("72% des répondants ont répondu oui.").
+   ✅ Décrire → quantifier → visualiser → interpréter à travers un framework de la Partie I.
+
+❌ **Fiche signalétique vide avec seulement le nom de l'entreprise**.
+   ✅ WebSearch avant d'écrire la section organisme — données réelles ou `[DONNÉES REQUISES]`.
+
+❌ **Numérotation des chapitres qui continue depuis la Partie I** (Ch. 3, Ch. 4…).
+   ✅ Partie II recommence toujours à Chapitre 1 — standard académique marocain.
+
+❌ **Figures sans caption au bon format**.
+   ✅ `*Figure N — [Titre]. Source : [Référence], [Auteur/Service], [Année].*` — obligatoire.
 
 ---
 
-## Error Table
+## ═══ RAPPEL FINAL — le contenu vient toujours de l'étudiant ═══
 
-| Condition | Response |
-|---|---|
-| `sommaire.md` missing | `<error>Le sommaire est requis…</error>` |
-| `partie-i.md` missing | `<error>La Partie I est requise…</error>` |
-| `theme` missing | `<error>Le thème du rapport est requis.</error>` |
-| No data uploaded | Generate with `[DONNÉES REQUISES]` placeholders |
+Ces exemples ne sont que des modèles de style et de niveau. Le contenu réel dépend TOUJOURS :
+- des données et documents uploadés par l'étudiant,
+- de son `sommaire.md`, `partie-i.md` et `student_memory.json`,
+- de ses préférences et retours en conversation,
+- et de la limite de pages fixée par son plan.
 
 ---
 
-## Quality Checklist
+## Quality checklist (vérifie avant de sauvegarder)
 
-- [ ] Sommaire structure followed exactly
-- [ ] Every chapter references Partie I frameworks explicitly
-- [ ] Company/field data used as primary source where available
-- [ ] Figures generated or `[DONNÉES REQUISES]` placeholders inserted
-- [ ] Each hypothesis addressed in discussion (if defined)
-- [ ] Chapter numbering starts at 1 (independent of Partie I)
-- [ ] Each section 600–900 words
-- [ ] Conclusion de la Partie II transitions to Conclusion Générale
-- [ ] Humanization rules applied throughout
-- [ ] [SOURCE] markers on unverifiable citations
+- [ ] `sommaire.md` lu, bloc Partie II entièrement extrait
+- [ ] `partie-i.md` lu, frameworks théoriques extraits pour les ponts avec la pratique
+- [ ] Tous les documents `.txt` uploadés lus
+- [ ] Chaque chapitre et section du sommaire couverts — rien ajouté, rien sauté
+- [ ] Flow section par section respecté — validation demandée après chaque section
+- [ ] Chaque résultat : décrit → quantifié → visualisé → interprété via Partie I
+- [ ] Données réelles utilisées où disponibles — `[DONNÉES REQUISES]` sinon
+- [ ] Section organisme : WebSearch effectué, fiche signalétique présente
+- [ ] Figures générées ou placeholders insérés avec caption au bon format
+- [ ] Chaque hypothèse traitée en discussion (si définies dans student_memory.json)
+- [ ] Numérotation recommence à Chapitre 1 (indépendant de la Partie I)
+- [ ] Conclusion de la Partie II fait la transition vers la Conclusion Générale
+- [ ] `[SOURCE]` sur les citations non vérifiables
+- [ ] Enregistré dans `partie-ii.md`
