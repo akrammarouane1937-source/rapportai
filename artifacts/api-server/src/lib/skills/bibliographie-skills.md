@@ -30,39 +30,92 @@ correctement, les règles de résolution des `[SOURCE]`, et les erreurs à évit
 
 ---
 
-## Exemples de références formatées
+## Exemple 1 — Bibliographie réelle (PFE Finance, style mixte APA) — extrait réel
 
-### APA 7th — le style le plus courant au Maroc
+**Contexte :** PFE Finance. Thème : *L'impact des cycles économiques sur les méthodes d'évaluation des entreprises — cas RISMA*. Style : APA, mélange livres + articles + sources web.
+
+> ⚠️ Cet extrait montre le niveau et le format attendus dans un rapport marocain réel. Il inclut des cas concrets : `s.d.` pour les sources sans date, sources web sans URL complète, et doublons (Damodaran cité deux fois avec des éditions différentes). C'est la réalité du terrain — traite chaque cas correctement.
+
+---
+
+**Ouvrages**
+
+Arnold, L. G. (2002). *Business cycle theory*. OUP Oxford.
+
+Damodaran, A. (2000). *Applied corporate finance*. Wiley.
+
+Damodaran, A. (2012). *Investment valuation: Tools and techniques for determining the value of any asset* (3rd ed.). Wiley.
+
+Phalippou, L. (2017). *Private equity laid bare*. [À COMPLÉTER — éditeur non précisé dans la source].
+
+Rothbard, M. N. (2000). *America's great depression*. Ludwig von Mises Institute.
+
+Zarnowitz, V. (1991). *Business cycles: Theory, history, indicators, and forecasting*. University of Chicago Press.
+
+---
+
+**Articles de revues**
+
+Berrada, R., & Taamouti, A. (2024). Dating the Moroccan business cycle. *African Scientific Journal*. [À COMPLÉTER — volume, numéro, pages].
+
+Damodaran, A. (2009). Ups and downs: Valuing cyclical and commodity companies. *SSRN Electronic Journal*. https://ssrn.com/abstract=[À COMPLÉTER]
+
+Giménez Roche, G. A. (2016). Entrepreneurial ignition of the business cycle: The corporate finance of malinvestment. *The Review of Austrian Economics*, *29*(3), 253–276.
+
+Heilemann, U., & Weihs, H. (2007). Business cycle synchronization in the Euro Area. *Review of International Economics*. [À COMPLÉTER — volume, numéro, pages].
+
+---
+
+**Webographie**
+
+Bourse de Casablanca. (s.d.). *Sociétés cotées — RISMA*. Consulté le [DATE] sur https://www.casablanca-bourse.com
+
+Business Cycle Dating Committee. (2020). *The CEPR and NBER approaches*. Centre for Economic Policy Research. Consulté le [DATE] sur https://cepr.org
+
+Corporate Finance Institute. (s.d.). *Business valuation course*. CFI. Consulté le [DATE] sur https://corporatefinanceinstitute.com
+
+Damodaran, A. (2000). *An introduction to valuation*. NYU Stern. Consulté le [DATE] sur https://pages.stern.nyu.edu/~adamodar/
+
+Fidelity. (2019). *How to invest using the business cycle*. Consulté le [DATE] sur https://www.fidelity.com
+
+Investopedia. (s.d.). *Economic cycle*. Consulté le [DATE] sur https://www.investopedia.com/terms/e/economic-cycle.asp
+
+Investopedia. (s.d.). *EBITDA*. Consulté le [DATE] sur https://www.investopedia.com/terms/e/ebitda.asp
+
+NBER & CEPR. (s.d.). *Chronologies des cycles économiques*. Consulté le [DATE] sur https://www.nber.org/research/business-cycle-dating
+
+RISMA. (s.d.). *Rapports financiers*. Consulté le [DATE] sur https://risma.ma
+
+Statista. (s.d.). *GDP 2025–2030*. Consulté le [DATE] sur https://www.statista.com
+
+---
+
+**Ce que cet exemple montre :**
+- `s.d.` = *sans date* — à utiliser quand l'année de publication n'est pas trouvable
+- Sources web toujours avec `Consulté le [DATE]` — l'agent doit insérer la date réelle du jour
+- Refs partielles (volume, pages manquants) → `[À COMPLÉTER]` — ne pas inventer
+- Doublons (Damodaran 2000 book + article separate) → deux entrées distinctes si titres différents
+- CFI course = source professionnelle, classe en Webographie même si c'est un cours payant
+
+---
+
+## Exemples de format par style
+
+### APA 7th — rappel format
 
 **Livre :**
 ```
 Damodaran, A. (2012). *Investment valuation: Tools and techniques for determining the value of any asset* (3rd ed.). Wiley.
-
-Rothbard, M. N. (2000). *America's great depression* (5th ed.). Ludwig von Mises Institute.
 ```
 
 **Article de revue :**
 ```
-Zarnowitz, V. (1991). What is a business cycle? *NBER Working Paper*, (3863). https://doi.org/10.3386/w3863
-
-Kokina, J., & Blanchette, S. (2019). Early evidence of digital labor in accounting: Innovation with Robotic Process Automation. *International Journal of Accounting Information Systems*, 35, 100431. https://doi.org/10.1016/j.accinf.2019.100431
+Giménez Roche, G. A. (2016). Entrepreneurial ignition of the business cycle. *The Review of Austrian Economics*, *29*(3), 253–276.
 ```
 
-**Chapitre dans un ouvrage collectif :**
+**Source web :**
 ```
-Arnold, R. A. (2002). Business cycle theory. In *Macroeconomics* (6th ed., pp. 142–158). South-Western College Publishing.
-```
-
-**Rapport institutionnel / webographie :**
-```
-Fonds Monétaire International. (2025). *World economic outlook: Navigating global divergences*. FMI. Consulté le 15 avril 2025 sur https://www.imf.org/en/Publications/WEO
-
-Haut-Commissariat au Plan. (2025). *Note de conjoncture — T1 2025*. HCP. Consulté le 20 avril 2025 sur https://www.hcp.ma
-```
-
-**Thèse / mémoire :**
-```
-El Ouafa, M. (2024). *L'adoption des technologies d'automatisation dans les cabinets d'audit marocains* [Mémoire de master, ISCAE Casablanca]. [À COMPLÉTER — dépôt institutionnel].
+Investopedia. (s.d.). *Economic cycle*. Consulté le 15 mai 2025 sur https://www.investopedia.com/terms/e/economic-cycle.asp
 ```
 
 ---
@@ -72,9 +125,9 @@ El Ouafa, M. (2024). *L'adoption des technologies d'automatisation dans les cabi
 ```
 [1] A. Damodaran, *Investment Valuation: Tools and Techniques for Determining the Value of Any Asset*, 3rd ed. Hoboken, NJ: Wiley, 2012.
 
-[2] J. Kokina and S. Blanchette, "Early evidence of digital labor in accounting: Innovation with Robotic Process Automation," *Int. J. Account. Inf. Syst.*, vol. 35, p. 100431, Jun. 2019, doi: 10.1016/j.accinf.2019.100431.
+[2] G. A. Giménez Roche, "Entrepreneurial ignition of the business cycle: The corporate finance of malinvestment," *Rev. Austrian Econ.*, vol. 29, no. 3, pp. 253–276, 2016.
 
-[3] V. Zarnowitz, "What is a business cycle?" NBER, Cambridge, MA, Working Paper 3863, Oct. 1991.
+[3] Investopedia. "Economic Cycle." Accessed: May 15, 2025. [Online]. Available: https://www.investopedia.com/terms/e/economic-cycle.asp
 ```
 
 ---
@@ -84,7 +137,7 @@ El Ouafa, M. (2024). *L'adoption des technologies d'automatisation dans les cabi
 ```
 Damodaran, A. (2012) *Investment valuation: Tools and techniques for determining the value of any asset*, 3rd edn. Wiley.
 
-Kokina, J. & Blanchette, S. (2019) 'Early evidence of digital labor in accounting: Innovation with Robotic Process Automation', *International Journal of Accounting Information Systems*, vol. 35, p. 100431.
+Giménez Roche, G. A. (2016) 'Entrepreneurial ignition of the business cycle', *The Review of Austrian Economics*, vol. 29, no. 3, pp. 253–276.
 ```
 
 ---
