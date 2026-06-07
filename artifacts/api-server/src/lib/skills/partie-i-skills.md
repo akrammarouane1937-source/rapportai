@@ -1,13 +1,13 @@
 ---
 name: rapportai-partie-i
 description: >
-  Generates Partie I (cadre théorique / revue de littérature) of the report. Reads sommaire.md
-  to extract the exact Partie I structure (dynamic: 2–4 chapters, any number of sections).
-  Generates content page by page (~350 words per page) or full mode. Screenshots relevant PDF
-  pages for figures using Bash. Trigger when section is "partie-i" or when the student requests
-  "rédiger la partie théorique", "écrire la partie 1", "cadre théorique".
+  Generates Partie I of the report — adaptive to report type: theoretical framework for PFE/mémoire,
+  host organisation presentation for stage/PFA. Reads sommaire.md to extract the exact Partie I
+  structure. Generates content page by page or in full mode. Crops relevant figures from uploaded
+  PDFs using PIL. Trigger when section is "partie-i" or when the student requests "rédiger la
+  partie I", "écrire la partie 1", "cadre théorique", "présentation de l'entreprise".
   Requires sommaire.md to exist — errors immediately if missing.
-  Do NOT use for Partie II (cadre pratique) — that is a separate agent.
+  Do NOT use for Partie II — that is a separate agent.
 allowed-tools:
   - Read
   - Write
@@ -19,10 +19,11 @@ allowed-tools:
   - WebSearch
 ---
 
-# RapportAI — Partie I Agent (Cadre Théorique)
+# RapportAI — Partie I Agent
 
-Generates the theoretical body of the report from sommaire structure + uploaded documents.
-Dynamic structure. Page-by-page or full mode. PDF screenshots for figures. 6,000–10,000 words total.
+Generates the first body section of the report from sommaire structure + uploaded documents.
+The nature of Partie I is determined by the report type and sommaire — not assumed.
+Dynamic structure. Page-by-page or full mode. PIL for figure crops.
 
 ---
 
@@ -33,14 +34,25 @@ If missing → `<error>Le sommaire est requis…</error>` — stop immediately.
 
 ---
 
+## Nature of Partie I — determined by sommaire, not assumed
+
+| Report type | Typical Partie I |
+|---|---|
+| PFE / mémoire | Cadre théorique — théories, concepts, revue de littérature |
+| Rapport de stage / PFA | Présentation de l'organisme d'accueil et cadre du stage |
+
+**Rule**: always follow what the `## Partie I` block of `sommaire.md` actually says.
+If it says "Présentation de l'entreprise" → write that, never impose theory.
+**The sommaire and the student's preferences always win.**
+
+---
+
 ## Generation Modes
 
 | Mode | Trigger | Output |
 |---|---|---|
-| **Page mode** | `extraContext.page` is present | ~350 words, no headers, no metadata |
+| **Page mode** | `extraContext.page` is present | ~one page, no headers, no metadata |
 | **Full mode** | `extraContext.page` absent | Complete Partie I sequentially |
-
-Page mode is the standard flow — student confirms each page before the next generates.
 
 ---
 
@@ -49,12 +61,12 @@ Page mode is the standard flow — student confirms each page before the next ge
 | Priority | Source | Use |
 |---|---|---|
 | 1 | Canevas (`canevas*.txt`) | Required structure — follow strictly |
-| 2 | Academic papers / articles | Theory, definitions, citations |
-| 3 | Company documents / data | Note for Partie II — skip in Partie I |
-| 4 | Student notes / plan | Orientation |
+| 2 | Academic papers / articles | Theory, definitions, citations (PFE/mémoire) |
+| 3 | Company documents / data | Company facts, org charts, data (stage) |
+| 4 | Student notes / plan | Orientation and emphasis |
 
-No `.txt` files → **WebSearch + WebFetch** academic sources before writing.
-Search: key authors from cadre théorique, mots-clés, theme + filière.
+No `.txt` files → **WebSearch + WebFetch** before writing.
+Search: key authors from `cadre théorique`, `mots_cles`, theme + filière.
 Prefer: Google Scholar, Cairn.info, Persée, ResearchGate, SSRN.
 Synthesize — never copy verbatim.
 
@@ -68,82 +80,52 @@ Synthesize — never copy verbatim.
 
 ---
 
-## Content Rules — Cadre Théorique
+## Content Rules
 
-Partie I = theoretical only:
-- Named frameworks with authors
-- Defined concepts with academic precision
-- Literature synthesis
-- NO empirical findings, NO company data, NO field results
+Write each section as **fluent academic prose** that genuinely develops its subject.
+For PFE/mémoire: named frameworks, defined concepts, literature synthesis, anchored in the problématique.
+For stage: real company facts, organisational context, sector description, mission scope.
 
-Every section must contain:
-1. **Opening** — define/frame (2–3 sentences)
-2. **Development** — 3–5 substantive paragraphs
-3. **Synthesis** — connects back to the problématique
+**No rigid structure imposed** — no systematic "ouverture / développement / synthèse".
+Vary rhythm and organisation naturally. The student can request adjustments after.
 
----
+**Length**: write as deep as the subject requires. Never pad to hit a word count, never cut artificially.
+The total length follows the sommaire structure and the depth the topic demands.
 
-## Length Targets
+**Moroccan anchoring**: when relevant, anchor concepts in Moroccan context (Bourse de Casablanca, AMMC, Bank Al-Maghrib, HCP, sectoral data, Moroccan regulation). Differentiates the report from generic content.
 
-| Element | Words |
-|---|---|
-| Introduction de la Partie I | 80–120 |
-| Each section (1.1, 1.2…) | 600–900 |
-| Chapter introduction | 80–100 |
-| Conclusion du Chapitre | 80–120 |
-| Conclusion de la Partie I | 150–200 |
-| **Total** | **6,000–10,000** |
-
----
-
-## Citation Format
-
-| Style | In-text |
-|---|---|
-| APA | (Author, Year) |
-| IEEE | [N] |
-| Harvard | (Author Year) |
-| Chicago | footnote or (Author Year) |
-| MLA | (Author page) |
-
-Mark unverifiable citations as **[SOURCE]** for student review.
+**Citations**: use the citation style declared in the student's mise en forme. Never re-ask for it.
+Cite only real, verifiable sources. Mark unverifiable citations as `[SOURCE]` for student review.
 
 ---
 
 ## Figures
 
-Two sources of figures for Partie I — check BOTH before writing any section:
+Two sources — check BOTH before writing any section:
 
 ### 1. Student-uploaded figures (priority)
 
-The task prompt will contain a list like:
+The task prompt may contain:
 ```
 Figures uploadées par l'étudiant pour la Partie I :
 - Figure N — "Titre" (Source : X, Auteur : Y)
-  Légende : ...
 ```
+Reference them in the relevant section text, then add the mandatory caption.
 
-For each of these, reference them in the relevant section text:
-```markdown
-La Figure N illustre [description en lien avec le contenu]. [Auteur, Source].
-```
+### 2. PIL crop from uploaded PDF pages (fallback)
 
-Caption format (mandatory after each figure reference):
-```markdown
-*Figure N — [Titre]. Source : [Source], [Auteur].*
-```
-
-### 2. PDF screenshots (fallback when no uploaded figure)
-
-Only when no uploaded figure is available for a section:
+Only when no uploaded figure is available for a section and `figures/page-N.png` exists:
 
 ```bash
-mkdir -p figures
 python3 -c "
-from pdf2image import convert_from_path
-pages = convert_from_path('paper.pdf', dpi=150)
-pages[2].save('figures/fig_1_1.png', 'PNG')
-print('saved')
+from PIL import Image
+import os
+img = Image.open('figures/page-3.png')
+print('Size:', img.size)
+cropped = img.crop((80, 150, 920, 520))  # adapt to image
+os.makedirs('figures', exist_ok=True)
+cropped.save('figures/fig_1_1.png')
+print('saved figures/fig_1_1.png')
 "
 ```
 
@@ -152,48 +134,47 @@ print('saved')
 *Figure 1.1 — [Titre]. Source : [Auteur(s), Année], p. [N].*
 ```
 
-No uploaded figures AND no PDF → placeholder:
+No uploaded figures AND no PDF pages → placeholder:
 ```markdown
-*Figure 1.1 — [Description précise]. Source : [Auteur, Année].*
+*[Figure 1.1 — [Description précise du visuel recommandé]. Source : [Auteur, Année].]*
 ```
 
-If pdf2image fails → placeholder immediately, no retry.
+If PIL fails → placeholder immediately, no retry.
 
 ### Caption format — MANDATORY for all figures
-
-Every figure caption MUST follow this exact format so it feeds the automatic Table of Figures in the Word export:
 
 ```
 *Figure N — [Titre complet]. Source : [Référence], [Auteur/Service].*
 ```
 
-- Wrap the entire line in single asterisks `*...*`
-- Start with `Figure N` (N = figure number)
-- Use ` — ` (space dash dash space) after the number
-- Always include `Source :` and the author/origin
-- This is the only way the caption appears in the Liste des figures automatically
+- Wrap entire line in `*...*`
+- Start with `Figure N`, ` — ` after the number
+- Always include `Source :`
+- This feeds the automatic Liste des figures in the Word export
 
 ---
 
 ## Full Mode Output Structure
 
 ```markdown
-# Partie I — [Titre]
+# Partie I — [Titre du sommaire]
 
 ## Introduction de la Partie I
-[80–120 words]
+[contextualise and announces chapters]
 
 ## Chapitre 1 — [Titre]
-[80–100 word intro]
+[chapter intro paragraph]
 
 ### 1.1 [Titre]
-[600–900 words — Opening → Development → Synthesis]
+[fluent academic prose — depth determined by subject]
+
+[Figure or placeholder if relevant]
 
 ### 1.2 [Titre]
-[600–900 words]
+[fluent academic prose]
 
 **Conclusion du Chapitre 1**
-[80–120 words + transition to Chapitre 2]
+[synthesis + transition to Chapitre 2]
 
 ---
 
@@ -201,20 +182,7 @@ Every figure caption MUST follow this exact format so it feeds the automatic Tab
 ...
 
 **Conclusion de la Partie I**
-[150–200 words + transition to Partie II]
-```
-
----
-
-## Humanization Block
-
-```
-- Alterne phrases courtes (8–12 mots) et longues complexes (22–35 mots). Jamais deux phrases consécutives de même longueur.
-- Vocabulaire interdit : s'inscrire dans, mettre en lumière, jouer un rôle essentiel/crucial/clé, il convient de noter, il est important de, enjeux (vague), dynamique (abstrait), écosystème, levier, incontournable, novateur, de nos jours, dans ce contexte, dans cette optique, au cœur de.
-- Remplace constitue/représente/se présente comme → est/sont.
-- Jamais d'annonces : "Nous allons maintenant aborder", "Dans ce qui suit", "Passons à".
-- Pas de conclusions génériques — formule une affirmation précise.
-- 1–2 nuances épistémiques par section : "Il semblerait que", "Force est de constater que".
+[synthesis + transition to Partie II]
 ```
 
 ---
@@ -230,23 +198,25 @@ Feeds forward to: `partie-ii`, `conclusion`, `bibliographie`
 
 | Condition | Response |
 |---|---|
-| `sommaire.md` missing | `<error>Le sommaire est requis…</error>` |
-| `theme` missing | `<error>Le thème du rapport est requis.</error>` |
+| `sommaire.md` missing | `<error>Le sommaire est requis…</error>` — stop |
+| `theme` missing | `<error>Le thème du rapport est requis.</error>` — stop |
 | `extraContext.page` out of range | Generate last valid page, note range |
-| Uploaded file unreadable | Skip, continue |
-| pdf2image fails | Placeholder immediately |
+| Uploaded file unreadable | Skip, continue with available sources |
+| PIL fails | Placeholder immediately |
 
 ---
 
 ## Quality Checklist
 
-- [ ] sommaire.md read, Partie I block fully extracted
-- [ ] All uploaded .txt documents scanned
+- [ ] `sommaire.md` read, Partie I block fully extracted
+- [ ] La nature de la Partie I correspond au sommaire (théorique ou organisme) — jamais imposée
+- [ ] All uploaded `.txt` documents scanned
 - [ ] Every chapter and section covered — none added, none skipped
-- [ ] Each section 600–900 words with Opening → Development → Synthesis
+- [ ] Each section developed with genuine depth — no padding, no artificial cuts
 - [ ] Introduction de la Partie I + Conclusion du Chapitre + Conclusion de la Partie I present
-- [ ] At least one figure or placeholder per chapter
-- [ ] [SOURCE] markers on unverifiable citations
-- [ ] Citations formatted per declared style
-- [ ] Humanization applied — no banned vocabulary
-- [ ] Saved to partie-i.md
+- [ ] Heading hierarchy respected (`#` / `##` / `###`)
+- [ ] Citation style matches student's mise en forme
+- [ ] `[SOURCE]` on unverifiable citations
+- [ ] At least one figure or placeholder per chapter when relevant
+- [ ] Never contradicts the problématique or hypothèses from `student_memory.json`
+- [ ] Saved to `partie-i.md`
