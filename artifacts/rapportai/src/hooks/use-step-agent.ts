@@ -1,8 +1,9 @@
-import { useState, useRef, useEffect, useCallback } from "react";
+import { useState, useRef, useEffect, useCallback, createElement, type ReactNode } from "react";
 import { fetchEventSource } from "@microsoft/fetch-event-source";
 import { API_BASE } from "@/lib/apiBase";
 import { useReportStore } from "@/lib/store";
 import { useUserSettingsStore } from "@/lib/userSettingsStore";
+import { ChoiceCard } from "@/components/chat-panel";
 
 // ─── Re-export ToolCall so pages can import from here ────────────────────────
 export type { ToolCall } from "@/hooks/use-generate";
@@ -16,7 +17,7 @@ const SESSION_TTL     = 4 * 60 * 60 * 1000; // 4 hours
 export interface ConvMsg {
   id: string;
   role: "agent" | "user";
-  content: string;
+  content: string | ReactNode;
 }
 
 export interface ToolCallItem {
@@ -147,7 +148,12 @@ export function useStepAgent({
   const messagesRef = useRef(messages);
   messagesRef.current = messages;
   useEffect(() => {
-    try { localStorage.setItem(lsKey, JSON.stringify(messages.slice(-20))); } catch { /* quota */ }
+    try {
+      // Only string-content messages are serializable. ChoiceCard (ReactNode)
+      // messages are transient prompts, not persisted.
+      const serializable = messages.filter((m) => typeof m.content === "string").slice(-20);
+      localStorage.setItem(lsKey, JSON.stringify(serializable));
+    } catch { /* quota */ }
   }, [messages, lsKey]);
 
   const abort = useCallback(() => {
@@ -184,7 +190,7 @@ export function useStepAgent({
       // Build compact history for the API
       const historyForApi = displayHistory
         .filter((m) => typeof m.content === "string" && m.content.trim())
-        .map((m) => ({ role: m.role, content: m.content.slice(0, 2000) }));
+        .map((m) => ({ role: m.role, content: typeof m.content === "string" ? m.content.slice(0, 2000) : "" }));
 
       try {
         const sessionId = await getOrCreateSession();
@@ -258,9 +264,39 @@ export function useStepAgent({
               } else {
                 const id = streamingIdRef.current;
                 setMessages((prev) =>
-                  prev.map((m) => m.id === id ? { ...m, content: m.content + content } : m)
+                  prev.map((m) =>
+                    m.id === id
+                      ? { ...m, content: (typeof m.content === "string" ? m.content : "") + content }
+                      : m
+                  )
                 );
               }
+            }
+
+            // ── ask_user: agent asks a question with clickable choices ──
+            if (
+              data.type === "ask_user" &&
+              typeof data.question === "string" &&
+              Array.isArray(data.choices) &&
+              data.choices.length > 0
+            ) {
+              setIsThinking(false);
+              setIsGenerating(false);
+              streamingIdRef.current = null;
+              const q = data.question as string;
+              const ch = (data.choices as unknown[]).map((c) => String(c));
+              setMessages((prev) => [
+                ...prev,
+                {
+                  id: nextId(),
+                  role: "agent",
+                  content: createElement(ChoiceCard, {
+                    question: q,
+                    choices: ch,
+                    onChoice: (choice: string) => { void sendRef.current(choice); },
+                  }),
+                },
+              ]);
             }
 
             // ── tool_call: generation activity ────────────────────────
@@ -335,6 +371,11 @@ export function useStepAgent({
     },
     [isThinking, isGenerating, step, onSectionGenerated, onStepComplete]
   );
+
+  // Stable ref to send — lets a ChoiceCard's onChoice (created inside the stream
+  // handler) send the chosen option back as the next user message.
+  const sendRef = useRef(send);
+  sendRef.current = send;
 
   // Auto-send initial message if configured and no history exists
   useEffect(() => {

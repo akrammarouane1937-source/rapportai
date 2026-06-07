@@ -156,6 +156,12 @@ SECTIONS: [section-id1,section-id2,...] (ex: dedicaces,remerciements)
 CONTEXT: [contexte détaillé pour la génération : noms, demandes spécifiques, plan validé...]
 RESPONSE: [message court en français — ex: "Je génère ta page de garde..."]
 
+OU pour poser une question à choix à l'étudiant (2 à 4 options courtes et cliquables) — utilise quand un choix rapide entre des options claires fait avancer la conversation (ex: une préférence de structure, oui/non, un format) :
+
+ACTION: ask_user
+QUESTION: [ta question courte, sans emoji]
+CHOICES: [option 1 | option 2 | option 3]
+
 OU quand l'étape est terminée après génération :
 
 ACTION: complete
@@ -184,11 +190,15 @@ function parseCoordinator(raw: string): {
   sections: string[];
   context: string;
   response: string;
+  question: string;
+  choices: string[];
 } {
   const lines = raw.trim().split("\n");
   let action = "chat";
   let sections: string[] = [];
   let context = "";
+  let question = "";
+  let choices: string[] = [];
   const responseLines: string[] = [];
   let inResponse = false;
   let inContext = false;
@@ -210,6 +220,14 @@ function parseCoordinator(raw: string): {
       context = line.slice(8).trim();
       inContext = true;
       inResponse = false;
+    } else if (line.startsWith("QUESTION:")) {
+      question = line.slice(9).trim();
+      inResponse = false;
+      inContext = false;
+    } else if (line.startsWith("CHOICES:")) {
+      choices = line.slice(8).trim().split("|").map((s) => s.trim()).filter(Boolean);
+      inResponse = false;
+      inContext = false;
     } else if (line.startsWith("RESPONSE:")) {
       responseLines.push(line.slice(9).trim());
       inResponse = true;
@@ -226,6 +244,8 @@ function parseCoordinator(raw: string): {
     sections,
     context: context.trim(),
     response: responseLines.join("\n").trim(),
+    question: question.trim(),
+    choices,
   };
 }
 
@@ -335,7 +355,7 @@ router.post("/agent/:step/stream", async (req: Request, res: Response) => {
 
     const coordData = (await coordRes.json()) as { content: Array<{ type: string; text: string }> };
     const rawText = coordData.content.find((b) => b.type === "text")?.text ?? "";
-    const { action, sections, context, response } = parseCoordinator(rawText);
+    const { action, sections, context, response, question, choices } = parseCoordinator(rawText);
 
     // ── 4. Stream the response text to the frontend ────────────────────────
     if (response) {
@@ -343,6 +363,14 @@ router.post("/agent/:step/stream", async (req: Request, res: Response) => {
     } else if (action === "chat" && !response) {
       // Fallback: use raw text as response if parsing failed
       sseWrite(res, { type: "text", content: rawText.slice(0, 1000) });
+    }
+
+    // ── ask_user: agent asks a clickable-choices question, then ends ───────
+    if (action === "ask_user" && question && choices.length >= 2) {
+      sseWrite(res, { type: "ask_user", question, choices });
+      sseWrite(res, { type: "done" });
+      res.end();
+      return;
     }
 
     // ── 5. If generate action, run the Claude Agent SDK ───────────────────
