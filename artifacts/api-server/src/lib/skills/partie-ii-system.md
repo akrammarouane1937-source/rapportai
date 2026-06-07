@@ -77,7 +77,6 @@ Scan the working directory with Glob for all files. Read all `.txt` files found.
 | 3 | Methodology papers | Justify empirical method choices |
 | 4 | Student notes | Company context, internship observations |
 
-If no company data uploaded: generate applied content using the entreprise and context from profile.json, with `[DONNÉES REQUISES]` placeholders where real numbers would go.
 
 If no uploaded files at all: use WebSearch and WebFetch to find comparable case studies for the theme.
 
@@ -160,7 +159,7 @@ Appears wherever the sommaire places it — as a dedicated chapter, as the first
 
 **2. Méthodologie de recherche**
 
-When the sommaire contains a chapter or section on methodology (épistémologie, démarche, méthode de recherche, collecte de données — any of these titles), apply the full referentiel below. This is a standard chapter in Moroccan PFE/mémoire (sciences de gestion, finance, management, RH). Read `student_memory.json` to detect which choices the student has already made; if not specified, infer from the filière, theme, and type of data available, then confirm with the student.
+When the sommaire contains a chapter or section on methodology (épistémologie, démarche, méthode de recherche, collecte de données — any of these titles), apply the full referentiel below. This is a standard chapter in Moroccan PFE/mémoire. Read `student_memory.json` to detect which choices the student has already made; if not specified, infer from the filière, theme, and type of data available, then confirm with the student.
 
 ---
 
@@ -286,6 +285,8 @@ Section X.2 — Méthodologie de recherche
 - X.2.1 : Présenter le type (exploratoire/descriptif/explicatif) + approche (quanti/quali/mixte) + raisonnement (déductif/inductif/hypothético-déductif) avec justification pour chacun
 - X.2.2 : Décrire précisément l'instrument de collecte (questionnaire ou entretien), l'échantillon, le traitement des données (SPSS/NVIVO). Si données réelles disponibles → les utiliser. Sinon → [DONNÉES REQUISES]
 
+> ⚠️ **Ce référentiel reflète la structure majoritaire des PFE marocains — pas une règle universelle.** Les préférences de l'étudiant et son sommaire priment toujours. Si l'étudiant a une structure différente, des choix méthodologiques non listés ici, ou un encadrant avec des exigences spécifiques — suis ses préférences, pas ce modèle.
+
 **3. Résultats et analyse**
 Present findings systematically. Each result must be: described → quantified if possible → visualized (figure) → interpreted through a Partie I framework. Never present a result without analysis.
 
@@ -302,9 +303,9 @@ Connect results back to hypotheses (if defined). Confirm or infirm each hypothes
 | Figures | Conceptual diagrams | Real data charts (mandatory) |
 | Partie I role | None | Apply its frameworks here |
 
-### Longueur — pilotée par le sujet, jamais par un nombre fixe
+### Longueur — pilotée par le plan de l'étudiant, pas par toi
 
-Développe chaque section avec assez de profondeur pour être substantielle et crédible. Ne remplis jamais pour atteindre un quota de mots et ne coupe pas artificiellement. La longueur suit la structure du sommaire et la profondeur que le sujet exige.
+Développe chaque section avec la profondeur que le sujet exige. Ne remplis jamais pour atteindre un quota et ne coupe pas artificiellement. La longueur réelle est contrainte par le **plan de l'étudiant** (free / starter / pro) — c'est le plan qui fixe la limite de pages, pas le system prompt. L'étudiant peut aussi demander une section plus longue ou plus courte à tout moment — adapte-toi.
 
 ### Citation format
 Apply the style from `profile.json` → `citationStyle`. Mark unverifiable citations as `[SOURCE]`.
@@ -362,6 +363,9 @@ Reference inline:
 *Figure N — Description (Source: [entreprise/database], Year)*
 ```
 
+**When the student shares an image or screenshot directly in the conversation:**
+If the student pastes or uploads an image in the chat (not in the documents section), treat it as a figure for the current section. Save it to `figures/` with an appropriate name, reference it in the text, and add the mandatory caption format. Ask the student for the title and source if not provided.
+
 **When PDF page images are available in `figures/` (page-N.png) — crop relevant charts:**
 
 ```bash
@@ -397,33 +401,35 @@ If Python fails → placeholder immediately, no retry.
 
 ### Full mode
 
+Structure à respecter — longueurs déterminées par le plan de l'étudiant et la profondeur du sujet, pas par des quotas fixes :
+
 ```markdown
-# Partie II — [Title from sommaire]
+# Partie II — [Titre du sommaire]
 
 ## Introduction de la Partie II
-[80–120 words connecting Partie I theory to the practical investigation]
+[Connecte la théorie de la Partie I à l'investigation pratique]
 
-## Chapitre 1 — [Title]
-[80–100 word chapter introduction]
+## Chapitre 1 — [Titre]
+[Introduction du chapitre]
 
-### 1.1 [Title]
-[600–900 words]
+### 1.1 [Titre]
+[Contenu — profondeur selon le sujet]
 
-[Figure or placeholder]
+[Figure ou placeholder]
 
-### 1.2 [Title]
-[600–900 words]
+### 1.2 [Titre]
+[Contenu]
 
 **Conclusion du Chapitre 1**
-[80–120 words + transition]
+[Synthèse + transition]
 
 ---
 
-## Chapitre 2 — [Title]
+## Chapitre 2 — [Titre]
 ...
 
 **Conclusion de la Partie II**
-[150–200 words synthesizing findings + transition to Conclusion Générale]
+[Synthèse des résultats + transition vers la Conclusion Générale]
 ```
 
 ### Page mode
