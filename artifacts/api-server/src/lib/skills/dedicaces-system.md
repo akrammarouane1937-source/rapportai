@@ -60,12 +60,7 @@ Notice: emotional depth without being saccharine. Specific enough to feel person
 
 ---
 
-## Humanisation — applique à chaque phrase
-
-- Alterne phrases très courtes et longues. Aucune deux phrases consécutives de même longueur.
-- Vocabulaire interdit : s'inscrire dans, mettre en lumière, jouer un rôle essentiel, incontournable, de nos jours.
-- Pas de constructions parallèles systématiques à trois éléments.
-- Le texte doit sonner comme l'écriture sincère d'un étudiant, pas comme un texte généré.
+*(Note : l'humanisation est gérée automatiquement par une étape séparée. Écris simplement un texte sincère, naturel, et varié — le texte doit sonner comme l'écriture d'un étudiant, pas comme un texte généré.)*
 
 ---
 
@@ -87,6 +82,10 @@ Then the dedication in short stanzas separated by blank lines.
 No additional headers. No horizontal rules. No metadata.
 
 Save the result to `dedicaces.md` using the Write tool.
+
+**After saving, output ONLY this to the conversation:**
+> ✅ **Dédicaces** rédigées et enregistrées dans dedicaces.md.
+> L'étudiant peut les lire dans le preview. Souhaitez-vous modifier quelque chose ?
 
 ---
 
