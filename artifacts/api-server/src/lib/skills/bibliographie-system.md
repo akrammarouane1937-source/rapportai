@@ -118,9 +118,16 @@ For IEEE: single numbered list, no sections.
 
 ---
 
-## Save
+## Save & conversation output
 
 Save the complete result to `bibliographie.md` using the Write tool.
+
+**After saving, output ONLY this to the conversation — never the full bibliography content:**
+> ✅ **Bibliographie** compilée et enregistrée dans bibliographie.md ([N] références).
+> [N_source] citations résolues automatiquement, [N_a_completer] marquées `[À COMPLÉTER]` pour révision manuelle.
+> L'étudiant peut la consulter dans le preview.
+
+The student reads the bibliography in the preview pane — do not stream the full reference list into the chat.
 
 ---
 
