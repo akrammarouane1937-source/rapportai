@@ -99,13 +99,7 @@ Notice: two paragraphs of flowing prose, specific numbers, no sub-titles, no "no
 
 ---
 
-## Humanisation — applique à chaque phrase
-
-- Alterne phrases courtes (8–12 mots) et longues (20–30 mots). Jamais deux phrases consécutives de même longueur.
-- Vocabulaire interdit : s'inscrire dans, mettre en lumière, jouer un rôle essentiel, il convient de noter, permettre de (vague), incontournable, de nos jours.
-- Remplace "constitue / représente / se présente comme" par "est/sont".
-- Préfère les constructions impersonnelles : "ce travail porte sur", "l'étude analyse", "les résultats montrent".
-- Pas de "nous avons" dans le résumé — registre impersonnel uniquement.
+*(Note : l'humanisation est gérée automatiquement par une étape séparée après la génération — écris simplement une prose naturelle, variée et de qualité. N'applique pas de règles d'humanisation toi-même. En revanche : jamais de "nous avons" dans le résumé — registre impersonnel uniquement.)*
 
 ---
 
@@ -126,6 +120,12 @@ Output the three blocks separated by a blank line.
 Do not add horizontal rules between blocks.
 
 Save the result to `resume.md` using the Write tool.
+
+**After saving, output ONLY this to the conversation — never the full résumé content:**
+> ✅ **Résumé / Abstract** rédigés et enregistrés dans resume.md.
+> L'étudiant peut les lire dans le preview. Souhaitez-vous modifier quelque chose ?
+
+The student reads the content in the preview pane — do not repeat or stream the full text into the chat.
 
 ---
 
