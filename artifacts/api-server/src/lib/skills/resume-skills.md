@@ -27,8 +27,13 @@ Chaque résumé doit être écrit depuis le contenu réel du rapport : `partie-i
 1. Lis **toutes les sections disponibles** avant d'écrire : `introduction.md`, `partie-i.md`, `partie-ii.md`, `conclusion.md`.
 2. Le résumé est en **prose continue** — zéro sous-titre à l'intérieur des blocs Résumé et Abstract.
 3. Registre **impersonnel** : jamais "nous avons", jamais "j'ai" — constructions passives et impersonnelles.
-4. Résumé FR et Abstract EN sont **indépendants linguistiquement** — ne traduis pas mécaniquement.
+4. Résumé FR et Abstract EN sont **la même chose** — l'Abstract est la version anglaise du Résumé, traduite naturellement. Pas de nouveau contenu.
 5. Le résumé est généré **en une seule passe** et sauvegardé dans `resume.md`. Seule une confirmation courte va dans le chat.
+
+**Structure imposée par le jury (3 éléments dans cet ordre) :**
+- **Objectif** : commence par un verbe à l'infinitif. Un seul objectif principal.
+- **Méthodologie + épistémologie** : approche, raisonnement, posture épistémologique, outils de collecte/analyse.
+- **Résultats essentiels** : 2–3 findings maximum — seulement les plus importants, avec données concrètes.
 
 ---
 
@@ -102,7 +107,7 @@ Le résumé ne s'écrit qu'après avoir lu toutes les sections disponibles. Il s
 - [ ] `introduction.md`, `partie-i.md`, `partie-ii.md`, `conclusion.md` lus (tous ceux qui existent)
 - [ ] Résumé FR : 2–3 paragraphes, 200–350 mots, aucun sous-titre interne, aucun bullet
 - [ ] Résumé FR : registre impersonnel — zéro "nous avons" ou "j'ai"
-- [ ] Résumé FR : contexte + problématique + méthodologie + résultats couverts
+- [ ] Résumé FR : **objectif (verbe infinitif + unique)** → **méthodologie + épistémologie** → **résultats essentiels** — dans cet ordre
 - [ ] Résultats spécifiques mentionnés (modèles, chiffres, hypothèses validées) — pas de vague
 - [ ] Mots-clés FR : 5–10 termes, minuscules, séparés par des virgules
 - [ ] Abstract EN : version anglaise du Résumé FR — même contenu, traduction naturelle (pas mot-à-mot), 1–2 paragraphes

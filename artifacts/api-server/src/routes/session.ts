@@ -864,6 +864,79 @@ router.post(
   }
 );
 
+// ─── POST /api/session/:sessionId/upload-template ────────────────────────────
+// Upload a page-de-garde template (image or PDF → first page only).
+// Saves a normalised template-screenshot.png to the session workDir so the
+// page-de-garde agent can read it visually via PATH A (Read tool, vision).
+
+router.post(
+  "/session/:sessionId/upload-template",
+  upload.single("file"),
+  async (req: Request, res: Response) => {
+    const sessionId = req.params.sessionId as string;
+    const file = (req as Request & { file?: Express.Multer.File }).file;
+
+    if (!file) {
+      res.status(400).json({ error: "Aucun fichier reçu." });
+      return;
+    }
+
+    const agent = sessionStore.get(sessionId) as SDKReportAgent | undefined;
+    if (!agent) {
+      res.status(404).json({ error: "Session introuvable ou expirée." });
+      return;
+    }
+
+    try {
+      const ext = file.originalname.toLowerCase().split(".").pop() ?? "";
+      const imageExts = new Set(["png", "jpg", "jpeg", "webp", "bmp"]);
+      const screenshotPath = path.join(agent.workDir, "template-screenshot.png");
+
+      if (imageExts.has(ext)) {
+        // Normalise to PNG → template-screenshot.png
+        const normalised = await sharp(file.buffer).png().toBuffer();
+        writeFileSync(screenshotPath, normalised);
+        const thumb = await sharp(normalised)
+          .resize({ width: 200, withoutEnlargement: true })
+          .png({ compressionLevel: 9 })
+          .toBuffer();
+        res.json({
+          success: true,
+          filename: "template-screenshot.png",
+          preview: `data:image/png;base64,${thumb.toString("base64")}`,
+        });
+      } else if (ext === "pdf") {
+        // Extract first page as PNG → template-screenshot.png
+        const convert = pdfFromBuffer(file.buffer, { density: 150, format: "png", width: 1240, height: 1754 });
+        const pages = await convert.bulk(1, { responseType: "buffer" });
+        const buf = (pages[0] as { buffer?: Buffer } | undefined)?.buffer;
+        if (!buf) {
+          res.status(422).json({ error: "Impossible d'extraire la première page du PDF." });
+          return;
+        }
+        writeFileSync(screenshotPath, buf);
+        // Also save the original PDF for reference
+        agent.uploadDocument(file.originalname, file.buffer);
+        const thumb = await sharp(buf)
+          .resize({ width: 200, withoutEnlargement: true })
+          .png({ compressionLevel: 9 })
+          .toBuffer();
+        res.json({
+          success: true,
+          filename: "template-screenshot.png",
+          preview: `data:image/png;base64,${thumb.toString("base64")}`,
+        });
+      } else {
+        res.status(400).json({ error: "Format non supporté. Uploadez une image (PNG/JPG) ou un PDF." });
+      }
+    } catch (err: unknown) {
+      const message = err instanceof Error ? err.message : "Erreur de conversion";
+      req.log.warn({ event: "upload_template_failed", error: message });
+      res.status(422).json({ error: message });
+    }
+  }
+);
+
 // ─── PATCH /api/session/:sessionId/memory ────────────────────────────────────
 // Called from frontend whenever the student fills/updates a form field.
 // Accepts any partial fields: problematique, hypotheses, objectifs, mots_cles,

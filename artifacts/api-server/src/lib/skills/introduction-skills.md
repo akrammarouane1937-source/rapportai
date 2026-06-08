@@ -28,10 +28,19 @@ Chaque introduction doit être écrite depuis le contexte réel de l'étudiant :
 ## ═══ RÈGLE D'OR — le contenu vient toujours de l'étudiant ═══
 
 1. Le thème, la problématique, les objectifs → lus depuis `student_memory.json` + `profile.json`.
-2. L'introduction est en **prose continue** — zéro sous-titre, zéro liste, zéro numérotation.
-3. Les cinq éléments (contexte → problématique → objectifs → méthodologie → plan) sont **tissés naturellement** dans les paragraphes — jamais annoncés.
+2. L'introduction est en **prose continue** — zéro sous-titre sauf si canevas imposé (Exemple 2).
+3. Les **7 éléments** (contexte → intérêt+motivations → problème = 1 question → sous-questions/hypothèses → objectif → méthodologie+épistémologie → architecture) sont **tissés naturellement** — jamais étiquetés.
 4. Ces exemples montrent comment écrire — jamais quoi écrire.
-5. L'introduction est générée **en une seule passe** (pas de section-par-section) et sauvegardée dans `introduction.md`. Seule une confirmation courte va dans le chat.
+5. L'introduction est générée **en une seule passe** et sauvegardée dans `introduction.md`. Seule une confirmation courte va dans le chat.
+
+**Structure imposée par le jury — ordre obligatoire :**
+1. Contexte (espace + temps)
+2. Intérêt du sujet + motivations
+3. Problème = **1 seule question centrale** (ni 2, ni 3)
+4a. Approche qualitative → sous-questions (tirets, max 4) **OU** 4b. Approche quantitative → hypothèses fondées + justifiées
+5. Objectif principal
+6. Méthodologie + paradigme épistémologique (bref — approche, raisonnement, posture, collecte, analyse)
+7. Architecture globale (1 paragraphe)
 
 ---
 
@@ -168,14 +177,16 @@ Ces exemples ne sont que des modèles de niveau et de style. Le contenu réel d�
 
 - [ ] `profile.json` et `student_memory.json` lus
 - [ ] `sommaire.md` lu si disponible — annonce du plan conforme aux titres réels
-- [ ] Aucun sous-titre `###` dans le contenu de l'introduction
-- [ ] Aucune liste à puces ou numérotée (sauf ✓ questions de recherche si explicitement demandé)
-- [ ] Ouverture sur une idée concrète et spécifique — pas une généralité
-- [ ] Contexte : 2–3 paragraphes, monte en puissance vers la problématique
-- [ ] Problématique : conséquence logique du contexte, pas une annonce abrupte
-- [ ] Objectifs : prose avec verbes d'action, pas de liste
-- [ ] Méthodologie : un paragraphe, approche + outils/données
-- [ ] Annonce du plan : titres réels des parties, formule variée
+- [ ] Contexte : espace + temps clairement établis (2–3 §)
+- [ ] Intérêt du sujet + motivations : présents dans la prose
+- [ ] Problème : **1 seule question centrale**, bien individualisée
+- [ ] Si qualitative : sous-questions (tirets, max 4) après la problématique
+- [ ] Si quantitative : hypothèses fondées et justifiées (base théorique/terrain AVANT l'hypothèse)
+- [ ] Objectif principal : formulé après la problématique, un seul objectif
+- [ ] Méthodologie + épistémologie : approche + raisonnement + posture + collecte + analyse (bref, 1 §)
+- [ ] Architecture : 1 paragraphe final, titres réels des parties
+- [ ] Aucune liste à puces sauf sous-questions/hypothèses
+- [ ] Ouverture sur une idée concrète — pas une généralité
 - [ ] Aucune phrase bannie (§ Tone rules du system prompt)
 - [ ] 400–750 mots
 - [ ] Sauvegardé dans `introduction.md`

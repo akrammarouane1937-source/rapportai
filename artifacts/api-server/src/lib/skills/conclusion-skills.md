@@ -30,6 +30,14 @@ Chaque conclusion doit être écrite depuis les résultats réels de l'étudiant
 5. La conclusion est générée **en une seule passe** et sauvegardée dans `conclusion.md`. Seule une confirmation courte va dans le chat.
 6. **Style** : prose continue par défaut (pas de `###` subheadings) — sauf si le canevas ou le professeur l'impose explicitement.
 
+**Structure imposée par le jury — 5 éléments dans cet ordre :**
+1. **Rappel du problème** (ouverture — reformuler la problématique)
+2. **Synthèse des principaux résultats** (les plus essentiels — pas tout)
+3. **Hypothèses** : confirmées ou non — UNIQUEMENT si approche quantitative
+4. **Contributions** (points forts : théoriques + pratiques)
+5. **Limites** (être conscient des limites de sa recherche)
+6. **Perspectives** (conclusion ouverte : nouveau problème OU pistes futures — ne pas "clore" la recherche)
+
 ---
 
 ## Exemples de prose académique (bibliothèque de référence)
@@ -117,11 +125,12 @@ La conclusion ne résume pas le plan — elle répond à la problématique. Tout
 - [ ] `student_memory.json` lu — hypothèses et leurs directions notées
 - [ ] `partie-i.md` lu — cadre théorique principal identifié
 - [ ] `partie-ii.md` lu — résultats des hypothèses + 3–4 trouvailles clés extraits
-- [ ] Synthèse : réponse directe à la problématique (150–200 mots)
-- [ ] Chaque hypothèse avec verdict explicite (confirmée / partiellement / infirmée)
-- [ ] Apports : théoriques + pratiques + ancrage marocain si pertinent (100–150 mots)
-- [ ] Limites : spécifiques, pas minimisées (80–120 mots)
-- [ ] Perspectives : 3–4 pistes concrètes + phrase de clôture affirmative (100–150 mots)
+- [ ] **Rappel du problème** en ouverture (40–60 mots)
+- [ ] **Synthèse des résultats** : les plus essentiels uniquement (120–180 mots)
+- [ ] **Hypothèses** : verdict explicite pour chaque H — SEULEMENT si approche quantitative
+- [ ] **Contributions** : théoriques + pratiques + ancrage marocain si pertinent (80–120 mots)
+- [ ] **Limites** : spécifiques, pas minimisées (60–90 mots)
+- [ ] **Perspectives** : conclusion ouverte — nouveau problème OU pistes (3–4 concrètes, 80–120 mots)
 - [ ] Total : 500–700 mots
 - [ ] Prose continue par défaut — `###` subheadings seulement si canevas l'impose
 - [ ] Aucun argument nouveau non mentionné dans les parties

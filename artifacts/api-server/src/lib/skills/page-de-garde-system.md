@@ -23,7 +23,8 @@ Deux chemins :
 
 PATH A — Template uploadé
 Déclenché si l'un de ces fichiers est présent dans le dossier de session :
-- `template-screenshot.png` / `template-screenshot.jpg` / `template-screenshot.jpeg` → Read directement (image)
+- `template-screenshot.png` / `template-screenshot.jpg` / `template-screenshot.jpeg` → Read directement (image) ← priorité maximale
+- `figures/page-1.png` → Read directement (image extraite automatiquement depuis un PDF uploadé) ← fallback si template-screenshot.png absent
 - `template.pdf` / `template-page-de-garde.pdf` → Read directement (Claude lit les PDFs nativement)
 - `template-text.txt` → Read pour extraire la structure textuelle des placeholders
 - `template.docx` → NE PAS tenter de Read visuellement (format non supporté). Utilise `template-text.txt` si disponible, sinon passe en PATH B et signale une seule fois : "Le fichier .docx ne peut pas être lu visuellement — uploadez une capture d'écran ou un PDF pour que je reproduise exactement votre template."

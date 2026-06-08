@@ -21,22 +21,31 @@ Fields may be missing. If a field is absent, generate intelligently from the the
 
 A great introduction is continuous flowing prose — no headers, no subheadings, no bullet points, no numbered lists. It reads as a single coherent argument that pulls the reader forward.
 
-The five elements below must all be present, but they are woven into the prose naturally — never labelled or sectioned off:
+**Structure obligatoire — 7 éléments dans cet ordre (instruction du jury) :**
 
-**1. Contexte général**
-Open by situating the theme within its broader landscape — economic, technological, scientific, or professional depending on the field. Establish why this domain matters right now. 2–3 paragraphs. This is where you build stakes: by the end of the context, the reader should feel the research question is inevitable.
+**1. Contexte** (espace + temps)
+Situer le sujet dans son espace géographique/sectoriel ET son époque. "Le contexte, c'est l'espace et le temps" — préciser dès le début. 2–3 paragraphes. Le lecteur doit ressentir pourquoi ce sujet est inévitable maintenant.
 
-**2. Problématique**
-The central problem or research challenge emerges from the context — it should feel like a logical consequence of what was just established, not a separate announcement. Use the `problematique` from memory if provided — treat it as the semantic foundation, reformulate into academic French if needed but preserve its meaning entirely. If empty, derive it from the theme.
+**2. Intérêt du sujet + motivations**
+Expliquer pourquoi ce sujet a été choisi — l'intérêt académique et/ou professionnel, et les motivations personnelles ou contextuelles du choix. Pas de fausse modestie. Clair et direct.
 
-**3. Objectifs**
-Do not list objectives with numbers or bullets. Weave them into the prose: "L'objectif de ce travail est d'analyser… et d'évaluer…" or similar. 3–5 objectives embedded naturally.
+**3. Énoncé du problème**
+Une seule question de recherche centrale — ni deux, ni trois. UNE question, bien individualisée, clairement visible. C'est la problématique. Elle émerge naturellement du contexte exposé.
 
-**4. Méthodologie**
-One paragraph describing the approach — qualitative, quantitative, mixed, or technical development. Use `approche_methodologique` from memory if present. If absent, infer from the theme (technical theme → développement; social/economic → qualitative or quantitative). Mention key tools or frameworks if inferable.
+**4a. Si approche qualitative — Questions sous-jacentes**
+Décliner la problématique en sous-questions de recherche, sous forme de tirets. Maximum 4 questions. Chaque question est une facette du problème central.
 
-**5. Annonce du plan**
-One closing paragraph that announces the structure of the report. Do not use a mechanical formula — vary the phrasing. Name the main parts and briefly describe each in a single fluid sentence.
+**4b. Si approche quantitative — Hypothèses fondées**
+Formuler les hypothèses — mais de manière fondée : justifier le choix AVANT de formuler chaque hypothèse. Expliquer sur quoi on se base (littérature, terrain, théorie) avant d'énoncer H1, H2, H3.
+
+**5. Objectif principal**
+Un objectif unique, formulé clairement — "L'objectif principal de cette recherche est de…" ou en prose naturelle. L'objectif découle de la problématique, il ne la précède pas.
+
+**6. Méthodologie + paradigme épistémologique (bref)**
+Un paragraphe court. Préciser : l'approche (qualitative/quantitative/mixte), le raisonnement (déductif/inductif/abductif), la posture épistémologique (positiviste/interprétativiste/constructiviste), la méthode de collecte des données, la méthode d'analyse. Évoquer sans entrer dans les détails — les détails viennent dans le corps du rapport.
+
+**7. Architecture globale du travail**
+Un paragraphe final annonçant la structure. Comme un résumé du plan. Nommer les parties réelles avec leur contenu — pas une formule mécanique.
 
 ---
 
@@ -90,7 +99,7 @@ Start with:
 
 ## Introduction Générale
 
-Then write the introduction as continuous paragraphs. No `###` subheadings. No bullet points. No numbered lists (except research questions if stated explicitly at the end of the problématique, introduced with a colon or ✓).
+Then write the introduction as continuous paragraphs. No `###` subheadings. No bullet points (except: sous-questions can appear as `–` tirets after the problème paragraph if the approach is qualitative; hypothèses can be numbered H1/H2 if the approach is quantitative).
 
 Do not add a horizontal rule, page break marker, or any wrapper around the output.
 

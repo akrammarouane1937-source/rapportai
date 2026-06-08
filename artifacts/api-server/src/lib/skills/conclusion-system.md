@@ -39,31 +39,37 @@ Extract from these files before writing:
 
 ## STEP 2 — Write the Conclusion Générale
 
-### Structure — four mandatory sections
+**Structure obligatoire — 5 éléments dans cet ordre (instruction du jury) :**
 
-#### 1. Synthèse des résultats (150–200 words)
-- Open with a direct answer to the problématique: "Cette étude a montré que..." or "Les résultats de cette recherche établissent que..."
-- Summarize the theoretical contribution of Partie I — which framework was retained, what it established
-- Summarize the key empirical findings of Partie II — what the data showed, what was measured
-- State each hypothesis outcome explicitly: "L'hypothèse H1 est confirmée / infirmée / partiellement validée."
+#### 1. Rappel du problème (40–60 words)
+- Ouvrir en rappelant la problématique centrale — le libellé exact ou une reformulation fidèle.
+- Serve de pont entre le corps du rapport et la synthèse finale.
+- Ex : "Ce travail avait pour problématique centrale de…"
+
+#### 2. Synthèse des principaux résultats (120–180 words)
+- Synthétiser les résultats les plus essentiels — pas tous les résultats, seulement les plus importants.
+- Séparer clairement apports théoriques (Partie I) et résultats empiriques (Partie II).
 - Be specific — name the models, cite the data, state the results. No generic phrases.
 
-#### 2. Apports et contributions (100–150 words)
-- Theoretical contributions: what this work adds to the academic literature on the theme
-- Practical/managerial contributions: concrete recommendations for practitioners or institutions
-- Specify the added value in the Moroccan context where applicable (AMMC, Bank Al-Maghrib, sectoral actors, Bourse de Casablanca)
+#### 3. Validation des hypothèses (si approche quantitative) (60–100 words)
+- **Uniquement si approche quantitative** : statuer explicitement sur chaque hypothèse.
+- "L'hypothèse H1 est confirmée / infirmée / partiellement validée. En effet, …"
+- Si approche qualitative : omettre ce bloc.
 
-#### 3. Limites de l'étude (80–120 words)
-- Methodological limits: sample size, data availability, study period, data quality constraints
-- Theoretical limits: restrictive assumptions, scope of the model, generalizability to other contexts
-- Do not minimize — well-stated limits demonstrate scientific maturity
-- Each limit must be specific: "La période d'analyse (2019–2023) exclut les effets de..." not "les données ont des limites"
+#### 4. Contributions de la recherche — points forts (80–120 words)
+- Théoriques : ce que ce travail apporte à la littérature sur le sujet.
+- Pratiques/managériales : recommandations concrètes pour les professionnels ou institutions concernés.
+- Ancrage marocain si applicable.
 
-#### 4. Perspectives et voies de recherche futures (100–150 words)
-- 3–4 specific and realistic future research directions, grounded in the identified limits
-- Practical recommendations for professionals or institutions concerned
-- End with a precise, affirmative closing statement — never "les perspectives sont prometteuses"
-- Final sentence must state a specific claim about where research or practice should go next
+#### 5. Limites de l'étude (60–90 words)
+- Limites méthodologiques et théoriques — spécifiques, pas minimisées.
+- Each limit must be specific: "La période d'analyse (2019–2023) exclut les effets de…" not "les données ont des limites".
+
+#### 6. Perspectives — conclusion ouverte (80–120 words)
+- **Conclusion ouverte** : "Tu n'es pas obligé de clore ta recherche — tu dois t'ouvrir à d'autres possibilités."
+- Formuler un nouveau problème à explorer, OU donner des pistes concrètes pour poursuivre ce travail.
+- 3–4 pistes réalistes ancrées dans les limites identifiées.
+- Dernière phrase : affirmation précise sur où la recherche ou la pratique doit aller — jamais vague.
 
 ### Total length: 500–700 words
 
@@ -83,13 +89,17 @@ Extract from these files before writing:
 ```markdown
 ## Conclusion Générale
 
-[Synthèse des résultats — 150–200 mots : réponse directe à la problématique + résultats des hypothèses]
+[Rappel du problème — 40–60 mots : reformulation fidèle de la problématique centrale]
 
-[Apports et contributions — 100–150 mots : apports théoriques + pratiques + ancrage marocain]
+[Synthèse des résultats — 120–180 mots : résultats essentiels (théoriques + empiriques), sans tout énumérer]
 
-[Limites de l'étude — 80–120 mots : limites méthodologiques et théoriques spécifiques]
+[Validation des hypothèses — 60–100 mots : H1 confirmée/infirmée, H2…  — UNIQUEMENT si approche quantitative]
 
-[Perspectives et voies de recherche futures — 100–150 mots : 3–4 pistes concrètes + phrase de clôture affirmative]
+[Contributions — 80–120 mots : apports théoriques + pratiques + ancrage marocain]
+
+[Limites de l'étude — 60–90 mots : limites méthodologiques et théoriques spécifiques]
+
+[Perspectives — 80–120 mots : conclusion ouverte, 3–4 pistes concrètes + phrase de clôture affirmative]
 ```
 
 ---
@@ -123,12 +133,12 @@ The student reads the content in the preview pane — do not repeat or stream th
 - [ ] student_memory.json read — hypotheses and their expected directions noted
 - [ ] partie-i.md read — key theoretical frameworks identified
 - [ ] partie-ii.md read — all hypothesis outcomes and major findings extracted
-- [ ] Synthèse des résultats: 150–200 words, direct answer to problématique
-- [ ] Every hypothesis stated with explicit outcome (confirmed / partially / rejected)
-- [ ] Apports: theoretical + practical + Moroccan context
-- [ ] Limites: specific, not minimized
-- [ ] Perspectives: 3–4 concrete directions + strong closing sentence
+- [ ] **Rappel du problème** : 40–60 mots en ouverture — reformule la problématique
+- [ ] **Synthèse des résultats** : 120–180 mots, résultats essentiels uniquement (pas exhaustifs)
+- [ ] **Hypothèses** : verdict explicite pour chaque H (confirmée/partiellement/infirmée) — SEULEMENT si quantitatif
+- [ ] **Contributions** : théoriques + pratiques + ancrage marocain si pertinent
+- [ ] **Limites** : spécifiques, pas minimisées
+- [ ] **Perspectives** : conclusion ouverte — nouveau problème OU pistes futures (3–4 concrètes)
 - [ ] Total: 500–700 words
-- [ ] No banned vocabulary
 - [ ] Final sentence is a specific affirmation, not vague
 - [ ] Saved to conclusion.md

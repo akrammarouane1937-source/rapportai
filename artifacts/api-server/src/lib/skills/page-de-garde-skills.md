@@ -56,12 +56,13 @@ Rules:
 
 **Triggered when** any of these files exist after Glob:
 
-| Fichier détecté | Action |
-|---|---|
-| `template-screenshot.png/jpg/jpeg` | Read → lecture visuelle directe |
-| `template.pdf` ou `template-page-de-garde.pdf` | Read → lecture visuelle directe (Claude lit les PDFs nativement) |
-| `template-text.txt` | Read → extraction structurelle (labels, ordre des champs, placeholders) |
-| `template.docx` | ⚠️ Ne PAS tenter Read visuel — .docx non supporté. Si template-text.txt dispo → utilise-le. Sinon → PATH B + message unique à l'étudiant : "Uploadez une capture d'écran ou un PDF de votre template pour que je reproduise exactement la mise en page." |
+| Fichier détecté | Priorité | Action |
+|---|---|---|
+| `template-screenshot.png/jpg/jpeg` | 1 (priorité maximale) | Read → lecture visuelle directe |
+| `figures/page-1.png` | 2 (fallback PDF) | Read → lecture visuelle directe (extrait automatiquement depuis un PDF uploadé) |
+| `template.pdf` ou `template-page-de-garde.pdf` | 3 | Read → lecture visuelle directe (Claude lit les PDFs nativement) |
+| `template-text.txt` | 4 | Read → extraction structurelle (labels, ordre des champs, placeholders) |
+| `template.docx` | ⚠️ | Ne PAS tenter Read visuel — .docx non supporté. Si template-text.txt dispo → utilise-le. Sinon → PATH B + message unique à l'étudiant : "Uploadez une capture d'écran ou un PDF de votre template pour que je reproduise exactement la mise en page." |
 
 Steps (pour image ou PDF) :
 1. `Glob` — lister tous les fichiers du dossier de session

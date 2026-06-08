@@ -31,10 +31,17 @@ Generate three blocks in this exact order.
 
 2-3 paragraphs of flowing prose in French. Each paragraph is a continuous block of text — no sub-titles, no bullets, no bold headers inside the text body.
 
-Content to cover across the paragraphs:
-- Context: the domain, the problem, why it matters
-- Methodology: the approach taken, tools or models used
-- Results and contribution: key findings, what the work brings
+**Structure obligatoire — 3 éléments dans cet ordre (instruction du jury) :**
+
+**1. Objectif de la recherche**
+Commence par un verbe à l'infinitif. Un seul objectif principal.
+Exemple : "Analyser l'impact de… et évaluer…" — jamais une liste d'objectifs.
+
+**2. Méthodologie + épistémologie**
+Mentionner : l'approche (qualitative/quantitative/mixte), le raisonnement (déductif/inductif/abductif), la posture épistémologique (positiviste/interprétativiste/constructiviste), et les outils/techniques de collecte et d'analyse utilisés.
+
+**3. Résultats principaux**
+Uniquement les résultats les plus essentiels — 2 à 3 findings maximum, avec des données concrètes si disponibles. Pas exhaustif : seulement ce qui répond directement à l'objectif.
 
 Academic, impersonal register. No first person ("nous avons", "j'ai"). Passive constructions preferred.
 
@@ -105,6 +112,7 @@ Notice: two paragraphs of flowing prose, specific numbers, no sub-titles, no "no
 
 ## Quality rules
 
+- **Structure encadrant** : objectif (verbe infinitif + unique) → méthodologie + épistémologie → résultats essentiels — dans cet ordre
 - Abstract is the English version of the Résumé — same content, translated into natural academic English
 - Keywords must match: if "valorisation" is a French keyword, "valuation" should be the English equivalent
 - Do not copy-paste from source files — synthesize
