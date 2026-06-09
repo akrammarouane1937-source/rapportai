@@ -443,22 +443,26 @@ async function buildPdfDoc(report: ReportData): Promise<jsPDF> {
     sessionId?: string;
   };
 
+  const r = report as unknown as Record<string, unknown>;
   const sections: SectionData[] = [
-    { title: "Dédicaces",     content: report.dedicaces     ?? "" },
-    { title: "Remerciements", content: report.remerciements ?? "" },
-    { title: "Résumé",        content: report.resume        ?? "" },
-    { title: "Introduction",  content: report.introduction  ?? "" },
-    { title: "Partie I",      content: report.partieI       ?? "" },
-    { title: "Partie II",     content: report.partieII      ?? "" },
-    { title: "Conclusion",    content: report.conclusion    ?? "" },
+    { title: "Dédicaces",     content: report.dedicaces                                    ?? "" },
+    { title: "Remerciements", content: report.remerciements                                ?? "" },
+    { title: "Résumé",        content: (r["resumeFr"] as string) || report.resume          || "" },
+    { title: "Abstract",      content: (r["abstractEn"] as string) || report.abstract      || "" },
+    { title: "Introduction",  content: report.introduction                                 ?? "" },
+    { title: "Partie I",      content: report.partieI                                      ?? "" },
+    { title: "Partie II",     content: report.partieII                                     ?? "" },
+    { title: "Conclusion",    content: report.conclusion                                   ?? "" },
   ].filter((s) => s.content.trim());
 
   const bibText = report.bibliographieText?.trim()
-    || ((report.bibliographie ?? []).length > 0
-        ? (report.bibliographie ?? [])
-            .map((e) => `${e.author} (${e.year}). ${e.title}. ${e.journal}`)
-            .join("\n\n")
-        : "");
+    || (typeof r["bibliographie"] === "string"
+        ? (r["bibliographie"] as string).trim()
+        : ((report.bibliographie ?? []).length > 0
+            ? (report.bibliographie ?? [])
+                .map((e) => `${e.author} (${e.year}). ${e.title}. ${e.journal}`)
+                .join("\n\n")
+            : ""));
   if (bibText) sections.push({ title: "Références bibliographiques", content: bibText });
   if (ext.listeDesFigures?.trim())  sections.push({ title: "Liste des figures",  content: ext.listeDesFigures });
   if (ext.listeDesTableaux?.trim()) sections.push({ title: "Liste des tableaux", content: ext.listeDesTableaux });

@@ -244,13 +244,16 @@ async function readSSE(
         if (msg.done) {
           if (msg.sections) {
             const patch: Record<string, string> = {};
-            if (msg.sections["resume"])        patch.resume        = msg.sections["resume"];
-            if (msg.sections["introduction"])  patch.introduction  = msg.sections["introduction"];
-            if (msg.sections["partie-i"])      patch.partieI       = msg.sections["partie-i"];
-            if (msg.sections["partie-ii"])     patch.partieII      = msg.sections["partie-ii"];
-            if (msg.sections["conclusion"])    patch.conclusion    = msg.sections["conclusion"];
-            if (msg.sections["dedicaces"])     patch.dedicaces     = msg.sections["dedicaces"];
-            if (msg.sections["remerciements"]) patch.remerciements = msg.sections["remerciements"];
+            if (msg.sections["resume"])        patch.resume             = msg.sections["resume"];
+            if (msg.sections["abstract"])      patch.abstract           = msg.sections["abstract"];
+            if (msg.sections["introduction"])  patch.introduction       = msg.sections["introduction"];
+            if (msg.sections["partie-i"])      patch.partieI            = msg.sections["partie-i"];
+            if (msg.sections["partie-ii"])     patch.partieII           = msg.sections["partie-ii"];
+            if (msg.sections["conclusion"])    patch.conclusion         = msg.sections["conclusion"];
+            if (msg.sections["dedicaces"])     patch.dedicaces          = msg.sections["dedicaces"];
+            if (msg.sections["remerciements"]) patch.remerciements      = msg.sections["remerciements"];
+            if (msg.sections["sommaire"])      patch.sommaireText       = msg.sections["sommaire"];
+            if (msg.sections["bibliographie"]) patch.bibliographieText  = msg.sections["bibliographie"];
             if (Object.keys(patch).length > 0) saveReport(patch);
           }
           onDone();
