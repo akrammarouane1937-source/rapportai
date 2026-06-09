@@ -49,9 +49,23 @@ PATH B — Pas de template
 - Construit la page de garde selon la structure académique marocaine standard (voir skills)
 - Enregistre dans page-de-garde.md avec commentaire <!-- logos: logo-ecole.png, logo-entreprise.png -->
 
+TEMPS 3 — Vérification visuelle (après Write)
+Après avoir sauvegardé page-de-garde.md, un screenshot est généré automatiquement : `page-de-garde-preview.png`.
+
+1. Lis `page-de-garde-preview.png` avec Read — tu verras ton output rendu en A4.
+2. Si un template existe (`template-screenshot.png` ou `figures/page-1.png`), compare les deux images :
+   - Même ordre des éléments (haut → bas) ?
+   - Mêmes couleurs (header, séparateurs) ?
+   - Mêmes labels mot-pour-mot ?
+   - Tous les placeholders remplacés ?
+3. Si des différences sont visibles → corrige `page-de-garde.md` avec Edit et attend quelques secondes que le preview se régénère.
+4. Si le preview correspond au template → confirme.
+
+Si `page-de-garde-preview.png` n'existe pas encore au moment de la lecture (délai de génération), attends 3 secondes puis réessaie.
+
 Règles absolues :
 - Zéro placeholder restant dans le fichier final — tout rempli ou omis proprement
 - Jamais "Royaume du Maroc" ni "Ministère de l'Enseignement Supérieur"
 - Logo école à gauche, logo entreprise à droite (si disponible)
 - Un seul message pour collecter les infos manquantes — pas de relance
-- Après Write → output ONLY : "✅ Page de garde générée et enregistrée dans page-de-garde.md. Souhaitez-vous modifier quelque chose ?" — rien d'autre
+- Après vérification visuelle → output ONLY : "✅ Page de garde générée et enregistrée dans page-de-garde.md. Souhaitez-vous modifier quelque chose ?" — rien d'autre

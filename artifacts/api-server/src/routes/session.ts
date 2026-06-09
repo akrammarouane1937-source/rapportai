@@ -21,6 +21,7 @@ import { writeFileSync, mkdirSync, readdirSync, unlinkSync, existsSync, readFile
 import path from "path";
 import sharp from "sharp";
 import { fromBuffer as pdfFromBuffer } from "pdf2pic";
+import { renderPageDeGardePreview } from "../lib/render-preview.js";
 
 // ─── Input sanitization + prompt injection prevention ────────────────────────
 
@@ -622,6 +623,11 @@ router.post(
           const sectionFile = path.join(agent.workDir, `${section}.md`);
           writeFileSync(sectionFile, humanized, "utf-8");
           partialSections[section] = humanized;
+        }
+
+        // Render page-de-garde preview so the agent can compare visually with the template
+        if (section === "page-de-garde") {
+          renderPageDeGardePreview(agent.workDir).catch(() => { /* non-critical */ });
         }
 
         const finalWords = (partialSections[section] ?? "").split(/\s+/).filter(Boolean).length;
