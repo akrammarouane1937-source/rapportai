@@ -79,14 +79,17 @@ async function prefetchFigureImagesPdf(
 }
 
 const SECTION_COLORS: Record<string, RGB> = {
-  "Dédicaces":           [168, 85,  247],
-  "Remerciements":       [139, 92,  246],
-  "Résumé":              [99,  102, 241],
-  "Introduction":        [124, 58,  237],
-  "Partie I":            [37,  99,  235],
-  "Partie II":           [8,   145, 178],
-  "Conclusion":          [5,   150, 105],
-  "Bibliographie":       [107, 114, 128],
+  "Dédicaces":                    [168, 85,  247],
+  "Remerciements":                [139, 92,  246],
+  "Résumé":                       [99,  102, 241],
+  "Abstract":                     [99,  102, 241],
+  "Introduction":                 [124, 58,  237],
+  "Partie I":                     [37,  99,  235],
+  "Partie II":                    [8,   145, 178],
+  "Conclusion":                   [5,   150, 105],
+  "Références bibliographiques":  [107, 114, 128],
+  "Liste des figures":            [107, 114, 128],
+  "Liste des tableaux":           [107, 114, 128],
 };
 
 const LETTERS = "ABCDEFGHIJKLMNOPQRSTUVWXYZ";
@@ -179,6 +182,20 @@ function renderSections(
         flushBuf();
         const item = cleanInline(line.replace(/^[-*]\s+/, ""));
         const wrapped = doc.splitTextToSize(`• ${item}`, USABLE_W - 6);
+        doc.setFont("helvetica", "normal");
+        doc.setFontSize(11);
+        doc.setTextColor(30, 30, 30);
+        for (const l of wrapped) {
+          checkY(6);
+          doc.text(l, MARGIN_L + 5, y);
+          y += 6;
+        }
+
+      } else if (/^\s*\d+\.\s+/.test(line)) {
+        flushBuf();
+        const item = cleanInline(line.replace(/^\s*\d+\.\s+/, ""));
+        const num  = (line.match(/^\s*(\d+)\./) ?? [])[1] ?? "1";
+        const wrapped = doc.splitTextToSize(`${num}. ${item}`, USABLE_W - 6);
         doc.setFont("helvetica", "normal");
         doc.setFontSize(11);
         doc.setTextColor(30, 30, 30);
