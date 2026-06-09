@@ -475,32 +475,37 @@ function buildPageDeGarde(d: Report): (Paragraph | Table)[] {
 }
 
 function buildDedicaces(d: Report): Paragraph[] {
+  if (!d.dedicaces?.trim()) return [];
   return [
     heading1("Dédicaces"),
     emptyLine(),
-    ...markdownToParas(d.dedicaces || "À ma famille et à mes proches."),
+    ...markdownToParas(d.dedicaces),
   ];
 }
 
 function buildRemerciements(d: Report): Paragraph[] {
+  if (!d.remerciements?.trim()) return [];
   return [
     heading1("Remerciements"),
     emptyLine(),
-    ...markdownToParas(d.remerciements || ""),
+    ...markdownToParas(d.remerciements),
   ];
 }
 
 function buildResume(d: Report): Paragraph[] {
+  const hasFr = !!d.resumeFr?.trim();
+  const hasEn = !!d.abstractEn?.trim();
+  if (!hasFr && !hasEn) return [];
   const mots = (d.motsCles || []).join(", ");
-  return [
-    heading1("Résumé"),
-    emptyLine(),
-    ...markdownToParas(d.resumeFr || ""),
-    ...(mots ? [emptyLine(), bodyPara(`Mots-clés : ${mots}`, { indent: { firstLine: 0 } })] : []),
-    heading1("Abstract"),
-    emptyLine(),
-    ...markdownToParas(d.abstractEn || ""),
-  ];
+  const paras: Paragraph[] = [];
+  if (hasFr) {
+    paras.push(heading1("Résumé"), emptyLine(), ...markdownToParas(d.resumeFr!));
+    if (mots) paras.push(emptyLine(), bodyPara(`Mots-clés : ${mots}`, { indent: { firstLine: 0 } }));
+  }
+  if (hasEn) {
+    paras.push(heading1("Abstract"), emptyLine(), ...markdownToParas(d.abstractEn!));
+  }
+  return paras;
 }
 
 function buildAbreviations(d: Report): Paragraph[] {
@@ -533,90 +538,44 @@ function parseSommaireMarkdown(md: string): Array<{ level: number; text: string 
   return entries;
 }
 
-// Sommaire — front matter overview. Uses the AI-generated sommaire markdown when available;
-// falls back to generic structure from partieI/II title fields.
+// Sommaire — front matter overview using the AI-generated sommaire markdown.
+// Returns [] if sommaire was not generated yet.
 function buildSommaire(d: Report): Paragraph[] {
-  const sommaireLines: Paragraph[] = [heading1("Sommaire"), emptyLine()];
-
   const parsed = parseSommaireMarkdown(d.sommaire || "");
+  if (parsed.length === 0) return [];
 
-  if (parsed.length > 0) {
-    // Render the real AI-generated plan
-    const indents = [0, 0, convertMillimetersToTwip(8), convertMillimetersToTwip(16), convertMillimetersToTwip(24)];
-    for (const { level, text } of parsed) {
-      const indent = indents[Math.min(level, 4)] ?? 0;
-      const bold = level <= 2;
-      sommaireLines.push(new Paragraph({
-        indent: { left: indent, firstLine: 0 },
-        spacing: { ...LINE_SPACING, before: level <= 2 ? 120 : 60, after: level <= 2 ? 60 : 30 },
-        children: [new TextRun({ text, font: FONT, size: BODY_PT, bold })],
-      }));
-    }
-  } else {
-    // Fallback: build from partieI/II title fields
-    const partieITitle  = d.partieITitle  || "Partie I : Revue de Littérature";
-    const partieIITitle = d.partieIITitle || "Partie II : Étude Empirique";
-
-    sommaireLines.push(bodyPara("Introduction Générale", { indent: { firstLine: 0 } }));
+  const sommaireLines: Paragraph[] = [heading1("Sommaire"), emptyLine()];
+  const indents = [0, 0, convertMillimetersToTwip(8), convertMillimetersToTwip(16), convertMillimetersToTwip(24)];
+  for (const { level, text } of parsed) {
+    const indent = indents[Math.min(level, 4)] ?? 0;
+    const bold = level <= 2;
     sommaireLines.push(new Paragraph({
-      spacing: PARA_SPACING,
-      children: [new TextRun({ text: partieITitle, font: FONT, size: BODY_PT, bold: true })],
+      indent: { left: indent, firstLine: 0 },
+      spacing: { ...LINE_SPACING, before: level <= 2 ? 120 : 60, after: level <= 2 ? 60 : 30 },
+      children: [new TextRun({ text, font: FONT, size: BODY_PT, bold })],
     }));
-    for (let i = 1; i <= (d.partieIChapters || 2); i++) {
-      sommaireLines.push(new Paragraph({
-        indent: { left: convertMillimetersToTwip(12), firstLine: 0 },
-        spacing: { ...LINE_SPACING, before: 60, after: 60 },
-        children: [new TextRun({ text: `Chapitre ${i}`, font: FONT, size: BODY_PT })],
-      }));
-    }
-    sommaireLines.push(new Paragraph({
-      spacing: PARA_SPACING,
-      children: [new TextRun({ text: partieIITitle, font: FONT, size: BODY_PT, bold: true })],
-    }));
-    for (let i = 1; i <= (d.partieIIChapters || 2); i++) {
-      sommaireLines.push(new Paragraph({
-        indent: { left: convertMillimetersToTwip(12), firstLine: 0 },
-        spacing: { ...LINE_SPACING, before: 60, after: 60 },
-        children: [new TextRun({ text: `Chapitre ${i}`, font: FONT, size: BODY_PT })],
-      }));
-    }
-    sommaireLines.push(bodyPara("Conclusion Générale", { indent: { firstLine: 0 } }));
-    sommaireLines.push(bodyPara("Bibliographie",       { indent: { firstLine: 0 } }));
   }
-
   return sommaireLines;
 }
 
 function buildIntroduction(d: Report, imageMap?: Map<string, Uint8Array>): Paragraph[] {
-  return [
-    heading1("Introduction Générale"),
-    emptyLine(),
-    ...markdownToParas(d.introduction || "", imageMap),
-  ];
+  if (!d.introduction?.trim()) return [];
+  return [heading1("Introduction Générale"), emptyLine(), ...markdownToParas(d.introduction, imageMap)];
 }
 
 function buildPartieI(d: Report, imageMap?: Map<string, Uint8Array>): Paragraph[] {
-  return [
-    heading1("Partie I"),
-    emptyLine(),
-    ...markdownToParas(d.partieI || "", imageMap),
-  ];
+  if (!d.partieI?.trim()) return [];
+  return [heading1("Partie I"), emptyLine(), ...markdownToParas(d.partieI, imageMap)];
 }
 
 function buildPartieII(d: Report, imageMap?: Map<string, Uint8Array>): Paragraph[] {
-  return [
-    heading1("Partie II"),
-    emptyLine(),
-    ...markdownToParas(d.partieII || "", imageMap),
-  ];
+  if (!d.partieII?.trim()) return [];
+  return [heading1("Partie II"), emptyLine(), ...markdownToParas(d.partieII, imageMap)];
 }
 
 function buildConclusion(d: Report, imageMap?: Map<string, Uint8Array>): Paragraph[] {
-  return [
-    heading1("Conclusion Générale"),
-    emptyLine(),
-    ...markdownToParas(d.conclusion || "", imageMap),
-  ];
+  if (!d.conclusion?.trim()) return [];
+  return [heading1("Conclusion Générale"), emptyLine(), ...markdownToParas(d.conclusion, imageMap)];
 }
 
 // Paragraph for a single bibliography entry with APA hanging indent.
@@ -781,12 +740,8 @@ function buildTableDesFigures(listeDesFigures?: string): Paragraph[] {
 
   // Fallback: build from approved figures metadata
   const figs = getApprovedFigures();
+  if (figs.length === 0) return [];
   const paras: Paragraph[] = [heading1("Liste des figures"), emptyLine()];
-
-  if (figs.length === 0) {
-    paras.push(bodyPara("(Aucune figure ajoutée)"));
-    return paras;
-  }
 
   for (const fig of figs) {
     paras.push(new Paragraph({
@@ -814,15 +769,9 @@ function buildTableDesFigures(listeDesFigures?: string): Paragraph[] {
 }
 
 function buildListeDesTableaux(listeDesTableaux?: string): Paragraph[] {
-  if (listeDesTableaux?.trim()) {
-    const content = stripLeadingListeHeading(listeDesTableaux.trim(), "liste des tableaux");
-    return [heading1("Liste des tableaux"), emptyLine(), ...markdownToParas(content)];
-  }
-  return [
-    heading1("Liste des tableaux"),
-    emptyLine(),
-    bodyPara("(Les tableaux seront numérotés automatiquement lors de la mise en page finale)"),
-  ];
+  if (!listeDesTableaux?.trim()) return [];
+  const content = stripLeadingListeHeading(listeDesTableaux.trim(), "liste des tableaux");
+  return [heading1("Liste des tableaux"), emptyLine(), ...markdownToParas(content)];
 }
 
 const ANNEXE_LETTERS = "ABCDEFGHIJKLMNOPQRSTUVWXYZ";
@@ -863,10 +812,13 @@ function buildAnnexes(d: Report): Paragraph[] {
 
 // Table des Matières — Word TOC field with page numbers + hyperlinks.
 // updateFields: true on Document forces Word to populate it automatically on open.
+// The title uses a plain bold paragraph (not Heading1) so it doesn't appear inside the TOC.
 function buildTableDesMatieres(): Paragraph[] {
   return [
-    heading1("Table des Matières"),
-    emptyLine(),
+    new Paragraph({
+      spacing: { before: 0, after: 240 },
+      children: [new TextRun({ text: "Table des Matières", font: FONT, size: H1_PT, bold: true })],
+    }),
     new TableOfContents("Table des Matières", {
       hyperlink:         true,
       headingStyleRange: "1-3",
@@ -992,29 +944,7 @@ export async function generateDocx(data: Report, formatting?: FormattingPrefs): 
         children: buildPageDeGarde(data),
       },
       {
-        // Front matter — roman numerals (i, ii, iii…)
-        properties: {
-          page: {
-            margin: MARGIN,
-            pageNumbers: { start: 1, formatType: NumberFormat.LOWER_ROMAN },
-          },
-        },
-        headers: { default: header },
-        footers: { default: buildFooter() },
-        children: [
-          // Table des matières en début de document (avant Dédicaces)
-          ...buildTableDesMatieres(),
-          buildTocInstruction(),
-          ...buildDedicaces(data),
-          ...buildRemerciements(data),
-          ...buildResume(data),
-          ...buildAbreviations(data),
-          ...buildSommaire(data),
-          ...(data.listeDesFigures?.trim() || getApprovedFigures().length > 0 ? buildTableDesFigures(data.listeDesFigures) : []),
-        ],
-      },
-      {
-        // Body + back matter — arabic numerals starting at 1
+        // All content — Arabic page numbers 1, 2, 3… throughout
         properties: {
           page: {
             margin: MARGIN,
@@ -1024,6 +954,16 @@ export async function generateDocx(data: Report, formatting?: FormattingPrefs): 
         headers: { default: header },
         footers: { default: buildFooter() },
         children: [
+          // Front matter
+          ...buildTableDesMatieres(),
+          buildTocInstruction(),
+          ...buildDedicaces(data),
+          ...buildRemerciements(data),
+          ...buildResume(data),
+          ...buildAbreviations(data),
+          ...buildSommaire(data),
+          ...buildTableDesFigures(data.listeDesFigures),
+          // Body
           ...buildIntroduction(data, imageMap),
           ...buildPartieI(data, imageMap),
           ...buildFiguresSection("Partie I"),
@@ -1037,7 +977,6 @@ export async function generateDocx(data: Report, formatting?: FormattingPrefs): 
               if (id === "tableDesFigures")  return buildTableDesFigures(data.listeDesFigures);
               if (id === "listeDesTableaux") return buildListeDesTableaux(data.listeDesTableaux);
               if (id === "annexes")          return buildAnnexes(data);
-              // tableDesMatieres is now always in front-matter — skip to avoid duplication
               if (id === "tableDesMatieres") return [];
               return [];
             }),
