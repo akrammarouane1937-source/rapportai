@@ -1,8 +1,8 @@
 ---
 name: rapportai-abbreviations
 description: >
-  Base de connaissances pour l'agent Abréviations : liste de sigles courants par domaine
-  dans les PFE marocains, règles d'extraction, et format de sortie JSON.
+  Base de connaissances pour l'agent Abréviations : règles d'extraction,
+  ordre de résolution (texte → WebSearch → [À COMPLÉTER]), et format de sortie JSON.
   Lis ce fichier AVANT d'extraire les abréviations.
 allowed-tools:
   - Read
@@ -14,106 +14,71 @@ allowed-tools:
 
 # RapportAI — Abréviations : base de connaissances
 
+Cet agent est domaine-agnostique. Il fonctionne pour tous les étudiants :
+médecine, droit, informatique, finance, génie civil, agronomie, etc.
+Il n'y a pas de liste statique de sigles — l'agent extrait du texte et cherche en ligne.
+
 ---
 
 ## ═══ RÈGLE D'OR ═══
 
-1. **Jamais inventer** une signification — utilise `[À COMPLÉTER]` si incertain.
-2. **JSON uniquement** — la sortie doit être un tableau JSON valide, rien d'autre.
-3. **Déduplique** — chaque sigle une seule occurrence, même s'il apparaît 50 fois dans le texte.
-4. **Ordre alphabétique** par `abbr`.
-5. **Longueur** — 2 lettres minimum. Ne pas inclure les abréviations standard (p., n°, etc.).
+1. **Texte d'abord** — si la définition est dans le rapport, extrais-la directement.
+2. **WebSearch avant d'abandonner** — cherche toujours avant de mettre `[À COMPLÉTER]`.
+3. **JSON uniquement** — la sortie doit être un tableau JSON valide, rien d'autre.
+4. **Déduplique** — chaque sigle une seule occurrence.
+5. **Ordre alphabétique** par `abbr`.
+6. **2 lettres minimum** — exclure les abréviations standard (p., n°, vol., cf., etc.).
 
 ---
 
-## Sigles fréquents par domaine
+## Ordre de résolution pour chaque sigle
 
-### Finance & Marchés de capitaux (ENCG, ISCAE, HEM…)
+### Étape 1 — Chercher dans le texte
 
-| Sigle | Signification |
-|-------|--------------|
-| AMMC | Autorité Marocaine du Marché des Capitaux |
-| BAM | Bank Al-Maghrib |
-| BFR | Besoin en Fonds de Roulement |
-| CAF | Capacité d'Autofinancement |
-| CDVM | Conseil Déontologique des Valeurs Mobilières (remplacé par AMMC) |
-| DCF | Discounted Cash Flow (Flux de Trésorerie Actualisés) |
-| EBE | Excédent Brut d'Exploitation |
-| EBITDA | Earnings Before Interest, Taxes, Depreciation and Amortization |
-| MASI | Moroccan All Shares Index |
-| OPCVM | Organismes de Placement Collectif en Valeurs Mobilières |
-| ROE | Return on Equity |
-| ROI | Return on Investment |
-| TRI | Taux de Rentabilité Interne |
-| VAN | Valeur Actuelle Nette |
-| WACC | Weighted Average Cost of Capital |
+Le texte introduit souvent les acronymes explicitement :
 
-### Informatique & Systèmes d'information
+```
+"la Robotic Process Automation (RPA)…"          → RPA = Robotic Process Automation
+"RPA (Robotic Process Automation)…"             → même résultat
+"HTA (Hypertension Artérielle)…"                → HTA = Hypertension Artérielle
+"l'Intelligence Artificielle (IA)…"             → IA = Intelligence Artificielle
+"le Bureau International du Travail (BIT)…"     → BIT = Bureau International du Travail
+```
 
-| Sigle | Signification |
-|-------|--------------|
-| API | Application Programming Interface |
-| BI | Business Intelligence |
-| CRM | Customer Relationship Management |
-| DSI | Direction des Systèmes d'Information |
-| ERP | Enterprise Resource Planning |
-| IA | Intelligence Artificielle |
-| IoT | Internet of Things |
-| KPI | Key Performance Indicator |
-| ML | Machine Learning |
-| RPA | Robotic Process Automation |
-| SaaS | Software as a Service |
-| SI | Système d'Information |
-| SQL | Structured Query Language |
-| UML | Unified Modeling Language |
+Si trouvé dans le texte → utiliser cette définition directement, sans chercher en ligne.
 
-### Audit & Contrôle de gestion
+### Étape 2 — WebSearch si absent du texte
 
-| Sigle | Signification |
-|-------|--------------|
-| CAC | Commissaire aux Comptes |
-| COSO | Committee of Sponsoring Organizations |
-| IAS | International Accounting Standards |
-| IFRS | International Financial Reporting Standards |
-| ISA | International Standards on Auditing |
-| PCGE | Plan Comptable Général des Entreprises (Maroc) |
-| PDCA | Plan-Do-Check-Act (Cycle de Deming) |
+Si l'acronyme apparaît sans définition explicite, faire une recherche :
 
-### Management & RH
+```
+WebSearch("RPA signification")              → Robotic Process Automation
+WebSearch("HTA définition médicale")        → Hypertension Artérielle
+WebSearch("IRC insuffisance rénale")        → Insuffisance Rénale Chronique
+WebSearch("OHADA droit des affaires")       → Organisation pour l'Harmonisation en Afrique du Droit des Affaires
+WebSearch("MASI bourse Maroc")              → Moroccan All Shares Index
+WebSearch("PCM génie chimique")             → Procédé de Changement de Matière / Process Control Module
+```
 
-| Sigle | Signification |
-|-------|--------------|
-| BSC | Balanced Scorecard |
-| DRH | Direction des Ressources Humaines |
-| GRH | Gestion des Ressources Humaines |
-| PME | Petite et Moyenne Entreprise |
-| RSE | Responsabilité Sociale des Entreprises |
-| SWOT | Strengths, Weaknesses, Opportunities, Threats |
-| TPE | Très Petite Entreprise |
+Adapter la recherche au domaine du rapport (lu depuis `profile.json` → `filiere` ou `theme`).
 
-### Contexte économique marocain
+### Étape 3 — [À COMPLÉTER] uniquement si WebSearch échoue
 
-| Sigle | Signification |
-|-------|--------------|
-| ANPME | Agence Nationale pour la Promotion de la PME |
-| CGEM | Confédération Générale des Entreprises du Maroc |
-| HCP | Haut-Commissariat au Plan |
-| OCP | Office Chérifien des Phosphates |
-| PIB | Produit Intérieur Brut |
+Après 1 tentative de recherche sans résultat clair → `"[À COMPLÉTER]"`.
 
 ---
 
-## Pattern de détection dans le texte
+## Ce qu'il faut extraire
 
-Le texte peut introduire les acronymes de deux façons :
+**Inclure :**
+- Acronymes en majuscules de 2+ lettres : `RPA`, `IA`, `HTA`, `ONU`, `OHADA`, `CNSS`
+- Sigles mixtes utilisés comme acronymes : `Covid`, `OCPe`
+- Tout terme introduit avec le pattern `[Nom complet] (ACRONYME)` ou `ACRONYME (Nom complet)`
 
-**Façon 1 — Définition explicite :**
-> "la Robotic Process Automation **(RPA)**…" → `{"abbr": "RPA", "sig": "Robotic Process Automation"}`
-> "**RPA** (Robotic Process Automation)…" → même résultat
-
-**Façon 2 — Usage implicite :**
-> "…les OPCVM marocains…" sans définition → cherche dans la table ci-dessus
-> Si absent de la table et contexte insuffisant → `{"abbr": "OPCVM", "sig": "[À COMPLÉTER]"}`
+**Exclure :**
+- Abréviations courantes françaises : `p.`, `n°`, `vol.`, `fig.`, `etc.`, `cf.`, `ibid.`, `art.`
+- Noms propres de personnes
+- Mots communs en majuscules en début de phrase
 
 ---
 
@@ -122,26 +87,27 @@ Le texte peut introduire les acronymes de deux façons :
 ❌ **Sortie markdown** : `## Abréviations\n\n| RPA | Robotic... |`
    ✅ JSON uniquement : `[{"abbr": "RPA", "sig": "..."}]`
 
-❌ **Noms propres non-acronymes** : `{"abbr": "Maroc", "sig": "..."}`
-   ✅ Acronymes uniquement — au moins 2 lettres majuscules
+❌ **Mettre `[À COMPLÉTER]` sans avoir cherché**
+   ✅ Toujours WebSearch d'abord
 
-❌ **Abréviations standard françaises** : `p.`, `n°`, `vol.`, `fig.`, `cf.`, `art.`
-   ✅ Exclure — pas de valeur dans la liste des abréviations académiques
+❌ **Signification inventée sans vérification**
+   ✅ Si incertain après recherche → `[À COMPLÉTER]`
 
 ❌ **Doublons** : RPA apparaît 20 fois → une seule entrée JSON
    ✅ Un sigle = une entrée
 
-❌ **Signification inventée** : `{"abbr": "RISMA", "sig": "Réseau International des Sociétés Marocaines Associées"}`
-   ✅ Si inconnu : `{"abbr": "RISMA", "sig": "[À COMPLÉTER]"}`
+❌ **Biais de domaine** : ne supposer que finance ou informatique
+   ✅ Adapter la recherche au domaine de l'étudiant (médecine, droit, génie, etc.)
 
 ---
 
 ## Quality checklist
 
+- [ ] `profile.json` lu pour connaître le domaine de l'étudiant
 - [ ] Tous les fichiers .md lus avec Glob
 - [ ] Acronymes 2+ lettres extraits
-- [ ] Significations vérifiées (texte + table ci-dessus)
-- [ ] `[À COMPLÉTER]` utilisé pour les cas incertains
+- [ ] Définitions trouvées dans le texte ou via WebSearch
+- [ ] `[À COMPLÉTER]` utilisé uniquement après tentative de recherche
 - [ ] Dédupliqué — chaque sigle une seule fois
 - [ ] Trié alphabétiquement par `abbr`
 - [ ] Sortie = JSON pur, aucun texte avant/après
