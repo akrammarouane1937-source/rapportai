@@ -6,12 +6,12 @@ import {
   Header,
   HeadingLevel,
   ImageRun,
+  LevelFormat,
   LineRuleType,
   NumberFormat,
   Packer,
   PageNumber,
   Paragraph,
-  StyleLevel,
   Table,
   TableCell,
   TableRow,
@@ -90,6 +90,26 @@ function parseInlineRuns(text: string): TextRun[] {
   }
   if (last < text.length) runs.push(bodyRun(text.slice(last)));
   return runs.length > 0 ? runs : [bodyRun(text)];
+}
+
+// Numbering references — must match the config in the Document constructor below
+const BULLET_LIST_REF   = "rapportai-bullet";
+const NUMBERED_LIST_REF = "rapportai-numbered";
+
+function bulletListPara(text: string, level = 0): Paragraph {
+  return new Paragraph({
+    numbering: { reference: BULLET_LIST_REF, level },
+    spacing: { ...LINE_SPACING, before: 60, after: 60 },
+    children: parseInlineRuns(text),
+  });
+}
+
+function numberedListPara(text: string): Paragraph {
+  return new Paragraph({
+    numbering: { reference: NUMBERED_LIST_REF, level: 0 },
+    spacing: { ...LINE_SPACING, before: 60, after: 60 },
+    children: parseInlineRuns(text),
+  });
 }
 
 function bodyPara(text: string, extra: Record<string, unknown> = {}): Paragraph {
@@ -234,7 +254,7 @@ function imagePlaceholderPara(alt: string): Paragraph {
 
 // imageMap: pre-fetched figure images keyed by their "figures/page-N.png" path
 function markdownToParas(md: string, imageMap?: Map<string, Uint8Array>): Paragraph[] {
-  if (!md?.trim()) return [bodyPara("(Section non générée)")];
+  if (!md?.trim()) return [];
 
   const lines = md.split("\n");
   const paras: Paragraph[] = [];
@@ -274,13 +294,24 @@ function markdownToParas(md: string, imageMap?: Map<string, Uint8Array>): Paragr
         const imgMatch = line.match(IMAGE_RE);
         const altText = imgMatch?.[1] ?? "";
         const imgPath = imgMatch?.[2] ?? "";
-        // Try to embed the actual image if we have it in the map
         const imgData = imageMap?.get(imgPath);
         if (imgData) {
           paras.push(imageRunPara(imgData));
         } else {
           paras.push(imagePlaceholderPara(altText));
         }
+      // Bullet list item (- text or * text, with optional leading spaces for nesting)
+      } else if (/^(\s{0,4})[-*]\s+/.test(line)) {
+        flushBuf();
+        const indent = (line.match(/^(\s*)/)?.[1].length ?? 0);
+        const level = Math.min(Math.floor(indent / 2), 1);
+        const text = line.replace(/^\s*[-*]\s+/, "").trim();
+        if (text) paras.push(bulletListPara(text, level));
+      // Numbered list item (1. text, 2. text, …)
+      } else if (/^\s*\d+\.\s+/.test(line)) {
+        flushBuf();
+        const text = line.replace(/^\s*\d+\.\s+/, "").trim();
+        if (text) paras.push(numberedListPara(text));
       } else {
         buf += (buf ? " " : "") + line;
       }
@@ -593,7 +624,7 @@ function bibEntryPara(text: string): Paragraph {
 // List items (-, *, 1.) and numbered entries are emitted as individual hanging-indent
 // paragraphs — never concatenated — to match APA one-entry-per-paragraph convention.
 function bibMarkdownToParas(md: string): Paragraph[] {
-  if (!md?.trim()) return [bodyPara("(Section non générée)")];
+  if (!md?.trim()) return [];
   const lines = md.split("\n");
   const paras: Paragraph[] = [];
   let buf = "";
@@ -822,11 +853,6 @@ function buildTableDesMatieres(): Paragraph[] {
     new TableOfContents("Table des Matières", {
       hyperlink:         true,
       headingStyleRange: "1-3",
-      stylesWithLevels: [
-        new StyleLevel("Heading1", 1),
-        new StyleLevel("Heading2", 2),
-        new StyleLevel("Heading3", 3),
-      ],
     }) as unknown as Paragraph,
   ];
 }
@@ -862,24 +888,27 @@ function buildParagraphStyles() {
     name: "Heading 1",
     basedOn: "Normal",
     next: "Normal",
+    quickFormat: true,
     run: { font: FONT, size: H1_PT, bold: true },
-    paragraph: { spacing: { before: 480, after: 240 }, alignment: AlignmentType.CENTER, keepNext: true },
+    paragraph: { spacing: { before: 480, after: 240 }, alignment: AlignmentType.CENTER, keepNext: true, outlineLevel: 0 },
   },
   {
     id: "Heading2",
     name: "Heading 2",
     basedOn: "Normal",
     next: "Normal",
+    quickFormat: true,
     run: { font: FONT, size: H2_PT, bold: true },
-    paragraph: { spacing: { before: 360, after: 180 }, keepNext: true },
+    paragraph: { spacing: { before: 360, after: 180 }, keepNext: true, outlineLevel: 1 },
   },
   {
     id: "Heading3",
     name: "Heading 3",
     basedOn: "Normal",
     next: "Normal",
+    quickFormat: true,
     run: { font: FONT, size: H3_PT, bold: true },
-    paragraph: { spacing: { before: 240, after: 120 }, keepNext: true },
+    paragraph: { spacing: { before: 240, after: 120 }, keepNext: true, outlineLevel: 2 },
   },
   {
     id: "Heading4",
@@ -887,7 +916,7 @@ function buildParagraphStyles() {
     basedOn: "Normal",
     next: "Normal",
     run: { font: FONT, size: BODY_PT, bold: true, italics: true },
-    paragraph: { spacing: { before: 180, after: 80 }, keepNext: true },
+    paragraph: { spacing: { before: 180, after: 80 }, keepNext: true, outlineLevel: 3 },
   },
   {
     id: "Caption",
@@ -935,8 +964,48 @@ export async function generateDocx(data: Report, formatting?: FormattingPrefs): 
   const imageMap = await prefetchFigureImages(data);
 
   const doc = new Document({
-    features: { updateFields: true },  // forces Word to update TOC on open
-    styles: { paragraphStyles: PARAGRAPH_STYLES },
+    features: { updateFields: true },
+    styles: {
+      default: {
+        document: { run: { font: FONT, size: BODY_PT } },
+      },
+      paragraphStyles: PARAGRAPH_STYLES,
+    },
+    numbering: {
+      config: [
+        {
+          reference: BULLET_LIST_REF,
+          levels: [
+            {
+              level: 0,
+              format: LevelFormat.BULLET,
+              text: "•",
+              alignment: AlignmentType.LEFT,
+              style: { paragraph: { indent: { left: 720, hanging: 360 } } },
+            },
+            {
+              level: 1,
+              format: LevelFormat.BULLET,
+              text: "◦",
+              alignment: AlignmentType.LEFT,
+              style: { paragraph: { indent: { left: 1080, hanging: 360 } } },
+            },
+          ],
+        },
+        {
+          reference: NUMBERED_LIST_REF,
+          levels: [
+            {
+              level: 0,
+              format: LevelFormat.DECIMAL,
+              text: "%1.",
+              alignment: AlignmentType.LEFT,
+              style: { paragraph: { indent: { left: 720, hanging: 360 } } },
+            },
+          ],
+        },
+      ],
+    },
     sections: [
       {
         // Page de garde — no page number
