@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { motion, Reorder, AnimatePresence } from "framer-motion";
-import { FileText, Search, CheckCircle2, Clock, ChevronRight, LayoutGrid, GripVertical, Lock, ArrowUpDown, ListOrdered, ChevronDown, ChevronUp, ImageIcon } from "lucide-react";
+import { FileText, Search, CheckCircle2, Clock, ChevronRight, LayoutGrid, GripVertical, ArrowUpDown, ListOrdered, ChevronDown, ChevronUp, ImageIcon } from "lucide-react";
 import { useLocation } from "wouter";
 import { Sidebar, SidebarSpacer } from "@/components/layout/Sidebar";
 import { useReportSync } from "@/hooks/use-report-sync";
@@ -268,26 +268,23 @@ function StepCard({ section, text, status: statusProp, index, onOpen }: {
 function DragRow({ id, label, fixed, onOpen }: { id: string; label: string; fixed: boolean; onOpen: () => void }) {
   return (
     <div
-      className="flex items-center gap-3 px-4 py-3 rounded-xl cursor-pointer transition-colors"
+      className="flex items-center gap-3 px-4 py-3 rounded-xl cursor-pointer transition-colors hover:bg-gray-50"
       style={{
-        background: fixed ? "#f9fafb" : "#fff",
-        border: `1px solid ${fixed ? "#f3f4f6" : "#ede9fe"}`,
+        background: "#fff",
+        border: "1px solid #ede9fe",
       }}
-      onClick={!fixed ? onOpen : undefined}
+      onClick={onOpen}
     >
-      <div className="flex-shrink-0" style={{ cursor: fixed ? "default" : "grab", color: fixed ? "#d1d5db" : "#a78bfa" }}>
-        {fixed ? <Lock className="w-4 h-4" /> : <GripVertical className="w-4 h-4" />}
+      <div className="flex-shrink-0" style={{ cursor: fixed ? "default" : "grab", color: "#a78bfa" }}>
+        <GripVertical className="w-4 h-4" />
       </div>
-      <span className="flex-1 text-sm font-medium" style={{ color: fixed ? "#9ca3af" : "#374151" }}>
+      <span className="flex-1 text-sm font-medium" style={{ color: "#374151" }}>
         {label}
       </span>
       {!fixed && (
         <span className="text-[10px] px-2 py-0.5 rounded-full font-medium" style={{ background: "#f5f0ff", color: "#7c3aed" }}>
           déplaçable
         </span>
-      )}
-      {fixed && (
-        <span className="text-[10px] text-gray-300">position fixe</span>
       )}
     </div>
   );
@@ -410,7 +407,7 @@ export default function RapportsPage({ completedOnly = false }: RapportsPageProp
             {reorderMode ? (
               <div className="max-w-xl">
                 <p className="text-sm text-gray-500 mb-4">
-                  Glisse les sections <span className="text-purple-600 font-medium">déplaçables</span> pour changer leur ordre dans le document exporté. Les sections à position fixe ne peuvent pas être déplacées.
+                  Clique sur une section pour l'ouvrir. Glisse les sections <span className="text-purple-600 font-medium">déplaçables</span> pour changer leur ordre dans le document exporté.
                 </p>
 
                 <div className="space-y-2 mb-4">
