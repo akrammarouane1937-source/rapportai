@@ -98,7 +98,7 @@ export const SECTION_CONFIGS: Record<string, SectionConfig> = {
     skillsFile:   "abbreviations-skills.md",
     maxTurns:     30,
     dependencies: ["introduction.md", "partie-i.md", "partie-ii.md", "conclusion.md"],
-    allowedTools: ["Read", "Write", "Edit", "Glob"],
+    allowedTools: ["Read", "Write", "Edit", "Glob", "WebSearch", "WebFetch"],
     description:  "Extraction des abréviations et sigles",
   },
 

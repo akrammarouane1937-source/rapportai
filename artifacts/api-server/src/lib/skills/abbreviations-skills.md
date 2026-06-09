@@ -8,6 +8,8 @@ allowed-tools:
   - Read
   - Write
   - Glob
+  - WebSearch
+  - WebFetch
 ---
 
 # RapportAI — Abréviations : base de connaissances
