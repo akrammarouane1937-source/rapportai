@@ -4,7 +4,8 @@ import { Button } from "@/components/ui/button";
 import { useLocation } from "wouter";
 
 interface PaywallModalProps {
-  open: boolean;
+  open:     boolean;
+  onClose?: () => void;
 }
 
 const PLANS = [
@@ -26,7 +27,7 @@ const PLANS = [
   },
 ];
 
-export function PaywallModal({ open }: PaywallModalProps) {
+export function PaywallModal({ open, onClose }: PaywallModalProps) {
   const [, setLocation] = useLocation();
 
   return (
@@ -113,6 +114,14 @@ export function PaywallModal({ open }: PaywallModalProps) {
               <p className="text-center text-xs text-gray-400 mt-5">
                 Paiement sécurisé · Remboursement 48h
               </p>
+              {onClose && (
+                <button
+                  onClick={onClose}
+                  className="w-full mt-2 text-xs text-gray-400 hover:text-gray-600 transition-colors py-1"
+                >
+                  Plus tard
+                </button>
+              )}
             </div>
           </motion.div>
         </motion.div>

@@ -129,6 +129,7 @@ function buildCoordinatorSystem(step: string, profile: Record<string, unknown>):
 - Filière : ${profile.filiere ?? ""}
 - Type : ${profile.reportType ?? ""}
 - Thème : ${hasTheme ? profile.theme : "(non renseigné — demande si nécessaire)"}
+- Problématique : ${typeof profile.problematique === "string" && profile.problematique.trim() ? profile.problematique : "(non renseignée)"}
 - Année : ${profile.academicYear ?? ""}
 ${profile.encadrantPeda ? `- Encadrant pédagogique : ${profile.encadrantPeda}` : ""}
 ${profile.encadrantPro ? `- Encadrant professionnel : ${profile.encadrantPro}` : ""}

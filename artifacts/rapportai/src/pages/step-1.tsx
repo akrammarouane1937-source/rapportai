@@ -10,7 +10,7 @@ import { Check } from "lucide-react";
 
 const delay = (ms: number) => new Promise<void>((r) => setTimeout(r, ms));
 
-type Phase = "theme" | "school" | "filiere" | "type" | "annee" | "color" | "done";
+type Phase = "theme" | "problematique" | "school" | "filiere" | "type" | "annee" | "color" | "done";
 type Msg = { role: "agent" | "user"; content: string | React.ReactNode };
 
 const TYPE_OPTIONS: Array<{ label: string; value: "PFE" | "stage" | "memoire" }> = [
@@ -56,13 +56,15 @@ async function resolveIntent(
 
 // ─── Phase ordering & skip logic ─────────────────────────────────────────────
 
-const PHASE_ORDER: Phase[] = ["theme", "school", "filiere", "type", "annee", "color", "done"];
+const PHASE_ORDER: Phase[] = ["theme", "problematique", "school", "filiere", "type", "annee", "color", "done"];
 
 function nextUncollectedPhase(after: Phase, snapshot: Partial<Report>): Phase {
   const idx = PHASE_ORDER.indexOf(after);
   for (let i = idx + 1; i < PHASE_ORDER.length; i++) {
     const p = PHASE_ORDER[i];
     if (p === "done") return "done";
+    if (p === "problematique" && !snapshot.problematique) return "problematique";
+    if (p === "problematique" && snapshot.problematique)  continue;
     if (p === "school"  && !snapshot.school)       return "school";
     if (p === "school"  && snapshot.school)        continue;
     if (p === "filiere" && !snapshot.filiere)      return "filiere";
@@ -93,12 +95,14 @@ function buildOpeningMessage(phase: Phase, report: Partial<Report>): string {
     return "Bienvenue sur RapportAI. On va construire ton rapport ensemble, étape par étape. Commence par le thème : c'est quoi ton sujet ?";
   }
   const known: string[] = [];
-  if (report.theme)        known.push(`thème : "${report.theme}"`);
-  if (report.school)       known.push(`école : ${report.school}`);
-  if (report.filiere)      known.push(`filière : ${report.filiere}`);
-  if (report.reportType)   known.push(`type : ${report.reportType.toUpperCase()}`);
-  if (report.academicYear) known.push(`année : ${report.academicYear}`);
+  if (report.theme)         known.push(`thème : "${report.theme}"`);
+  if (report.problematique) known.push(`problématique : "${report.problematique.length > 60 ? report.problematique.slice(0, 60) + "…" : report.problematique}"`);
+  if (report.school)        known.push(`école : ${report.school}`);
+  if (report.filiere)       known.push(`filière : ${report.filiere}`);
+  if (report.reportType)    known.push(`type : ${report.reportType.toUpperCase()}`);
+  if (report.academicYear)  known.push(`année : ${report.academicYear}`);
   const prefix = known.length ? `J'ai déjà : ${known.join(", ")}. ` : "";
+  if (phase === "problematique") return `${prefix}Ta problématique de recherche ? Si tu ne l'as pas encore, pas de panique — clique sur le bouton en dessous et l'assistant IA t'aidera à la définir plus tard.`;
   if (phase === "school")  return `${prefix}Ton école ou université ?`;
   if (phase === "filiere") return `${prefix}Ta filière ?`;
   if (phase === "type")    return `${prefix}Quel type de rapport ? (PFE, Stage ou Mémoire)`;
@@ -111,10 +115,16 @@ function buildOpeningMessage(phase: Phase, report: Partial<Report>): string {
 // Short acknowledgment + next question after a successful answer.
 function buildTransitionMessage(answeredPhase: Phase, value: string, nextPhase: Phase, wasSkipped = false): string {
   const ack = wasSkipped
-    ? "D'accord, on passe."
+    ? answeredPhase === "theme"
+      ? "Pas de souci — l'assistant IA (bouton chat en bas à droite du dashboard) t'aidera à choisir ton thème et ta problématique."
+      : answeredPhase === "problematique"
+        ? "Pas de souci — l'assistant IA t'aidera à définir ta problématique quand tu seras prêt."
+        : "D'accord, on passe."
     : answeredPhase === "theme"
       ? `Noté — "${value.length > 55 ? value.slice(0, 55) + "…" : value}".`
-      : answeredPhase === "school"
+      : answeredPhase === "problematique"
+        ? "Bonne problématique — je la transmets à tous les agents de rédaction."
+        : answeredPhase === "school"
         ? (() => {
             const s = value.toUpperCase();
             if (s.includes("EMSI"))   return "EMSI, super.";
@@ -138,6 +148,7 @@ function buildTransitionMessage(answeredPhase: Phase, value: string, nextPhase: 
           : "Parfait.";
 
   if (nextPhase === "done")    return `${ack} Toutes les infos sont là. On commence !`;
+  if (nextPhase === "problematique") return `${ack} Et ta problématique de recherche ? (Si tu ne l'as pas encore, clique sur le bouton en dessous.)`;
   if (nextPhase === "school")  return `${ack} Ton école ou université ?`;
   if (nextPhase === "filiere") return `${ack} Ta filière ?`;
   if (nextPhase === "type")    return `${ack} Quel type de rapport ?`;
@@ -248,13 +259,33 @@ export default function Step1() {
     const wasSkipped = intent.type === "skip";
 
     const updatedSnapshot = { ...report };
-    if (phase === "theme")   { updateReport({ theme: value });        updatedSnapshot.theme = value; }
-    if (phase === "school")  { updateReport({ school: value });       updatedSnapshot.school = value; }
-    if (phase === "filiere") { updateReport({ filiere: value });      updatedSnapshot.filiere = value; }
-    if (phase === "annee")   { updateReport({ academicYear: value }); updatedSnapshot.academicYear = value; }
+    if (phase === "theme")         { updateReport({ theme: value });         updatedSnapshot.theme = value; }
+    if (phase === "problematique") { updateReport({ problematique: value }); updatedSnapshot.problematique = value; }
+    if (phase === "school")        { updateReport({ school: value });        updatedSnapshot.school = value; }
+    if (phase === "filiere")       { updateReport({ filiere: value });       updatedSnapshot.filiere = value; }
+    if (phase === "annee")         { updateReport({ academicYear: value });  updatedSnapshot.academicYear = value; }
 
-    const next = nextUncollectedPhase(phase, updatedSnapshot);
+    // Typing "je l'ai pas encore" on the theme also skips the problématique question
+    const next = (phase === "theme" && wasSkipped)
+      ? nextUncollectedPhase("problematique", updatedSnapshot)
+      : nextUncollectedPhase(phase, updatedSnapshot);
     push({ role: "agent", content: buildTransitionMessage(phase, value, next, wasSkipped) });
+    setPhase(next);
+  };
+
+  // "Je l'ai pas encore" — skip theme or problématique; the dashboard chat
+  // assistant takes over later (quick-start chips appear when these are empty).
+  const handleNotYet = async () => {
+    if ((phase !== "theme" && phase !== "problematique") || typing) return;
+    push({ role: "user", content: "Je l'ai pas encore" });
+    // No theme → no problématique either; jump straight to school
+    const next = phase === "theme"
+      ? nextUncollectedPhase("problematique", { ...report })
+      : nextUncollectedPhase(phase, { ...report });
+    setTyping(true);
+    await delay(350);
+    setTyping(false);
+    push({ role: "agent", content: buildTransitionMessage(phase, "", next, true) });
     setPhase(next);
   };
 
@@ -340,6 +371,19 @@ export default function Step1() {
 
         {typing && <ChatMessage role="agent" content="" isTyping />}
 
+        {/* "Je l'ai pas encore" — theme & problématique are skippable, the dashboard chat takes over */}
+        {(phase === "theme" || phase === "problematique") && !typing && disclaimerAccepted && (
+          <div className="ml-10 mb-4 px-4">
+            <button
+              onClick={handleNotYet}
+              className="px-4 py-2 rounded-lg text-sm font-medium transition-all hover:bg-purple-50"
+              style={{ border: "1px dashed #7c3aed55", color: "#a78bfa", background: "transparent" }}
+            >
+              Je l'ai pas encore
+            </button>
+          </div>
+        )}
+
         {/* Type selector */}
         {phase === "type" && !typing && (
           <div className="flex gap-2 flex-wrap ml-10 mb-4 px-4">
@@ -396,6 +440,7 @@ export default function Step1() {
           disabled={inputDisabled}
           placeholder={
             phase === "theme"   ? "Ton thème de rapport..." :
+            phase === "problematique" ? "Ta problématique de recherche..." :
             phase === "school"  ? "Ton école / université..." :
             phase === "filiere" ? "Ta filière (ou 'passer' pour continuer)..." :
             phase === "annee"   ? "Année académique (ex: 2025–2026)..." :

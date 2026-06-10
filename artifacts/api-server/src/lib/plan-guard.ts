@@ -12,7 +12,8 @@ interface PlanLimit {
 }
 
 const PLAN_LIMITS: Record<PlanId, PlanLimit> = {
-  free:    { pages: 15,       revisions: 2        },
+  // 12 pages: la wall tombe juste après la Partie I même si l'utilisateur saute des sections
+  free:    { pages: 12,       revisions: 2        },
   starter: { pages: 60,       revisions: 20       },
   pro:     { pages: Infinity, revisions: Infinity },
 };
@@ -21,7 +22,7 @@ const VALID_PLANS = new Set<string>(["free", "starter", "pro"]);
 
 function parsePlanId(raw: string | undefined): PlanId {
   if (raw && VALID_PLANS.has(raw)) return raw as PlanId;
-  return "pro"; // default: unlimited during free launch
+  return "free";
 }
 
 /** 250 words ≈ 1 page */
@@ -43,10 +44,17 @@ declare global {
 
 // ─── Middleware: attach plan to every request ─────────────────────────────────
 // During free launch (FREE_LAUNCH=true), all limits are bypassed.
-// Founding users (x-founding: true) bypass all limits forever.
+// Founding users bypass limits only if x-founding matches the FOUNDING_SECRET
+// env var — a bare "true" header was spoofable from DevTools.
+
+function bypassLimits(req: Request): boolean {
+  if (process.env.FREE_LAUNCH === "true") return true;
+  const secret = process.env.FOUNDING_SECRET;
+  return !!secret && req.headers["x-founding"] === secret;
+}
 
 export function attachPlan(req: Request, _res: Response, next: NextFunction) {
-  if (process.env.FREE_LAUNCH === "true" || req.headers["x-founding"] === "true") {
+  if (bypassLimits(req)) {
     req.planId        = "pro";
     req.planPages     = Infinity;
     req.planRevisions = Infinity;
@@ -63,7 +71,7 @@ export function attachPlan(req: Request, _res: Response, next: NextFunction) {
 // ─── Guard: reject if report is unpaid ───────────────────────────────────────
 
 export async function guardPayment(req: Request, res: Response, next: NextFunction): Promise<void> {
-  if (process.env.FREE_LAUNCH === "true" || req.headers["x-founding"] === "true") {
+  if (bypassLimits(req)) {
     next(); return;
   }
   if (req.planId === "free") { next(); return; }
@@ -93,7 +101,7 @@ export async function guardPayment(req: Request, res: Response, next: NextFuncti
 // Frontend sends x-pages-generated header (total pages generated so far).
 
 export function guardPageLimit(req: Request, res: Response, next: NextFunction) {
-  if (process.env.FREE_LAUNCH === "true" || req.headers["x-founding"] === "true") return next();
+  if (bypassLimits(req)) return next();
 
   const pagesGenerated = parseInt(req.headers["x-pages-generated"] as string ?? "0", 10);
   const limit          = req.planPages;
@@ -115,7 +123,7 @@ export function guardPageLimit(req: Request, res: Response, next: NextFunction) 
 // ─── Guard: reject if revision limit exceeded ─────────────────────────────────
 
 export function guardRevisionLimit(req: Request, res: Response, next: NextFunction) {
-  if (process.env.FREE_LAUNCH === "true" || req.headers["x-founding"] === "true") return next();
+  if (bypassLimits(req)) return next();
 
   const revisions = parseInt(req.headers["x-revision-count"] as string ?? "0", 10);
   const limit      = req.planRevisions;

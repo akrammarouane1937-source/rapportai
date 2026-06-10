@@ -4,7 +4,6 @@ import { FileText, Search, CheckCircle2, Clock, ChevronRight, LayoutGrid, GripVe
 import { useLocation } from "wouter";
 import { Sidebar, SidebarSpacer } from "@/components/layout/Sidebar";
 import { useReportSync } from "@/hooks/use-report-sync";
-import { FloatingChat } from "@/components/dashboard/FloatingChat";
 import { useReportStore } from "@/lib/store";
 import { ReportToc } from "@/components/report/ReportToc";
 import { getApprovedFigures, type ApprovedFigure } from "@/lib/figureStore";
@@ -566,8 +565,6 @@ export default function RapportsPage({ completedOnly = false }: RapportsPageProp
           </motion.div>
         </div>
       </main>
-
-      <FloatingChat />
     </div>
   );
 }

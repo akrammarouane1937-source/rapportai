@@ -2,6 +2,9 @@ import { ReactNode } from "react";
 import { Sidebar } from "@/components/layout/Sidebar";
 import { REPORT_STEPS, TOTAL_STEPS } from "@/lib/steps";
 import { useReportSync } from "@/hooks/use-report-sync";
+import { PaywallModal } from "@/components/report/PaywallModal";
+import { UpsellModal } from "@/components/report/UpsellModal";
+import { usePaywallStore } from "@/lib/paywallStore";
 
 interface StepLayoutProps {
   stepId: number;
@@ -14,9 +17,18 @@ export function StepLayout({ stepId, children, fullHeight }: StepLayoutProps) {
   useReportSync(); // restore from DB on login + save to DB on changes
   const step = REPORT_STEPS.find((s) => s.id === stepId);
   const progress = (stepId / TOTAL_STEPS) * 100;
+  const { open: paywallOpen, limitType, currentPlan, close } = usePaywallStore();
+
+  // free user → PaywallModal (shows Starter + Pro cards)
+  // starter user → UpsellModal (targeted starter → Pro upgrade, +300 MAD)
+  const upsellVariant = limitType === "revisions" ? "revision-essentiel" : "page-essentiel";
 
   return (
-    <div className={`flex bg-[#f9f8ff] ${fullHeight ? "h-screen overflow-hidden" : "min-h-screen"}`}>
+    <div className={`relative flex bg-[#f9f8ff] ${fullHeight ? "h-screen overflow-hidden" : "min-h-screen"}`}>
+      {currentPlan === "free"
+        ? <PaywallModal open={paywallOpen} onClose={close} />
+        : <UpsellModal open={paywallOpen} onClose={close} variant={upsellVariant} currentPlan={currentPlan} />
+      }
       <Sidebar />
       <div className="flex-shrink-0" style={{ width: 60 }} />
       <div className="flex-1 flex flex-col overflow-hidden">

@@ -22,7 +22,7 @@ export interface PlanLimit {
 
 export const PLAN_LIMITS: Record<PlanId, PlanLimit> = {
   //                pages  revisions  label         labelShort  priceMad  priceUsd  anchorMad  stripePriceId
-  free:    { pages: 15,       revisions: 2,        label: "Gratuit",   labelShort: "Gratuit",   priceMad: 0,   priceUsd: 0,  anchorMad: 0,    stripePriceId: null },
+  free:    { pages: 12,       revisions: 2,        label: "Gratuit",   labelShort: "Gratuit",   priceMad: 0,   priceUsd: 0,  anchorMad: 0,    stripePriceId: null },
   starter: { pages: 60,       revisions: 20,       label: "Essentiel", labelShort: "Essentiel", priceMad: 377, priceUsd: 37, anchorMad: 1000, stripePriceId: "price_1TdDGG003Ts2AXbaNkwwT03b" },
   pro:     { pages: Infinity, revisions: Infinity, label: "Pro",       labelShort: "Pro",       priceMad: 677, priceUsd: 67, anchorMad: 1500, stripePriceId: "price_1TdDGO003Ts2AXbac5dyihpl" },
 };
@@ -40,15 +40,14 @@ export function getMyPlan(): UserPlanData {
       const parsed = JSON.parse(raw) as Partial<UserPlanData> & { sectionsGenerated?: number };
       // migrate old "sectionsGenerated" field → "pagesGenerated"
       return {
-        planId:         parsed.planId ?? "pro",
+        planId:         parsed.planId ?? "free",
         revisionCount:  parsed.revisionCount ?? 0,
         pagesGenerated: parsed.pagesGenerated ?? (parsed.sectionsGenerated ? parsed.sectionsGenerated * 8 : 0),
         purchasedAt:    parsed.purchasedAt,
       };
     }
   } catch {}
-  // Default during free launch: pro with no limits
-  return { planId: "pro", revisionCount: 0, pagesGenerated: 0 };
+  return { planId: "free", revisionCount: 0, pagesGenerated: 0 };
 }
 
 export function saveMyPlan(patch: Partial<UserPlanData>): void {

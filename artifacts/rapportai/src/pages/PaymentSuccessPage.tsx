@@ -3,6 +3,7 @@ import { useLocation } from "wouter";
 import { motion } from "framer-motion";
 import { CheckCircle2, Loader2, XCircle, ArrowRight } from "lucide-react";
 import { saveMyPlan, type PlanId } from "@/lib/userPlan";
+import { consumeReturnPath } from "@/lib/paywallStore";
 
 import { API_BASE as BASE_PATH } from "@/lib/apiBase";
 
@@ -11,6 +12,7 @@ export default function PaymentSuccessPage() {
   const [status, setStatus] = useState<"loading" | "success" | "error">("loading");
   const [planId, setPlanId] = useState<string | null>(null);
   const [email, setEmail] = useState<string | null>(null);
+  const [returnPath] = useState(() => consumeReturnPath());
 
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
@@ -21,15 +23,15 @@ export default function PaymentSuccessPage() {
       return;
     }
 
-    fetch(`${BASE_PATH}/api/stripe/verify?session_id=${encodeURIComponent(sessionId)}`)
+    fetch(`${BASE_PATH}/api/payments/verify?session_id=${encodeURIComponent(sessionId)}`)
       .then((r) => r.json())
-      .then((data: { paid: boolean; planId: string; email: string | null; error?: string }) => {
-        if (data.error || !data.paid || !data.planId) {
+      .then((data: { paid: boolean; plan: string; email: string | null; error?: string }) => {
+        if (data.error || !data.paid || !data.plan) {
           setStatus("error");
           return;
         }
-        saveMyPlan({ planId: data.planId as PlanId, purchasedAt: Date.now() });
-        setPlanId(data.planId);
+        saveMyPlan({ planId: data.plan as PlanId, purchasedAt: Date.now() });
+        setPlanId(data.plan);
         setEmail(data.email);
         setStatus("success");
       })
@@ -37,9 +39,8 @@ export default function PaymentSuccessPage() {
   }, []);
 
   const PLAN_LABELS: Record<string, string> = {
-    essentiel: "Essentiel",
-    pro: "Pro",
-    premium: "Premium",
+    starter: "Essentiel",
+    pro:     "Pro",
   };
 
   return (
@@ -87,37 +88,30 @@ export default function PaymentSuccessPage() {
             )}
 
             <div className="bg-purple-50 rounded-2xl p-4 mb-8 text-left">
-              <p className="text-xs font-bold text-purple-600 uppercase tracking-wider mb-2">Ce que tu débloque</p>
-              {planId === "essentiel" && (
+              <p className="text-xs font-bold text-purple-600 uppercase tracking-wider mb-2">Ce que tu débloqués</p>
+              {planId === "starter" && (
                 <ul className="text-sm text-gray-700 space-y-1">
-                  <li>✓ 30 pages générées par IA</li>
+                  <li>✓ 60 pages générées par IA</li>
                   <li>✓ Export Word + PDF</li>
-                  <li>✓ 10 révisions IA</li>
-                  <li>✓ Bibliothèque de sources</li>
+                  <li>✓ 20 révisions IA</li>
+                  <li>✓ Humanisation anti-détection IA</li>
+                  <li>✓ Génération depuis tes documents</li>
                 </ul>
               )}
               {planId === "pro" && (
                 <ul className="text-sm text-gray-700 space-y-1">
-                  <li>✓ 60 pages générées par IA</li>
-                  <li>✓ Export Word + PDF</li>
-                  <li>✓ Révisions illimitées</li>
-                  <li>✓ JuryAI : simulation de soutenance</li>
-                  <li>✓ Vérification anti-plagiat</li>
-                  <li>✓ Certificat Anti-Détection IA</li>
-                </ul>
-              )}
-              {planId === "premium" && (
-                <ul className="text-sm text-gray-700 space-y-1">
                   <li>✓ Pages illimitées</li>
-                  <li>✓ Tout le plan Pro inclus</li>
-                  <li>✓ Slides PowerPoint</li>
-                  <li>✓ Support prioritaire</li>
+                  <li>✓ Révisions illimitées</li>
+                  <li>✓ Export Word + PDF</li>
+                  <li>✓ JuryAI : simulation de soutenance</li>
+                  <li>✓ Humanisation anti-détection IA</li>
+                  <li>✓ Certificat Anti-Détection IA</li>
                 </ul>
               )}
             </div>
 
             <button
-              onClick={() => setLocation("/dashboard")}
+              onClick={() => setLocation(returnPath)}
               className="w-full h-12 rounded-xl font-black text-sm text-white flex items-center justify-center gap-2"
               style={{
                 background: "linear-gradient(135deg, #7c3aed, #a855f7)",
@@ -125,7 +119,7 @@ export default function PaymentSuccessPage() {
                 fontFamily: "'Plus Jakarta Sans', sans-serif",
               }}
             >
-              Aller à mon tableau de bord <ArrowRight className="w-4 h-4" />
+              Continuer mon rapport <ArrowRight className="w-4 h-4" />
             </button>
           </>
         )}
@@ -144,10 +138,10 @@ export default function PaymentSuccessPage() {
               Nous n'avons pas pu vérifier ton paiement. Si tu as été débité, contacte-nous.
             </p>
             <button
-              onClick={() => setLocation("/dashboard")}
+              onClick={() => setLocation(returnPath)}
               className="w-full h-11 rounded-xl font-bold text-sm border-2 border-purple-200 text-purple-600 hover:bg-purple-50 transition-colors"
             >
-              Retour au tableau de bord
+              Retour à mon rapport
             </button>
           </>
         )}

@@ -179,6 +179,86 @@ This tool reads all available section content — call it directly without needi
       properties: {},
     },
   },
+
+  {
+    name: "revise_section",
+    description: `Revise an existing report section in-place, without navigating away from the chat.
+Use when the student asks to improve, rewrite, shorten, expand, fix, or humanize an EXISTING section
+("améliore ma Partie I", "rends mon introduction moins robotique", "raccourcis ma conclusion").
+The revised content replaces the section in the student's report automatically.
+Do NOT use for sections that haven't been generated yet — use navigate_to_section for that.
+Before calling, briefly tell the student what you're about to do ("Je révise ta Partie I…").`,
+    input_schema: {
+      type: "object" as const,
+      properties: {
+        section: {
+          type: "string",
+          description: "Section key: pageDeGarde | dedicaces | resumeFr | sommaire | introduction | partieI | partieII | conclusion",
+        },
+        instructions: {
+          type: "string",
+          description: "Precise revision instructions in French: what to change, what to keep, target length, tone. Include the student's exact request plus your own diagnosis of what needs fixing.",
+        },
+      },
+      required: ["section", "instructions"],
+    },
+  },
+
+  {
+    name: "search_references",
+    description: `Search for real, citable academic papers via the Semantic Scholar database.
+Use when the student asks for sources, references, bibliography entries, articles, or academic literature
+("trouve-moi des sources sur X", "j'ai besoin de références pour ma Partie I").
+Returns real papers with authors, year, venue, and link — never invent references yourself.
+Query in English gives better results (translate the student's topic), but present results in French.`,
+    input_schema: {
+      type: "object" as const,
+      properties: {
+        query: {
+          type: "string",
+          description: "Search query in English, 3-8 keywords. E.g. 'participatory islamic finance Morocco SME'",
+        },
+        limit: {
+          type: "number",
+          description: "Number of papers to return (default 5, max 10)",
+        },
+      },
+      required: ["query"],
+    },
+  },
+
+  {
+    name: "save_to_profile",
+    description: `Save a confirmed theme or problématique to the student's report profile.
+Use ONLY after the student explicitly confirms a value — either one they provided themselves
+("mon thème c'est X", "ma problématique est Y") or one you suggested and they accepted.
+Do NOT call this speculatively. Always get explicit confirmation first.
+After calling this tool, send a short confirmation message and offer to continue.`,
+    input_schema: {
+      type: "object" as const,
+      properties: {
+        field: {
+          type: "string",
+          enum: ["theme", "problematique"],
+          description: "Which profile field to save",
+        },
+        value: {
+          type: "string",
+          description: "The confirmed value to save. For problématique: a well-formed research question (25–45 words).",
+        },
+      },
+      required: ["field", "value"],
+    },
+  },
+];
+
+// Server-side tools — executed by Anthropic, no handler code needed.
+// web_search: live web results. web_fetch: read a specific URL.
+// Both stream their results transparently; our SSE parser ignores the
+// server_tool_use blocks and only forwards the final text to the client.
+const SERVER_TOOLS: Array<Record<string, unknown>> = [
+  { type: "web_search_20260209", name: "web_search", max_uses: 3 },
+  { type: "web_fetch_20260209", name: "web_fetch", max_uses: 3 },
 ];
 
 // ─── Stats builder ────────────────────────────────────────────────────────────
@@ -254,6 +334,101 @@ function buildCoherencePayload(
   lines.push(`5. Score de cohérence global : /10 avec justification.`);
 
   return lines.join("\n");
+}
+
+// ─── Reference search (Semantic Scholar) ──────────────────────────────────────
+
+interface ScholarPaper {
+  title: string;
+  year: number | null;
+  venue: string | null;
+  url: string | null;
+  abstract: string | null;
+  authors: { name: string }[];
+  externalIds?: { DOI?: string };
+}
+
+async function searchReferences(query: string, limit: number): Promise<string> {
+  const fields = "title,authors,year,venue,abstract,url,externalIds";
+  const url = `https://api.semanticscholar.org/graph/v1/paper/search?query=${encodeURIComponent(query)}&limit=${limit}&fields=${fields}`;
+
+  try {
+    const ctrl = new AbortController();
+    const timer = setTimeout(() => ctrl.abort(), 10_000);
+    const resp = await fetch(url, { signal: ctrl.signal });
+    clearTimeout(timer);
+
+    if (!resp.ok) {
+      return `Erreur API Semantic Scholar (${resp.status}). Dis à l'étudiant que la recherche de références est momentanément indisponible et propose de réessayer dans un instant. N'invente JAMAIS de références.`;
+    }
+
+    const data = await resp.json() as { total?: number; data?: ScholarPaper[] };
+    const papers = data.data ?? [];
+    if (papers.length === 0) {
+      return `Aucun résultat pour "${query}". Suggère à l'étudiant d'élargir la recherche (mots-clés plus génériques, sans mention du Maroc) — tu peux relancer search_references avec une requête reformulée.`;
+    }
+
+    const lines = papers.map((p, i) => {
+      const authors = p.authors?.length
+        ? p.authors.slice(0, 3).map((a) => a.name).join(", ") + (p.authors.length > 3 ? " et al." : "")
+        : "Auteur inconnu";
+      const doi = p.externalIds?.DOI ? ` · DOI: ${p.externalIds.DOI}` : "";
+      const abstract = p.abstract ? `\n   Résumé : ${p.abstract.slice(0, 250)}…` : "";
+      return `${i + 1}. **${authors}** (${p.year ?? "s.d."}). *${p.title}*. ${p.venue ?? ""}${doi}${p.url ? `\n   ${p.url}` : ""}${abstract}`;
+    });
+
+    return `## Résultats Semantic Scholar pour "${query}" (${papers.length} articles réels)\n\n${lines.join("\n\n")}\n\nPrésente ces références à l'étudiant en format APA 7 (ou le style de citation de son école), avec une phrase sur la pertinence de chacune pour son rapport.`;
+  } catch {
+    return `La recherche de références a échoué (timeout ou réseau). Informe l'étudiant et propose de réessayer. N'invente JAMAIS de références.`;
+  }
+}
+
+// ─── Section revision (dedicated API call) ────────────────────────────────────
+
+async function reviseSectionContent(
+  sectionKey: string,
+  currentContent: string,
+  instructions: string,
+  profile: { theme: string; problematique: string; filiere: string },
+  apiKey: string,
+): Promise<string | null> {
+  const label = SECTION_LABELS[sectionKey] ?? sectionKey;
+  const systemPrompt = `Tu es un rédacteur académique expert pour les rapports de PFE marocains et francophones.
+Tu révises la section "${label}" d'un rapport. Thème : ${profile.theme}. ${profile.problematique ? `Problématique : ${profile.problematique}.` : ""} Filière : ${profile.filiere}.
+
+RÈGLES :
+- Retourne UNIQUEMENT le contenu révisé de la section, sans préambule ni commentaire.
+- Conserve la structure markdown existante (titres, niveaux) sauf si les instructions demandent de la changer.
+- Style académique français : phrases variées, vocabulaire précis, transitions naturelles.
+- INTERDIT : "il est important de noter", "s'inscrire dans", "mettre en lumière", "jouer un rôle essentiel", "incontournable", "force est de constater".
+- Ne réduis pas la longueur sauf si demandé explicitement.`;
+
+  try {
+    const resp = await fetch(ANTHROPIC_API, {
+      method: "POST",
+      headers: {
+        "anthropic-version": "2023-06-01",
+        "x-api-key": apiKey,
+        "content-type": "application/json",
+      },
+      body: JSON.stringify({
+        model: "claude-sonnet-4-6",
+        max_tokens: 16384,
+        system: systemPrompt,
+        messages: [{
+          role: "user",
+          content: `## Contenu actuel de la section "${label}" :\n\n${currentContent}\n\n## Instructions de révision :\n\n${instructions}\n\nRetourne la version révisée complète.`,
+        }],
+      }),
+    });
+
+    if (!resp.ok) return null;
+    const data = await resp.json() as { content?: { type: string; text?: string }[] };
+    const text = data.content?.filter((b) => b.type === "text").map((b) => b.text).join("") ?? "";
+    return text.trim() || null;
+  } catch {
+    return null;
+  }
 }
 
 // ─── System prompts ───────────────────────────────────────────────────────────
@@ -462,7 +637,7 @@ interface ApiCallResult {
 async function streamApiCall(
   messages: ChatMessage[],
   systemPrompt: string,
-  tools: typeof ORCHESTRATOR_TOOLS | [],
+  tools: Array<Record<string, unknown>>,
   apiKey: string,
   res: Response,
 ): Promise<ApiCallResult> {
@@ -474,9 +649,12 @@ async function streamApiCall(
       "content-type": "application/json",
     },
     body: JSON.stringify({
-      model: "claude-sonnet-4-5",
-      max_tokens: 2048,
+      // Sonnet 4.6 required for the _20260209 server-side web tools.
+      // effort "medium": 4.6 defaults to "high", too slow for a chat widget.
+      model: "claude-sonnet-4-6",
+      max_tokens: 8192,
       stream: true,
+      output_config: { effort: "medium" },
       system: systemPrompt,
       messages,
       ...(tools.length > 0 ? { tools, tool_choice: { type: "auto" } } : {}),
@@ -647,7 +825,7 @@ ${nextKey ? `**Prochaine section recommandée :** ${SECTION_LABELS[nextKey] ?? n
 
   const isJury = mode === "jury";
   const systemPrompt = CHAT_SYSTEM_PROMPT + (CHAT_SKILLS ? `\n\n---\n## KNOWLEDGE BASE\n${CHAT_SKILLS}` : "") + contextBlock;
-  const tools = isJury ? [] : ORCHESTRATOR_TOOLS;
+  const tools: Array<Record<string, unknown>> = isJury ? [] : [...ORCHESTRATOR_TOOLS, ...SERVER_TOOLS];
 
   let currentMessages: ChatMessage[] = rawMessages.map((m) => ({
     role: m.role,
@@ -681,13 +859,24 @@ ${nextKey ? `**Prochaine section recommandée :** ${SECTION_LABELS[nextKey] ?? n
         return;
       }
 
+      // save_to_profile — send action to frontend then continue loop (agent confirms to user)
+      const saveProfileTool = toolUses.find((tu) => tu.name === "save_to_profile");
+      if (saveProfileTool) {
+        const input = saveProfileTool.input as { field: string; value: string };
+        if (input.field && input.value) {
+          res.write(`data: ${JSON.stringify({ action: { type: "save_to_profile", field: input.field, value: input.value } })}\n\n`);
+        }
+        // don't return — let loop continue so agent sends confirmation text
+      }
+
       const assistantContent: ContentBlock[] = blocks.map((b) =>
         b.type === "text"
           ? { type: "text", text: b.text ?? "" }
           : { type: "tool_use", id: b.id!, name: b.name!, input: b.input ?? {} },
       );
 
-      const toolResultContent: ContentBlock[] = toolUses.map((tu) => {
+      const toolResultContent: ContentBlock[] = [];
+      for (const tu of toolUses) {
         let result = "";
 
         if (tu.name === "read_full_section") {
@@ -718,12 +907,48 @@ ${nextKey ? `**Prochaine section recommandée :** ${SECTION_LABELS[nextKey] ?? n
           result = buildCoherencePayload(sections, prob);
         }
 
-        return {
+        else if (tu.name === "save_to_profile") {
+          const input = tu.input as { field: string; value: string };
+          result = `✅ "${input.field}" sauvegardé dans le profil : "${input.value}". Tu peux maintenant continuer à générer les sections.`;
+        }
+
+        else if (tu.name === "search_references") {
+          const input = tu.input as { query: string; limit?: number };
+          const limit = Math.min(Math.max(input.limit ?? 5, 1), 10);
+          result = await searchReferences(input.query ?? "", limit);
+        }
+
+        else if (tu.name === "revise_section") {
+          const input = tu.input as { section: string; instructions: string };
+          const data = sections[input.section];
+          if (!data || data.wordCount <= 10) {
+            result = `La section "${SECTION_LABELS[input.section] ?? input.section}" n'a pas encore été générée — impossible de la réviser. Propose navigate_to_section pour la générer.`;
+          } else {
+            const revised = await reviseSectionContent(
+              input.section,
+              data.content,
+              input.instructions ?? "",
+              { theme: subject, problematique: prob, filiere: fil },
+              apiKey,
+            );
+            if (revised) {
+              res.write(`data: ${JSON.stringify({ action: { type: "update_section", section: input.section, content: revised } })}\n\n`);
+              const newWords = revised.split(/\s+/).filter(Boolean).length;
+              // Keep server-side copy in sync so later reads in this same turn see the new content
+              sections[input.section] = { content: revised, wordCount: newWords };
+              result = `✅ Section "${SECTION_LABELS[input.section] ?? input.section}" révisée et mise à jour dans le rapport (${data.wordCount} → ${newWords} mots).\n\nDébut du nouveau contenu :\n${revised.slice(0, 400)}…\n\nConfirme brièvement à l'étudiant ce qui a été amélioré.`;
+            } else {
+              result = `La révision a échoué (erreur API). Informe l'étudiant et propose de réessayer.`;
+            }
+          }
+        }
+
+        toolResultContent.push({
           type: "tool_result" as const,
           tool_use_id: tu.id,
           content: result,
-        };
-      });
+        });
+      }
 
       currentMessages = [
         ...currentMessages,

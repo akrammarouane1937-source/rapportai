@@ -13,7 +13,7 @@ interface UpgradeModalProps {
 
 const MESSAGES: Record<PlanId, Record<"pages" | "revisions", { title: string; body: string }>> = {
   free: {
-    pages:     { title: "Tu as atteint tes 15 pages gratuites 🎯", body: "Tu viens de voir la qualité RapportAI. Passe à Essentiel pour générer ton rapport complet en 30 minutes." },
+    pages:     { title: "Tu as atteint tes 12 pages gratuites 🎯", body: "Tu viens de voir la qualité RapportAI. Passe à Essentiel pour générer ton rapport complet en 30 minutes." },
     revisions: { title: "Tes 2 révisions gratuites sont épuisées", body: "Tu viens de voir comment l'IA améliore ton texte. Passe à Essentiel pour 20 révisions complètes." },
   },
   starter: {

@@ -14,7 +14,6 @@ import { AnimatePresence } from "framer-motion";
 import { StatsRow } from "@/components/dashboard/StatsRow";
 import { ActiveReportCard } from "@/components/dashboard/ActiveReportCard";
 import { FiguresPanel } from "@/components/dashboard/FiguresPanel";
-import { FloatingChat } from "@/components/dashboard/FloatingChat";
 
 const NAV = [
   { icon: LayoutDashboard, label: "Tableau de bord", id: "dashboard" },
@@ -310,7 +309,6 @@ export default function DemoPage() {
           )}
         </div>
       </main>
-      <FloatingChat />
     </div>
   );
 }

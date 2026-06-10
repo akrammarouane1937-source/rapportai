@@ -4,6 +4,8 @@ import { API_BASE } from "@/lib/apiBase";
 import { useReportStore } from "@/lib/store";
 import { useUserSettingsStore } from "@/lib/userSettingsStore";
 import { ChoiceCard } from "@/components/chat-panel";
+import { getMyPlan, incrementPages } from "@/lib/userPlan";
+import { usePaywallStore } from "@/lib/paywallStore";
 
 // ─── Re-export ToolCall so pages can import from here ────────────────────────
 export type { ToolCall } from "@/hooks/use-generate";
@@ -234,9 +236,15 @@ export function useStepAgent({
           formatting,
         };
 
+        const planData = getMyPlan();
+
         await fetchEventSource(`${API_BASE}/api/agent/${step}/stream`, {
           method: "POST",
-          headers: { "Content-Type": "application/json" },
+          headers: {
+            "Content-Type":      "application/json",
+            "x-plan-id":         planData.planId,
+            "x-pages-generated": String(planData.pagesGenerated ?? 0),
+          },
           body: JSON.stringify({
             message: text,
             history: historyForApi,
@@ -245,6 +253,25 @@ export function useStepAgent({
           }),
           signal: ctrl.signal,
           openWhenHidden: true,
+
+          async onopen(response) {
+            if (response.status === 403) {
+              try {
+                const body = await response.json() as { error?: string; limit_type?: string; planId?: string };
+                if (body.error === "plan_limit_reached") {
+                  const lt = body.limit_type === "revisions" ? "revisions" : "pages";
+                  const cp = (body.planId === "starter" || body.planId === "pro") ? body.planId : "free";
+                  usePaywallStore.getState().trigger(lt, cp as import("@/lib/userPlan").PlanId);
+                  const e = new Error("plan_limit_reached");
+                  e.name = "PlanLimitError";
+                  throw e;
+                }
+              } catch (jsonErr) {
+                if ((jsonErr as Error)?.name === "PlanLimitError") throw jsonErr;
+              }
+            }
+            if (!response.ok) throw new Error(`HTTP ${response.status}`);
+          },
 
           onmessage(ev) {
             if (!ev.data || ev.data === "[DONE]") return;
@@ -318,6 +345,8 @@ export function useStepAgent({
               typeof data.content === "string"
             ) {
               setToolCalls((prev) => prev.map((tc) => ({ ...tc, done: true })));
+              const wordCount = (data.content as string).split(/\s+/).filter(Boolean).length;
+              incrementPages(wordCount);
               onSectionGenerated?.(data.section as string, data.content as string);
             }
 
@@ -348,9 +377,12 @@ export function useStepAgent({
             if ((err as Error)?.name === "AbortError") return;
             setIsThinking(false);
             setIsGenerating(false);
+            streamingIdRef.current = null;
+            if ((err as Error)?.name === "PlanLimitError") {
+              throw err; // paywall already shown — no chat message
+            }
             const errId = nextId();
             setMessages((prev) => [...prev, { id: errId, role: "agent", content: "Une erreur est survenue. Réessaie." }]);
-            streamingIdRef.current = null;
             throw err; // stop retrying
           },
 

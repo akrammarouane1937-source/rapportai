@@ -652,7 +652,7 @@ export default function LandingPage() {
                   popular: false,
                   description: "Pour explorer sans engagement.",
                   features: [
-                    "15 pages générées",
+                    "12 pages générées",
                     "2 révisions IA",
                     "Export Word",
                     "Qualité identique aux plans payants",

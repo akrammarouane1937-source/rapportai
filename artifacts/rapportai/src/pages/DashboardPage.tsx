@@ -11,7 +11,6 @@ import { getReport } from "@/lib/reportStore";
 import { API_BASE } from "@/lib/apiBase";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
-import ReportProgressCard from "@/components/ReportProgressCard";
 
 type SectionSummary = { content: string; wordCount: number };
 
@@ -227,34 +226,51 @@ export default function DashboardPage() {
     sendInternal(prompt, [...messages, userMsg]);
   };
 
+  const missingTheme = !report.theme?.trim();
+  const missingProb  = !report.problematique?.trim();
+
   const quickActions = hasReport && completedCount > 0
     ? [
-        {
-          label: "Qu'est-ce qu'il manque ?",
+        ...(missingTheme ? [{
+          label: "Aide-moi à choisir mon thème",
           action: () => sendQuickAction(
-            "Qu'est-ce qu'il manque ?",
-            `J'ai généré ${completedCount} sections sur 9 dans mon rapport${shortTheme ? ` sur "${shortTheme}"` : ""}. Qu'est-ce qui manque et dans quel ordre continuer ?`
+            "Aide-moi à choisir mon thème",
+            "Je n'ai pas encore de thème pour mon rapport. Pose-moi des questions sur ma filière et mes intérêts, puis propose-moi 3 thèmes concrets adaptés au contexte marocain."
+          ),
+        }] : []),
+        ...(missingProb ? [{
+          label: "Aide-moi à définir ma problématique",
+          action: () => sendQuickAction(
+            "Aide-moi à définir ma problématique",
+            `Je n'ai pas encore de problématique pour mon rapport${shortTheme ? ` sur "${shortTheme}"` : ""}. Propose-moi 2-3 formulations académiques solides et aide-moi à choisir la bonne.`
+          ),
+        }] : []),
+        {
+          label: "Trouve-moi des sources académiques",
+          action: () => sendQuickAction(
+            "Trouve-moi des sources académiques",
+            `Trouve-moi des sources académiques réelles et citables pour mon rapport${shortTheme ? ` sur "${shortTheme}"` : ""}, en format APA 7.`
           ),
         },
         {
-          label: "Mon rapport est-il cohérent ?",
+          label: "Améliore ma dernière section",
           action: () => sendQuickAction(
-            "Mon rapport est-il cohérent ?",
-            `Analyse la cohérence de mon rapport${shortTheme ? ` sur "${shortTheme}"` : ""} : est-ce que l'intro, le développement et la conclusion se tiennent ?`
+            "Améliore ma dernière section",
+            "Relis la dernière section que j'ai générée, identifie ses faiblesses et améliore-la directement."
           ),
         },
+        ...(report.resumeFr ? [{
+          label: "Traduis mon résumé en Abstract",
+          action: () => sendQuickAction(
+            "Traduis mon résumé en Abstract",
+            "Lis mon résumé français et traduis-le en anglais académique pour la section Abstract, avec les keywords."
+          ),
+        }] : []),
         {
-          label: "Emmène-moi à l'étape suivante",
+          label: "Continue mon rapport",
           action: () => setLocation(STEP_PATHS[currentStep] ?? "/rapport/step-1"),
         },
-        {
-          label: "Prépare-moi pour la soutenance",
-          action: () => sendQuickAction(
-            "Prépare-moi pour la soutenance",
-            `Prépare-moi pour la soutenance de mon rapport${shortTheme ? ` sur "${shortTheme}"` : ""}. Quelles questions difficiles mon jury va me poser ?`
-          ),
-        },
-      ]
+      ].slice(0, 4)
     : [
         {
           label: "💡 Parlons de mon rapport",
@@ -374,12 +390,21 @@ export default function DashboardPage() {
               content?: string;
               done?: boolean;
               error?: string;
-              action?: { type: string; path?: string; injection?: string };
+              action?: { type: string; path?: string; injection?: string; field?: string; value?: string; section?: string; content?: string };
             };
             if (msg.error) throw new Error(msg.error);
             if (msg.done) break;
             if (msg.action?.type === "navigate" && msg.action.path) {
               pendingNav = { path: msg.action.path, injection: msg.action.injection ?? "" };
+            }
+            // Agent confirmed a theme/problématique → persist to profile
+            if (msg.action?.type === "save_to_profile" && msg.action.field && msg.action.value) {
+              const field = msg.action.field as "theme" | "problematique";
+              updateReport({ [field]: msg.action.value });
+            }
+            // revise_section tool finished → replace the section content in the store
+            if (msg.action?.type === "update_section" && msg.action.section && msg.action.content) {
+              updateReport({ [msg.action.section]: msg.action.content });
             }
             if (msg.content) {
               fullText += msg.content;
@@ -707,15 +732,6 @@ export default function DashboardPage() {
         )}
 
       </div>{/* end main chat column */}
-
-      {/* ── Persistent right panel: progress card ── */}
-      {completedCount > 0 && (
-        <aside className="hidden xl:flex flex-col w-80 flex-shrink-0 border-l border-gray-200 bg-white overflow-y-auto">
-          <div className="p-4">
-            <ReportProgressCard />
-          </div>
-        </aside>
-      )}
 
       </main>
     </div>

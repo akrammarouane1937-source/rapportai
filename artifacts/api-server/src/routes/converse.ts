@@ -244,7 +244,8 @@ Réponds toujours en français. Sois naturel et humain.`;
 const ANTHROPIC_API = "https://api.anthropic.com/v1/messages";
 
 const PHASE_QUESTIONS: Record<string, string> = {
-  theme: "C'est quoi le thème / sujet de ton rapport ?",
+  theme: "C'est quoi le thème / sujet de ton rapport ? (tu peux dire 'je l'ai pas encore' pour passer — l'assistant IA t'aidera à le choisir)",
+  problematique: "Ta problématique de recherche ? (tu peux dire 'je l'ai pas encore' pour passer — l'assistant IA t'aidera plus tard)",
   school: "Ton école ou université ?",
   filiere: "Ta filière ? (tu peux dire 'passer' si tu ne sais pas encore)",
   annee: "Année académique ? (ex: 2025–2026)",

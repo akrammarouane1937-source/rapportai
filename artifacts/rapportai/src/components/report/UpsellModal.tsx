@@ -33,9 +33,9 @@ function getConfig(
       return {
         icon: <FileText className="w-6 h-6 text-purple-600" />,
         iconBg: "bg-purple-100",
-        title: "Tu as atteint ta limite de 30 pages",
+        title: "Tu as atteint ta limite de 60 pages",
         desc: "Passe au plan Pro pour continuer ton rapport sans interruption.",
-        benefits: ["60 pages (×2)", "Révisions illimitées", "JuryAI inclus", "Certificat Anti-IA"],
+        benefits: ["Pages illimitées", "Révisions illimitées", "JuryAI inclus", "Certificat Anti-IA"],
         targetPlan: "Pro",
         upgradeLabel: "Passer au Pro",
         price: 300,
@@ -44,9 +44,9 @@ function getConfig(
       return {
         icon: <AlertTriangle className="w-6 h-6 text-amber-500" />,
         iconBg: "bg-amber-100",
-        title: "Tu as utilisé tes 10 révisions",
+        title: "Tu as utilisé tes 20 révisions",
         desc: "Débloque les révisions illimitées pour peaufiner ton rapport sans limite.",
-        benefits: ["Révisions illimitées", "Anti-plagiat", "JuryAI inclus", "Certificat Anti-IA"],
+        benefits: ["Révisions illimitées", "Pages illimitées", "JuryAI inclus", "Certificat Anti-IA"],
         targetPlan: "Pro",
         upgradeLabel: "Débloquer les révisions",
         price: 300,
@@ -56,10 +56,10 @@ function getConfig(
         icon: <Zap className="w-6 h-6 text-indigo-600" />,
         iconBg: "bg-indigo-100",
         title: "Tu as atteint ta limite de 60 pages",
-        desc: "Passe au plan Premium pour des pages illimitées et un rapport sans contrainte.",
-        benefits: ["Pages illimitées", "Slides PowerPoint", "Tout Pro inclus", "Support prioritaire"],
-        targetPlan: "Premium",
-        upgradeLabel: "Passer au Premium",
+        desc: "Passe au plan Pro pour des pages illimitées et un rapport sans contrainte.",
+        benefits: ["Pages illimitées", "Révisions illimitées", "JuryAI inclus", "Certificat Anti-IA"],
+        targetPlan: "Pro",
+        upgradeLabel: "Passer au Pro",
         price: 300,
       };
     case "feature":

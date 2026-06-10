@@ -73,7 +73,7 @@ router.post("/payments/checkout", async (req: Request, res: Response) => {
         quantity: 1,
       }],
       metadata:    { clerk_id: clerkId ?? "", report_id, plan },
-      success_url: `${appUrl}/dashboard?payment=success&session_id={CHECKOUT_SESSION_ID}`,
+      success_url: `${appUrl}/payment/success?session_id={CHECKOUT_SESSION_ID}`,
       cancel_url:  `${appUrl}/pricing?payment=cancelled`,
       ...(user_email ? { customer_email: user_email } : {}),
     });
