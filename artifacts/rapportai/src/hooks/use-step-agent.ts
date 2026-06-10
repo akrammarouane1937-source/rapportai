@@ -233,8 +233,15 @@ export function useStepAgent({
           partieIChapters: report.partieIChapters,
           partieIIChapters: report.partieIIChapters,
           problematique:  report.problematique,
+          pendingContextInjection: report.pendingContextInjection,
           formatting,
         };
+
+        // One-shot: the injection came from a chat navigation and applies to
+        // this step only — clear it so it doesn't leak into later steps.
+        if (report.pendingContextInjection) {
+          useReportStore.getState().updateReport({ pendingContextInjection: "" });
+        }
 
         const planData = getMyPlan();
 

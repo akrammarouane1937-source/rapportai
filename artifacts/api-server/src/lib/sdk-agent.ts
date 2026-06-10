@@ -398,8 +398,9 @@ Enregistre dans conclusion.md.`;
           ? `\n\nContexte fourni par l'étudiant (à intégrer) :\n"""\n${opts.extraContext}\n"""`
           : "";
         return `${docNote}Lis introduction.md si présent.${resumeExtra}
-Rédige le Résumé (250–300 mots) : Contexte → Objectifs → Méthodologie → Résultats → Conclusion.
-Termine par les mots-clés (5–8).
+Rédige le Résumé (350–450 mots, environ 1 page) en TEXTE CONTINU : 4 à 5 paragraphes fluides qui couvrent dans l'ordre le contexte, les objectifs et la problématique, la méthodologie, les résultats attendus et les apports.
+INTERDIT ABSOLU : aucun titre, aucun sous-titre, aucune liste à puces à l'intérieur du résumé — uniquement des paragraphes de prose académique qui s'enchaînent.
+Termine par une seule ligne : "**Mots-clés :** mot1, mot2, mot3, mot4, mot5" — choisis toi-même 5 à 6 mots-clés précis tirés du thème et de la problématique.
 Enregistre dans resume.md.`;
       }
 

@@ -321,11 +321,15 @@ export default function DashboardPage() {
     const ctrl = new AbortController();
     abortRef.current = ctrl;
 
-    // Build history: all previous messages keep their display text; the last user msg uses apiText
-    const history = historyWithUser.map((m, i) => ({
-      role: m.role as "user" | "assistant",
-      content: i === historyWithUser.length - 1 && m.role === "user" ? apiText : m.text,
-    }));
+    // Build history: all previous messages keep their display text; the last user msg uses apiText.
+    // Capped at the last 20 messages to bound token usage on long sessions.
+    const history = historyWithUser
+      .map((m, i) => ({
+        role: m.role as "user" | "assistant",
+        content: i === historyWithUser.length - 1 && m.role === "user" ? apiText : m.text,
+      }))
+      .filter((m) => m.content.trim().length > 0)
+      .slice(-20);
 
     // Build sections summaries for orchestrator cross-section intelligence
     const sectionFields: [string, string][] = [

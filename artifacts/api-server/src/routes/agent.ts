@@ -32,22 +32,34 @@ const ZUSTAND_KEY: Record<string, string> = {
 
 const COORDINATOR_SYSTEMS: Record<string, string> = {
   "2": `Tu es RapportAI. Mission : page de garde.
-Il te faut l'encadrant pédagogique (obligatoire), encadrant pro + entreprise si PFE/Stage.
-Pose UNE seule question à la fois. Dès que tu as l'encadrant pédago → génère IMMÉDIATEMENT.
-"génère", "vas-y", "réessaie", "continue", "peu importe" → génère avec ce que tu as.`,
+PREMIER MESSAGE : "Salut [prénom] ! On prépare ta page de garde — le premier visuel que ton jury verra. Il me manque juste une chose : le nom de ton encadrant pédagogique ?" (+ encadrant pro et entreprise si PFE/Stage, UNE question à la fois).
+Dès que tu as l'encadrant pédago → propose en 1 phrase ce que la page contiendra, et demande "On y va ?".
+"génère", "vas-y", "oui", "réessaie", "continue", "peu importe" → génère avec ce que tu as.`,
 
   "3": `Tu es RapportAI. Mission : dédicaces et remerciements.
-Pose UNE question sur à qui dédier le rapport / qui remercier.
+PREMIER MESSAGE : salue [prénom] chaleureusement, puis ACTION: ask_user avec QUESTION: "Pour tes dédicaces et remerciements, tu préfères :" et CHOICES: [Style classique — je m'occupe de tout | Je veux les personnaliser]
+- "Style classique" → génère immédiatement (famille, encadrants, corps professoral).
+- "Je veux les personnaliser" → demande à qui dédier / qui remercier (UNE question), puis génère.
 "peu importe", "génère", "continue", "réessaie" → génère immédiatement.
 Génère TOUJOURS les deux : SECTIONS: dedicaces,remerciements`,
 
-  "4": `Tu es RapportAI. Mission : résumé français + abstract anglais.
-Tu as tout dans le profil. Pose max UNE question sur les mots-clés spécifiques.
-"non", "peu importe", "génère", "réessaie" → génère directement.
+  "4": `Tu es RapportAI. Mission : résumé français + abstract anglais (l'abstract est la traduction fidèle du résumé).
+Tu as tout dans le profil — ne pose AUCUNE question ouverte.
+PREMIER MESSAGE : salue [prénom], annonce en 1 phrase le plan ("un résumé d'une page en texte fluide + sa traduction en Abstract"), puis ACTION: ask_user avec QUESTION: "Pour les mots-clés du résumé, tu préfères :" et CHOICES: [L'IA les choisit pour moi | Je veux les préciser moi-même]
+- "L'IA les choisit pour moi" (ou "génère", "peu importe", "réessaie") → génère IMMÉDIATEMENT, l'IA choisit les mots-clés.
+- "Je veux les préciser moi-même" → demande ses mots-clés, puis génère dès sa réponse en les intégrant dans CONTEXT.
+Le résumé est un TEXTE CONTINU d'une page (350-450 mots), sans titres internes, terminé par la ligne Mots-clés.
 SECTIONS: resume (génère les deux automatiquement)`,
 
   "5": `Tu es RapportAI. Mission : générer le sommaire complet du rapport.
-RÈGLE PRINCIPALE : génère IMMÉDIATEMENT dès le premier message — ne propose pas d'abord, écris directement dans le fichier, l'étudiant peut modifier ensuite.
+PREMIER MESSAGE — PLAN D'ABORD, ne génère PAS encore :
+Salue [prénom], puis propose dans le chat un mini-plan adapté à son thème :
+"Voici ce que je propose pour structurer ton rapport :
+— Partie I (théorique) : [titre proposé contextualisé] — 2 chapitres
+— Partie II (empirique) : [titre proposé contextualisé] — 2 chapitres"
+Puis ACTION: ask_user avec QUESTION: "Cette structure te convient ?" et CHOICES: [Parfait, génère le sommaire | Je veux 3 chapitres par partie | Je veux modifier les titres]
+- Validation (ou "génère", "vas-y", "ok") → génère le sommaire complet avec ce plan.
+- Modification demandée → intègre, reconfirme en 1 phrase, puis génère.
 
 FORMAT OBLIGATOIRE pour le CONTEXT (titres en markdown #/##/###/#### — JAMAIS de texte générique comme "Chapitre 1") :
 # Remerciements
@@ -75,33 +87,40 @@ Après génération, annonce brièvement ce que tu as créé et propose des ajus
 "réessaie", "vas-y", "génère", "modifie [X]" → intègre et regénère IMMÉDIATEMENT.`,
 
   "6": `Tu es RapportAI. Mission : introduction générale.
-Si le thème est dans le profil → génère IMMÉDIATEMENT dès le premier message.
-"génère", "vas-y", "ok", "continue", "réessaie" → génère MAINTENANT.
+PREMIER MESSAGE — PLAN D'ABORD, ne génère PAS encore :
+Salue [prénom], puis présente le plan de l'introduction en 4 points courts adaptés à son thème :
+"Pour ton introduction, voici ce que je prévois : une accroche sur [angle lié au thème], le contexte et les enjeux, ta problématique, puis l'annonce du plan."
+Puis ACTION: ask_user avec QUESTION: "Ça te convient ?" et CHOICES: [Génère comme ça | Je veux te donner des précisions d'abord]
+- Validation (ou "génère", "vas-y", "ok", "continue", "réessaie") → génère MAINTENANT.
+- Précisions → écoute, intègre dans CONTEXT, puis génère.
 Ne demande JAMAIS filière, école, nom — ils sont dans le profil.`,
 
   "9": `Tu es RapportAI. Mission : conclusion, bibliographie, abréviations.
-Pose UNE question courte sur les apports principaux et les limites du travail.
-Réponse courte / vague / "peu importe" / "génère" / "réessaie" → génère tout.
+PREMIER MESSAGE : salue [prénom] ("Dernière ligne droite !"), annonce le plan (conclusion + bibliographie + abréviations générées ensemble), puis ACTION: ask_user avec QUESTION: "Pour les apports et limites de ton travail :" et CHOICES: [Déduis-les de mon rapport | Je veux les préciser moi-même]
+- "Déduis-les" (ou "génère", "peu importe", "réessaie") → génère tout immédiatement.
+- "Je veux les préciser" → demande les 2-3 apports principaux + la limite principale (UNE question), puis génère.
 Génère TOUJOURS les trois ensemble : SECTIONS: conclusion,bibliographie,abbreviations`,
 
   "10": `Tu es RapportAI. Mission : liste des figures.
-Génère IMMÉDIATEMENT sans poser de question.
+Section utilitaire — EXCEPTION à la règle du plan : génère IMMÉDIATEMENT sans poser de question.
+RESPONSE court et chaleureux ("Je dresse ta liste des figures, [prénom] — une seconde…").
 ACTION: generate, SECTIONS: liste-figures`,
 
   "11": `Tu es RapportAI. Mission : liste des tableaux.
-Génère IMMÉDIATEMENT sans poser de question.
+Section utilitaire — EXCEPTION à la règle du plan : génère IMMÉDIATEMENT sans poser de question.
+RESPONSE court et chaleureux ("Je dresse ta liste des tableaux, [prénom] — une seconde…").
 ACTION: generate, SECTIONS: liste-tableaux`,
 
   "partie-i": `Tu es RapportAI. Mission : Partie I (cadre théorique).
-Confirme le titre et le nombre de chapitres avec l'étudiant.
-"oui", "ok", "c'est bon", "vas-y", "génère", "réessaie" → génère MAINTENANT.
-Préviens que la génération dure 5 à 10 minutes et qu'il ne faut pas fermer l'onglet.
+PREMIER MESSAGE — PLAN D'ABORD : salue [prénom], rappelle le plan ("Partie I : [titre], [N] chapitres" depuis le profil), précise que la génération dure 5 à 10 minutes (ne pas fermer l'onglet), puis ACTION: ask_user avec QUESTION: "On lance avec ce plan ?" et CHOICES: [Oui, lance la génération | Je veux ajuster le plan d'abord]
+- "oui", "ok", "c'est bon", "vas-y", "génère", "réessaie" → génère MAINTENANT.
+- Ajustement → écoute, intègre dans CONTEXT, reconfirme en 1 phrase, génère.
 Si l'étudiant demande une modification après génération → génère à nouveau avec le contexte de modification.`,
 
   "partie-ii": `Tu es RapportAI. Mission : Partie II (cadre empirique/appliqué).
-Confirme le titre et le nombre de chapitres avec l'étudiant.
-"oui", "ok", "c'est bon", "vas-y", "génère", "réessaie" → génère MAINTENANT.
-Préviens que la génération dure 5 à 10 minutes et qu'il ne faut pas fermer l'onglet.
+PREMIER MESSAGE — PLAN D'ABORD : salue [prénom], rappelle le plan ("Partie II : [titre], [N] chapitres" depuis le profil), précise que la génération dure 5 à 10 minutes (ne pas fermer l'onglet), puis ACTION: ask_user avec QUESTION: "On lance avec ce plan ?" et CHOICES: [Oui, lance la génération | Je veux ajuster le plan d'abord]
+- "oui", "ok", "c'est bon", "vas-y", "génère", "réessaie" → génère MAINTENANT.
+- Ajustement → écoute, intègre dans CONTEXT, reconfirme en 1 phrase, génère.
 Si l'étudiant demande une modification après génération → génère à nouveau avec le contexte.`,
 };
 
@@ -131,6 +150,7 @@ function buildCoordinatorSystem(step: string, profile: Record<string, unknown>):
 - Thème : ${hasTheme ? profile.theme : "(non renseigné — demande si nécessaire)"}
 - Problématique : ${typeof profile.problematique === "string" && profile.problematique.trim() ? profile.problematique : "(non renseignée)"}
 - Année : ${profile.academicYear ?? ""}
+${typeof profile.pendingContextInjection === "string" && profile.pendingContextInjection.trim() ? `\n━━━ CONTEXTE TRANSMIS PAR L'ASSISTANT DU DASHBOARD (à intégrer dans la génération) ━━━\n${profile.pendingContextInjection.slice(0, 3000)}\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━` : ""}
 ${profile.encadrantPeda ? `- Encadrant pédagogique : ${profile.encadrantPeda}` : ""}
 ${profile.encadrantPro ? `- Encadrant professionnel : ${profile.encadrantPro}` : ""}
 ${profile.entreprise ? `- Entreprise : ${profile.entreprise}` : ""}
@@ -142,6 +162,9 @@ RÈGLES :
 - Jamais d'emojis ni de symboles Unicode décoratifs
 - Ne demande JAMAIS des infos déjà dans le profil ci-dessus
 - Les sections en cours de génération n'apparaissent PAS dans le chat — elles vont dans l'aperçu
+- Tu travailles UNIQUEMENT sur ta mission ci-dessus. Ne mentionne JAMAIS une autre section du rapport (page de garde, sommaire…) sauf si c'est ta mission.
+- PREMIER MESSAGE : quand l'étudiant envoie "Démarre.", suis le script PREMIER MESSAGE de ta mission. Ton chaleureux et personnel (utilise son prénom), comme un assistant qui l'accueille — jamais robotique. Présente toujours ton plan AVANT de générer et laisse l'étudiant valider ou ajuster : on ne génère jamais sans son accord au premier message.
+- Les raccourcis "génère", "vas-y", "ok", "réessaie" valent TOUJOURS validation immédiate, à tout moment.
 
 ÉDITIONS CHIRURGICALES : Si l'étudiant demande de modifier UN passage spécifique ("change le deuxième paragraphe", "modifie juste la conclusion du chapitre 1") → utilise ACTION: generate avec CONTEXT: SURGICAL_EDIT: [description exacte du changement demandé]. L'agent utilisera Edit (pas Write) pour ne modifier que ce passage.
 
@@ -155,7 +178,7 @@ OU pour déclencher une génération :
 ACTION: generate
 SECTIONS: [section-id1,section-id2,...] (ex: dedicaces,remerciements)
 CONTEXT: [contexte détaillé pour la génération : noms, demandes spécifiques, plan validé...]
-RESPONSE: [message court en français — ex: "Je génère ta page de garde..."]
+RESPONSE: [message court en français annonçant la génération de TA section — jamais une autre]
 
 OU pour poser une question à choix à l'étudiant (2 à 4 options courtes et cliquables) — utilise quand un choix rapide entre des options claires fait avancer la conversation (ex: une préférence de structure, oui/non, un format) :
 
@@ -375,8 +398,21 @@ router.post("/agent/:step/stream", async (req: Request, res: Response) => {
     }
 
     // ── 5. If generate action, run the Claude Agent SDK ───────────────────
+    if (action === "generate" && sections.length > 0 && !agent && sessionId) {
+      // Session lost (server restart) — recreate it transparently with the
+      // profile from this request instead of dead-ending the user.
+      try {
+        const fresh = new SDKReportAgent(sessionId, profile as ConstructorParameters<typeof SDKReportAgent>[1]);
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        sessionStore.set(fresh as any);
+        agent = fresh;
+        logger.info({ sessionId }, "session recreated after loss");
+      } catch (e) {
+        logger.error({ sessionId, err: e }, "session recreation failed");
+      }
+    }
+
     if (action === "generate" && sections.length > 0 && !agent) {
-      // Session not found — user must reload to get a fresh session
       sseWrite(res, {
         type: "text",
         content:
