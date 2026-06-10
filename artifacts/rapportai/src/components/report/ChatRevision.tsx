@@ -3,6 +3,8 @@ import { motion, AnimatePresence } from "framer-motion";
 import { Send, X, Sparkles, Loader2, Plus } from "lucide-react";
 import { API_BASE } from "@/lib/apiBase";
 import { ensureSession } from "@/lib/useGenerate";
+import { getMyPlan, incrementRevision } from "@/lib/userPlan";
+import { usePaywallStore } from "@/lib/paywallStore";
 
 type Message = {
   id: string;
@@ -177,15 +179,40 @@ export function ChatRevision({
           ? await processRevisionFiles(filesToSend.map((i) => i.file))
           : undefined;
 
+        const planData = getMyPlan();
         const resp = await fetch(`${API_BASE}/api/session/${sessionId}/revise`, {
           method: "POST",
-          headers: { "Content-Type": "application/json" },
+          headers: {
+            "Content-Type":     "application/json",
+            "x-plan-id":        planData.planId,
+            "x-revision-count": String(planData.revisionCount ?? 0),
+          },
           body: JSON.stringify({
             sectionId,
             instruction: text,
             files: fileBlocks,
           }),
         });
+
+        // Revision limit reached → show the paywall instead of a generic error
+        if (resp.status === 403) {
+          try {
+            const body = await resp.json() as { error?: string; planId?: string };
+            if (body.error === "plan_limit_reached") {
+              const cp = (body.planId === "starter" || body.planId === "pro") ? body.planId : "free";
+              usePaywallStore.getState().trigger("revisions", cp as import("@/lib/userPlan").PlanId);
+              setMessages((prev) =>
+                prev.map((m) =>
+                  m.id === agentId
+                    ? { ...m, content: "Tu as atteint la limite de révisions de ton plan.", streaming: false }
+                    : m
+                )
+              );
+              setStreaming(false);
+              return;
+            }
+          } catch { /* fall through to generic error */ }
+        }
 
         if (!resp.ok || !resp.body) throw new Error(`HTTP ${resp.status}`);
 
@@ -225,7 +252,10 @@ export function ChatRevision({
                     m.id === agentId ? { ...m, content: finalText, streaming: false } : m
                   )
                 );
-                if (msg.updatedContent) onContentUpdated(msg.updatedContent);
+                if (msg.updatedContent) {
+                  onContentUpdated(msg.updatedContent);
+                  incrementRevision();
+                }
               }
             } catch { /* skip malformed */ }
           }

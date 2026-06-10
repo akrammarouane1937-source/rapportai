@@ -38,9 +38,15 @@ export function getMyPlan(): UserPlanData {
     const raw = localStorage.getItem(KEY);
     if (raw) {
       const parsed = JSON.parse(raw) as Partial<UserPlanData> & { sectionsGenerated?: number };
+      // A paid plan without a purchase record is a stale value from the
+      // free-launch era (old default was "pro") — downgrade to free.
+      const stored = parsed.planId ?? "free";
+      const planId: PlanId = (stored === "starter" || stored === "pro")
+        ? (parsed.purchasedAt ? stored : "free")
+        : "free";
       // migrate old "sectionsGenerated" field → "pagesGenerated"
       return {
-        planId:         parsed.planId ?? "free",
+        planId,
         revisionCount:  parsed.revisionCount ?? 0,
         pagesGenerated: parsed.pagesGenerated ?? (parsed.sectionsGenerated ? parsed.sectionsGenerated * 8 : 0),
         purchasedAt:    parsed.purchasedAt,
