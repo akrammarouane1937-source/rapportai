@@ -13,6 +13,17 @@ import { logger } from "./lib/logger";
 import { attachPlan } from "./lib/plan-guard";
 import { stripeWebhookHandler } from "./routes/stripe";
 
+// ── Crash guards ──────────────────────────────────────────────────────────
+// Without these, ONE unhandled rejection kills the whole Node process: every
+// in-flight request dies as "Failed to fetch" in the browser, then the host
+// auto-restarts and the app looks healthy again. Log loudly, keep serving.
+process.on("unhandledRejection", (reason) => {
+  logger.error({ err: reason }, "UNHANDLED REJECTION (process kept alive)");
+});
+process.on("uncaughtException", (err) => {
+  logger.error({ err }, "UNCAUGHT EXCEPTION (process kept alive)");
+});
+
 const app: Express = express();
 
 app.use(

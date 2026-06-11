@@ -492,7 +492,11 @@ export function useStepAgent({
         setIsThinking(false);
         setIsGenerating(false);
         const errId = nextId();
-        const msg = err instanceof Error ? err.message : "Erreur de connexion.";
+        const raw = err instanceof Error ? err.message : "";
+        // "Failed to fetch" = the server connection dropped (restart/deploy) — say it humanly
+        const msg = /failed to fetch|networkerror|load failed/i.test(raw)
+          ? "La connexion au serveur a été interrompue. Attends quelques secondes puis renvoie ton message — tes réponses sont conservées."
+          : raw || "Erreur de connexion.";
         setMessages((prev) => [...prev, { id: errId, role: "agent", content: msg }]);
       }
     },
