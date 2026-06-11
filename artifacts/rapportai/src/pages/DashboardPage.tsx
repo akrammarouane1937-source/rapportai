@@ -9,7 +9,7 @@ import { Sidebar, SidebarSpacer } from "@/components/layout/Sidebar";
 import { useReportStore } from "@/lib/store";
 import { getReport } from "@/lib/reportStore";
 import { API_BASE } from "@/lib/apiBase";
-import { getMyPlan, incrementRevision, type PlanId } from "@/lib/userPlan";
+import { getMyPlan, incrementRevision, getChatUsage, incrementChatMessage, type PlanId } from "@/lib/userPlan";
 import { usePaywallStore } from "@/lib/paywallStore";
 import { PaywallModal } from "@/components/report/PaywallModal";
 import { UpsellModal } from "@/components/report/UpsellModal";
@@ -382,12 +382,14 @@ export default function DashboardPage() {
       const sessionId = localStorage.getItem("rapportai_session") ?? undefined;
 
       const planData = getMyPlan();
+      const chatUsage = getChatUsage();
       const resp = await fetch(`${API_BASE}/api/chat`, {
         method: "POST",
         headers: {
           "Content-Type":     "application/json",
           "x-plan-id":        planData.planId,
           "x-revision-count": String(planData.revisionCount ?? 0),
+          "x-chat-count":     String(chatUsage.count),
         },
         body: JSON.stringify({
           sessionId,
@@ -405,7 +407,27 @@ export default function DashboardPage() {
         signal: ctrl.signal,
       });
 
+      // Daily chat limit reached → ChatGPT-style notice + paywall, no generic error
+      if (resp.status === 403) {
+        try {
+          const body = await resp.json() as { error?: string; limit_type?: string; planId?: string };
+          if (body.error === "plan_limit_reached" && body.limit_type === "chat") {
+            setMessages((prev) =>
+              prev.map((m) =>
+                m.id === assistantId
+                  ? { ...m, streaming: false, text: "Tu as atteint ta limite de **15 messages par jour** du plan Gratuit. Reviens demain — ou passe à **Essentiel** pour discuter sans limite avec ton assistant. 🚀" }
+                  : m
+              )
+            );
+            usePaywallStore.getState().trigger("pages", (body.planId === "starter" || body.planId === "pro") ? body.planId as PlanId : "free");
+            setLoading(false);
+            return;
+          }
+        } catch { /* fall through */ }
+      }
+
       if (!resp.ok || !resp.body) throw new Error(`HTTP ${resp.status}`);
+      incrementChatMessage();
 
       const reader  = resp.body.getReader();
       const decoder = new TextDecoder();
@@ -489,10 +511,15 @@ export default function DashboardPage() {
     }
   };
 
+  // Daily chat quota (re-evaluated on every render — increments trigger re-renders)
+  const chatUsage = getChatUsage();
+  const chatLimitReached = isFinite(chatUsage.limit) && chatUsage.count >= chatUsage.limit;
+  const chatRemaining = isFinite(chatUsage.limit) ? Math.max(0, chatUsage.limit - chatUsage.count) : Infinity;
+
   // send() — triggered by textarea send button / Enter key
   const send = () => {
     const text = input.trim();
-    if (!text || loading) return;
+    if (!text || loading || chatLimitReached) return;
     sendWithText(text);
   };
 
@@ -676,7 +703,7 @@ export default function DashboardPage() {
             >
               <div className="flex-1 relative" style={{ minHeight: 24 }}>
                 {/* Animated placeholder overlay */}
-                {!input && (
+                {!input && !chatLimitReached && (
                   <div className="absolute inset-0 pointer-events-none flex items-center overflow-hidden">
                     <AnimatePresence mode="wait">
                       <motion.span
@@ -697,8 +724,8 @@ export default function DashboardPage() {
                   value={input}
                   onChange={(e) => { setInput(e.target.value); autoResize(e.target); }}
                   onKeyDown={handleKeyDown}
-                  disabled={loading}
-                  placeholder=""
+                  disabled={loading || chatLimitReached}
+                  placeholder={chatLimitReached ? "Limite quotidienne atteinte — reviens demain ou passe à Essentiel" : ""}
                   rows={1}
                   className="w-full text-sm text-gray-800 outline-none resize-none bg-transparent leading-relaxed disabled:opacity-50"
                   style={{ minHeight: 24, maxHeight: 140 }}
@@ -724,6 +751,24 @@ export default function DashboardPage() {
                 </button>
               )}
             </div>
+
+            {/* Daily quota notice — only when running low (free plan) */}
+            {isFinite(chatUsage.limit) && chatRemaining <= 5 && (
+              <div className="flex justify-center mt-2">
+                <span className={`text-[11px] ${chatLimitReached ? "text-red-400" : "text-gray-400"}`}>
+                  {chatLimitReached
+                    ? "Limite quotidienne atteinte · réinitialisée demain"
+                    : `${chatRemaining} message${chatRemaining > 1 ? "s" : ""} restant${chatRemaining > 1 ? "s" : ""} aujourd'hui`}
+                  {" · "}
+                  <button
+                    onClick={() => usePaywallStore.getState().trigger("pages", "free")}
+                    className="underline underline-offset-2 hover:text-purple-600 transition-colors"
+                  >
+                    Passer à l'illimité
+                  </button>
+                </span>
+              </div>
+            )}
 
             {/* Quick action pills — BELOW input, only on greeting screen */}
             <AnimatePresence>

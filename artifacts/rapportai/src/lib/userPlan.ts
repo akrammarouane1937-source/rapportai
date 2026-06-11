@@ -102,6 +102,30 @@ export function nextPlan(planId: PlanId): PlanId {
   return "pro";
 }
 
+// ─── Daily chat message limit (the only otherwise-unbounded free surface) ─────
+
+const CHAT_DAILY_LIMITS: Record<PlanId, number> = { free: 15, starter: Infinity, pro: Infinity };
+const CHAT_USAGE_KEY = "rapportai_chat_usage";
+
+export function getChatUsage(): { count: number; limit: number } {
+  const limit = CHAT_DAILY_LIMITS[getMyPlan().planId];
+  try {
+    const today = new Date().toISOString().slice(0, 10);
+    const raw = JSON.parse(localStorage.getItem(CHAT_USAGE_KEY) ?? "{}") as { date?: string; count?: number };
+    return { count: raw.date === today ? (raw.count ?? 0) : 0, limit };
+  } catch {
+    return { count: 0, limit };
+  }
+}
+
+export function incrementChatMessage(): void {
+  try {
+    const today = new Date().toISOString().slice(0, 10);
+    const { count } = getChatUsage();
+    localStorage.setItem(CHAT_USAGE_KEY, JSON.stringify({ date: today, count: count + 1 }));
+  } catch { /* quota — non-fatal */ }
+}
+
 /** Price difference between current plan and target plan, in MAD */
 export function upgradeCostMad(from: PlanId, to: PlanId): number {
   return Math.max(0, PLAN_LIMITS[to].priceMad - PLAN_LIMITS[from].priceMad);

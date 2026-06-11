@@ -758,6 +758,21 @@ router.post("/chat", async (req: Request, res: Response) => {
     return;
   }
 
+  // Daily chat limit — free plan only (each message costs real tokens).
+  // attachPlan middleware already set req.planId from x-plan-id.
+  const CHAT_DAILY_LIMIT: Partial<Record<string, number>> = { free: 15 };
+  const chatLimit = CHAT_DAILY_LIMIT[req.planId ?? "free"];
+  const chatCount = parseInt((req.headers["x-chat-count"] as string) ?? "0", 10);
+  if (chatLimit !== undefined && chatCount >= chatLimit && process.env.FREE_LAUNCH !== "true") {
+    res.status(403).json({
+      error: "plan_limit_reached",
+      limit_type: "chat",
+      planId: req.planId ?? "free",
+      limit: chatLimit,
+    });
+    return;
+  }
+
   res.setHeader("Content-Type", "text/event-stream");
   res.setHeader("Cache-Control", "no-cache");
   res.setHeader("Connection", "keep-alive");
