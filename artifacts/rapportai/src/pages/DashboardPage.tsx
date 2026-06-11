@@ -435,7 +435,7 @@ export default function DashboardPage() {
             }
             // Agent confirmed a theme/problématique → persist to profile
             if (msg.action?.type === "save_to_profile" && msg.action.field && msg.action.value) {
-              const field = msg.action.field as "theme" | "problematique";
+              const field = msg.action.field as "theme" | "problematique" | "filiere" | "school";
               updateReport({ [field]: msg.action.value });
             }
             // revise_section tool finished → replace the section content in the store

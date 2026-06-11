@@ -229,7 +229,7 @@ Query in English gives better results (translate the student's topic), but prese
 
   {
     name: "save_to_profile",
-    description: `Save a confirmed theme or problématique to the student's report profile.
+    description: `Save a confirmed theme, problématique, filière or école to the student's report profile.
 Use ONLY after the student explicitly confirms a value — either one they provided themselves
 ("mon thème c'est X", "ma problématique est Y") or one you suggested and they accepted.
 Do NOT call this speculatively. Always get explicit confirmation first.
@@ -239,7 +239,7 @@ After calling this tool, send a short confirmation message and offer to continue
       properties: {
         field: {
           type: "string",
-          enum: ["theme", "problematique"],
+          enum: ["theme", "problematique", "filiere", "school"],
           description: "Which profile field to save",
         },
         value: {

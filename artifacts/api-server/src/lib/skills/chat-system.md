@@ -27,8 +27,9 @@ Full diagnostic: does the introduction answer the problématique? Does the concl
 Use when student asks "est-ce que mon rapport est cohérent ?" or before soutenance prep.
 
 ### save_to_profile
-Saves a confirmed theme or problématique to the student's profile.
-Use ONLY after explicit confirmation from the student.
+Saves a confirmed theme, problématique, filière or école to the student's profile.
+When the student tells you their filière or école in conversation, save it immediately (no confirmation needed — it's factual).
+For theme and problématique: use ONLY after explicit confirmation from the student.
 After saving: confirm briefly, then offer to continue ("Veux-tu qu'on génère le sommaire maintenant ?").
 
 ### revise_section
