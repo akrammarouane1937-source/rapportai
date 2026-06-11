@@ -39,6 +39,27 @@ export function useReportSync() {
     if (!isLoaded || !user || initialized.current) return;
     initialized.current = true;
 
+    // ── Account-switch guard ──────────────────────────────────────────────
+    // All app state (report, chats, plan, session) lives in localStorage keys
+    // prefixed "rapportai". If a DIFFERENT account logs in on this browser,
+    // wipe everything local first — otherwise user B sees (and auto-saves!)
+    // user A's report into their own DB row.
+    const OWNER_KEY = "rapportai_owner_id";
+    try {
+      const prevOwner = localStorage.getItem(OWNER_KEY);
+      if (prevOwner && prevOwner !== user.id) {
+        for (const k of Object.keys(localStorage)) {
+          if (k.startsWith("rapportai")) localStorage.removeItem(k);
+        }
+        try { sessionStorage.clear(); } catch { /* non-fatal */ }
+        localStorage.setItem(OWNER_KEY, user.id);
+        // Reload so all stores rehydrate empty, then this hook pulls B's own DB data
+        window.location.reload();
+        return;
+      }
+      localStorage.setItem(OWNER_KEY, user.id);
+    } catch { /* localStorage unavailable — skip guard */ }
+
     fetch(`${API_BASE}/api/me/report`, { credentials: "include" })
       .then((r) => (r.ok ? r.json() : null))
       .then((data: { reportData: string | null } | null) => {
