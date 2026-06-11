@@ -30,6 +30,42 @@ const SESSION_KEY     = "rapportai_session";
 const SESSION_TS_KEY  = "rapportai_session_ts";
 const SESSION_TTL     = 4 * 60 * 60 * 1000; // 4 hours
 
+// ─── Attachment display (parsed by ChatMessage in chat-panel.tsx) ─────────────
+// Files are uploaded to the backend separately; this marker makes them VISIBLE
+// in the message stream (thumbnails for images, file cards for documents).
+
+function makeImageThumb(file: File): Promise<string> {
+  return new Promise((resolve, reject) => {
+    const url = URL.createObjectURL(file);
+    const img = new Image();
+    img.onload = () => {
+      try {
+        const scale = 96 / Math.max(img.width, img.height, 1);
+        const canvas = document.createElement("canvas");
+        canvas.width = Math.max(1, Math.round(img.width * Math.min(scale, 1)));
+        canvas.height = Math.max(1, Math.round(img.height * Math.min(scale, 1)));
+        canvas.getContext("2d")?.drawImage(img, 0, 0, canvas.width, canvas.height);
+        resolve(canvas.toDataURL("image/jpeg", 0.7));
+      } catch (e) { reject(e); } finally { URL.revokeObjectURL(url); }
+    };
+    img.onerror = () => { URL.revokeObjectURL(url); reject(new Error("thumb failed")); };
+    img.src = url;
+  });
+}
+
+async function buildAttachMarker(files: File[]): Promise<string> {
+  const items = await Promise.all(files.map(async (f) => {
+    const base: { name: string; size: number; type: string; thumb?: string } = {
+      name: f.name, size: f.size, type: f.type || "fichier",
+    };
+    if (f.type.startsWith("image/")) {
+      try { base.thumb = await makeImageThumb(f); } catch { /* card without thumb */ }
+    }
+    return base;
+  }));
+  return `⟦ATTACH:${JSON.stringify(items)}⟧`;
+}
+
 // ─── Types ────────────────────────────────────────────────────────────────────
 
 export interface ConvMsg {
@@ -192,7 +228,14 @@ export function useStepAgent({
       const ctrl = new AbortController();
       abortCtrlRef.current = ctrl;
 
-      const userMsg: ConvMsg = { id: nextId(), role: "user", content: text };
+      // Attachments stay VISIBLE in the chat (thumbnail/file cards) via marker
+      let displayContent = text;
+      if (_files && _files.length > 0) {
+        try {
+          displayContent = `${text}\n\n${await buildAttachMarker(_files)}`.trim();
+        } catch { /* marker failed — plain text */ }
+      }
+      const userMsg: ConvMsg = { id: nextId(), role: "user", content: displayContent };
       const displayHistory: ConvMsg[] = [...messagesRef.current];
 
       if (!opts?.silent) {
@@ -205,10 +248,18 @@ export function useStepAgent({
       setToolCalls([]);
       streamingIdRef.current = null;
 
-      // Build compact history for the API
+      // Build compact history for the API — replace the attachment marker
+      // (may contain base64 thumbnails) with a short note the coordinator understands
+      const stripMarker = (s: string) =>
+        s.replace(/⟦ATTACH:([\s\S]+?)⟧/g, (_m, json: string) => {
+          try {
+            const names = (JSON.parse(json) as Array<{ name: string }>).map((a) => a.name).join(", ");
+            return `[fichier(s) joint(s) : ${names}]`;
+          } catch { return "[fichier joint]"; }
+        });
       const historyForApi = displayHistory
         .filter((m) => typeof m.content === "string" && m.content.trim())
-        .map((m) => ({ role: m.role, content: typeof m.content === "string" ? m.content.slice(0, 2000) : "" }));
+        .map((m) => ({ role: m.role, content: stripMarker(m.content as string).slice(0, 2000) }));
 
       try {
         const sessionId = await getOrCreateSession();
@@ -270,7 +321,10 @@ export function useStepAgent({
             "x-revision-count":  String(planData.revisionCount ?? 0),
           },
           body: JSON.stringify({
-            message: text,
+            // File-only sends still give the coordinator a meaningful message
+            message: text || (_files && _files.length > 0
+              ? `J'ai joint un fichier : ${_files.map((f) => f.name).join(", ")}. Utilise-le comme base.`
+              : text),
             history: historyForApi,
             sessionId,
             profile,

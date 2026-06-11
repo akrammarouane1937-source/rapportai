@@ -41,6 +41,73 @@ function AgentMarkdown({ content }: { content: string }) {
   );
 }
 
+// ─── Attachments in the message stream ───────────────────────────────────────
+// use-step-agent encodes uploaded files into the message string with a marker:
+// ⟦ATTACH:[{name,size,type,thumb?}]⟧ — parsed here and rendered as cards, like
+// modern LLM chats (image thumbnails, file cards with name + type + size).
+
+type AttachInfo = { name: string; size: number; type: string; thumb?: string };
+const ATTACH_RE = /⟦ATTACH:([\s\S]+?)⟧/;
+
+function parseAttachments(content: ReactNode): { text: ReactNode; attachments: AttachInfo[] } {
+  if (typeof content !== "string") return { text: content, attachments: [] };
+  const m = content.match(ATTACH_RE);
+  if (!m) return { text: content, attachments: [] };
+  let attachments: AttachInfo[] = [];
+  try { attachments = JSON.parse(m[1]) as AttachInfo[]; } catch { /* malformed — ignore */ }
+  return { text: content.replace(ATTACH_RE, "").trim(), attachments };
+}
+
+function fmtSize(bytes: number): string {
+  if (!bytes || bytes < 0) return "";
+  return bytes >= 1048576 ? `${(bytes / 1048576).toFixed(1)} Mo` : `${Math.max(1, Math.round(bytes / 1024))} Ko`;
+}
+
+function fileKindLabel(type: string, name: string): string {
+  const ext = name.split(".").pop()?.toUpperCase() ?? "";
+  if (ext && ext.length <= 5) return ext;
+  return (type.split("/")[1] ?? "FICHIER").toUpperCase();
+}
+
+function AttachmentCards({ items }: { items: AttachInfo[] }) {
+  return (
+    <div className="flex flex-wrap gap-1.5 justify-end">
+      {items.map((a, i) =>
+        a.thumb ? (
+          <img
+            key={i}
+            src={a.thumb}
+            alt={a.name}
+            title={a.name}
+            className="rounded-xl object-cover"
+            style={{ width: 76, height: 76, border: "1px solid #e9d5ff", boxShadow: "0 1px 4px rgba(124,58,237,0.12)" }}
+          />
+        ) : (
+          <div
+            key={i}
+            className="flex items-center gap-2 rounded-xl px-3 py-2"
+            style={{ background: "#fff", border: "1px solid #e9d5ff", maxWidth: 230, boxShadow: "0 1px 4px rgba(124,58,237,0.10)" }}
+            title={a.name}
+          >
+            <div
+              className="w-8 h-8 rounded-lg flex items-center justify-center shrink-0"
+              style={{ background: "#f5f0ff" }}
+            >
+              <FileText className="w-4 h-4" style={{ color: "#7c3aed" }} />
+            </div>
+            <div className="min-w-0">
+              <div className="text-[11px] font-semibold text-gray-800 truncate">{a.name}</div>
+              <div className="text-[10px] text-gray-400">
+                {fileKindLabel(a.type, a.name)}{a.size ? ` · ${fmtSize(a.size)}` : ""}
+              </div>
+            </div>
+          </div>
+        )
+      )}
+    </div>
+  );
+}
+
 // ─── ChatMessage ─────────────────────────────────────────────────────────────
 
 export function ChatMessage({
@@ -53,17 +120,24 @@ export function ChatMessage({
   isTyping?: boolean;
 }) {
   if (role === "user") {
+    const { text, attachments } = parseAttachments(content);
+    const hasText = typeof text === "string" ? text.trim().length > 0 : !!text;
     return (
       <motion.div
         initial={{ opacity: 0, y: 6 }}
         animate={{ opacity: 1, y: 0 }}
         className="flex justify-end mb-4 px-4"
       >
-        <div
-          className="max-w-[80%] rounded-2xl rounded-tr-sm px-4 py-2.5 text-sm"
-          style={{ background: "#7c3aed", color: "#fff", lineHeight: "1.55" }}
-        >
-          {content}
+        <div className="max-w-[80%] flex flex-col items-end gap-1.5">
+          {attachments.length > 0 && <AttachmentCards items={attachments} />}
+          {hasText && (
+            <div
+              className="rounded-2xl rounded-tr-sm px-4 py-2.5 text-sm"
+              style={{ background: "#7c3aed", color: "#fff", lineHeight: "1.55" }}
+            >
+              {text}
+            </div>
+          )}
         </div>
       </motion.div>
     );
