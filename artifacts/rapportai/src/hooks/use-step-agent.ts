@@ -445,6 +445,16 @@ export function useStepAgent({
               usePaywallStore.getState().trigger(lt, cp as import("@/lib/userPlan").PlanId);
             }
 
+            // ── template_filled: student's own .docx template, filled ──
+            if (data.type === "template_filled" && typeof data.url === "string") {
+              const dlUrl = `${API_BASE}${data.url}`;
+              setMessages((prev) => [...prev, {
+                id: nextId(),
+                role: "agent",
+                content: `Bonus : j'ai aussi rempli **ton modèle Word exact** avec tes informations — mise en page, logo et polices d'origine conservés.\n\n[📄 Télécharger ta page de garde (ton modèle rempli)](${dlUrl})`,
+              }]);
+            }
+
             // ── step_done: step complete ───────────────────────────────
             if (data.type === "step_done") {
               onStepComplete?.();

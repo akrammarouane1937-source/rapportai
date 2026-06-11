@@ -4,6 +4,7 @@ import path from "path";
 import { sessionStore } from "../lib/session-store";
 import { SDKReportAgent } from "../lib/sdk-agent";
 import { streamingHumanize } from "../lib/humanize-util";
+import { fillDocxTemplate, FILLED_DOCX_NAME } from "../lib/docx-template-fill";
 import { logger } from "../lib/logger";
 
 const router = Router();
@@ -514,6 +515,27 @@ router.post("/agent/:step/stream", async (req: Request, res: Response) => {
             content,
           });
         }
+
+        // Page de garde + uploaded .docx template → fill the student's EXACT
+        // template (fonts/logo/layout untouched) and offer it for download.
+        if (sectionId === "page-de-garde") {
+          try {
+            const filled = await fillDocxTemplate(
+              agent.workDir,
+              (profile ?? {}) as Record<string, unknown>,
+              context || "",
+            );
+            if (filled) {
+              sseWrite(res, {
+                type: "template_filled",
+                url: `/api/session/${sessionId}/template-filled`,
+                replaced: filled.replaced,
+              });
+            }
+          } catch (fillErr) {
+            logger.warn({ err: fillErr }, "docx template fill failed — markdown version still available");
+          }
+        }
       }
 
       // Mark step as done after successful generation
@@ -535,6 +557,24 @@ router.post("/agent/:step/stream", async (req: Request, res: Response) => {
       res.end();
     }
   }
+});
+
+// ─── GET /api/session/:sessionId/template-filled ─────────────────────────────
+// Download the student's own template, filled (produced by fillDocxTemplate).
+
+router.get("/session/:sessionId/template-filled", (req: Request, res: Response) => {
+  const sessionId = req.params.sessionId as string;
+  const agent = sessionStore.get(sessionId) as SDKReportAgent | undefined;
+  if (!agent) {
+    res.status(404).json({ error: "Session introuvable ou expirée." });
+    return;
+  }
+  const filledPath = path.join(agent.workDir, FILLED_DOCX_NAME);
+  if (!existsSync(filledPath)) {
+    res.status(404).json({ error: "Aucune page de garde remplie pour cette session." });
+    return;
+  }
+  res.download(filledPath, "Page-de-garde.docx");
 });
 
 export default router;

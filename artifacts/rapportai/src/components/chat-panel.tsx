@@ -34,6 +34,16 @@ function AgentMarkdown({ content }: { content: string }) {
             {children}
           </blockquote>
         ),
+        a: ({ href, children }) => (
+          <a
+            href={href}
+            target="_blank"
+            rel="noreferrer"
+            className="inline-flex items-center gap-1 font-semibold text-violet-600 underline underline-offset-2 hover:text-violet-800 transition-colors"
+          >
+            {children}
+          </a>
+        ),
       }}
     >
       {content}
