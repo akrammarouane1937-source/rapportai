@@ -136,9 +136,32 @@ export default function DashboardPage() {
   useSessionRecover(); // silently merge any server-side disk content into Zustand
   useReportSync();     // restore from DB on login + save to DB on changes
 
-  const [messages, setMessages] = useState<Message[]>([]);
+  // Conversation persists across navigation/reload (like ChatGPT's current chat)
+  const DASHCHAT_KEY = "rapportai_dashchat";
+  const [messages, setMessages] = useState<Message[]>(() => {
+    try {
+      const raw = localStorage.getItem(DASHCHAT_KEY);
+      if (raw) return (JSON.parse(raw) as Message[]).filter((m) => m.text);
+    } catch { /* corrupt — start fresh */ }
+    return [];
+  });
   const [input, setInput]       = useState("");
   const [loading, setLoading]   = useState(false);
+
+  useEffect(() => {
+    try {
+      const serializable = messages
+        .filter((m) => !m.streaming && m.text)
+        .map(({ id, role, text }) => ({ id, role, text }));
+      localStorage.setItem(DASHCHAT_KEY, JSON.stringify(serializable.slice(-40)));
+    } catch { /* quota — non-fatal */ }
+  }, [messages]);
+
+  const newConversation = () => {
+    abortRef.current?.abort();
+    setMessages([]);
+    try { localStorage.removeItem(DASHCHAT_KEY); } catch { /* ignore */ }
+  };
   const [copiedId, setCopiedId] = useState<string | null>(null);
   const bottomRef               = useRef<HTMLDivElement>(null);
   const textareaRef             = useRef<HTMLTextAreaElement>(null);
@@ -555,6 +578,14 @@ export default function DashboardPage() {
             {/* Messages (when chatting) */}
             {!showGreeting && (
               <div className="space-y-6 mb-6">
+                <div className="flex justify-end">
+                  <button
+                    onClick={newConversation}
+                    className="text-[11px] text-gray-400 hover:text-purple-600 transition-colors underline underline-offset-2"
+                  >
+                    + Nouvelle conversation
+                  </button>
+                </div>
                 {messages.map((msg) => (
                   <motion.div
                     key={msg.id}
