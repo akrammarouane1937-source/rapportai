@@ -352,7 +352,29 @@ export function PreviewPanel({ activeSection, content, maxStep, isGenerating }: 
             ...(pageIdx === 0 ? activeAccent : {}),
           }}
         >
-          <ReactMarkdown remarkPlugins={[remarkGfm]}>{pageText}</ReactMarkdown>
+          <ReactMarkdown
+            remarkPlugins={[remarkGfm]}
+            components={{
+              // Generated sections may reference local figure files that don't
+              // resolve in the browser — show a clean placeholder, never a broken image
+              img: ({ alt }) => (
+                <span
+                  style={{
+                    display: "inline-block",
+                    border: "1px dashed #d1d5db",
+                    borderRadius: 6,
+                    padding: "10px 18px",
+                    color: "#9ca3af",
+                    fontSize: "10pt",
+                    background: "#f9fafb",
+                    margin: "6px 0",
+                  }}
+                >
+                  📊 {alt || "Figure"} — visible dans l'export Word/PDF
+                </span>
+              ),
+            }}
+          >{pageText}</ReactMarkdown>
           <div
             style={{
               position: "absolute",

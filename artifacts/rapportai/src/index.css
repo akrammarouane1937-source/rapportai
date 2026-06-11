@@ -357,7 +357,9 @@
   margin: 0.25em 0;
 }
 
-.word-preview-content table.md-table {
+/* Applies to ALL tables in the preview — ReactMarkdown emits plain <table>,
+   the old .md-table class never matched, so generated tables were unstyled. */
+.word-preview-content table {
   width: 100%;
   border-collapse: collapse;
   margin: 1em 0 1.5em;
@@ -366,15 +368,15 @@
   color: #1a1a1a;
 }
 
-.word-preview-content table.md-table th,
-.word-preview-content table.md-table td {
+.word-preview-content table th,
+.word-preview-content table td {
   border: 1px solid #bbb;
   padding: 6px 10px;
   text-align: left;
   vertical-align: top;
 }
 
-.word-preview-content table.md-table th {
+.word-preview-content table th {
   background: #f0f0f0;
   font-weight: bold;
   text-align: center;
