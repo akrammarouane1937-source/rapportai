@@ -316,7 +316,9 @@ function SourceCard({ source, onRemove }: { source: BibSource; onRemove: () => v
 
 function EmptyState({ onMethod }: { onMethod: (m: "pdf" | "doi" | "bib" | "scholar") => void }) {
   const report = getReport();
-  const scholarQuery = [report.theme, report.filiere]
+  // Build a targeted Scholar query from the report context: the problématique
+  // carries the most precise keywords, then theme, then filière as fallback.
+  const scholarQuery = [report.problematique?.slice(0, 120), report.theme, report.filiere]
     .filter(Boolean).slice(0, 2).join(" ") || "recherche académique Maroc";
 
   return (
@@ -358,7 +360,8 @@ function SourcesView({
   sources, onRemove, onMethod,
 }: { sources: BibSource[]; onRemove: (id: string) => void; onMethod: (m: "pdf" | "doi" | "bib") => void }) {
   const report = getReport();
-  const scholarQuery = [report.theme, report.filiere].filter(Boolean).join(" ") || "recherche académique";
+  const scholarQuery = [report.problematique?.slice(0, 120), report.theme, report.filiere]
+    .filter(Boolean).slice(0, 2).join(" ") || "recherche académique";
 
   return (
     <div className="flex h-full">

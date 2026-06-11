@@ -128,12 +128,6 @@ export function Sidebar() {
               RapportAI
             </span>
           </div>
-          <button
-            className="w-7 h-7 rounded-lg flex items-center justify-center text-gray-400 hover:text-gray-600 hover:bg-gray-100 transition-colors"
-            title="Rechercher (Ctrl+K)"
-          >
-            <Search className="w-3.5 h-3.5" />
-          </button>
         </div>
 
         {/* Workspace / User */}
@@ -165,7 +159,7 @@ export function Sidebar() {
             }}
           >
             <Plus className="w-3.5 h-3.5 flex-shrink-0" />
-            Nouveau rapport
+            {hasReport ? "Continuer mon rapport" : "Commencer mon rapport"}
           </button>
           <button
             onClick={() => setLocation("/figures")}
