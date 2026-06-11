@@ -291,17 +291,17 @@ export default function DashboardPage() {
           ),
         },
         {
+          label: "Aide-moi à définir ma problématique",
+          action: () => sendQuickAction(
+            "Aide-moi à définir ma problématique",
+            "Je n'ai pas encore de problématique pour mon rapport. Propose-moi 2-3 formulations académiques solides adaptées à mon contexte et aide-moi à choisir la bonne."
+          ),
+        },
+        {
           label: "🤖 IA et plagiarisme — mon rapport est-il safe ?",
           action: () => sendQuickAction(
             "IA et plagiarisme — mon rapport est-il safe ?",
             "Est-ce qu'un rapport généré par IA peut être détecté comme plagiat par mon école ? Comment RapportAI contourne la détection IA ? Mon rapport risque-t-il d'être refusé ?"
-          ),
-        },
-        {
-          label: "📄 Je peux débuter en uploadant mon plan ?",
-          action: () => sendQuickAction(
-            "Je peux débuter en uploadant mon plan ?",
-            "J'ai déjà un plan ou une ébauche de mon rapport. Est-ce que je peux l'uploader pour que RapportAI s'en serve comme base ? Comment ça marche ?"
           ),
         },
       ];
