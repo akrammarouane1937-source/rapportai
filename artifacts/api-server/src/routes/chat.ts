@@ -53,6 +53,7 @@ interface ChatBody {
 // ─── Routing maps ─────────────────────────────────────────────────────────────
 
 const SECTION_PATHS: Record<string, string> = {
+  onboarding:   "/rapport/step-1",
   pageDeGarde:  "/rapport/step-2",
   dedicaces:    "/rapport/step-3",
   resumeFr:     "/rapport/step-4",
@@ -103,7 +104,7 @@ If summaries aren't available yet, build context_injection from the section prev
       properties: {
         section: {
           type: "string",
-          description: "One of: pageDeGarde | dedicaces | resumeFr | sommaire | introduction | partieI | partieII | conclusion | rapports | figures | export",
+          description: "One of: onboarding (Step 1 — for new users after saving their theme/problématique) | pageDeGarde | dedicaces | resumeFr | sommaire | introduction | partieI | partieII | conclusion | rapports | figures | export",
         },
         context_injection: {
           type: "string",

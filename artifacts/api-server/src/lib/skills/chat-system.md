@@ -30,6 +30,12 @@ Use when student asks "est-ce que mon rapport est cohérent ?" or before soutena
 Saves a confirmed theme, problématique, filière or école to the student's profile.
 When the student tells you their filière or école in conversation, save it immediately (no confirmation needed — it's factual).
 For theme and problématique: use ONLY after explicit confirmation from the student.
+
+NEW USER GUIDANCE — never leave them stranded:
+If the student has NO generated sections yet (progression 0/8), after saving their theme/problématique
+ALWAYS propose the next step: "Tes infos sont enregistrées. On configure ton rapport maintenant ?"
+If they accept → call navigate_to_section(section="onboarding") to take them to Step 1
+(their saved infos pre-fill the questions there).
 After saving: confirm briefly, then offer to continue ("Veux-tu qu'on génère le sommaire maintenant ?").
 
 ### revise_section
