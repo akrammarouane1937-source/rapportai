@@ -18,19 +18,6 @@ import remarkGfm from "remark-gfm";
 
 type SectionSummary = { content: string; wordCount: number };
 
-// ── Navigation detection ──────────────────────────────────────────────────────
-const STEP_NAV = [
-  { pattern: /page de garde/i,          path: "/rapport/step-2",   label: "Page de garde" },
-  { pattern: /dédicaces?/i,             path: "/rapport/step-3",   label: "Dédicaces" },
-  { pattern: /remerciements?/i,         path: "/rapport/step-3",   label: "Remerciements" },
-  { pattern: /résumé|abstract/i,        path: "/rapport/step-4",   label: "Résumé & Abstract" },
-  { pattern: /sommaire/i,               path: "/rapport/step-5",   label: "Sommaire" },
-  { pattern: /introduction/i,           path: "/rapport/step-6",   label: "Introduction" },
-  { pattern: /partie\s+i(?!\s*i)/i,     path: "/rapport/partie-i", label: "Partie I" },
-  { pattern: /partie\s+ii/i,            path: "/rapport/partie-ii",label: "Partie II" },
-  { pattern: /conclusion/i,             path: "/rapport/step-9",   label: "Conclusion" },
-];
-
 const STEP_PATHS: Record<number, string> = {
   1: "/rapport/step-1", 2: "/rapport/step-2", 3: "/rapport/step-3",
   4: "/rapport/step-4", 5: "/rapport/step-5", 6: "/rapport/step-6",
@@ -45,13 +32,6 @@ interface Message {
   progressText?: string;
   navSuggestion?: { path: string; label: string } | null;
   navAction?: { path: string; label: string; injection: string } | null;
-}
-
-function detectNav(text: string) {
-  for (const item of STEP_NAV) {
-    if (item.pattern.test(text)) return { path: item.path, label: item.label };
-  }
-  return null;
 }
 
 // ── Animated placeholder hook ─────────────────────────────────────────────────
@@ -490,10 +470,12 @@ export default function DashboardPage() {
           )
         );
       } else {
-        const nav = detectNav(apiText) || detectNav(fullText);
+        // No keyword-based nav fallback: merely MENTIONING "Partie I" in an answer
+        // used to show a wrong "Aller à Partie I" button. The agent's
+        // navigate_to_section tool is the only authoritative navigation source.
         setMessages((prev) =>
           prev.map((m) =>
-            m.id === assistantId ? { ...m, streaming: false, navSuggestion: nav } : m
+            m.id === assistantId ? { ...m, streaming: false, navSuggestion: null } : m
           )
         );
       }
