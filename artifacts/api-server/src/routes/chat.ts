@@ -921,7 +921,13 @@ ${nextKey ? `**Prochaine section recommandée :** ${SECTION_LABELS[nextKey] ?? n
         else if (tu.name === "revise_section") {
           const input = tu.input as { section: string; instructions: string };
           const data = sections[input.section];
-          if (!data || data.wordCount <= 10) {
+          // Revisions are plan-limited (attachPlan middleware set req.planRevisions)
+          const revCount = parseInt((req.headers["x-revision-count"] as string) ?? "0", 10);
+          const revLimit = req.planRevisions ?? Infinity;
+          if (isFinite(revLimit) && revCount >= revLimit) {
+            res.write(`data: ${JSON.stringify({ action: { type: "plan_limit", limit_type: "revisions", planId: req.planId ?? "free" } })}\n\n`);
+            result = `Limite de révisions atteinte (${revLimit} pour le plan ${req.planId === "starter" ? "Essentiel" : "Gratuit"}). N'effectue PAS la révision. Explique gentiment à l'étudiant qu'il a utilisé ses révisions incluses et qu'il peut passer au plan supérieur pour continuer.`;
+          } else if (!data || data.wordCount <= 10) {
             result = `La section "${SECTION_LABELS[input.section] ?? input.section}" n'a pas encore été générée — impossible de la réviser. Propose navigate_to_section pour la générer.`;
           } else {
             const revised = await reviseSectionContent(

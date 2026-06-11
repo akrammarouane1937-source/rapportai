@@ -423,6 +423,23 @@ router.post("/agent/:step/stream", async (req: Request, res: Response) => {
       return;
     }
 
+    // Surgical edits of existing content count as revisions — enforce the plan limit.
+    // Full regenerations stay gated by the page quota instead.
+    if (action === "generate" && context.includes("SURGICAL_EDIT")) {
+      const revCount = parseInt((req.headers["x-revision-count"] as string) ?? "0", 10);
+      const revLimit = req.planRevisions;
+      if (isFinite(revLimit) && revCount >= revLimit) {
+        sseWrite(res, {
+          type: "text",
+          content: `Tu as atteint la limite de ${revLimit} révisions de ton plan. Passe au plan supérieur pour continuer à affiner ton rapport.`,
+        });
+        sseWrite(res, { type: "plan_limit", limit_type: "revisions", planId: req.planId });
+        sseWrite(res, { type: "done" });
+        res.end();
+        return;
+      }
+    }
+
     if (action === "generate" && sections.length > 0 && agent) {
       // Patch the agent profile with latest data from the frontend
       if (profile && typeof profile === "object") {

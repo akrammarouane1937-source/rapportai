@@ -9,6 +9,10 @@ import { Sidebar, SidebarSpacer } from "@/components/layout/Sidebar";
 import { useReportStore } from "@/lib/store";
 import { getReport } from "@/lib/reportStore";
 import { API_BASE } from "@/lib/apiBase";
+import { getMyPlan, incrementRevision, type PlanId } from "@/lib/userPlan";
+import { usePaywallStore } from "@/lib/paywallStore";
+import { PaywallModal } from "@/components/report/PaywallModal";
+import { UpsellModal } from "@/components/report/UpsellModal";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 
@@ -354,9 +358,14 @@ export default function DashboardPage() {
     try {
       const sessionId = localStorage.getItem("rapportai_session") ?? undefined;
 
+      const planData = getMyPlan();
       const resp = await fetch(`${API_BASE}/api/chat`, {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: {
+          "Content-Type":     "application/json",
+          "x-plan-id":        planData.planId,
+          "x-revision-count": String(planData.revisionCount ?? 0),
+        },
         body: JSON.stringify({
           sessionId,
           messages:        history,
@@ -394,7 +403,7 @@ export default function DashboardPage() {
               content?: string;
               done?: boolean;
               error?: string;
-              action?: { type: string; path?: string; injection?: string; field?: string; value?: string; section?: string; content?: string };
+              action?: { type: string; path?: string; injection?: string; field?: string; value?: string; section?: string; content?: string; planId?: string };
             };
             if (msg.error) throw new Error(msg.error);
             if (msg.done) break;
@@ -409,6 +418,12 @@ export default function DashboardPage() {
             // revise_section tool finished → replace the section content in the store
             if (msg.action?.type === "update_section" && msg.action.section && msg.action.content) {
               updateReport({ [msg.action.section]: msg.action.content });
+              incrementRevision();
+            }
+            // Revision limit reached server-side → show the paywall
+            if (msg.action?.type === "plan_limit") {
+              const cp = (msg.action.planId === "starter" || msg.action.planId === "pro") ? msg.action.planId : "free";
+              usePaywallStore.getState().trigger("revisions", cp as PlanId);
             }
             if (msg.content) {
               fullText += msg.content;
@@ -484,8 +499,15 @@ export default function DashboardPage() {
 
   const workspaceName = user?.firstName || "Mon espace";
 
+  const { open: paywallOpen, limitType: paywallLimitType, currentPlan: paywallPlan, close: closePaywall } = usePaywallStore();
+  const paywallUpsellVariant = paywallLimitType === "revisions" ? "revision-essentiel" as const : "page-essentiel" as const;
+
   return (
     <div className="flex h-screen overflow-hidden" style={{ background: "#f9f8ff" }}>
+      {paywallPlan === "free"
+        ? <PaywallModal open={paywallOpen} onClose={closePaywall} />
+        : <UpsellModal open={paywallOpen} onClose={closePaywall} variant={paywallUpsellVariant} currentPlan={paywallPlan} />
+      }
       <Sidebar />
       <SidebarSpacer />
 

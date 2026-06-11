@@ -4,8 +4,24 @@ import { API_BASE } from "@/lib/apiBase";
 import { useReportStore } from "@/lib/store";
 import { useUserSettingsStore } from "@/lib/userSettingsStore";
 import { ChoiceCard } from "@/components/chat-panel";
-import { getMyPlan, incrementPages } from "@/lib/userPlan";
+import { getMyPlan, incrementPages, incrementRevision } from "@/lib/userPlan";
 import { usePaywallStore } from "@/lib/paywallStore";
+
+// Section id (backend) → report store key, to detect whether a file_written
+// is a first generation or a revision of existing content.
+const SECTION_TO_STORE_KEY: Record<string, string> = {
+  "page-de-garde":  "pageDeGarde",
+  "dedicaces":      "dedicaces",
+  "remerciements":  "remerciements",
+  "resume":         "resumeFr",
+  "abstract":       "abstractEn",
+  "sommaire":       "sommaire",
+  "introduction":   "introduction",
+  "partie-i":       "partieI",
+  "partie-ii":      "partieII",
+  "conclusion":     "conclusion",
+  "bibliographie":  "bibliographie",
+};
 
 // ─── Re-export ToolCall so pages can import from here ────────────────────────
 export type { ToolCall } from "@/hooks/use-generate";
@@ -251,6 +267,7 @@ export function useStepAgent({
             "Content-Type":      "application/json",
             "x-plan-id":         planData.planId,
             "x-pages-generated": String(planData.pagesGenerated ?? 0),
+            "x-revision-count":  String(planData.revisionCount ?? 0),
           },
           body: JSON.stringify({
             message: text,
@@ -354,7 +371,24 @@ export function useStepAgent({
               setToolCalls((prev) => prev.map((tc) => ({ ...tc, done: true })));
               const wordCount = (data.content as string).split(/\s+/).filter(Boolean).length;
               incrementPages(wordCount);
+              // If this section already had content, the agent just edited it → that's a revision
+              const storeKey = SECTION_TO_STORE_KEY[data.section as string];
+              const existing = storeKey
+                ? (useReportStore.getState().report as unknown as Record<string, unknown>)[storeKey]
+                : undefined;
+              if (typeof existing === "string" && existing.trim().length > 0) {
+                incrementRevision();
+              }
               onSectionGenerated?.(data.section as string, data.content as string);
+            }
+
+            // ── plan_limit: revision/page limit hit mid-stream ─────────
+            if (data.type === "plan_limit") {
+              setIsThinking(false);
+              setIsGenerating(false);
+              const lt = data.limit_type === "revisions" ? "revisions" as const : "pages" as const;
+              const cp = (data.planId === "starter" || data.planId === "pro") ? data.planId : "free";
+              usePaywallStore.getState().trigger(lt, cp as import("@/lib/userPlan").PlanId);
             }
 
             // ── step_done: step complete ───────────────────────────────
