@@ -22,10 +22,9 @@ const NAV_ITEMS = [
   { icon: Settings,      label: "Paramètres",          path: "/parametres",         proFeature: "" },
 ];
 
-const BOTTOM_NAV = [
-  { icon: GraduationCap, label: "Tutoriel",      path: "/tutoriel" },
-  { icon: BookMarked,    label: "Documentation", path: "/documentation" },
-];
+// Tutoriel/Documentation removed for launch — those routes don't exist yet.
+// Re-add entries here once the pages are built.
+const BOTTOM_NAV: Array<{ icon: typeof GraduationCap; label: string; path: string }> = [];
 
 export function Sidebar() {
   const [location, setLocation] = useLocation();

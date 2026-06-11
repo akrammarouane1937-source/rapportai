@@ -292,7 +292,16 @@ export default function LandingPage() {
               transition={{ duration: 0.5, delay: 0.2 }}
               className="w-full"
             >
-              <WaitlistForm />
+              <div className="flex justify-center">
+                <Link href="/sign-up">
+                  <button
+                    className="px-8 py-4 rounded-xl font-bold text-white text-base transition-transform hover:scale-[1.02]"
+                    style={{ background: "linear-gradient(135deg,#7c3aed,#a855f7)", boxShadow: "0 8px 30px rgba(124,58,237,0.35)" }}
+                  >
+                    Commencer gratuitement →
+                  </button>
+                </Link>
+              </div>
               <div className="mt-4 flex justify-center">
                 <Link href="/demo">
                   <button className="text-sm text-muted-foreground hover:text-foreground underline underline-offset-4 transition-colors">
