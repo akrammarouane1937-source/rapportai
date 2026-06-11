@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Sidebar, SidebarSpacer } from "@/components/layout/Sidebar";
 import { getReport, saveReport } from "@/lib/reportStore";
+import { API_BASE } from "@/lib/apiBase";
 import { useReportStore } from "@/lib/store";
 import { useOptionalUser as useUser } from "@/lib/useOptionalClerk";
 
@@ -35,13 +36,31 @@ export default function ParametresPage() {
   const [values, setValues] = useState<Record<string, string>>({});
   const [saved, setSaved] = useState(false);
 
-  const handleDelete = () => {
+  const handleDelete = async () => {
     const ok = window.confirm(
       "Supprimer ce rapport et tout son contenu ? Cette action est irréversible. Pense à exporter ton rapport (Word/PDF) avant si tu veux le garder."
     );
     if (!ok) return;
     resetReport();
-    setLocation("/dashboard");
+    // Full reset: clear ALL local app state (raw store, per-step chats, session)
+    // — keep the owner id and the plan (purchases must survive a report reset)
+    try {
+      for (const k of Object.keys(localStorage)) {
+        if (k.startsWith("rapportai") && k !== "rapportai_owner_id" && k !== "rapportai_plan") {
+          localStorage.removeItem(k);
+        }
+      }
+    } catch { /* non-fatal */ }
+    // Clear the server copy too — otherwise useReportSync re-hydrates the old report on next login
+    try {
+      await fetch(`${API_BASE}/api/me/report`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        credentials: "include",
+        body: JSON.stringify({ reportData: JSON.stringify({}) }),
+      });
+    } catch { /* offline — local reset still done */ }
+    window.location.href = "/dashboard"; // hard reload so every store rehydrates empty
   };
 
   useEffect(() => {
