@@ -122,9 +122,16 @@ export function PreviewPanel({ activeSection, content, maxStep, isGenerating }: 
   // Track whether active section already had content (to detect transition empty→non-empty)
   const hadContentRef = useRef(false);
 
+  // ── Typewriter reveal: when fresh content lands for the active section,
+  //    reveal it progressively so generation feels like live streaming ──────────
+  const [typed, setTyped] = useState<{ id: string; text: string; full: string } | null>(null);
+  const prevContentRef = useRef<string | null>(null);
+
   // Scroll to active section when it changes (step navigation)
   useEffect(() => {
     hadContentRef.current = false; // reset on step change
+    prevContentRef.current = null; // don't animate on plain navigation
+    setTyped(null);
     const frame = requestAnimationFrame(() => {
       if (!scrollRef.current) return;
       const el = scrollRef.current.querySelector(`[data-section="${activeSection}"]`);
@@ -138,6 +145,35 @@ export function PreviewPanel({ activeSection, content, maxStep, isGenerating }: 
   const activeSectionContent = activeField
     ? (report as unknown as Record<string, string>)[activeField] || ""
     : "";
+
+  // Animate only when content CHANGES while the page is open (a generation or
+  // revision just finished) — not on plain step navigation to existing content.
+  useEffect(() => {
+    if (prevContentRef.current === null) {
+      prevContentRef.current = activeSectionContent;
+      return;
+    }
+    if (activeSectionContent && activeSectionContent !== prevContentRef.current) {
+      prevContentRef.current = activeSectionContent;
+      const full = activeSectionContent;
+      const words = full.split(/(\s+)/);
+      let i = 0;
+      const step = Math.max(6, Math.ceil(words.length / 160)); // ~160 ticks ≈ 12s max
+      setTyped({ id: activeSection, text: "", full });
+      const interval = setInterval(() => {
+        i += step;
+        if (i >= words.length) {
+          setTyped({ id: activeSection, text: full, full });
+          clearInterval(interval);
+        } else {
+          setTyped({ id: activeSection, text: words.slice(0, i).join(""), full });
+        }
+      }, 75);
+      return () => clearInterval(interval);
+    }
+    prevContentRef.current = activeSectionContent;
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [activeSectionContent, activeSection]);
 
   useEffect(() => {
     if (!activeSectionContent || hadContentRef.current) return;
@@ -205,9 +241,14 @@ export function PreviewPanel({ activeSection, content, maxStep, isGenerating }: 
     // When maxStep is provided, skip sections that belong to future steps
     if (maxStep !== undefined && (SECTION_STEPS[id] ?? 99) > maxStep) continue;
 
-    const text = id === activeSection && content
+    let text = id === activeSection && content
       ? content
       : (report as unknown as Record<string, string>)[field] || "";
+
+    // Typewriter in progress for this section → show the partial reveal
+    if (id === activeSection && typed && typed.id === id && typed.text !== typed.full) {
+      text = typed.text;
+    }
 
     const isActive = id === activeSection;
 
