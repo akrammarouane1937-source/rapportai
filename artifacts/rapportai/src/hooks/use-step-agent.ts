@@ -426,14 +426,30 @@ export function useStepAgent({
               const wordCount = (data.content as string).split(/\s+/).filter(Boolean).length;
               incrementPages(wordCount);
               // If this section already had content, the agent just edited it → that's a revision
-              const storeKey = SECTION_TO_STORE_KEY[data.section as string];
+              const storeKey = (typeof data.zustand_key === "string" && data.zustand_key)
+                || SECTION_TO_STORE_KEY[data.section as string];
               const existing = storeKey
                 ? (useReportStore.getState().report as unknown as Record<string, unknown>)[storeKey]
                 : undefined;
               if (typeof existing === "string" && existing.trim().length > 0) {
                 incrementRevision();
               }
+              // Write the content DIRECTLY into the store — never depend solely on
+              // the page callback. Idempotent with onSectionGenerated.
+              if (storeKey) {
+                useReportStore.getState().updateReport(
+                  { [storeKey]: data.content } as Parameters<ReturnType<typeof useReportStore.getState>["updateReport"]>[0]
+                );
+              }
               onSectionGenerated?.(data.section as string, data.content as string);
+              // Visible confirmation — if this message appears but the preview stays
+              // empty, the bug is in rendering; if it never appears, the event was lost.
+              setMessages((prev) => [...prev, {
+                id: nextId(),
+                role: "agent",
+                content: `✅ Section enregistrée (${wordCount} mots) — visible dans l'aperçu à droite.`,
+              }]);
+              streamingIdRef.current = null;
             }
 
             // ── plan_limit: revision/page limit hit mid-stream ─────────
