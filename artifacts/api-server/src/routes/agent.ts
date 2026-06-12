@@ -443,6 +443,22 @@ router.post("/agent/:step/stream", async (req: Request, res: Response) => {
     }
 
     if (action === "generate" && sections.length > 0 && agent) {
+      // Memory guard: if the process is already using too much RAM, refuse to spawn
+      // the Claude Code subprocess (which needs ~250MB) rather than letting the OS
+      // kill the process with exit 134 (SIGABRT / OOM). The server stays alive and
+      // the user sees a friendly retry message instead of a 502.
+      const rssMB = Math.round(process.memoryUsage().rss / 1024 / 1024);
+      if (rssMB > 380) {
+        logger.warn({ rssMB }, "memory guard triggered — refusing generation to avoid OOM");
+        sseWrite(res, {
+          type: "text",
+          content: "⚠️ Le serveur est sous forte charge en ce moment. Réessaie dans 30 secondes — tes infos sont sauvegardées.",
+        });
+        sseWrite(res, { type: "done" });
+        res.end();
+        return;
+      }
+
       // Patch the agent profile with latest data from the frontend
       if (profile && typeof profile === "object") {
         const profileFields: Record<string, unknown> = {};
