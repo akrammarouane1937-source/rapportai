@@ -11,7 +11,6 @@ interface SectionDef {
 }
 
 const SECTIONS: SectionDef[] = [
-  { key: "pageDeGarde",   label: "Page de garde",    path: "/rapport/step-2",    step: 2 },
   { key: "dedicaces",     label: "Dédicaces",         path: "/rapport/step-3",    step: 3 },
   { key: "remerciements", label: "Remerciements",     path: "/rapport/step-3",    step: 3 },
   { key: "resumeFr",      label: "Résumé & Abstract", path: "/rapport/step-4",    step: 4 },

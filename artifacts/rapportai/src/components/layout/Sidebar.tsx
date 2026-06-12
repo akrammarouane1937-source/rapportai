@@ -77,7 +77,6 @@ export function Sidebar() {
 
   const STEP_LABELS: Record<number, string> = {
     1:  "Informations générales",
-    2:  "Page de garde",
     3:  "Dédicaces & Remerciements",
     4:  "Résumé & Abstract",
     5:  "Sommaire",
@@ -88,7 +87,7 @@ export function Sidebar() {
   };
 
   const STEP_PATHS: Record<number, string> = {
-    1: "/rapport/step-1", 2: "/rapport/step-2", 3: "/rapport/step-3",
+    1: "/rapport/step-1", 3: "/rapport/step-3",
     4: "/rapport/step-4", 5: "/rapport/step-5", 6: "/rapport/step-6",
     7: "/rapport/partie-i", 8: "/rapport/partie-ii", 9: "/rapport/step-9",
   };

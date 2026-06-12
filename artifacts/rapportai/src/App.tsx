@@ -282,7 +282,7 @@ function ClerkProviderWithRoutes() {
               <ProtectedRoute component={Step1Page} />
             </Route>
             <Route path="/rapport/step-2">
-              <ProtectedRoute component={Step2Page} />
+              <Redirect to="/rapport/step-3" />
             </Route>
             <Route path="/rapport/step-3">
               <ProtectedRoute component={Step3Page} />
@@ -324,7 +324,7 @@ function ClerkProviderWithRoutes() {
               <ProtectedRoute component={BibliothequeePage} />
             </Route>
             <Route path="/demo/step-1" component={Step1Page} />
-            <Route path="/demo/step-2" component={Step2Page} />
+            <Route path="/demo/step-2"><Redirect to="/demo/step-3" /></Route>
             <Route path="/demo/step-3" component={Step3Page} />
             <Route path="/demo/step-4" component={Step4Page} />
             <Route path="/demo/step-5" component={Step5Page} />
@@ -374,7 +374,7 @@ function NoAuthApp() {
           <Route path="/sections-terminees" component={SectionsTermineesPage} />
           <Route path="/demo" component={DemoPage} />
           <Route path="/rapport/step-1" component={Step1Page} />
-          <Route path="/rapport/step-2" component={Step2Page} />
+          <Route path="/rapport/step-2"><Redirect to="/rapport/step-3" /></Route>
           <Route path="/rapport/step-3" component={Step3Page} />
           <Route path="/rapport/step-4" component={Step4Page} />
           <Route path="/rapport/step-5" component={Step5Page} />
