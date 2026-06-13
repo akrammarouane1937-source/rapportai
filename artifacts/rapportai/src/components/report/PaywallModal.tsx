@@ -10,20 +10,28 @@ interface PaywallModalProps {
 
 const PLANS = [
   {
-    id: "starter",
-    name: "Starter",
-    price: "37",
-    currency: "$",
+    id: "basique",
+    name: "Basique",
+    price: "147",
+    currency: "MAD",
     popular: false,
-    features: ["60 pages", "PDF export", "Anti-plagiat", "20 révisions"],
+    features: ["35 pages", "Partie I incluse", "8 révisions", "Humanisation IA"],
+  },
+  {
+    id: "starter",
+    name: "Essentiel",
+    price: "377",
+    currency: "MAD",
+    popular: true,
+    features: ["60 pages", "Parties I + II", "PDF export", "Anti-plagiat", "20 révisions"],
   },
   {
     id: "pro",
     name: "Pro",
-    price: "67",
-    currency: "$",
-    popular: true,
-    features: ["Pages illimitées", "Révisions illimitées", "Anti-plagiat", "JuryAI", "Certificat", "PowerPoint"],
+    price: "677",
+    currency: "MAD",
+    popular: false,
+    features: ["Pages illimitées", "Révisions illimitées", "Anti-plagiat", "JuryAI"],
   },
 ];
 
@@ -45,7 +53,7 @@ export function PaywallModal({ open, onClose }: PaywallModalProps) {
             animate={{ scale: 1, opacity: 1, y: 0 }}
             exit={{ scale: 0.95, opacity: 0, y: 16 }}
             transition={{ type: "spring", damping: 24, stiffness: 280 }}
-            className="bg-white rounded-2xl w-full max-w-lg overflow-hidden"
+            className="bg-white rounded-2xl w-full max-w-2xl overflow-hidden"
             style={{ boxShadow: "0 24px 80px rgba(124,58,237,0.22)" }}
           >
             <div className="px-8 pt-8 pb-6 text-center border-b border-gray-100">
@@ -61,7 +69,7 @@ export function PaywallModal({ open, onClose }: PaywallModalProps) {
             </div>
 
             <div className="p-6">
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-3 gap-3">
                 {PLANS.map((plan) => (
                   <div
                     key={plan.id}

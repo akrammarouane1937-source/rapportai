@@ -1,6 +1,6 @@
 const KEY = "rapportai_plan_v1";
 
-export type PlanId = "free" | "starter" | "pro";
+export type PlanId = "free" | "basique" | "starter" | "pro";
 
 export interface UserPlanData {
   planId:         PlanId;
@@ -21,14 +21,16 @@ export interface PlanLimit {
 }
 
 export const PLAN_LIMITS: Record<PlanId, PlanLimit> = {
-  //                pages  revisions  label         labelShort  priceMad  priceUsd  anchorMad  stripePriceId
+  //                 pages  revisions  label         labelShort  priceMad  priceUsd  anchorMad  stripePriceId
   free:    { pages: 12,       revisions: 2,        label: "Gratuit",   labelShort: "Gratuit",   priceMad: 0,   priceUsd: 0,  anchorMad: 0,    stripePriceId: null },
+  basique: { pages: 35,       revisions: 8,        label: "Basique",   labelShort: "Basique",   priceMad: 147, priceUsd: 15, anchorMad: 350,  stripePriceId: "price_BASIQUE_TO_ADD" },
   starter: { pages: 60,       revisions: 20,       label: "Essentiel", labelShort: "Essentiel", priceMad: 377, priceUsd: 37, anchorMad: 1000, stripePriceId: "price_1TdDGG003Ts2AXbaNkwwT03b" },
   pro:     { pages: Infinity, revisions: Infinity, label: "Pro",       labelShort: "Pro",       priceMad: 677, priceUsd: 67, anchorMad: 1500, stripePriceId: "price_1TdDGO003Ts2AXbac5dyihpl" },
 };
 
 export const PLAN_FEATURES: Record<PlanId, string[]> = {
   free:    [],
+  basique: ["humanize"],
   starter: ["pdf", "anti-plagiat", "humanize"],
   pro:     ["pdf", "anti-plagiat", "humanize", "juryai"],
 };
@@ -41,7 +43,7 @@ export function getMyPlan(): UserPlanData {
       // A paid plan without a purchase record is a stale value from the
       // free-launch era (old default was "pro") — downgrade to free.
       const stored = parsed.planId ?? "free";
-      const planId: PlanId = (stored === "starter" || stored === "pro")
+      const planId: PlanId = (stored === "basique" || stored === "starter" || stored === "pro")
         ? (parsed.purchasedAt ? stored : "free")
         : "free";
       // migrate old "sectionsGenerated" field → "pagesGenerated"
@@ -98,13 +100,14 @@ export function canUseFeature(feature: string, planId: PlanId): boolean {
 }
 
 export function nextPlan(planId: PlanId): PlanId {
-  if (planId === "free") return "starter";
+  if (planId === "free") return "basique";
+  if (planId === "basique") return "starter";
   return "pro";
 }
 
 // ─── Daily chat message limit (the only otherwise-unbounded free surface) ─────
 
-const CHAT_DAILY_LIMITS: Record<PlanId, number> = { free: 15, starter: Infinity, pro: Infinity };
+const CHAT_DAILY_LIMITS: Record<PlanId, number> = { free: 15, basique: Infinity, starter: Infinity, pro: Infinity };
 const CHAT_USAGE_KEY = "rapportai_chat_usage";
 
 export function getChatUsage(): { count: number; limit: number } {

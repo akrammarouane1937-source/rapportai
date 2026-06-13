@@ -27,14 +27,29 @@ const PLANS: Plan[] = [
     name:        "Gratuit",
     priceMad:    null,
     anchorMad:   null,
-    description: "Pour explorer la plateforme sans engagement.",
+    description: "Pour découvrir la plateforme.",
     cta:         "Commencer gratuitement",
     popular:     false,
     features: [
       "12 pages générées",
       "2 révisions IA",
       "Export Word",
-      "Qualité identique aux plans payants",
+    ],
+  },
+  {
+    id:          "basique",
+    name:        "Basique",
+    priceMad:    147,
+    anchorMad:   350,
+    description: "Partie I incluse — le cœur de ton rapport.",
+    cta:         FREE_LAUNCH ? "Commencer gratuitement" : "Choisir Basique",
+    popular:     false,
+    features: [
+      "35 pages générées",
+      "8 révisions IA",
+      "Partie I (cadre théorique)",
+      "Export Word",
+      "Humanisation anti-détection IA",
     ],
   },
   {
@@ -42,15 +57,15 @@ const PLANS: Plan[] = [
     name:        "Essentiel",
     priceMad:    377,
     anchorMad:   1000,
-    description: "Pour finir ton rapport en une seule session.",
+    description: "Rapport complet, Partie I + II.",
     cta:         FREE_LAUNCH ? "Commencer gratuitement" : "Choisir Essentiel",
-    popular:     false,
+    popular:     true,
     features: [
       "60 pages générées",
       "20 révisions IA",
+      "Parties I + II complètes",
       "Export Word + PDF",
       "Humanisation anti-détection IA",
-      "Génération depuis tes documents",
       "Canevas de ton école",
     ],
   },
@@ -59,15 +74,14 @@ const PLANS: Plan[] = [
     name:        "Pro",
     priceMad:    677,
     anchorMad:   1500,
-    description: "Pages et révisions illimitées. Accès complet.",
+    description: "Pages et révisions illimitées.",
     cta:         FREE_LAUNCH ? "Commencer gratuitement" : "Choisir Pro",
-    popular:     true,
+    popular:     false,
     features: [
       "Pages illimitées",
       "Révisions illimitées",
       "Export Word + PDF",
       "Humanisation anti-détection IA",
-      "Génération depuis tes documents",
       "Canevas de ton école",
       "Accès JuryAI",
     ],
@@ -111,7 +125,7 @@ function PricingContent({
   const [openFaq, setOpenFaq] = useState<number | null>(null);
 
   const currentPlan = getMyPlan();
-  const planOrder: PlanId[] = ["free", "starter", "pro"];
+  const planOrder: PlanId[] = ["free", "basique", "starter", "pro"];
   const canUpgrade = (id: PlanId) =>
     planOrder.indexOf(id) > planOrder.indexOf(currentPlan.planId);
 
@@ -175,7 +189,7 @@ function PricingContent({
           </div>
 
           {/* Cards */}
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-5">
             {PLANS.map((plan) => {
               const isCurrent  = plan.id === currentPlan.planId;
               const isFree     = plan.priceMad === null;

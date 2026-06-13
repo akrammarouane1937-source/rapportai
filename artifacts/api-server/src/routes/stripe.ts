@@ -18,6 +18,13 @@ const PRICES: Record<string, {
   label:        string;
   stripePriceId: string;
 }> = {
+  basique: {
+    amountUsd:    1500,
+    priceMad:     147,
+    anchorMad:    350,
+    label:        "RapportAI Basique",
+    stripePriceId: "price_BASIQUE_TO_ADD",
+  },
   starter: {
     amountUsd:    3700,
     priceMad:     377,
@@ -50,7 +57,7 @@ router.post("/payments/checkout", async (req: Request, res: Response) => {
   };
 
   if (!plan || !PRICES[plan]) {
-    res.status(400).json({ error: "Invalid plan. Use 'starter' or 'pro'." });
+    res.status(400).json({ error: "Invalid plan. Use 'basique', 'starter' or 'pro'." });
     return;
   }
   if (!report_id) {
