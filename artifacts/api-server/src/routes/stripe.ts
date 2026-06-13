@@ -6,43 +6,44 @@ import { db, reportsTable, usersTable } from "@workspace/db";
 import { logger } from "../lib/logger";
 import { getUserByClerkId, consumeReferralCredit, onReferredUserPaid } from "../lib/referral";
 
-// Smallest charge Stripe accepts (USD). We always leave at least this much to
-// pay so a fully-covering referral credit can't produce a zero-total checkout.
-const MIN_CHARGE_CENTS = 50;
+// Smallest charge we leave on a checkout (MAD centimes) so a fully-covering
+// referral credit can't produce a zero-total checkout below Stripe's minimum.
+const MIN_CHARGE_CENTIMES = 500; // 5 MAD
 
 const router = Router();
 
 // ─── Plan catalogue ───────────────────────────────────────────────────────────
-// Prices charged in USD (Stripe doesn't support MAD).
-// Display prices on the frontend are in MAD (377 / 677 MAD ≈ $37 / $67 USD).
+// Charged in MAD (dirhams) so students pay the exact advertised price with no
+// bank-FX surprise. Stripe settles to the account's USD balance with a small
+// currency-conversion fee. Amounts are in MAD centimes (147 MAD = 14700).
 
 const PRICES: Record<string, {
-  amountUsd:    number;   // cents
-  priceMad:     number;   // display only
+  amountMad:    number;   // MAD centimes (the actual charge)
+  priceMad:     number;   // display only (whole dirhams)
   anchorMad:    number;   // crossed-out anchor price
   label:        string;
   stripePriceId: string;
 }> = {
   basique: {
-    amountUsd:    1500,
+    amountMad:    14700,
     priceMad:     147,
     anchorMad:    350,
     label:        "RapportAI Basique",
-    stripePriceId: "price_1ThvLn003Ts2AXbay1naFpjd",
+    stripePriceId: "price_1ThvTn003Ts2AXbaKWJA2vd8",
   },
   starter: {
-    amountUsd:    3700,
+    amountMad:    37700,
     priceMad:     377,
     anchorMad:    1000,
     label:        "RapportAI Essentiel",
-    stripePriceId: "price_1TdDGG003Ts2AXbaNkwwT03b",
+    stripePriceId: "price_1ThvTt003Ts2AXbae7IRuMOC",
   },
   pro: {
-    amountUsd:    6700,
+    amountMad:    67700,
     priceMad:     677,
     anchorMad:    1500,
     label:        "RapportAI Pro",
-    stripePriceId: "price_1TdDGO003Ts2AXbac5dyihpl",
+    stripePriceId: "price_1ThvTw003Ts2AXbaFgqC5P87",
   },
 };
 
@@ -78,23 +79,23 @@ router.post("/payments/checkout", async (req: Request, res: Response) => {
     const stripe  = getStripe();
 
     // ── Auto-apply referral credit (in-app credit model) ──────────────────────
-    // Pull the buyer's accrued referral balance (USD cents) and apply up to it as
-    // a one-off Stripe coupon, always leaving at least MIN_CHARGE_CENTS to pay.
+    // Pull the buyer's accrued referral balance (MAD centimes) and apply up to it
+    // as a one-off MAD coupon, always leaving at least MIN_CHARGE_CENTIMES to pay.
     // The applied amount is recorded in metadata and deducted in the webhook once
     // payment actually succeeds.
-    let creditAppliedCents = 0;
+    let creditAppliedCentimes = 0;
     const discounts: Stripe.Checkout.SessionCreateParams.Discount[] = [];
 
     if (clerkId) {
       const user      = await getUserByClerkId(clerkId);
       const available = user?.referralBalance ?? 0;
-      const maxUsable = Math.max(0, price.amountUsd - MIN_CHARGE_CENTS);
-      creditAppliedCents = Math.min(available, maxUsable);
+      const maxUsable = Math.max(0, price.amountMad - MIN_CHARGE_CENTIMES);
+      creditAppliedCentimes = Math.min(available, maxUsable);
 
-      if (creditAppliedCents > 0) {
+      if (creditAppliedCentimes > 0) {
         const coupon = await stripe.coupons.create({
-          amount_off:      creditAppliedCents,
-          currency:        "usd",
+          amount_off:      creditAppliedCentimes,
+          currency:        "mad",
           duration:        "once",
           max_redemptions: 1,
           name:            "Crédit parrainage RapportAI",
@@ -114,7 +115,7 @@ router.post("/payments/checkout", async (req: Request, res: Response) => {
         clerk_id:             clerkId ?? "",
         report_id,
         plan,
-        credit_applied_cents: String(creditAppliedCents),
+        credit_applied_cents: String(creditAppliedCentimes),
       },
       ...(discounts.length ? { discounts } : {}),
       success_url: `${appUrl}/payment/success?session_id={CHECKOUT_SESSION_ID}`,

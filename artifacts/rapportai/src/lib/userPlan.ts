@@ -15,7 +15,7 @@ export interface PlanLimit {
   label:        string;   // display name
   labelShort:   string;
   priceMad:     number;   // display price in MAD
-  priceUsd:     number;   // Stripe charge in USD
+  priceUsd:     number;   // rough USD reference only — actual charge is in MAD
   anchorMad:    number;   // crossed-out "market price" for anchoring
   stripePriceId: string | null;
 }
@@ -23,9 +23,9 @@ export interface PlanLimit {
 export const PLAN_LIMITS: Record<PlanId, PlanLimit> = {
   //                 pages  revisions  label         labelShort  priceMad  priceUsd  anchorMad  stripePriceId
   free:    { pages: 12,       revisions: 2,        label: "Gratuit",   labelShort: "Gratuit",   priceMad: 0,   priceUsd: 0,  anchorMad: 0,    stripePriceId: null },
-  basique: { pages: 35,       revisions: 8,        label: "Basique",   labelShort: "Basique",   priceMad: 147, priceUsd: 15, anchorMad: 350,  stripePriceId: "price_1ThvLn003Ts2AXbay1naFpjd" },
-  starter: { pages: 60,       revisions: 20,       label: "Essentiel", labelShort: "Essentiel", priceMad: 377, priceUsd: 37, anchorMad: 1000, stripePriceId: "price_1TdDGG003Ts2AXbaNkwwT03b" },
-  pro:     { pages: Infinity, revisions: Infinity, label: "Pro",       labelShort: "Pro",       priceMad: 677, priceUsd: 67, anchorMad: 1500, stripePriceId: "price_1TdDGO003Ts2AXbac5dyihpl" },
+  basique: { pages: 35,       revisions: 8,        label: "Basique",   labelShort: "Basique",   priceMad: 147, priceUsd: 15, anchorMad: 350,  stripePriceId: "price_1ThvTn003Ts2AXbaKWJA2vd8" },
+  starter: { pages: 60,       revisions: 20,       label: "Essentiel", labelShort: "Essentiel", priceMad: 377, priceUsd: 37, anchorMad: 1000, stripePriceId: "price_1ThvTt003Ts2AXbae7IRuMOC" },
+  pro:     { pages: Infinity, revisions: Infinity, label: "Pro",       labelShort: "Pro",       priceMad: 677, priceUsd: 67, anchorMad: 1500, stripePriceId: "price_1ThvTw003Ts2AXbaFgqC5P87" },
 };
 
 // "humanize" is the single anti-AI-detection / anti-plagiat feature (one capability,

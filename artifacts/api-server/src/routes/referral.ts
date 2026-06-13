@@ -43,13 +43,13 @@ router.get("/referral/me", async (req: Request, res: Response) => {
       where: eq(referralsTable.referrerId, user.id),
     });
 
-    // Balance is stored in USD cents; displayed in MAD at a flat 10 MAD = 1 USD
-    // (1000 cents = 100 MAD). Credit is auto-applied at the next checkout.
+    // Balance is stored in MAD centimes (10000 = 100 MAD); credit is auto-applied
+    // at the next checkout.
     res.json({
       referralCode:       user.referralCode,
       referralLink:       `https://rapportai.io/sign-up?ref=${user.referralCode}`,
       balance:            user.referralBalance,
-      balanceMad:         Math.round(user.referralBalance / 10),
+      balanceMad:         Math.round(user.referralBalance / 100),
       isFoundingUser:     user.isFoundingUser,
       totalReferrals:     referrals.length,
       pendingReferrals:   referrals.filter(r => r.status === "pending").length,

@@ -112,15 +112,16 @@ export async function onReportCompleted(
 // 100 MAD of in-app credit per 2 converted referrals. A referral "converts" when
 // the referred friend pays for Essentiel or Pro (handled in the Stripe webhook).
 //
-// The reward is delivered as account credit (stored in `referralBalance`, in cents)
-// that is auto-applied as a discount at the referrer's next checkout. Morocco isn't
-// a supported Stripe Connect payout destination, so we credit instead of cashing out.
+// The reward is delivered as account credit (stored in `referralBalance`, in MAD
+// centimes) that is auto-applied as a discount at the referrer's next checkout.
+// Morocco isn't a supported Stripe Connect payout destination, so we credit
+// instead of cashing out.
 //
-// Balance is stored in USD cents (the charge currency) and DISPLAYED in MAD at a
-// flat 10 MAD = 1 USD: 1000 cents = $10 = 100 MAD. Keep these in sync.
+// Balance is stored in MAD centimes (the charge currency): 10000 = 100 MAD.
+// Display divides by 100. Keep this in sync with stripe.ts.
 
-const CASHBACK_THRESHOLD = 2;    // converted referrals per reward
-const CASHBACK_AMOUNT    = 1000; // 100 MAD, stored as cents (display = cents / 10)
+const CASHBACK_THRESHOLD = 2;     // converted referrals per reward
+const CASHBACK_AMOUNT    = 10000; // 100 MAD, stored as centimes (display = / 100)
 
 const QUALIFYING_PLANS = new Set(["starter", "pro"]);
 
@@ -200,7 +201,7 @@ async function grantDueRewards(referrerId: number): Promise<void> {
   }
 
   logger.info(
-    { event: "referral_rewarded", referrerId, rewards: missing, amountCents: CASHBACK_AMOUNT * missing },
+    { event: "referral_rewarded", referrerId, rewards: missing, amountCentimes: CASHBACK_AMOUNT * missing },
     `Granted ${missing} × 100 MAD referral credit`,
   );
 }
