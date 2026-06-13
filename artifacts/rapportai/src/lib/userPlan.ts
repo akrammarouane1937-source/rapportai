@@ -23,7 +23,7 @@ export interface PlanLimit {
 export const PLAN_LIMITS: Record<PlanId, PlanLimit> = {
   //                 pages  revisions  label         labelShort  priceMad  priceUsd  anchorMad  stripePriceId
   free:    { pages: 12,       revisions: 2,        label: "Gratuit",   labelShort: "Gratuit",   priceMad: 0,   priceUsd: 0,  anchorMad: 0,    stripePriceId: null },
-  basique: { pages: 35,       revisions: 8,        label: "Basique",   labelShort: "Basique",   priceMad: 147, priceUsd: 15, anchorMad: 350,  stripePriceId: "price_BASIQUE_TO_ADD" },
+  basique: { pages: 35,       revisions: 8,        label: "Basique",   labelShort: "Basique",   priceMad: 147, priceUsd: 15, anchorMad: 350,  stripePriceId: "price_1ThvLn003Ts2AXbay1naFpjd" },
   starter: { pages: 60,       revisions: 20,       label: "Essentiel", labelShort: "Essentiel", priceMad: 377, priceUsd: 37, anchorMad: 1000, stripePriceId: "price_1TdDGG003Ts2AXbaNkwwT03b" },
   pro:     { pages: Infinity, revisions: Infinity, label: "Pro",       labelShort: "Pro",       priceMad: 677, priceUsd: 67, anchorMad: 1500, stripePriceId: "price_1TdDGO003Ts2AXbac5dyihpl" },
 };

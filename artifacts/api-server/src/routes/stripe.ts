@@ -28,7 +28,7 @@ const PRICES: Record<string, {
     priceMad:     147,
     anchorMad:    350,
     label:        "RapportAI Basique",
-    stripePriceId: "price_BASIQUE_TO_ADD",
+    stripePriceId: "price_1ThvLn003Ts2AXbay1naFpjd",
   },
   starter: {
     amountUsd:    3700,
