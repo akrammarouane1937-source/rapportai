@@ -13,19 +13,21 @@ interface PaywallModalProps {
   currentPlan?:  PlanId;
   /** Lowest plan that unlocks what the user clicked. Hides cheaper plans. */
   requiredPlan?: PlanId;
+  /** Name of the section being unlocked, shown in the header for context. */
+  sectionLabel?: string;
 }
 
 const ORDER: PlanId[] = ["free", "basique", "starter", "pro"];
 
 const FEATURES: Record<Exclude<PlanId, "free">, string[]> = {
-  basique: ["35 pages", "Partie I incluse", "8 révisions", "Humanisation anti-détection IA"],
+  basique: ["Partie I incluse", "Pages illimitées", "8 révisions", "Humanisation anti-détection IA"],
   starter: ["60 pages", "Parties I + II", "Export Word + PDF", "Humanisation anti-détection IA", "20 révisions"],
   pro:     ["Pages illimitées", "Révisions illimitées", "Humanisation anti-détection IA", "JuryAI"],
 };
 
 const PAID: Exclude<PlanId, "free">[] = ["basique", "starter", "pro"];
 
-export function PaywallModal({ open, onClose, currentPlan, requiredPlan }: PaywallModalProps) {
+export function PaywallModal({ open, onClose, currentPlan, requiredPlan, sectionLabel }: PaywallModalProps) {
   const { user } = useUser();
   const current  = currentPlan ?? getMyPlan().planId;
   const minRank  = requiredPlan ? ORDER.indexOf(requiredPlan) : 0;
@@ -92,12 +94,14 @@ export function PaywallModal({ open, onClose, currentPlan, requiredPlan }: Paywa
                 <Lock className="w-6 h-6 text-purple-600" />
               </div>
               <h2 className="text-xl font-bold text-gray-900 mb-2" style={{ fontFamily: "'Plus Jakarta Sans', sans-serif" }}>
-                {isUpgrade ? "Passe au plan supérieur" : "Débloque ton rapport complet"}
+                {sectionLabel ? `Débloque ${sectionLabel}` : isUpgrade ? "Passe au plan supérieur" : "Débloque ton rapport complet"}
               </h2>
               <p className="text-sm text-gray-500">
-                {isUpgrade
-                  ? "Tu ne paies que la différence avec ton plan actuel."
-                  : "Choisis ton plan et génère ton rapport en quelques minutes."}
+                {requiredPlan && requiredPlan !== "free"
+                  ? `Inclus dès le plan ${PLAN_LIMITS[requiredPlan].label}.${isUpgrade ? " Tu ne paies que la différence." : ""}`
+                  : isUpgrade
+                    ? "Tu ne paies que la différence avec ton plan actuel."
+                    : "Choisis ton plan et génère ton rapport en quelques minutes."}
               </p>
             </div>
 

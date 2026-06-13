@@ -329,8 +329,8 @@ export default function RapportsPage({ completedOnly = false }: RapportsPageProp
   const [reorderMode, setReorderMode] = useState(false);
   const [activeFilter, setActiveFilter] = useState<FilterTab>(completedOnly ? "completed" : "all");
   const [tocOpen, setTocOpen] = useState(false);
-  // Plan required to unlock the section the user clicked → opens the paywall popup.
-  const [paywallReq, setPaywallReq] = useState<PlanId | null>(null);
+  // The section the user clicked to unlock → opens the paywall popup.
+  const [paywall, setPaywall] = useState<{ plan: PlanId; label: string } | null>(null);
 
   const reportData = report as unknown as Record<string, string>;
   const planId = getMyPlan().planId;
@@ -385,10 +385,11 @@ export default function RapportsPage({ completedOnly = false }: RapportsPageProp
   return (
     <div className="flex min-h-screen" style={{ background: "#f9f8ff" }}>
       <PaywallModal
-        open={paywallReq !== null}
-        onClose={() => setPaywallReq(null)}
+        open={paywall !== null}
+        onClose={() => setPaywall(null)}
         currentPlan={planId}
-        requiredPlan={paywallReq ?? undefined}
+        requiredPlan={paywall?.plan}
+        sectionLabel={paywall?.label}
       />
       <Sidebar />
       <SidebarSpacer />
@@ -536,7 +537,7 @@ export default function RapportsPage({ completedOnly = false }: RapportsPageProp
                           index={i}
                           locked={locked}
                           lockLabel={locked ? lockBadge(section.id) : undefined}
-                          onOpen={() => locked ? setPaywallReq(sectionMinPlan(section.id)) : navigate(section.path)}
+                          onOpen={() => locked ? setPaywall({ plan: sectionMinPlan(section.id), label: section.label }) : navigate(section.path)}
                         />
                       );
                     })}

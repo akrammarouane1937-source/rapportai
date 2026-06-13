@@ -45,9 +45,9 @@ const PLANS: Plan[] = [
     cta:         FREE_LAUNCH ? "Commencer gratuitement" : "Choisir Basique",
     popular:     false,
     features: [
-      "35 pages générées",
-      "8 révisions IA",
       "Partie I (cadre théorique)",
+      "Pages illimitées",
+      "8 révisions IA",
       "Export Word",
       "Humanisation anti-détection IA",
     ],

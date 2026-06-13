@@ -13,7 +13,7 @@ interface PlanLimit {
 
 const PLAN_LIMITS: Record<PlanId, PlanLimit> = {
   free:    { pages: 12,       revisions: 2        },
-  basique: { pages: 35,       revisions: 8        },
+  basique: { pages: Infinity, revisions: 8        },  // section-gated only (Partie I), no page cap
   starter: { pages: 60,       revisions: 20       },
   pro:     { pages: Infinity, revisions: Infinity },
 };
