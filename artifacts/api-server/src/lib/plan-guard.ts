@@ -4,7 +4,7 @@ import { db, reportsTable } from "@workspace/db";
 
 // ─── Plan definitions (must mirror frontend userPlan.ts) ─────────────────────
 
-export type PlanId = "free" | "starter" | "pro";
+export type PlanId = "free" | "basique" | "starter" | "pro";
 
 interface PlanLimit {
   pages:     number;   // max pages (250 words ≈ 1 page). Infinity = unlimited.
@@ -12,13 +12,42 @@ interface PlanLimit {
 }
 
 const PLAN_LIMITS: Record<PlanId, PlanLimit> = {
-  // 12 pages: la wall tombe juste après la Partie I même si l'utilisateur saute des sections
   free:    { pages: 12,       revisions: 2        },
+  basique: { pages: 35,       revisions: 8        },
   starter: { pages: 60,       revisions: 20       },
   pro:     { pages: Infinity, revisions: Infinity },
 };
 
-const VALID_PLANS = new Set<string>(["free", "starter", "pro"]);
+const VALID_PLANS = new Set<string>(["free", "basique", "starter", "pro"]);
+
+// ─── Section-based gating ─────────────────────────────────────────────────────
+// The real paywall is BY SECTION, not page count. Free gets the full frame
+// (front matter + Introduction); Partie I is the first locked section.
+
+const PLAN_RANK: Record<PlanId, number> = { free: 0, basique: 1, starter: 2, pro: 3 };
+
+// Minimum plan required to generate each section. Keys are server section ids
+// (see ZUSTAND_KEY in routes/agent.ts). Sections absent here default to "free".
+const SECTION_MIN_PLAN: Record<string, PlanId> = {
+  "page-de-garde": "free",
+  "dedicaces":     "free",
+  "remerciements": "free",
+  "resume":        "free",
+  "abstract":      "free",
+  "sommaire":      "free",
+  "introduction":  "free",
+  "partie-i":      "basique",
+  "partie-ii":     "starter",
+  "conclusion":    "starter",
+  "bibliographie": "starter",
+  "abbreviations": "starter",
+  "liste-figures": "starter",
+  "liste-tableaux":"starter",
+};
+
+function planLabel(plan: PlanId): string {
+  return plan === "free" ? "Gratuit" : plan === "basique" ? "Basique" : plan === "starter" ? "Essentiel" : "Pro";
+}
 
 function parsePlanId(raw: string | undefined): PlanId {
   if (raw && VALID_PLANS.has(raw)) return raw as PlanId;
@@ -97,8 +126,34 @@ export async function guardPayment(req: Request, res: Response, next: NextFuncti
   next();
 }
 
+// ─── Guard: reject if the section is above the user's plan ────────────────────
+// The generate route puts the section id in req.body.section (parsed by the
+// multipart middleware that runs before this guard).
+
+export function guardSectionAccess(req: Request, res: Response, next: NextFunction) {
+  if (bypassLimits(req)) return next();
+
+  const section = (req.body as { section?: string } | undefined)?.section?.trim();
+  if (!section) { next(); return; }   // unknown section → let downstream handle
+
+  const required = SECTION_MIN_PLAN[section] ?? "free";
+  if (PLAN_RANK[req.planId] < PLAN_RANK[required]) {
+    res.status(403).json({
+      error:        "plan_limit_reached",
+      limit_type:   "section",
+      section,
+      requiredPlan: required,
+      planId:       req.planId,
+      message:      `Cette section nécessite le plan ${planLabel(required)}.`,
+    });
+    return;
+  }
+  next();
+}
+
 // ─── Guard: reject if page limit exceeded ────────────────────────────────────
 // Frontend sends x-pages-generated header (total pages generated so far).
+// Secondary backstop — section gating is the primary control.
 
 export function guardPageLimit(req: Request, res: Response, next: NextFunction) {
   if (bypassLimits(req)) return next();
@@ -110,7 +165,7 @@ export function guardPageLimit(req: Request, res: Response, next: NextFunction) 
     res.status(403).json({
       error:       "plan_limit_reached",
       limit_type:  "pages",
-      message:     `Tu as atteint la limite de ${limit} pages de ton plan ${req.planId === "free" ? "Gratuit" : "Essentiel"}.`,
+      message:     `Tu as atteint la limite de ${limit} pages de ton plan ${planLabel(req.planId)}.`,
       planId:      req.planId,
       limit,
       pagesGenerated,
@@ -132,7 +187,7 @@ export function guardRevisionLimit(req: Request, res: Response, next: NextFuncti
     res.status(403).json({
       error:      "plan_limit_reached",
       limit_type: "revisions",
-      message:    `Tu as atteint la limite de ${limit} révisions de ton plan ${req.planId === "free" ? "Gratuit" : "Essentiel"}.`,
+      message:    `Tu as atteint la limite de ${limit} révisions de ton plan ${planLabel(req.planId)}.`,
       planId:     req.planId,
       limit,
       revisions,

@@ -1,10 +1,12 @@
 import { useState, useEffect } from "react";
 import { motion, Reorder, AnimatePresence } from "framer-motion";
-import { FileText, Search, CheckCircle2, Clock, ChevronRight, LayoutGrid, GripVertical, ArrowUpDown, ListOrdered, ChevronDown, ChevronUp, ImageIcon } from "lucide-react";
+import { FileText, Search, CheckCircle2, Clock, ChevronRight, LayoutGrid, GripVertical, ArrowUpDown, ListOrdered, ChevronDown, ChevronUp, ImageIcon, Lock } from "lucide-react";
 import { useLocation } from "wouter";
 import { Sidebar, SidebarSpacer } from "@/components/layout/Sidebar";
 import { useReportSync } from "@/hooks/use-report-sync";
 import { useReportStore } from "@/lib/store";
+import { getMyPlan } from "@/lib/userPlan";
+import { canAccessSection, lockBadge } from "@/lib/sectionAccess";
 import { ReportToc } from "@/components/report/ReportToc";
 import { getApprovedFigures, type ApprovedFigure } from "@/lib/figureStore";
 import { API_BASE } from "@/lib/apiBase";
@@ -143,15 +145,15 @@ interface SectionConfig {
 }
 
 const FIXED_SECTIONS: SectionConfig[] = [
-  { id: "step-1",       label: "Informations générales", field: null,          path: "/rapport/step-1",   fixed: true },
-  { id: "step-2",       label: "Page de garde",          field: "pageDeGarde", path: "/rapport/step-2",   fixed: true },
-  { id: "step-3",       label: "Dédicaces",              field: "dedicaces",   path: "/rapport/step-3",   fixed: true },
-  { id: "step-4",       label: "Résumé & Abstract",      field: "resumeFr",    path: "/rapport/step-4",   fixed: true },
-  { id: "step-5",       label: "Sommaire",               field: "sommaire",    path: "/rapport/step-5",   fixed: true },
-  { id: "step-6",       label: "Introduction",           field: "introduction",path: "/rapport/step-6",   fixed: true },
-  { id: "partie-i",     label: "Partie I",               field: "partieI",     path: "/rapport/partie-i", fixed: true },
-  { id: "partie-ii",    label: "Partie II",              field: "partieII",    path: "/rapport/partie-ii",fixed: true },
-  { id: "step-9",       label: "Conclusion",             field: "conclusion",  path: "/rapport/step-9",   fixed: true },
+  { id: "step-1",       label: "Informations générales", field: null,           path: "/rapport/step-1",   fixed: true },
+  { id: "remerciements",label: "Remerciements",          field: "remerciements",path: "/rapport/step-3",   fixed: true },
+  { id: "step-3",       label: "Dédicaces",              field: "dedicaces",    path: "/rapport/step-3",   fixed: true },
+  { id: "step-4",       label: "Résumé & Abstract",      field: "resumeFr",     path: "/rapport/step-4",   fixed: true },
+  { id: "step-5",       label: "Sommaire",               field: "sommaire",     path: "/rapport/step-5",   fixed: true },
+  { id: "step-6",       label: "Introduction",           field: "introduction", path: "/rapport/step-6",   fixed: true },
+  { id: "partie-i",     label: "Partie I",               field: "partieI",      path: "/rapport/partie-i", fixed: true },
+  { id: "partie-ii",    label: "Partie II",              field: "partieII",     path: "/rapport/partie-ii",fixed: true },
+  { id: "step-9",       label: "Conclusion",             field: "conclusion",   path: "/rapport/step-9",   fixed: true },
 ];
 
 const BACK_MATTER_META: Record<string, { label: string; field: string | null; path: string }> = {
@@ -211,11 +213,13 @@ function SectionThumbnail({ text }: { text: string | undefined }) {
 
 // ─── Grid card ────────────────────────────────────────────────────────────────
 
-function StepCard({ section, text, status: statusProp, index, onOpen }: {
+function StepCard({ section, text, status: statusProp, index, locked, lockLabel, onOpen }: {
   section: SectionConfig;
   text: string | undefined;
   status?: "completed" | "in_progress" | "not_started";
   index: number;
+  locked?: boolean;
+  lockLabel?: string;
   onOpen: () => void;
 }) {
   const status = statusProp ?? (section.field ? getStatus(text) : "not_started");
@@ -229,14 +233,26 @@ function StepCard({ section, text, status: statusProp, index, onOpen }: {
       transition={{ duration: 0.15 }}
       onClick={onOpen}
       className="rounded-xl overflow-hidden cursor-pointer border"
-      style={{ background: "#fff", borderColor: "#e5e7eb", boxShadow: "0 1px 4px rgba(0,0,0,0.06)" }}
+      style={{ background: "#fff", borderColor: locked ? "#e9d5ff" : "#e5e7eb", boxShadow: "0 1px 4px rgba(0,0,0,0.06)" }}
     >
       <div className="w-full overflow-hidden relative" style={{ height: 148, borderBottom: "1px solid #f3f4f6" }}>
         <SectionThumbnail text={text} />
+        {locked && (
+          <div className="absolute inset-0 flex flex-col items-center justify-center gap-2" style={{ background: "rgba(249,248,255,0.78)", backdropFilter: "blur(2px)" }}>
+            <div className="w-9 h-9 rounded-full flex items-center justify-center" style={{ background: "linear-gradient(135deg,#7c3aed,#a855f7)" }}>
+              <Lock className="w-4 h-4 text-white" />
+            </div>
+            {lockLabel && (
+              <span className="text-[11px] font-bold px-2.5 py-1 rounded-full" style={{ background: "#fff", color: "#7c3aed", boxShadow: "0 1px 4px rgba(124,58,237,0.18)" }}>
+                Débloquer · {lockLabel}
+              </span>
+            )}
+          </div>
+        )}
         <div className="absolute top-2 left-2 w-5 h-5 rounded-full flex items-center justify-center text-[10px] font-bold" style={{ background: "#fff", color: "#7c3aed", boxShadow: "0 1px 4px rgba(0,0,0,0.12)" }}>
           {index + 1}
         </div>
-        {status === "completed" && (
+        {status === "completed" && !locked && (
           <div className="absolute top-2 right-2"><CheckCircle2 className="w-4 h-4" style={{ color: "#22c55e" }} /></div>
         )}
       </div>
@@ -314,6 +330,7 @@ export default function RapportsPage({ completedOnly = false }: RapportsPageProp
   const [tocOpen, setTocOpen] = useState(false);
 
   const reportData = report as unknown as Record<string, string>;
+  const planId = getMyPlan().planId;
 
   // Merge saved order with DEFAULT_ORDER so new items (abreviations, etc.)
   // appear for users whose persisted order predates this entry.
@@ -499,16 +516,21 @@ export default function RapportsPage({ completedOnly = false }: RapportsPageProp
                   </div>
                 ) : (
                   <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
-                    {filteredSections.map((section, i) => (
-                      <StepCard
-                        key={section.id}
-                        section={section}
-                        text={getSectionText(section)}
-                        status={getSectionStatus(section)}
-                        index={i}
-                        onOpen={() => navigate(section.path)}
-                      />
-                    ))}
+                    {filteredSections.map((section, i) => {
+                      const locked = !canAccessSection(section.id, planId);
+                      return (
+                        <StepCard
+                          key={section.id}
+                          section={section}
+                          text={getSectionText(section)}
+                          status={getSectionStatus(section)}
+                          index={i}
+                          locked={locked}
+                          lockLabel={locked ? lockBadge(section.id) : undefined}
+                          onOpen={() => navigate(locked ? "/pricing" : section.path)}
+                        />
+                      );
+                    })}
                   </div>
                 )}
 

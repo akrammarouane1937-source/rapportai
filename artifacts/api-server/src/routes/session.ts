@@ -13,7 +13,7 @@ import {
   incrementSessionCount,
   updateReportFields,
 } from "../lib/memory";
-import { guardSectionLimit, guardRevisionLimit, guardPayment } from "../lib/plan-guard";
+import { guardSectionLimit, guardRevisionLimit, guardPayment, guardSectionAccess } from "../lib/plan-guard";
 import { logger } from "../lib/logger";
 import { streamingHumanize } from "../lib/humanize-util";
 import { metrics, estimateCost, estimateTokens } from "../lib/metrics";
@@ -378,6 +378,7 @@ router.post("/session/start", (req: Request, res: Response) => {
 router.post(
   "/session/:sessionId/generate",
   conditionalMultipart,
+  guardSectionAccess,
   guardPayment,
   guardSectionLimit,
   async (req: Request, res: Response) => {
