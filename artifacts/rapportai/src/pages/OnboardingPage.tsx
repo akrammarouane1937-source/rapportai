@@ -3,6 +3,7 @@ import { useLocation } from "wouter";
 import { useOptionalUser as useUser } from "@/lib/useOptionalClerk";
 import { saveReport } from "@/lib/reportStore";
 import { API_BASE } from "@/lib/apiBase";
+import { getStoredRef, clearStoredRef } from "@/lib/referralCapture";
 import { motion, AnimatePresence } from "framer-motion";
 import { ChevronRight, ChevronLeft, GraduationCap, BookOpen, Building2, CheckCircle2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -70,7 +71,7 @@ export default function OnboardingPage() {
     });
 
     if (user?.id) {
-      const refCode = new URLSearchParams(window.location.search).get("ref") ?? undefined;
+      const refCode = getStoredRef();
       void fetch(`${API_BASE}/api/referral/register`, {
         method:  "POST",
         headers: { "Content-Type": "application/json" },
@@ -80,7 +81,7 @@ export default function OnboardingPage() {
           name:    user.firstName ? `${user.firstName} ${user.lastName ?? ""}`.trim() : undefined,
           refCode,
         }),
-      });
+      }).finally(() => clearStoredRef());
     }
 
     setLocation("/dashboard");

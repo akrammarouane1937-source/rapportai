@@ -4,6 +4,11 @@ import Stripe from "stripe";
 import { eq } from "drizzle-orm";
 import { db, reportsTable, usersTable } from "@workspace/db";
 import { logger } from "../lib/logger";
+import { getUserByClerkId, consumeReferralCredit, onReferredUserPaid } from "../lib/referral";
+
+// Smallest charge Stripe accepts (USD). We always leave at least this much to
+// pay so a fully-covering referral credit can't produce a zero-total checkout.
+const MIN_CHARGE_CENTS = 50;
 
 const router = Router();
 
@@ -72,6 +77,32 @@ router.post("/payments/checkout", async (req: Request, res: Response) => {
   try {
     const stripe  = getStripe();
 
+    // ── Auto-apply referral credit (in-app credit model) ──────────────────────
+    // Pull the buyer's accrued referral balance (USD cents) and apply up to it as
+    // a one-off Stripe coupon, always leaving at least MIN_CHARGE_CENTS to pay.
+    // The applied amount is recorded in metadata and deducted in the webhook once
+    // payment actually succeeds.
+    let creditAppliedCents = 0;
+    const discounts: Stripe.Checkout.SessionCreateParams.Discount[] = [];
+
+    if (clerkId) {
+      const user      = await getUserByClerkId(clerkId);
+      const available = user?.referralBalance ?? 0;
+      const maxUsable = Math.max(0, price.amountUsd - MIN_CHARGE_CENTS);
+      creditAppliedCents = Math.min(available, maxUsable);
+
+      if (creditAppliedCents > 0) {
+        const coupon = await stripe.coupons.create({
+          amount_off:      creditAppliedCents,
+          currency:        "usd",
+          duration:        "once",
+          max_redemptions: 1,
+          name:            "Crédit parrainage RapportAI",
+        });
+        discounts.push({ coupon: coupon.id });
+      }
+    }
+
     const session = await stripe.checkout.sessions.create({
       payment_method_types: ["card"],
       mode:                 "payment",
@@ -79,7 +110,13 @@ router.post("/payments/checkout", async (req: Request, res: Response) => {
         price:    price.stripePriceId,
         quantity: 1,
       }],
-      metadata:    { clerk_id: clerkId ?? "", report_id, plan },
+      metadata: {
+        clerk_id:             clerkId ?? "",
+        report_id,
+        plan,
+        credit_applied_cents: String(creditAppliedCents),
+      },
+      ...(discounts.length ? { discounts } : {}),
       success_url: `${appUrl}/payment/success?session_id={CHECKOUT_SESSION_ID}`,
       cancel_url:  `${appUrl}/pricing?payment=cancelled`,
       ...(user_email ? { customer_email: user_email } : {}),
@@ -124,7 +161,7 @@ async function handleWebhookEvent(event: Stripe.Event): Promise<void> {
   if (event.type !== "checkout.session.completed") return;
 
   const session                   = event.data.object as Stripe.Checkout.Session;
-  const { clerk_id, report_id, plan } = session.metadata ?? {};
+  const { clerk_id, report_id, plan, credit_applied_cents } = session.metadata ?? {};
 
   if (!report_id) {
     logger.warn({ event: "webhook_missing_metadata", session_id: session.id });
@@ -151,6 +188,13 @@ async function handleWebhookEvent(event: Stripe.Event): Promise<void> {
         .update(usersTable)
         .set({ plan } as Partial<typeof usersTable.$inferSelect>)
         .where(eq(usersTable.clerkId, clerk_id));
+
+      // Deduct any referral credit that was applied to this checkout.
+      const applied = parseInt(credit_applied_cents ?? "0", 10);
+      if (applied > 0) await consumeReferralCredit(clerk_id, applied);
+
+      // Convert the referral if this buyer was referred and paid Essentiel/Pro.
+      await onReferredUserPaid(clerk_id, plan);
     }
 
     logger.info({

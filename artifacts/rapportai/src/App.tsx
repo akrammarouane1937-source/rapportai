@@ -42,6 +42,10 @@ import ReferralPage from "@/pages/ReferralPage";
 import PricingPage from "@/pages/PricingPage";
 import NotFound from "@/pages/not-found";
 import { ErrorBoundary } from "@/components/ErrorBoundary";
+import { captureRefFromUrl } from "@/lib/referralCapture";
+
+// Capture ?ref= at boot, before Clerk's sign-up redirect can strip it.
+captureRefFromUrl();
 
 const queryClient = new QueryClient();
 
