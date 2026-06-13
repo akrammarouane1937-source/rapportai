@@ -5,8 +5,9 @@ import { useLocation } from "wouter";
 import { Sidebar, SidebarSpacer } from "@/components/layout/Sidebar";
 import { useReportSync } from "@/hooks/use-report-sync";
 import { useReportStore } from "@/lib/store";
-import { getMyPlan } from "@/lib/userPlan";
-import { canAccessSection, lockBadge } from "@/lib/sectionAccess";
+import { getMyPlan, type PlanId } from "@/lib/userPlan";
+import { canAccessSection, lockBadge, sectionMinPlan } from "@/lib/sectionAccess";
+import { PaywallModal } from "@/components/report/PaywallModal";
 import { ReportToc } from "@/components/report/ReportToc";
 import { getApprovedFigures, type ApprovedFigure } from "@/lib/figureStore";
 import { API_BASE } from "@/lib/apiBase";
@@ -328,6 +329,8 @@ export default function RapportsPage({ completedOnly = false }: RapportsPageProp
   const [reorderMode, setReorderMode] = useState(false);
   const [activeFilter, setActiveFilter] = useState<FilterTab>(completedOnly ? "completed" : "all");
   const [tocOpen, setTocOpen] = useState(false);
+  // Plan required to unlock the section the user clicked → opens the paywall popup.
+  const [paywallReq, setPaywallReq] = useState<PlanId | null>(null);
 
   const reportData = report as unknown as Record<string, string>;
   const planId = getMyPlan().planId;
@@ -381,6 +384,12 @@ export default function RapportsPage({ completedOnly = false }: RapportsPageProp
 
   return (
     <div className="flex min-h-screen" style={{ background: "#f9f8ff" }}>
+      <PaywallModal
+        open={paywallReq !== null}
+        onClose={() => setPaywallReq(null)}
+        currentPlan={planId}
+        requiredPlan={paywallReq ?? undefined}
+      />
       <Sidebar />
       <SidebarSpacer />
 
@@ -527,7 +536,7 @@ export default function RapportsPage({ completedOnly = false }: RapportsPageProp
                           index={i}
                           locked={locked}
                           lockLabel={locked ? lockBadge(section.id) : undefined}
-                          onOpen={() => navigate(locked ? "/pricing" : section.path)}
+                          onOpen={() => locked ? setPaywallReq(sectionMinPlan(section.id)) : navigate(section.path)}
                         />
                       );
                     })}

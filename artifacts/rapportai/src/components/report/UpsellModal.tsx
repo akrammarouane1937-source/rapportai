@@ -1,7 +1,10 @@
+import { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { X, Zap, Check, Lock, AlertTriangle, FileText } from "lucide-react";
+import { X, Zap, Check, Lock, AlertTriangle, FileText, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { type PlanId, PLAN_LIMITS, upgradeCostMad, nextPlan } from "@/lib/userPlan";
+import { startCheckout } from "@/lib/checkout";
+import { useOptionalUser as useUser } from "@/lib/useOptionalClerk";
 
 export type UpsellVariant =
   | "page-essentiel"
@@ -97,6 +100,26 @@ export function UpsellModal({
   featureName,
 }: UpsellModalProps) {
   const cfg = getConfig(variant, currentPlan, featureName);
+  const { user } = useUser();
+  const target   = nextPlan(currentPlan);
+  const [loading, setLoading] = useState(false);
+  const [error, setError]     = useState<string | null>(null);
+
+  const handleUpgrade = async () => {
+    setLoading(true);
+    setError(null);
+    try {
+      await startCheckout({
+        plan:      target,
+        clerkId:   user?.id,
+        userEmail: user?.primaryEmailAddress?.emailAddress,
+      });
+      // success → browser redirects to Stripe
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "Erreur de paiement");
+      setLoading(false);
+    }
+  };
 
   return (
     <AnimatePresence>
@@ -174,12 +197,14 @@ export function UpsellModal({
               {/* CTAs */}
               <div className="space-y-2.5">
                   <Button
-                    onClick={onClose}
+                    onClick={handleUpgrade}
+                    disabled={loading}
                     className="w-full h-12 bg-purple-600 hover:bg-purple-700 text-white font-bold rounded-xl text-sm flex items-center justify-center gap-2"
                     style={{ boxShadow: "0 4px 20px rgba(124,58,237,0.35)" }}
                   >
-                    <Zap className="w-4 h-4" />
-                    {cfg.upgradeLabel} (+{cfg.price} MAD)
+                    {loading
+                      ? <Loader2 className="w-4 h-4 animate-spin" />
+                      : <><Zap className="w-4 h-4" />{cfg.upgradeLabel} (+{cfg.price} MAD)</>}
                   </Button>
                 <button
                   onClick={onClose}
@@ -188,6 +213,10 @@ export function UpsellModal({
                   Plus tard
                 </button>
               </div>
+
+              {error && (
+                <div className="mt-3 text-center text-xs text-red-600">{error}</div>
+              )}
 
               <p className="text-center text-xs text-gray-400 mt-3">
                 Paiement sécurisé · Remboursement 48h

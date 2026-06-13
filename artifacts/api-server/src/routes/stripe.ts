@@ -2,7 +2,7 @@ import { Router, type Request, type Response, type NextFunction } from "express"
 import express from "express";
 import Stripe from "stripe";
 import { eq } from "drizzle-orm";
-import { db, reportsTable, usersTable } from "@workspace/db";
+import { db, reportsTable } from "@workspace/db";
 import { logger } from "../lib/logger";
 import { getUserByClerkId, consumeReferralCredit, onReferredUserPaid } from "../lib/referral";
 
@@ -47,6 +47,12 @@ const PRICES: Record<string, {
   },
 };
 
+const PLAN_RANK: Record<string, number> = { free: 0, basique: 1, starter: 2, pro: 3 };
+
+function planLabelFr(p: string): string {
+  return p === "basique" ? "Basique" : p === "starter" ? "Essentiel" : p === "pro" ? "Pro" : "Gratuit";
+}
+
 function getStripe(): Stripe {
   const key = process.env.STRIPE_SECRET_KEY;
   if (!key) throw new Error("STRIPE_SECRET_KEY not configured");
@@ -72,24 +78,65 @@ router.post("/payments/checkout", async (req: Request, res: Response) => {
   }
 
   const appUrl  = process.env.APP_URL ?? "http://localhost:3000";
-  const price   = PRICES[plan];
+  const target  = PRICES[plan];
   const clerkId = req.headers["x-clerk-id"] as string | undefined;
 
   try {
     const stripe  = getStripe();
 
+    // ── Determine the plan already paid for THIS report (server-authoritative) ──
+    // An upgrade charges only the price difference. We trust the report row, not
+    // the client, so nobody can pay a small "difference" without the lower plan.
+    let currentPlan = "free";
+    try {
+      const existing = await db.query.reportsTable.findFirst({
+        where: eq(reportsTable.id, report_id),
+      });
+      if (existing?.paymentStatus === "paid" && existing.plan && PLAN_RANK[existing.plan] !== undefined) {
+        currentPlan = existing.plan;
+      }
+    } catch {
+      // DB hiccup → treat as a fresh purchase (charges full price, never under-charges)
+    }
+
+    // Reject buying a plan you already own (or a downgrade).
+    if (PLAN_RANK[plan] <= PLAN_RANK[currentPlan]) {
+      res.status(400).json({
+        error:   "already_owned",
+        message: `Tu as déjà le plan ${planLabelFr(currentPlan)}.`,
+      });
+      return;
+    }
+
+    // Fresh purchase → full fixed price. Upgrade from a paid plan → only the delta.
+    let chargeAmountMad: number;
+    let lineItem: Stripe.Checkout.SessionCreateParams.LineItem;
+    if (currentPlan === "free") {
+      chargeAmountMad = target.amountMad;
+      lineItem = { price: target.stripePriceId, quantity: 1 };
+    } else {
+      chargeAmountMad = target.amountMad - PRICES[currentPlan].amountMad;
+      lineItem = {
+        quantity: 1,
+        price_data: {
+          currency:     "mad",
+          unit_amount:  chargeAmountMad,
+          product_data: { name: `Mise à niveau ${planLabelFr(currentPlan)} → ${planLabelFr(plan)}` },
+        },
+      };
+    }
+
     // ── Auto-apply referral credit (in-app credit model) ──────────────────────
-    // Pull the buyer's accrued referral balance (MAD centimes) and apply up to it
-    // as a one-off MAD coupon, always leaving at least MIN_CHARGE_CENTIMES to pay.
-    // The applied amount is recorded in metadata and deducted in the webhook once
-    // payment actually succeeds.
+    // Apply the buyer's balance (MAD centimes) against the ACTUAL charge as a
+    // one-off coupon, always leaving at least MIN_CHARGE_CENTIMES to pay. The
+    // applied amount is recorded in metadata and deducted in the webhook.
     let creditAppliedCentimes = 0;
     const discounts: Stripe.Checkout.SessionCreateParams.Discount[] = [];
 
     if (clerkId) {
       const user      = await getUserByClerkId(clerkId);
       const available = user?.referralBalance ?? 0;
-      const maxUsable = Math.max(0, price.amountMad - MIN_CHARGE_CENTIMES);
+      const maxUsable = Math.max(0, chargeAmountMad - MIN_CHARGE_CENTIMES);
       creditAppliedCentimes = Math.min(available, maxUsable);
 
       if (creditAppliedCentimes > 0) {
@@ -107,10 +154,7 @@ router.post("/payments/checkout", async (req: Request, res: Response) => {
     const session = await stripe.checkout.sessions.create({
       payment_method_types: ["card"],
       mode:                 "payment",
-      line_items: [{
-        price:    price.stripePriceId,
-        quantity: 1,
-      }],
+      line_items:           [lineItem],
       metadata: {
         clerk_id:             clerkId ?? "",
         report_id,
@@ -123,7 +167,14 @@ router.post("/payments/checkout", async (req: Request, res: Response) => {
       ...(user_email ? { customer_email: user_email } : {}),
     });
 
-    logger.info({ event: "checkout_created", report_id, plan, session_id: session.id });
+    logger.info({
+      event:      "checkout_created",
+      report_id,
+      plan,
+      from:       currentPlan,
+      charge_mad: chargeAmountMad,
+      session_id: session.id,
+    });
     res.json({ checkout_url: session.url });
   } catch (err) {
     const msg = err instanceof Error ? err.message : "Stripe error";
@@ -185,10 +236,8 @@ async function handleWebhookEvent(event: Stripe.Event): Promise<void> {
       });
 
     if (clerk_id) {
-      await db
-        .update(usersTable)
-        .set({ plan } as Partial<typeof usersTable.$inferSelect>)
-        .where(eq(usersTable.clerkId, clerk_id));
+      // Per-report plan lives on reportsTable (set above) — usersTable has no
+      // plan column, so we don't write one here.
 
       // Deduct any referral credit that was applied to this checkout.
       const applied = parseInt(credit_applied_cents ?? "0", 10);
