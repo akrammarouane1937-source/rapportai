@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Check, Lock, Loader2, AlertCircle } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -32,6 +32,15 @@ export function PaywallModal({ open, onClose, currentPlan, requiredPlan }: Paywa
 
   const [loading, setLoading] = useState<PlanId | null>(null);
   const [error, setError]     = useState<string | null>(null);
+
+  // Reset the spinner if the user returns via the browser back button (the page
+  // is restored from bfcache with React state frozen mid-redirect).
+  useEffect(() => {
+    const reset = () => setLoading(null);
+    window.addEventListener("pageshow", reset);
+    return () => window.removeEventListener("pageshow", reset);
+  }, []);
+  useEffect(() => { if (!open) { setLoading(null); setError(null); } }, [open]);
 
   // Plans above the user's current plan AND high enough to unlock the content.
   const plans = PAID.filter(

@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { X, Zap, Check, Lock, AlertTriangle, FileText, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -104,6 +104,13 @@ export function UpsellModal({
   const target   = nextPlan(currentPlan);
   const [loading, setLoading] = useState(false);
   const [error, setError]     = useState<string | null>(null);
+
+  // Reset the spinner if the user returns via the browser back button.
+  useEffect(() => {
+    const reset = () => setLoading(false);
+    window.addEventListener("pageshow", reset);
+    return () => window.removeEventListener("pageshow", reset);
+  }, []);
 
   const handleUpgrade = async () => {
     setLoading(true);
