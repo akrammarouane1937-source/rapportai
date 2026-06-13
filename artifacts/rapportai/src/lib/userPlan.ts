@@ -28,11 +28,13 @@ export const PLAN_LIMITS: Record<PlanId, PlanLimit> = {
   pro:     { pages: Infinity, revisions: Infinity, label: "Pro",       labelShort: "Pro",       priceMad: 677, priceUsd: 67, anchorMad: 1500, stripePriceId: "price_1TdDGO003Ts2AXbac5dyihpl" },
 };
 
+// "humanize" is the single anti-AI-detection / anti-plagiat feature (one capability,
+// one flag). Don't reintroduce a separate "anti-plagiat" flag — they are the same thing.
 export const PLAN_FEATURES: Record<PlanId, string[]> = {
   free:    [],
   basique: ["humanize"],
-  starter: ["pdf", "anti-plagiat", "humanize"],
-  pro:     ["pdf", "anti-plagiat", "humanize", "juryai"],
+  starter: ["pdf", "humanize"],
+  pro:     ["pdf", "humanize", "juryai"],
 };
 
 export function getMyPlan(): UserPlanData {

@@ -15,7 +15,7 @@ const PLANS = [
     price: "147",
     currency: "MAD",
     popular: false,
-    features: ["35 pages", "Partie I incluse", "8 révisions", "Humanisation IA"],
+    features: ["35 pages", "Partie I incluse", "8 révisions", "Humanisation anti-détection IA"],
   },
   {
     id: "starter",
@@ -23,7 +23,7 @@ const PLANS = [
     price: "377",
     currency: "MAD",
     popular: true,
-    features: ["60 pages", "Parties I + II", "PDF export", "Anti-plagiat", "20 révisions"],
+    features: ["60 pages", "Parties I + II", "Export Word + PDF", "Humanisation anti-détection IA", "20 révisions"],
   },
   {
     id: "pro",
@@ -31,7 +31,7 @@ const PLANS = [
     price: "677",
     currency: "MAD",
     popular: false,
-    features: ["Pages illimitées", "Révisions illimitées", "Anti-plagiat", "JuryAI"],
+    features: ["Pages illimitées", "Révisions illimitées", "Humanisation anti-détection IA", "JuryAI"],
   },
 ];
 
