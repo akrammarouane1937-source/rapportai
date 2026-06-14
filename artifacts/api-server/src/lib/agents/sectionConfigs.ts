@@ -51,7 +51,15 @@ export const SECTION_CONFIGS: Record<string, SectionConfig> = {
     maxTurns:     30,
     dependencies: ["generation_context.md"],
     allowedTools: ["Read", "Write", "Edit", "Glob"],
-    description:  "Rédaction du résumé et abstract",
+    description:  "Rédaction du résumé en français",
+  },
+
+  abstract: {
+    skillsFile:   "abstract-skills.md",
+    maxTurns:     20,
+    dependencies: ["resume.md", "generation_context.md"],
+    allowedTools: ["Read", "Write"],
+    description:  "Rédaction de l'Abstract en anglais",
   },
 
   introduction: {

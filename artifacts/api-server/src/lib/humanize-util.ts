@@ -96,6 +96,20 @@ ${chunk}`,
   }
 }
 
+// ─── Post-processing — applied after LLM rewrite, guaranteed ─────────────────
+// The LLM sometimes keeps em dashes in complex parenthetical clauses even when
+// told not to. This removes them deterministically so the rule is never broken.
+
+function postProcess(text: string): string {
+  // Em dash with spaces → comma (appositive aside)
+  // Em dash without spaces → comma too
+  return text
+    .replace(/ — /g, ", ")
+    .replace(/— /g, ", ")
+    .replace(/ —/g, ",")
+    .replace(/—/g, ", ");
+}
+
 // ─── Public API ───────────────────────────────────────────────────────────────
 
 export async function runInternalHumanize(
@@ -116,14 +130,14 @@ export async function runInternalHumanize(
 
   let result: string;
   if (wordCount <= CHUNK_MAX_WORDS) {
-    result = await humanizeChunk(rawText, sectionType);
+    result = postProcess(await humanizeChunk(rawText, sectionType));
   } else {
     const chunks = splitIntoChunks(rawText);
     logger.info({ section: sectionType, chunks: chunks.length }, "humanize: multi-chunk");
     const humanizedChunks = await Promise.all(
       chunks.map((chunk) => humanizeChunk(chunk, sectionType)),
     );
-    result = humanizedChunks.join("\n\n");
+    result = postProcess(humanizedChunks.join("\n\n"));
   }
 
   const outWords = result.split(/\s+/).filter(Boolean).length;
@@ -156,7 +170,7 @@ export async function streamingHumanize(
   logger.info({ section: sectionType, wordCount }, "humanize: streaming start");
 
   if (wordCount <= CHUNK_MAX_WORDS) {
-    const result = await humanizeChunk(rawText, sectionType);
+    const result = postProcess(await humanizeChunk(rawText, sectionType));
     onChunk(result, true);
     logger.info({ section: sectionType, outWords: result.split(/\s+/).filter(Boolean).length }, "humanize: streaming done (single chunk)");
     return result;
@@ -167,7 +181,7 @@ export async function streamingHumanize(
 
   const results: string[] = [];
   for (const chunk of chunks) {
-    const humanized = await humanizeChunk(chunk, sectionType);
+    const humanized = postProcess(await humanizeChunk(chunk, sectionType));
     results.push(humanized);
     onChunk(humanized, results.length === 1);
   }
