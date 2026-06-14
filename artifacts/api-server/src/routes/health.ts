@@ -24,8 +24,12 @@ router.get("/diag", (_req, res) => {
     }
   }
 
+  const mem = process.memoryUsage();
   res.json({
     status: "ok",
+    rss_mb: Math.round(mem.rss / 1024 / 1024),
+    heap_used_mb: Math.round(mem.heapUsed / 1024 / 1024),
+    memory_guard_limit_mb: 380,
     claude_binary: binary ?? "NOT FOUND",
     claude_version: claudeVersion,
     anthropic_api_key: process.env.ANTHROPIC_API_KEY ? "✅ SET" : "❌ MISSING",
