@@ -3,6 +3,8 @@ import { Link, useLocation } from "wouter";
 import { Sparkles, Check, Loader2 } from "lucide-react";
 import { useReportStore } from "@/lib/store";
 import { useReportSync } from "@/hooks/use-report-sync";
+import { usePaywallStore } from "@/lib/paywallStore";
+import { PaywallModal } from "@/components/report/PaywallModal";
 
 interface LayoutProps {
   children: ReactNode;
@@ -91,9 +93,12 @@ function StepNav({ currentStepNumber }: { currentStepNumber?: number }) {
 
 export function Layout({ children, previewPanel, stepName, stepNumber }: LayoutProps) {
   useReportSync();
+  const { open: paywallOpen, close: closePaywall } = usePaywallStore();
 
   return (
     <div className="h-screen overflow-hidden flex flex-col bg-background">
+      {/* Paywall popup — opens when a section/limit is hit during generation */}
+      <PaywallModal open={paywallOpen} onClose={closePaywall} />
       {/* Header */}
       <header className="shrink-0 flex items-center justify-between h-12 px-5 z-10 bg-background border-b border-border">
         <Link href="/" className="flex items-center gap-2">
