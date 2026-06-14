@@ -491,7 +491,7 @@ router.post("/agent/:step/stream", async (req: Request, res: Response) => {
       // kill the process with exit 134 (SIGABRT / OOM). The server stays alive and
       // the user sees a friendly retry message instead of a 502.
       const rssMB = Math.round(process.memoryUsage().rss / 1024 / 1024);
-      if (rssMB > 380) {
+      if (rssMB > 1600) {
         logger.warn({ rssMB }, "memory guard triggered — refusing generation to avoid OOM");
         sseWrite(res, {
           type: "text",
