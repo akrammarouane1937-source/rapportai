@@ -436,10 +436,20 @@ Enregistre dans conclusion.md.`;
           ? `\n\nContexte fourni par l'étudiant (à intégrer) :\n"""\n${opts.extraContext}\n"""`
           : "";
         return `${docNote}Lis introduction.md si présent.${resumeExtra}
-Rédige le Résumé (350–450 mots, environ 1 page) en TEXTE CONTINU : 4 à 5 paragraphes fluides qui couvrent dans l'ordre le contexte, les objectifs et la problématique, la méthodologie, les résultats attendus et les apports.
+Rédige le Résumé EN FRANÇAIS (350–450 mots, environ 1 page) en TEXTE CONTINU : 4 à 5 paragraphes fluides qui couvrent dans l'ordre le contexte, les objectifs et la problématique, la méthodologie, les résultats attendus et les apports.
 INTERDIT ABSOLU : aucun titre, aucun sous-titre, aucune liste à puces à l'intérieur du résumé — uniquement des paragraphes de prose académique qui s'enchaînent.
 Termine par une seule ligne : "**Mots-clés :** mot1, mot2, mot3, mot4, mot5" — choisis toi-même 5 à 6 mots-clés précis tirés du thème et de la problématique.
 Enregistre dans resume.md.`;
+      }
+
+      case "abstract": {
+        return `${docNote}Read resume.md first — the Abstract is the faithful English translation of the French Résumé.
+Write the Abstract IN ENGLISH ONLY — not a single French word in the body or keywords.
+Same structure as the Résumé: research objective → methodology → key results. Same length (300–450 words).
+Natural academic English — adapt phrasing so it reads natively, do not translate word-for-word.
+No sub-titles, no bullet points, continuous prose only.
+End with one line: "**Keywords:** word1, word2, word3, word4, word5" — English equivalents of the French mots-clés.
+Save to abstract.md.`;
       }
 
       case "page-de-garde": {
