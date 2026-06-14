@@ -102,8 +102,8 @@ export function ReferralNudgeModal() {
                 Rédige ton rapport avec tes amis
               </h2>
               <p className="text-sm text-gray-500 mb-6 leading-relaxed">
-                Partage RapportAI à un ami qui galère sur son rapport. Quand il finalise le sien,
-                tu reçois <span className="font-semibold text-gray-700">100 MAD de crédit</span> pour 2 amis.
+                Partage RapportAI à un ami qui galère sur son rapport. Quand 2 amis passent à Essentiel ou Pro,
+                tu reçois <span className="font-semibold text-gray-700">100 MAD remboursés sur ta carte</span>.
               </p>
 
               {/* Link */}

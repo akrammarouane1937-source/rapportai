@@ -4,11 +4,10 @@ import Stripe from "stripe";
 import { eq } from "drizzle-orm";
 import { db, reportsTable } from "@workspace/db";
 import { logger } from "../lib/logger";
-import { getUserByClerkId, consumeReferralCredit, onReferredUserPaid } from "../lib/referral";
-
-// Smallest charge we leave on a checkout (MAD centimes) so a fully-covering
-// referral credit can't produce a zero-total checkout below Stripe's minimum.
-const MIN_CHARGE_CENTIMES = 500; // 5 MAD
+import {
+  getUserByClerkId, onReferredUserPaid,
+  getPendingPayoutCentimes, getReferrerLatestPaidSession, markReferralRewardsPaid,
+} from "../lib/referral";
 
 const router = Router();
 
@@ -126,42 +125,15 @@ router.post("/payments/checkout", async (req: Request, res: Response) => {
       };
     }
 
-    // ── Auto-apply referral credit (in-app credit model) ──────────────────────
-    // Apply the buyer's balance (MAD centimes) against the ACTUAL charge as a
-    // one-off coupon, always leaving at least MIN_CHARGE_CENTIMES to pay. The
-    // applied amount is recorded in metadata and deducted in the webhook.
-    let creditAppliedCentimes = 0;
-    const discounts: Stripe.Checkout.SessionCreateParams.Discount[] = [];
-
-    if (clerkId) {
-      const user      = await getUserByClerkId(clerkId);
-      const available = user?.referralBalance ?? 0;
-      const maxUsable = Math.max(0, chargeAmountMad - MIN_CHARGE_CENTIMES);
-      creditAppliedCentimes = Math.min(available, maxUsable);
-
-      if (creditAppliedCentimes > 0) {
-        const coupon = await stripe.coupons.create({
-          amount_off:      creditAppliedCentimes,
-          currency:        "mad",
-          duration:        "once",
-          max_redemptions: 1,
-          name:            "Crédit parrainage RapportAI",
-        });
-        discounts.push({ coupon: coupon.id });
-      }
-    }
-
     const session = await stripe.checkout.sessions.create({
       payment_method_types: ["card"],
       mode:                 "payment",
       line_items:           [lineItem],
       metadata: {
-        clerk_id:             clerkId ?? "",
+        clerk_id: clerkId ?? "",
         report_id,
         plan,
-        credit_applied_cents: String(creditAppliedCentimes),
       },
-      ...(discounts.length ? { discounts } : {}),
       success_url: `${appUrl}/payment/success?session_id={CHECKOUT_SESSION_ID}`,
       cancel_url:  `${appUrl}/pricing?payment=cancelled`,
       ...(user_email ? { customer_email: user_email } : {}),
@@ -213,7 +185,7 @@ async function handleWebhookEvent(event: Stripe.Event): Promise<void> {
   if (event.type !== "checkout.session.completed") return;
 
   const session                   = event.data.object as Stripe.Checkout.Session;
-  const { clerk_id, report_id, plan, credit_applied_cents } = session.metadata ?? {};
+  const { clerk_id, report_id, plan } = session.metadata ?? {};
 
   if (!report_id) {
     logger.warn({ event: "webhook_missing_metadata", session_id: session.id });
@@ -221,10 +193,14 @@ async function handleWebhookEvent(event: Stripe.Event): Promise<void> {
   }
 
   try {
+    // Link the report to the user so we can later find their card to refund.
+    const buyer = clerk_id ? await getUserByClerkId(clerk_id) : null;
+
     await db
       .insert(reportsTable)
       .values({
         id:              report_id,
+        userId:          buyer?.id ?? null,
         plan:            plan ?? null,
         paymentStatus:   "paid",
         stripeSessionId: session.id,
@@ -232,19 +208,19 @@ async function handleWebhookEvent(event: Stripe.Event): Promise<void> {
       })
       .onConflictDoUpdate({
         target: reportsTable.id,
-        set: { plan, paymentStatus: "paid", stripeSessionId: session.id, paidAt: new Date() },
+        set: { userId: buyer?.id ?? null, plan, paymentStatus: "paid", stripeSessionId: session.id, paidAt: new Date() },
       });
 
     if (clerk_id) {
       // Per-report plan lives on reportsTable (set above) — usersTable has no
       // plan column, so we don't write one here.
 
-      // Deduct any referral credit that was applied to this checkout.
-      const applied = parseInt(credit_applied_cents ?? "0", 10);
-      if (applied > 0) await consumeReferralCredit(clerk_id, applied);
-
       // Convert the referral if this buyer was referred and paid Essentiel/Pro.
-      await onReferredUserPaid(clerk_id, plan);
+      // Returns the referrer's id when a new 100 MAD reward was earned.
+      const referrerId = await onReferredUserPaid(clerk_id, plan);
+      if (referrerId !== null) {
+        await payReferrerRefund(getStripe(), referrerId);
+      }
     }
 
     logger.info({
@@ -257,6 +233,50 @@ async function handleWebhookEvent(event: Stripe.Event): Promise<void> {
     });
   } catch (err) {
     logger.error({ event: "webhook_db_error", session_id: session.id, error: String(err) });
+  }
+}
+
+// ─── Referral cash payout (Stripe partial refund to the referrer's card) ─────
+// The reward is paid by refunding the referrer's OWN payment — which means the
+// referrer must themselves be on a paid Essentiel/Pro plan (we only refund
+// against such a charge). Free/Basique referrers can't be cashed out until they
+// upgrade; their reward stays pending. Failures are non-fatal and retried on the
+// referrer's next earned reward.
+async function payReferrerRefund(stripe: Stripe, referrerId: number): Promise<void> {
+  try {
+    const owed = await getPendingPayoutCentimes(referrerId);
+    if (owed <= 0) return;
+
+    const sessionId = await getReferrerLatestPaidSession(referrerId);
+    if (!sessionId) {
+      logger.warn(
+        { event: "referral_payout_pending", referrerId, owed },
+        "Referrer earned a reward but isn't on Essentiel/Pro yet — payout held",
+      );
+      return;
+    }
+
+    const session = await stripe.checkout.sessions.retrieve(sessionId);
+    const pi = typeof session.payment_intent === "string"
+      ? session.payment_intent
+      : session.payment_intent?.id;
+    if (!pi) {
+      logger.warn({ event: "referral_payout_no_pi", referrerId, sessionId }, "No payment_intent to refund");
+      return;
+    }
+
+    const refund = await stripe.refunds.create({ payment_intent: pi, amount: owed });
+    await markReferralRewardsPaid(referrerId, refund.id);
+
+    logger.info(
+      { event: "referral_refunded", referrerId, amount_mad: owed / 100, refund_id: refund.id },
+      `Refunded ${owed / 100} MAD to referrer's card`,
+    );
+  } catch (err) {
+    logger.error(
+      { event: "referral_refund_error", referrerId, error: String(err) },
+      "Referral cash refund failed — reward stays pending, retried next time",
+    );
   }
 }
 

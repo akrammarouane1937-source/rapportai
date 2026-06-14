@@ -67,7 +67,7 @@ export default function ReferralPage() {
                 Parrainage
               </h1>
               <p className="text-gray-500 text-sm mt-0.5">
-                Invite tes amis et gagne 100 MAD de crédit pour 2 amis qui finalisent leur rapport.
+                Invite tes amis et reçois 100 MAD remboursés sur ta carte pour 2 amis qui passent à Essentiel ou Pro.
               </p>
             </div>
 
@@ -104,7 +104,7 @@ export default function ReferralPage() {
                 {/* Stats row */}
                 <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-5">
                   {[
-                    { icon: Wallet, label: "Crédit disponible", value: `${balanceMad} MAD`,             color: "text-green-600",  bg: "bg-green-50"  },
+                    { icon: Wallet, label: "Gains",             value: `${balanceMad} MAD`,             color: "text-green-600",  bg: "bg-green-50"  },
                     { icon: Users,  label: "Total parrainés",   value: String(data.totalReferrals),     color: "text-purple-600", bg: "bg-purple-50" },
                     { icon: Clock,  label: "En attente",        value: String(data.pendingReferrals),   color: "text-amber-600",  bg: "bg-amber-50"  },
                     { icon: Gift,   label: "Validés",           value: String(data.completedReferrals), color: "text-blue-600",   bg: "bg-blue-50"   },
@@ -139,10 +139,10 @@ export default function ReferralPage() {
                     </div>
                     <div>
                       <p className="text-sm font-semibold text-green-800">
-                        Tu as {balanceMad} MAD de crédit
+                        Tu as gagné {balanceMad} MAD
                       </p>
                       <p className="text-xs text-green-700">
-                        Appliqué automatiquement sur ton prochain achat — rien à faire.
+                        Remboursés automatiquement sur la carte de ton dernier paiement Essentiel/Pro.
                       </p>
                     </div>
                   </motion.div>
@@ -203,10 +203,10 @@ export default function ReferralPage() {
                   </h2>
                   <div className="space-y-2">
                     {[
-                      "Partage ton lien ou ton code avec un ami",
-                      "Il s'inscrit et choisit le plan Essentiel ou Pro",
-                      "Pour 2 amis, tu reçois 100 MAD de crédit",
-                      "Ton crédit s'applique tout seul à ton prochain achat",
+                      "Sois toi-même sur Essentiel ou Pro (requis pour recevoir tes gains)",
+                      "Partage ton lien avec un ami",
+                      "Il s'inscrit et prend Essentiel ou Pro",
+                      "Pour 2 amis, tu reçois 100 MAD remboursés sur ta carte",
                     ].map((step, i) => (
                       <div key={i} className="flex items-start gap-3 text-sm text-purple-700">
                         <div className="w-5 h-5 bg-purple-200 rounded-full flex items-center justify-center text-[11px] font-bold text-purple-700 flex-shrink-0 mt-0.5">

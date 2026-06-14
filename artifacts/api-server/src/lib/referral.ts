@@ -1,5 +1,5 @@
-import { eq, and, or, count, sql } from "drizzle-orm";
-import { db, usersTable, referralsTable, referralRewardsTable } from "@workspace/db";
+import { eq, and, or, count, sql, desc } from "drizzle-orm";
+import { db, usersTable, referralsTable, referralRewardsTable, reportsTable } from "@workspace/db";
 import { logger } from "./logger";
 import { sendEmail } from "./email";
 
@@ -109,34 +109,35 @@ export async function onReportCompleted(
 }
 
 // ─── Referral reward economics ─────────────────────────────────────────────────
-// 100 MAD of in-app credit per 2 converted referrals. A referral "converts" when
-// the referred friend pays for Essentiel or Pro (handled in the Stripe webhook).
+// 100 MAD per 2 converted referrals, paid as a CASH refund to the referrer's own
+// card (Stripe partial refund against their original payment). The product is a
+// one-time purchase, so account credit would be worthless — cash back is the real
+// incentive. A referral "converts" when the referred friend pays Essentiel/Pro.
 //
-// The reward is delivered as account credit (stored in `referralBalance`, in MAD
-// centimes) that is auto-applied as a discount at the referrer's next checkout.
-// Morocco isn't a supported Stripe Connect payout destination, so we credit
-// instead of cashing out.
-//
-// Balance is stored in MAD centimes (the charge currency): 10000 = 100 MAD.
-// Display divides by 100. Keep this in sync with stripe.ts.
+// referralBalance = lifetime MAD earned (centimes, 10000 = 100 MAD), for display.
+// Each 100 MAD reward is a referralRewardsTable row: "pending" until the cash
+// refund lands, then "paid". The Stripe refund itself happens in stripe.ts (it
+// needs the Stripe client); these helpers are the DB side.
 
-const CASHBACK_THRESHOLD = 2;     // converted referrals per reward
-const CASHBACK_AMOUNT    = 10000; // 100 MAD, stored as centimes (display = / 100)
+export const CASHBACK_AMOUNT = 10000; // 100 MAD in centimes
+const CASHBACK_THRESHOLD      = 2;     // converted referrals per reward
 
 const QUALIFYING_PLANS = new Set(["starter", "pro"]);
 
 /**
- * Called from the Stripe webhook when a user pays. If that user was referred and
- * the plan is Essentiel/Pro, mark the referral converted and top up the referrer's
- * credit so they always hold floor(conversions / 2) × 100 MAD. Idempotent: it
- * never grants more rewards than the conversion count deserves, fixing the old
- * over-pay bug where referral #1 paired with every later referral.
+ * Mark a referral converted when the referred friend pays Essentiel/Pro, and
+ * accrue any newly-earned rewards (status "pending"). Returns the referrer's id
+ * when a new reward was created — so the caller issues the cash refund — else
+ * null. Idempotent: never grants more than floor(conversions / 2).
  */
-export async function onReferredUserPaid(clerkId: string, plan: string | null | undefined) {
-  if (!plan || !QUALIFYING_PLANS.has(plan)) return;
+export async function onReferredUserPaid(
+  clerkId: string,
+  plan: string | null | undefined,
+): Promise<number | null> {
+  if (!plan || !QUALIFYING_PLANS.has(plan)) return null;
 
   const user = await getUserByClerkId(clerkId);
-  if (!user) return;
+  if (!user) return null;
 
   const referral = await db.query.referralsTable.findFirst({
     where: and(
@@ -144,46 +145,38 @@ export async function onReferredUserPaid(clerkId: string, plan: string | null | 
       eq(referralsTable.status, "pending"),
     ),
   });
-  if (!referral) return; // organic user, or already converted
+  if (!referral) return null; // organic user, or already converted
 
   await db
     .update(referralsTable)
     .set({ status: "completed", completedAt: new Date() })
     .where(eq(referralsTable.id, referral.id));
 
-  await grantDueRewards(referral.referrerId);
+  const created = await accrueDueRewards(referral.referrerId);
+  return created > 0 ? referral.referrerId : null;
 }
 
-/** Grant any referral credit the referrer has earned but not yet received. */
-async function grantDueRewards(referrerId: number): Promise<void> {
-  // Converted referrals (completed or rewarded — both count toward pairs)
+/** Insert any owed reward rows (status "pending") + bump lifetime earned. */
+async function accrueDueRewards(referrerId: number): Promise<number> {
   const [{ value: convertedCount }] = await db
     .select({ value: count() })
     .from(referralsTable)
-    .where(
-      and(
-        eq(referralsTable.referrerId, referrerId),
-        or(
-          eq(referralsTable.status, "completed"),
-          eq(referralsTable.status, "rewarded"),
-        ),
-      ),
-    );
+    .where(and(
+      eq(referralsTable.referrerId, referrerId),
+      or(eq(referralsTable.status, "completed"), eq(referralsTable.status, "rewarded")),
+    ));
 
-  // Rewards already granted to this referrer
   const [{ value: grantedCount }] = await db
     .select({ value: count() })
     .from(referralRewardsTable)
-    .where(
-      and(
-        eq(referralRewardsTable.userId, referrerId),
-        eq(referralRewardsTable.reason, "referral_cashback"),
-      ),
-    );
+    .where(and(
+      eq(referralRewardsTable.userId, referrerId),
+      eq(referralRewardsTable.reason, "referral_cashback"),
+    ));
 
   const deserved = Math.floor(Number(convertedCount) / CASHBACK_THRESHOLD);
   const missing  = deserved - Number(grantedCount);
-  if (missing <= 0) return;
+  if (missing <= 0) return 0;
 
   await db
     .update(usersTable)
@@ -195,36 +188,56 @@ async function grantDueRewards(referrerId: number): Promise<void> {
       userId: referrerId,
       amount: CASHBACK_AMOUNT,
       reason: "referral_cashback",
-      status: "paid",            // credit delivered to balance immediately
-      paidAt: new Date(),
+      status: "pending",   // awaiting cash refund to the referrer's card
     });
   }
 
   logger.info(
-    { event: "referral_rewarded", referrerId, rewards: missing, amountCentimes: CASHBACK_AMOUNT * missing },
-    `Granted ${missing} × 100 MAD referral credit`,
+    { event: "referral_earned", referrerId, rewards: missing, amountCentimes: CASHBACK_AMOUNT * missing },
+    `Referrer earned ${missing} × 100 MAD (pending refund)`,
   );
+  return missing;
+}
+
+/** Total unpaid reward owed to a referrer, in MAD centimes. */
+export async function getPendingPayoutCentimes(referrerId: number): Promise<number> {
+  const rows = await db
+    .select({ amount: referralRewardsTable.amount })
+    .from(referralRewardsTable)
+    .where(and(
+      eq(referralRewardsTable.userId, referrerId),
+      eq(referralRewardsTable.reason, "referral_cashback"),
+      eq(referralRewardsTable.status, "pending"),
+    ));
+  return rows.reduce((s, r) => s + (r.amount ?? 0), 0);
 }
 
 /**
- * Deduct in-app credit that was applied at checkout. Called from the Stripe
- * webhook after a successful payment, using the amount recorded in session
- * metadata. Clamped at 0 so concurrent charges can never drive it negative.
+ * The referrer's most recent paid Essentiel/Pro checkout session id, to refund
+ * against. Only Essentiel/Pro charges qualify — so a referrer must be on a paid
+ * upper tier to be cashed out (Basique/free referrers stay pending until they
+ * upgrade, à la Replit's "upgrade to claim").
  */
-export async function consumeReferralCredit(clerkId: string, cents: number): Promise<void> {
-  if (!Number.isFinite(cents) || cents <= 0) return;
+export async function getReferrerLatestPaidSession(referrerId: number): Promise<string | null> {
+  const report = await db.query.reportsTable.findFirst({
+    where: and(
+      eq(reportsTable.userId, referrerId),
+      eq(reportsTable.paymentStatus, "paid"),
+      or(eq(reportsTable.plan, "starter"), eq(reportsTable.plan, "pro")),
+    ),
+    orderBy: desc(reportsTable.paidAt),
+  });
+  return report?.stripeSessionId ?? null;
+}
 
-  const user = await getUserByClerkId(clerkId);
-  if (!user) return;
-
-  const newBalance = Math.max(0, user.referralBalance - cents);
+/** Mark a referrer's pending rewards paid, recording the Stripe refund id. */
+export async function markReferralRewardsPaid(referrerId: number, refundId: string): Promise<void> {
   await db
-    .update(usersTable)
-    .set({ referralBalance: newBalance })
-    .where(eq(usersTable.id, user.id));
-
-  logger.info(
-    { event: "referral_credit_consumed", clerkId, cents, newBalance },
-    "Referral credit applied at checkout",
-  );
+    .update(referralRewardsTable)
+    .set({ status: "paid", method: "stripe_refund", payoutDetails: refundId, paidAt: new Date() })
+    .where(and(
+      eq(referralRewardsTable.userId, referrerId),
+      eq(referralRewardsTable.reason, "referral_cashback"),
+      eq(referralRewardsTable.status, "pending"),
+    ));
 }
