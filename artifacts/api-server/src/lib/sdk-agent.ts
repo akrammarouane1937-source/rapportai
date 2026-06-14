@@ -203,7 +203,9 @@ export class SDKReportAgent {
 
     // Heavy sections need Sonnet quality; light sections use Haiku to cut costs ~5x
     // Sommaire uses Sonnet — its plan must cover the full report structure without truncation
-    const HEAVY_SECTIONS = new Set(["partie-i", "partie-ii", "introduction", "conclusion", "sommaire"]);
+    // Résumé uses Sonnet — it's jury-critical and must translate the Abstract to English
+    // (Haiku left the Abstract in French and mangled terminology)
+    const HEAVY_SECTIONS = new Set(["partie-i", "partie-ii", "introduction", "conclusion", "sommaire", "resume"]);
     const sectionModel = HEAVY_SECTIONS.has(section)
       ? "claude-sonnet-4-5"
       : "claude-haiku-4-5";
