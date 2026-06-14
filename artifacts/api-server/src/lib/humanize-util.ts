@@ -5,16 +5,18 @@ import { logger } from "./logger";
 
 const client = new Anthropic();
 
-// Only PROSE sections are humanized. Structured sections are excluded because
-// humanizing them can corrupt their format or data:
-// - sommaire: parseable ##/### structure read by Partie I/II agents + the export TOC
-// - page-de-garde: student name, school, encadrants, dates — must stay exact
-// - bibliographie: citations (author, year, DOI) must stay exact
-// - abbreviations/keywords/problematique/contexte: structured utility data
-const HUMANIZE_SECTIONS = new Set([
-  "introduction", "partie-i", "partie-ii", "conclusion",
-  "resume", "abstract", "dedicaces", "remerciements",
-  "section",
+// Structured sections that must NOT be humanized — rewriting them breaks their format or data.
+// Everything else (all prose) is humanized.
+const SKIP_HUMANIZE = new Set([
+  "page-de-garde",    // student name, school, dates — must stay exact
+  "sommaire",          // ##/### structure parsed by downstream agents + export TOC
+  "bibliographie",     // citations (author, year, DOI) must stay exact
+  "abbreviations",     // structured list
+  "liste-figures",     // structured list
+  "liste-tableaux",    // structured list
+  "keywords",          // utility metadata
+  "problematique",     // utility metadata
+  "contexte",          // utility metadata
 ]);
 
 // Max words per chunk — Haiku handles 2000 words comfortably in one shot
@@ -100,8 +102,8 @@ export async function runInternalHumanize(
   rawText: string,
   sectionType: string,
 ): Promise<string> {
-  if (!HUMANIZE_SECTIONS.has(sectionType)) {
-    logger.info({ section: sectionType }, "humanize: skipped (not a prose section)");
+  if (SKIP_HUMANIZE.has(sectionType)) {
+    logger.info({ section: sectionType }, "humanize: skipped (structured section)");
     return rawText;
   }
   if (!rawText.trim()) {
@@ -144,8 +146,8 @@ export async function streamingHumanize(
   sectionType: string,
   onChunk: (chunk: string, isFirst: boolean) => void,
 ): Promise<string> {
-  if (!HUMANIZE_SECTIONS.has(sectionType) || !rawText.trim()) {
-    logger.info({ section: sectionType }, "humanize: skipped (non-prose or empty) — streaming as-is");
+  if (SKIP_HUMANIZE.has(sectionType) || !rawText.trim()) {
+    logger.info({ section: sectionType }, "humanize: skipped (structured or empty) — streaming as-is");
     onChunk(rawText, true);
     return rawText;
   }
