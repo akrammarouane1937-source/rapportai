@@ -530,26 +530,53 @@ router.post("/agent/:step/stream", async (req: Request, res: Response) => {
       // Generate each section sequentially
       for (const sectionId of sections) {
         sseWrite(res, { type: "tool_call", name: "Write", detail: `${sectionId}.md` });
+        const filePath = path.join(agent.workDir, `${sectionId}.md`);
 
-        const task = agent.buildSectionTask(sectionId, {
-          extraContext: context || undefined,
-        });
-
-        try {
-          for await (const event of agent.streamSection(sectionId, task)) {
-            if (event.type === "tool_call") {
-              sseWrite(res, { type: "tool_call", name: event.name, detail: event.detail });
-            }
-            // Don't stream internal agent text to chat — it goes to the preview panel
+        // Abstract is generated in-process (direct API call) — it only needs to
+        // read resume.md and translate it to English. No subprocess needed.
+        if (sectionId === "abstract") {
+          const resumePath = path.join(agent.workDir, "resume.md");
+          const resumeContent = existsSync(resumePath) ? readFileSync(resumePath, "utf-8") : "";
+          if (!resumeContent) {
+            sseWrite(res, { type: "text", content: "Le résumé n'existe pas encore. Génère d'abord le résumé français." });
+            continue;
           }
-        } catch (genErr) {
-          logger.error({ err: genErr, section: sectionId }, "streamSection error");
-          sseWrite(res, { type: "text", content: `La génération de ${sectionId} a échoué. Réessaie.` });
-          continue;
+          try {
+            const abstractRes = await fetch(ANTHROPIC_API, {
+              method: "POST",
+              headers: { "anthropic-version": "2023-06-01", "x-api-key": apiKey, "content-type": "application/json" },
+              body: JSON.stringify({
+                model: "claude-sonnet-4-6",
+                max_tokens: 2048,
+                system: "You are an academic translator. Translate the given French résumé into natural academic English as an Abstract. Rules: 100% English (not a single French word), same structure and length as the original, adapt phrasing to read natively in English (not word-for-word), no sub-titles or bullet points, continuous prose only. End with 'Keywords: word1, word2, ...' (English equivalents of the French mots-clés). Return only the abstract text, no preamble.",
+                messages: [{ role: "user", content: `Translate this French résumé to an English Abstract:\n\n${resumeContent}` }],
+              }),
+            });
+            const abstractData = await abstractRes.json() as { content: Array<{ type: string; text: string }> };
+            const abstractText = abstractData.content.find((b) => b.type === "text")?.text ?? "";
+            if (abstractText.trim()) {
+              writeFileSync(filePath, abstractText.trim(), "utf-8");
+            }
+          } catch (e) {
+            logger.error({ err: e }, "abstract generation failed");
+            sseWrite(res, { type: "text", content: "La génération de l'Abstract a échoué. Réessaie." });
+            continue;
+          }
+        } else {
+          const task = agent.buildSectionTask(sectionId, { extraContext: context || undefined });
+          try {
+            for await (const event of agent.streamSection(sectionId, task)) {
+              if (event.type === "tool_call") {
+                sseWrite(res, { type: "tool_call", name: event.name, detail: event.detail });
+              }
+            }
+          } catch (genErr) {
+            logger.error({ err: genErr, section: sectionId }, "streamSection error");
+            sseWrite(res, { type: "text", content: `La génération de ${sectionId} a échoué. Réessaie.` });
+            continue;
+          }
         }
 
-        // Read the written file
-        const filePath = path.join(agent.workDir, `${sectionId}.md`);
         if (!existsSync(filePath)) {
           sseWrite(res, { type: "text", content: `Le fichier ${sectionId}.md n'a pas été écrit. Réessaie.` });
           continue;
