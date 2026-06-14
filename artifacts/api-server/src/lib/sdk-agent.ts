@@ -201,14 +201,11 @@ export class SDKReportAgent {
       ? `${sectionSystem}\n\n---\n## CONTEXTE ÉTUDIANT\n${baseSystem}${knowledgeBase}`
       : `${baseSystem}${knowledgeBase}`;
 
-    // Heavy sections need Sonnet quality; light sections use Haiku to cut costs ~5x
-    // Sommaire uses Sonnet — its plan must cover the full report structure without truncation
-    // Résumé uses Sonnet — it's jury-critical and must translate the Abstract to English
-    // (Haiku left the Abstract in French and mangled terminology)
-    const HEAVY_SECTIONS = new Set(["partie-i", "partie-ii", "introduction", "conclusion", "sommaire", "resume"]);
-    const sectionModel = HEAVY_SECTIONS.has(section)
-      ? "claude-sonnet-4-5"
-      : "claude-haiku-4-5";
+    // All sections use Sonnet for consistent, jury-grade quality. Haiku was
+    // cheaper (~5x) but produced weak output on the lighter sections (e.g. the
+    // Abstract came out in French, terminology mangled). The light sections are
+    // short, so the absolute cost increase is small.
+    const sectionModel = "claude-sonnet-4-5";
 
     for await (const message of query({
       prompt: task,
