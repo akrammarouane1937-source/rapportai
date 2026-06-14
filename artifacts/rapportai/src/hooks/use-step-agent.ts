@@ -7,6 +7,51 @@ import { ChoiceCard } from "@/components/chat-panel";
 import { getMyPlan, incrementPages, incrementRevision } from "@/lib/userPlan";
 import { usePaywallStore } from "@/lib/paywallStore";
 
+// ─── Client-side file extraction ─────────────────────────────────────────────
+// Images and PDFs go as base64 (Claude reads them natively).
+// DOCX → mammoth text extraction. TXT/CSV/MD → plain text.
+
+type FileContent =
+  | { type: "image"; media_type: string; data: string; name: string }
+  | { type: "document"; data: string; name: string }
+  | { type: "text"; text: string; name: string };
+
+function toBase64(file: File): Promise<string> {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => resolve((reader.result as string).split(",")[1]);
+    reader.onerror = reject;
+    reader.readAsDataURL(file);
+  });
+}
+
+async function extractFileContents(files: File[]): Promise<FileContent[]> {
+  const results: FileContent[] = [];
+  for (const file of files) {
+    const ext = file.name.split(".").pop()?.toLowerCase() ?? "";
+    try {
+      if (file.type.startsWith("image/")) {
+        const data = await toBase64(file);
+        results.push({ type: "image", media_type: file.type, data, name: file.name });
+      } else if (file.type === "application/pdf" || ext === "pdf") {
+        const data = await toBase64(file);
+        results.push({ type: "document", data, name: file.name });
+      } else if (ext === "docx" || ext === "doc") {
+        const arrayBuffer = await file.arrayBuffer();
+        const mammoth = await import("mammoth");
+        const result = await mammoth.extractRawText({ arrayBuffer });
+        results.push({ type: "text", text: result.value.slice(0, 30000), name: file.name });
+      } else {
+        const text = await file.text();
+        results.push({ type: "text", text: text.slice(0, 30000), name: file.name });
+      }
+    } catch {
+      // Non-blocking — if extraction fails, omit this file from content
+    }
+  }
+  return results;
+}
+
 // Section id (backend) → report store key, to detect whether a file_written
 // is a first generation or a revision of existing content.
 const SECTION_TO_STORE_KEY: Record<string, string> = {
@@ -264,8 +309,12 @@ export function useStepAgent({
       try {
         const sessionId = await getOrCreateSession();
 
-        // Upload any attached files to the session workDir before generation
+        // Extract file contents client-side — Claude reads images/PDFs natively,
+        // DOCX via mammoth, everything else as plain text.
+        let fileContents: FileContent[] = [];
         if (_files && _files.length > 0) {
+          fileContents = await extractFileContents(_files);
+          // Also upload to workDir so the generation agent can reference them
           for (const file of _files) {
             try {
               const fd = new FormData();
@@ -275,7 +324,7 @@ export function useStepAgent({
                 body: fd,
                 signal: ctrl.signal,
               });
-            } catch { /* non-blocking — agent will still generate without files */ }
+            } catch { /* non-blocking */ }
           }
         }
 
@@ -321,13 +370,13 @@ export function useStepAgent({
             "x-revision-count":  String(planData.revisionCount ?? 0),
           },
           body: JSON.stringify({
-            // File-only sends still give the coordinator a meaningful message
             message: text || (_files && _files.length > 0
-              ? `J'ai joint un fichier : ${_files.map((f) => f.name).join(", ")}. Utilise-le comme base.`
+              ? `J'ai joint un fichier : ${_files.map((f) => f.name).join(", ")}. Lis-le et utilise-le comme contexte.`
               : text),
             history: historyForApi,
             sessionId,
             profile,
+            fileContents: fileContents.length > 0 ? fileContents : undefined,
           }),
           signal: ctrl.signal,
           openWhenHidden: true,

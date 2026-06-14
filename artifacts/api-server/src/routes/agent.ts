@@ -284,6 +284,43 @@ function sseWrite(res: Response, data: Record<string, unknown>): void {
 
 // ─── POST /api/agent/:step/stream ─────────────────────────────────────────────
 
+// File content block sent from the client after client-side extraction
+type ClientFileContent =
+  | { type: "image"; media_type: string; data: string; name: string }
+  | { type: "document"; data: string; name: string }
+  | { type: "text"; text: string; name: string };
+
+// Build the last user message content — rich array when files are present
+function buildLastUserContent(
+  message: string,
+  fileContents: ClientFileContent[],
+): string | Array<Record<string, unknown>> {
+  if (fileContents.length === 0) return message || "(message vide)";
+
+  const blocks: Array<Record<string, unknown>> = [];
+  for (const fc of fileContents) {
+    if (fc.type === "image") {
+      blocks.push({
+        type: "image",
+        source: { type: "base64", media_type: fc.media_type, data: fc.data },
+      });
+    } else if (fc.type === "document") {
+      blocks.push({
+        type: "document",
+        source: { type: "base64", media_type: "application/pdf", data: fc.data },
+      });
+    } else {
+      // Plain text (DOCX extracted, TXT, CSV, etc.)
+      blocks.push({
+        type: "text",
+        text: `[Contenu du fichier "${fc.name}"] :\n${fc.text}`,
+      });
+    }
+  }
+  blocks.push({ type: "text", text: message || "Lis ce fichier et réponds à ma question." });
+  return blocks;
+}
+
 router.post("/agent/:step/stream", async (req: Request, res: Response) => {
   const { step } = req.params;
   const {
@@ -291,11 +328,13 @@ router.post("/agent/:step/stream", async (req: Request, res: Response) => {
     history = [],
     sessionId,
     profile = {},
+    fileContents = [],
   } = req.body as {
     message?: string;
     history?: ConvTurn[];
     sessionId?: string;
     profile?: Record<string, unknown>;
+    fileContents?: ClientFileContent[];
   };
 
   const apiKey = process.env.ANTHROPIC_API_KEY;
@@ -339,12 +378,12 @@ router.post("/agent/:step/stream", async (req: Request, res: Response) => {
     const stepStr = Array.isArray(step) ? step[0] : step;
     const systemPrompt = buildCoordinatorSystem(stepStr, profile);
 
-    const apiMessages: Array<{ role: "user" | "assistant"; content: string }> = [];
+    const apiMessages: Array<{ role: "user" | "assistant"; content: string | Array<Record<string, unknown>> }> = [];
     for (const turn of bounded) {
       if (!turn.content?.trim()) continue;
       apiMessages.push({
         role: turn.role === "agent" ? "assistant" : "user",
-        content: turn.content.slice(0, 2000), // cap each turn to avoid huge payloads
+        content: turn.content.slice(0, 2000),
       });
     }
     // Ensure messages alternate (Anthropic requires user/assistant alternation)
@@ -352,9 +391,12 @@ router.post("/agent/:step/stream", async (req: Request, res: Response) => {
       if (i === 0) return m.role === "user";
       return m.role !== apiMessages[i - 1].role;
     });
-    filteredMessages.push({ role: "user", content: message || "(message vide)" });
+    filteredMessages.push({ role: "user", content: buildLastUserContent(message, fileContents) });
 
-    // ── 3. Call Haiku coordinator (non-streaming) ──────────────────────────
+    // ── 3. Call coordinator (Sonnet when files present, Haiku for text-only) ─
+    // Files need a stronger model to read and act on them.
+    const coordModel = fileContents.length > 0 ? "claude-sonnet-4-6" : "claude-haiku-4-5";
+    const coordMaxTokens = fileContents.length > 0 ? 2048 : 1200;
     const coordRes = await fetch(ANTHROPIC_API, {
       method: "POST",
       headers: {
@@ -363,8 +405,8 @@ router.post("/agent/:step/stream", async (req: Request, res: Response) => {
         "content-type": "application/json",
       },
       body: JSON.stringify({
-        model: "claude-haiku-4-5",
-        max_tokens: 1200,
+        model: coordModel,
+        max_tokens: coordMaxTokens,
         system: systemPrompt,
         messages: filteredMessages,
       }),
