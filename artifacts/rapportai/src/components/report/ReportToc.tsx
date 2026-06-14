@@ -111,7 +111,7 @@ export function ReportToc({ compact = false }: ReportTocProps) {
     },
     {
       id: "dedicaces",
-      label: "Dédicaces & Remerciements",
+      label: "Remerciements & Dédicaces",
       path: "/rapport/step-3",
       content: report.dedicaces || report.remerciements,
       sub: [],

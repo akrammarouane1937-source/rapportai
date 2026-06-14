@@ -425,9 +425,9 @@ export default function Step1() {
         {phase === "done" && !typing && (
           <StepTransitionCard
             title="Informations générales enregistrées"
-            subtitle="On continue avec les dédicaces et remerciements."
+            subtitle="On continue avec les remerciements et dédicaces."
             onNext={() => { updateReport({ currentStep: 3 }); setLocation("/rapport/step-3"); }}
-            nextLabel="Étape suivante : Dédicaces & Remerciements"
+            nextLabel="Étape suivante : Remerciements & Dédicaces"
           />
         )}
 

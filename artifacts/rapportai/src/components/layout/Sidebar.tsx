@@ -78,7 +78,7 @@ export function Sidebar() {
 
   const STEP_LABELS: Record<number, string> = {
     1:  "Informations générales",
-    3:  "Dédicaces & Remerciements",
+    3:  "Remerciements & Dédicaces",
     4:  "Résumé & Abstract",
     5:  "Sommaire",
     6:  "Introduction",

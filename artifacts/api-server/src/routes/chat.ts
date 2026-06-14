@@ -69,7 +69,7 @@ const SECTION_PATHS: Record<string, string> = {
 
 const SECTION_LABELS: Record<string, string> = {
   pageDeGarde:  "Page de garde",
-  dedicaces:    "Dédicaces & Remerciements",
+  dedicaces:    "Remerciements & Dédicaces",
   resumeFr:     "Résumé & Abstract",
   sommaire:     "Sommaire",
   introduction: "Introduction",

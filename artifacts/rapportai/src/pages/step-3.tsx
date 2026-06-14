@@ -35,7 +35,7 @@ export default function Step3() {
     (report.remerciements ? `## Remerciements\n\n${stripTitle(report.remerciements, "Remerciements")}` : "");
 
   return (
-    <Layout stepName="Dédicaces & Remerciements" stepNumber={3}
+    <Layout stepName="Remerciements & Dédicaces" stepNumber={3}
       previewPanel={<PreviewPanel activeSection="dedicaces" content={previewContent} maxStep={3} isGenerating={isThinking || isGenerating} />}
     >
       <div className="flex-1 overflow-y-auto py-4 px-2 md:py-5 md:px-3">
@@ -44,7 +44,7 @@ export default function Step3() {
         {(isThinking || isGenerating) && <ChatMessage role="agent" content="" isTyping />}
         {stepDone && !isThinking && !isGenerating && (
           <StepTransitionCard
-            title="Dédicaces & Remerciements prêts"
+            title="Remerciements & Dédicaces prêts"
             subtitle="On génère maintenant ton résumé et abstract."
             onNext={() => { updateReport({ currentStep: 4 }); setLocation("/rapport/step-4"); }}
             nextLabel="Étape 4 : Résumé"
