@@ -3,7 +3,7 @@ import { existsSync, readFileSync, writeFileSync } from "fs";
 import path from "path";
 import { sessionStore } from "../lib/session-store";
 import { SDKReportAgent } from "../lib/sdk-agent";
-import { streamingHumanize } from "../lib/humanize-util";
+import "../lib/humanize-util"; // kept for the /humanize route
 import { fillDocxTemplate, FILLED_DOCX_NAME } from "../lib/docx-template-fill";
 import { logger } from "../lib/logger";
 
@@ -555,15 +555,24 @@ router.post("/agent/:step/stream", async (req: Request, res: Response) => {
           continue;
         }
 
-        let content = readFileSync(filePath, "utf-8");
-
-        // Humanize the content (skips non-prose sections like abbreviations)
-        sseWrite(res, { type: "tool_call", name: "Humanizing", detail: sectionId });
-        try {
-          content = await streamingHumanize(content, sectionId, () => {});
-        } catch (hErr) {
-          logger.warn({ err: hErr, section: sectionId }, "humanize failed — using raw content");
+        // Humanize via SDK agent (same tool-using agent as generation) so the
+        // humanize-skills.md skill runs as designed — with Read/Write/Edit tools
+        // to verify and fix its own output iteratively.
+        const SKIP_HUMANIZE = new Set([
+          "page-de-garde", "sommaire", "bibliographie",
+          "abbreviations", "liste-figures", "liste-tableaux",
+          "keywords", "problematique", "contexte",
+        ]);
+        if (!SKIP_HUMANIZE.has(sectionId)) {
+          sseWrite(res, { type: "tool_call", name: "Humanizing", detail: sectionId });
+          try {
+            await agent.humanizeSection(sectionId);
+          } catch (hErr) {
+            logger.warn({ err: hErr, section: sectionId }, "humanize agent failed — using raw content");
+          }
         }
+
+        let content = readFileSync(filePath, "utf-8");
 
         const zustandKey = ZUSTAND_KEY[sectionId];
         if (zustandKey) {

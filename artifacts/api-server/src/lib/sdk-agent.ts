@@ -223,6 +223,45 @@ export class SDKReportAgent {
     }
   }
 
+  // humanizeSection — runs the humanizer as a real SDK agent with Read/Write/Edit tools.
+  // This is how the humanize-skills.md skill was designed to work: the agent reads the
+  // raw file, applies all 37 rules iteratively (with Edit to fix specific patterns and
+  // Read to verify its own output), then writes the final result back to the same file.
+  async humanizeSection(sectionId: string): Promise<void> {
+    const rawPath = path.join(this.workDir, `${sectionId}.md`);
+    if (!existsSync(rawPath)) return;
+
+    const humanizeSkills = this.loadSkillFile("humanize-skills.md");
+    const humanizeSystem = this.loadSkillFile("humanize-system.md");
+    const systemPrompt = [humanizeSkills, humanizeSystem].filter(Boolean).join("\n\n---\n\n");
+    if (!systemPrompt) return;
+
+    const claudeBinary = findClaudeBinary();
+    const task = `Lis le fichier "${sectionId}.md" dans le répertoire de travail.
+Applique TOUTES les règles d'humanisation (les 37 règles du skill).
+Vérifie en particulier :
+- Zéro tiret cadratin (—) dans le texte — remplace chacun par une virgule ou reformule
+- Aucun mot de la liste interdite (cruciale, notamment, systématiquement, etc.)
+- Burstiness : après 3-4 phrases longues, insère une phrase courte
+- Aucune structure parallèle parfaite consécutive
+Utilise l'outil Edit pour corriger les passages problématiques, puis Read pour vérifier le résultat.
+Écris la version finale dans "${sectionId}.md" avec l'outil Write.`;
+
+    const ctrl = new AbortController();
+    for await (const _ of query({
+      prompt: task,
+      options: {
+        abortController: ctrl,
+        maxTurns: 20,
+        cwd: this.workDir,
+        systemPrompt,
+        model: "claude-sonnet-4-5",
+        allowedTools: ["Read", "Write", "Edit"],
+        ...(claudeBinary ? { pathToClaudeCodeExecutable: claudeBinary } : {}),
+      },
+    })) { /* consume — we only care about the written file */ }
+  }
+
   // stream — generic stream (used by revision + fallback), no section config
   async *stream(prompt: string): AsyncGenerator<StreamEvent> {
     this.lastActiveAt = new Date();
