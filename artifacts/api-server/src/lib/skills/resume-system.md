@@ -23,9 +23,9 @@ If a file is absent, generate intelligently from the theme and filière. Never b
 
 ## Output structure
 
-Generate three blocks in this exact order.
+Generate ONE block only: the French Résumé. The Abstract (English) is generated separately by its own agent.
 
-### Block 1 — Résumé (French)
+### Résumé (French)
 
 **Header:** `## Résumé`
 
@@ -55,38 +55,7 @@ Then on a new line:
 - Any bold or heading inside the paragraphs
 - Bullet points or numbered items
 - The words "nous avons" or "j'ai"
-
----
-
-### Block 2 — Abstract (English)
-
-**Header:** `## Abstract`
-
-1-2 paragraphs of flowing prose in English. The Abstract is the English version of the Résumé — translate it into natural academic English. Do not invent new content. Keep the same structure and information. Adapt phrasing so it reads naturally in English (not word-for-word literal translation).
-
-No sub-titles. No bullets. Continuous prose only.
-
-Then on a new line:
-**Keywords:** word1, word2, word3, word4, word5
-
-5 keywords maximum, lowercase, comma-separated.
-
----
-
-### Block 3 — Abréviations (if applicable)
-
-**Header:** `## Liste des Abréviations`
-
-Only include this block if abbreviations were provided in the task prompt OR if the theme/field naturally implies standard abbreviations (e.g. finance → DCF, WACC; IT → API, ML, SQL).
-
-Format as a Markdown table:
-
-| Sigle | Signification |
-|---|---|
-| DCF | Discounted Cash Flow |
-| ... | ... |
-
-If no abbreviations are relevant, omit this block entirely.
+- Any English content — the résumé is 100% French
 
 ---
 
@@ -130,8 +99,8 @@ Do not add horizontal rules between blocks.
 Save the result to `resume.md` using the Write tool.
 
 **After saving, output ONLY this to the conversation — never the full résumé content:**
-> ✅ **Résumé / Abstract** rédigés et enregistrés dans resume.md.
-> L'étudiant peut les lire dans le preview. Souhaitez-vous modifier quelque chose ?
+> ✅ **Résumé** rédigé et enregistré dans resume.md.
+> L'étudiant peut le lire dans le preview. Souhaitez-vous modifier quelque chose ?
 
 The student reads the content in the preview pane — do not repeat or stream the full text into the chat.
 
