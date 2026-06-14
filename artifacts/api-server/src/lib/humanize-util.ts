@@ -60,13 +60,21 @@ function splitIntoChunks(text: string): string[] {
 async function humanizeChunk(chunk: string, sectionType: string): Promise<string> {
   try {
     const response = await client.messages.create({
-      model: "claude-haiku-4-5",
+      // Sonnet, not Haiku: Haiku over-rewrites and mangles domain terms
+      // (IA → "agent informatisé", mots-clés → "Vocables-clés"). Sonnet follows
+      // the "preserve terminology" rules and keeps the text natural.
+      model: "claude-sonnet-4-6",
       max_tokens: 8192,
       system: SYSTEM_PROMPT,
       messages: [
         {
           role: "user",
-          content: `SECTION : ${sectionType} | CIBLE : score GPTZero < 20%
+          content: `SECTION : ${sectionType}
+OBJECTIF : un texte qui se lit comme écrit par un bon étudiant marocain — naturel et académique d'ABORD, peu détectable ensuite. Ne JAMAIS sacrifier le sens ou la terminologie pour baisser un score.
+
+INTERDIT ABSOLU — garder ces termes EXACTEMENT, ne jamais les remplacer par des synonymes :
+intelligence artificielle / IA, machine learning / apprentissage automatique, mots-clés, risque(s), volatilité, rendement, modèle, outil, algorithme, portefeuille, Bourse de Casablanca, et tout terme technique, acronyme ou nom propre.
+(Exemples de ce qu'il NE FAUT PAS faire : "agent informatisé" pour IA, "cognition informatisée" pour machine learning, "Vocables-clés" pour mots-clés, "menaces" pour risques, "appareils/dispositifs" pour outils/modèles.)
 ${SKILLS_PROMPT ? `\n${SKILLS_PROMPT}\n` : ""}
 Retourne UNIQUEMENT le texte humanisé complet, même structure Markdown, aucun commentaire :
 
