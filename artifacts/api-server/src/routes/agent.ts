@@ -329,12 +329,14 @@ router.post("/agent/:step/stream", async (req: Request, res: Response) => {
     history = [],
     sessionId,
     profile = {},
+    existingSections = {},
     fileContents = [],
   } = req.body as {
     message?: string;
     history?: ConvTurn[];
     sessionId?: string;
     profile?: Record<string, unknown>;
+    existingSections?: Record<string, string>;
     fileContents?: ClientFileContent[];
   };
 
@@ -394,10 +396,15 @@ router.post("/agent/:step/stream", async (req: Request, res: Response) => {
     });
     filteredMessages.push({ role: "user", content: buildLastUserContent(message, fileContents) });
 
-    // ── 3. Call coordinator (Sonnet when files present, Haiku for text-only) ─
-    // Files need a stronger model to read and act on them.
-    const coordModel = fileContents.length > 0 ? "claude-sonnet-4-6" : "claude-haiku-4-5";
-    const coordMaxTokens = fileContents.length > 0 ? 2048 : 1200;
+    // ── 3. Call coordinator ────────────────────────────────────────────────
+    // Sonnet when files are present (needs a stronger model to read/act on them)
+    // OR for step 4 (résumé + abstract): Haiku is unreliable at emitting the
+    // "SECTIONS: resume,abstract" directive here — it often replies
+    // conversationally and generation never fires. Haiku is fine for the other
+    // text-only steps.
+    const useSonnet = fileContents.length > 0 || stepStr === "4";
+    const coordModel = useSonnet ? "claude-sonnet-4-6" : "claude-haiku-4-5";
+    const coordMaxTokens = useSonnet ? 2048 : 1200;
     const coordRes = await fetch(ANTHROPIC_API, {
       method: "POST",
       headers: {
@@ -516,6 +523,30 @@ router.post("/agent/:step/stream", async (req: Request, res: Response) => {
         agent.patchProfile(profileFields as Parameters<typeof agent.patchProfile>[0]);
       }
 
+      // Restore section files the frontend still has in its store but that are
+      // missing from disk — Render wipes the /tmp workDir on every deploy/restart,
+      // so a revived session has profile.json but none of the .md dependencies.
+      // Only write files that are absent so we never clobber freshly-generated
+      // content with an older copy from the store.
+      if (existingSections && typeof existingSections === "object") {
+        for (const [id, content] of Object.entries(existingSections)) {
+          if (typeof content !== "string" || !content.trim()) continue;
+          const p = path.join(agent.workDir, `${id}.md`);
+          if (!existsSync(p)) {
+            try {
+              writeFileSync(p, content, "utf-8");
+              logger.info({ sessionId, section: id }, "restored section to disk from store");
+            } catch { /* ignore write errors */ }
+          }
+        }
+      }
+
+      // Abstract depends on resume.md — force the résumé to generate first if both
+      // are requested, regardless of the order the coordinator emitted them in.
+      if (sections.includes("abstract") && sections.includes("resume")) {
+        sections.sort((a, b) => (a === "resume" ? -1 : b === "resume" ? 1 : 0));
+      }
+
       // Write generation_context.md so section agents can read it
       if (context) {
         try {
@@ -536,7 +567,14 @@ router.post("/agent/:step/stream", async (req: Request, res: Response) => {
         // read resume.md and translate it to English. No subprocess needed.
         if (sectionId === "abstract") {
           const resumePath = path.join(agent.workDir, "resume.md");
-          const resumeContent = existsSync(resumePath) ? readFileSync(resumePath, "utf-8") : "";
+          // resume.md is guaranteed on disk here: either generated earlier in this
+          // same loop (resume is sorted before abstract), or restored from the
+          // frontend store by the existingSections block above.
+          let resumeContent = existsSync(resumePath) ? readFileSync(resumePath, "utf-8") : "";
+          if (!resumeContent && typeof existingSections.resume === "string" && existingSections.resume.trim()) {
+            writeFileSync(resumePath, existingSections.resume, "utf-8");
+            resumeContent = existingSections.resume;
+          }
           if (!resumeContent) {
             sseWrite(res, { type: "text", content: "Le résumé n'existe pas encore. Génère d'abord le résumé français." });
             continue;
@@ -552,8 +590,14 @@ router.post("/agent/:step/stream", async (req: Request, res: Response) => {
                 messages: [{ role: "user", content: `Translate this French résumé to an English Abstract:\n\n${resumeContent}` }],
               }),
             });
-            const abstractData = await abstractRes.json() as { content: Array<{ type: string; text: string }> };
-            const abstractText = abstractData.content.find((b) => b.type === "text")?.text ?? "";
+            if (!abstractRes.ok) {
+              const errBody = await abstractRes.text().catch(() => "");
+              logger.error({ status: abstractRes.status, body: errBody }, "abstract API call failed");
+              sseWrite(res, { type: "text", content: "La traduction de l'Abstract a échoué (API). Réessaie dans un instant." });
+              continue;
+            }
+            const abstractData = await abstractRes.json() as { content?: Array<{ type: string; text: string }> };
+            const abstractText = abstractData.content?.find((b) => b.type === "text")?.text ?? "";
             if (abstractText.trim()) {
               writeFileSync(filePath, abstractText.trim(), "utf-8");
             }
@@ -589,6 +633,9 @@ router.post("/agent/:step/stream", async (req: Request, res: Response) => {
           "page-de-garde", "sommaire", "bibliographie",
           "abbreviations", "liste-figures", "liste-tableaux",
           "keywords", "problematique", "contexte",
+          // abstract is English — the humanizer skill is French (INTERDIT terms,
+          // French phrasing rules) and would inject French words / corrupt it.
+          "abstract",
         ]);
         if (!SKIP_HUMANIZE.has(sectionId)) {
           sseWrite(res, { type: "tool_call", name: "Humanizing", detail: sectionId });

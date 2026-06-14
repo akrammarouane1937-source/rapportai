@@ -353,6 +353,28 @@ export function useStepAgent({
           formatting,
         };
 
+        // Render's /tmp workDir is wiped on every deploy/restart, so the server
+        // can lose section .md files while the store still holds the content.
+        // Send all generated sections so the server can restore them to disk
+        // before generating anything that depends on them (abstract needs the
+        // résumé, partie-ii needs partie-i, conclusion needs all, etc.).
+        const existingSections: Record<string, string> = {};
+        const sectionMap: Record<string, string> = {
+          "resume":         report.resumeFr,
+          "abstract":       report.abstractEn,
+          "introduction":   report.introduction,
+          "partie-i":       report.partieI,
+          "partie-ii":      report.partieII,
+          "conclusion":     report.conclusion,
+          "dedicaces":      report.dedicaces,
+          "remerciements":  report.remerciements,
+          "sommaire":       report.sommaire,
+          "bibliographie":  report.bibliographie,
+        };
+        for (const [id, content] of Object.entries(sectionMap)) {
+          if (typeof content === "string" && content.trim()) existingSections[id] = content;
+        }
+
         // One-shot: the injection came from a chat navigation and applies to
         // this step only — clear it so it doesn't leak into later steps.
         if (report.pendingContextInjection) {
@@ -376,6 +398,7 @@ export function useStepAgent({
             history: historyForApi,
             sessionId,
             profile,
+            existingSections: Object.keys(existingSections).length > 0 ? existingSections : undefined,
             fileContents: fileContents.length > 0 ? fileContents : undefined,
           }),
           signal: ctrl.signal,
