@@ -5,7 +5,7 @@ import { Check, X, Loader2, ChevronDown } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import PublicNavbar from "@/components/layout/PublicNavbar";
 import { getMyPlan, type PlanId } from "@/lib/userPlan";
-import { API_BASE as BASE_PATH } from "@/lib/apiBase";
+import { startCheckout } from "@/lib/checkout";
 
 const FREE_LAUNCH = import.meta.env.VITE_FREE_LAUNCH === "true";
 
@@ -115,9 +115,11 @@ const FAQ_ITEMS = [
 function PricingContent({
   isSignedIn,
   userEmail,
+  clerkId,
 }: {
   isSignedIn: boolean;
   userEmail:  string | undefined;
+  clerkId?:   string;
 }) {
   const [, setLocation]       = useLocation();
   const [loading, setLoading] = useState<PlanId | null>(null);
@@ -140,21 +142,10 @@ function PricingContent({
     setLoading(plan.id);
     setError(null);
     try {
-      const origin = window.location.origin;
-      const res    = await fetch(`${BASE_PATH}/api/payments/checkout`, {
-        method:  "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          plan:       plan.id,
-          report_id:  crypto.randomUUID(),
-          user_email: userEmail,
-          successUrl: `${origin}${BASE_PATH}/dashboard?payment=success&session_id={CHECKOUT_SESSION_ID}`,
-          cancelUrl:  `${origin}${BASE_PATH}/pricing?payment=cancelled`,
-        }),
-      });
-      const data = await res.json() as { checkout_url?: string; error?: string };
-      if (!res.ok || !data.checkout_url) throw new Error(data.error ?? "Erreur paiement");
-      window.location.href = data.checkout_url;
+      // Shared helper: defaults report_id to the current session and sends
+      // x-clerk-id, so the purchase unlocks the right report and the webhook can
+      // link the user + convert referrals.
+      await startCheckout({ plan: plan.id, clerkId, userEmail });
     } catch (err) {
       setError(err instanceof Error ? err.message : "Erreur inconnue");
       setLoading(null);
@@ -379,6 +370,7 @@ function PricingWithClerk() {
     <PricingContent
       isSignedIn={!!isSignedIn}
       userEmail={user?.primaryEmailAddress?.emailAddress ?? undefined}
+      clerkId={user?.id}
     />
   );
 }
