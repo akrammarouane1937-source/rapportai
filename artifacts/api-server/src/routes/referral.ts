@@ -36,15 +36,16 @@ router.get("/referral/me", async (req: Request, res: Response) => {
   if (!clerkId) { res.status(400).json({ error: "clerkId required" }); return; }
 
   try {
-    const user = await getUserByClerkId(clerkId);
-    if (!user) { res.status(404).json({ error: "User not found" }); return; }
+    // Self-heal: create the user (with a referral code) if they don't have a row
+    // yet — onboarding registration is best-effort, so /me must not depend on it.
+    const user = await upsertUser(clerkId);
 
     const referrals = await db.query.referralsTable.findMany({
       where: eq(referralsTable.referrerId, user.id),
     });
 
-    // Balance is stored in MAD centimes (10000 = 100 MAD); credit is auto-applied
-    // at the next checkout.
+    // Balance is stored in MAD centimes (10000 = 100 MAD); paid out as a cash
+    // refund to the referrer's Essentiel/Pro card.
     res.json({
       referralCode:       user.referralCode,
       referralLink:       `https://rapportai.io/sign-up?ref=${user.referralCode}`,
