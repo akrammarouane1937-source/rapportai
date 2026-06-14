@@ -23,16 +23,20 @@ const SKIP_HUMANIZE = new Set([
 const CHUNK_MAX_WORDS = 2000;
 
 // ─── Load system + skills files once at startup ──────────────────────────────
-
-const systemPath = path.join(process.cwd(), "src/lib/skills/humanize-system.md");
-const SYSTEM_PROMPT = existsSync(systemPath)
-  ? readFileSync(systemPath, "utf-8")
-  : "Tu es un expert en humanisation de texte académique marocain. Réécris le texte fourni pour qu'il soit indétectable par GPTZero et Turnitin. Retourne UNIQUEMENT le texte final, même structure Markdown, sans rien supprimer ni résumer.";
+// humanize-skills.md is the primary skill file with the 37 rules — it becomes
+// the system prompt so Claude treats it as authoritative instructions.
+// humanize-system.md contains domain-specific overrides (INTERDIT terms, etc.)
+// and is appended after the skill file in the system prompt.
 
 const skillsPath = path.join(process.cwd(), "src/lib/skills/humanize-skills.md");
-const SKILLS_PROMPT = existsSync(skillsPath)
-  ? readFileSync(skillsPath, "utf-8")
-  : "";
+const SKILLS_CONTENT = existsSync(skillsPath) ? readFileSync(skillsPath, "utf-8") : "";
+
+const systemPath = path.join(process.cwd(), "src/lib/skills/humanize-system.md");
+const SYSTEM_OVERRIDES = existsSync(systemPath) ? readFileSync(systemPath, "utf-8") : "";
+
+// Combine: skill file first (the 37 rules), then domain overrides
+const SYSTEM_PROMPT = [SKILLS_CONTENT, SYSTEM_OVERRIDES].filter(Boolean).join("\n\n---\n\n")
+  || "Tu es un expert en humanisation de texte académique marocain. Réécris le texte fourni pour qu'il soit indétectable par GPTZero et Turnitin. Retourne UNIQUEMENT le texte final, même structure Markdown, sans rien supprimer ni résumer.";
 
 // ─── Split markdown text into chunks on ## / ### headings ────────────────────
 
@@ -74,10 +78,6 @@ async function humanizeChunk(chunk: string, sectionType: string): Promise<string
           content: `SECTION : ${sectionType}
 OBJECTIF : un texte qui se lit comme écrit par un bon étudiant marocain — naturel et académique d'ABORD, peu détectable ensuite. Ne JAMAIS sacrifier le sens ou la terminologie pour baisser un score.
 
-INTERDIT ABSOLU — garder ces termes EXACTEMENT, ne jamais les remplacer par des synonymes :
-intelligence artificielle / IA, machine learning / apprentissage automatique, mots-clés, risque(s), volatilité, rendement, modèle, outil, algorithme, portefeuille, Bourse de Casablanca, et tout terme technique, acronyme ou nom propre.
-(Exemples de ce qu'il NE FAUT PAS faire : "agent informatisé" pour IA, "cognition informatisée" pour machine learning, "Vocables-clés" pour mots-clés, "menaces" pour risques, "appareils/dispositifs" pour outils/modèles.)
-${SKILLS_PROMPT ? `\n${SKILLS_PROMPT}\n` : ""}
 Retourne UNIQUEMENT le texte humanisé complet, même structure Markdown, aucun commentaire :
 
 ${chunk}`,
