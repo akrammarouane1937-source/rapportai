@@ -13,6 +13,7 @@ import { getMyPlan, incrementRevision, getChatUsage, incrementChatMessage, type 
 import { usePaywallStore } from "@/lib/paywallStore";
 import { PaywallModal } from "@/components/report/PaywallModal";
 import { UpsellModal } from "@/components/report/UpsellModal";
+import { ReferralNudgeModal } from "@/components/ReferralNudgeModal";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 
@@ -540,6 +541,7 @@ export default function DashboardPage() {
         ? <PaywallModal open={paywallOpen} onClose={closePaywall} />
         : <UpsellModal open={paywallOpen} onClose={closePaywall} variant={paywallUpsellVariant} currentPlan={paywallPlan} />
       }
+      <ReferralNudgeModal />
       <Sidebar />
       <SidebarSpacer />
 
