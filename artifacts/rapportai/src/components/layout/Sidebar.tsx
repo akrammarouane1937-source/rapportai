@@ -4,7 +4,7 @@ import { useOptionalUser as useUser, useOptionalClerk as useClerk } from "@/lib/
 import {
   Home, LayoutGrid, ListChecks, ImageIcon, BookOpen,
   Settings, LogOut, Search, Plus,
-  FileInput, GraduationCap, BookMarked, ChevronDown, Zap, FileText,
+  FileInput, GraduationCap, BookMarked, ChevronDown, Zap, FileText, Gift,
 } from "lucide-react";
 import { UpsellModal } from "@/components/report/UpsellModal";
 import { getMyPlan, canUseFeature, PLAN_LIMITS } from "@/lib/userPlan";
@@ -19,6 +19,7 @@ const NAV_ITEMS = [
   { icon: ImageIcon,     label: "Figures",             path: "/figures",            proFeature: "" },
   { icon: BookOpen,      label: "Bibliothèque",        path: "/bibliotheque",       proFeature: "" },
   { icon: FileText,      label: "Mise en forme",       path: "/mise-en-forme",      proFeature: "" },
+  { icon: Gift,          label: "Parrainage",          path: "/referral",           proFeature: "" },
   { icon: Settings,      label: "Paramètres",          path: "/parametres",         proFeature: "" },
 ];
 
