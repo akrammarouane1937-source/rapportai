@@ -399,11 +399,13 @@ router.post("/agent/:step/stream", async (req: Request, res: Response) => {
 
     // ── 3. Call coordinator ────────────────────────────────────────────────
     // Sonnet when files are present (needs a stronger model to read/act on them)
-    // OR for step 4 (résumé + abstract): Haiku is unreliable at emitting the
-    // "SECTIONS: resume,abstract" directive here — it often replies
-    // conversationally and generation never fires. Haiku is fine for the other
-    // text-only steps.
-    const useSonnet = fileContents.length > 0 || stepStr === "4";
+    // OR for the substantive content steps. Haiku is unreliable at emitting the
+    // "SECTIONS: ..." generate directive — it often narrates ("Sommaire régénéré !")
+    // without actually triggering generation, so the section never persists and
+    // downstream steps see it as missing. Sonnet follows the directive format.
+    // Cheap front-matter steps (page de garde, dédicaces) stay on Haiku.
+    const SONNET_STEPS = new Set(["4", "5", "6", "partie-i", "partie-ii"]);
+    const useSonnet = fileContents.length > 0 || SONNET_STEPS.has(stepStr);
     const coordModel = useSonnet ? "claude-sonnet-4-6" : "claude-haiku-4-5";
     const coordMaxTokens = useSonnet ? 2048 : 1200;
     const coordRes = await fetch(ANTHROPIC_API, {

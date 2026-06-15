@@ -94,7 +94,11 @@ export default function Step5() {
     return headings >= 2 ? txt : null;
   }, [messages]);
 
-  const previewContent = liveContent ?? report.sommaire ?? "";
+  // Once the sommaire is actually saved, show THAT (clean) — not the chat text.
+  // liveContent (last agent message) is only a pre-generation preview; preferring
+  // it over a saved sommaire is what leaks "Je régénère ton sommaire…" into the
+  // preview and hides whether the section truly persisted.
+  const previewContent = (report.sommaire?.trim() ? report.sommaire : liveContent) ?? "";
 
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: "smooth" });
