@@ -163,10 +163,11 @@ const BACK_MATTER_META: Record<string, { label: string; field: string | null; pa
   tableDesFigures:   { label: "Liste des figures",   field: "listeDesFigures",   path: "/rapport/liste-figures"  },
   listeDesTableaux:  { label: "Liste des tableaux",  field: "listeDesTableaux",  path: "/rapport/liste-tableaux" },
   annexes:           { label: "Annexes",             field: null,                path: "/rapport/annexes" },
-  tableDesMatieres:  { label: "Table des matières",  field: null,                path: "/rapport/step-9"  },
 };
 
-const DEFAULT_ORDER = ["bibliographie", "abreviations", "tableDesFigures", "listeDesTableaux", "annexes", "tableDesMatieres"];
+// Note: the Table des Matières is NOT a step — it's auto-generated as a live Word
+// TOC field at export (see buildTableDesMatieres in generateDocx.ts). No agent step.
+const DEFAULT_ORDER = ["bibliographie", "abreviations", "tableDesFigures", "listeDesTableaux", "annexes"];
 
 // ─── Status helpers ───────────────────────────────────────────────────────────
 

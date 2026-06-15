@@ -5,6 +5,7 @@ import { sessionStore } from "../lib/session-store";
 import { SDKReportAgent } from "../lib/sdk-agent";
 import "../lib/humanize-util"; // kept for the /humanize route
 import { fillDocxTemplate, FILLED_DOCX_NAME } from "../lib/docx-template-fill";
+import { checkSectionAccess } from "../lib/plan-guard";
 import { logger } from "../lib/logger";
 
 const router = Router();
@@ -560,6 +561,18 @@ router.post("/agent/:step/stream", async (req: Request, res: Response) => {
 
       // Generate each section sequentially
       for (const sectionId of sections) {
+        // Server-side paywall: the coordinator route resolves sections dynamically,
+        // so middleware can't gate them — enforce section access here. This is the
+        // real backstop; the frontend nav gating is only a convenience and is
+        // bypassable. Without this, a free user could generate Partie I/II for free.
+        const paywall = checkSectionAccess(req, sectionId);
+        if (paywall) {
+          sseWrite(res, { type: "text", content: paywall.message });
+          sseWrite(res, { type: "plan_limit", limit_type: paywall.limit_type, planId: paywall.planId });
+          logger.info({ sessionId, section: sectionId, planId: paywall.planId, required: paywall.requiredPlan }, "section blocked by plan");
+          continue;
+        }
+
         sseWrite(res, { type: "tool_call", name: "Write", detail: `${sectionId}.md` });
         const filePath = path.join(agent.workDir, `${sectionId}.md`);
 

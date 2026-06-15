@@ -29,7 +29,7 @@ export const SECTION_MIN_PLAN: Record<string, PlanId> = {
   "tableDesFigures": "starter",
   "listeDesTableaux":"starter",
   "annexes":         "starter",
-  "tableDesMatieres":"starter",
+  // tableDesMatieres removed — it's auto-generated at export, not a step.
 };
 
 export function sectionMinPlan(sectionId: string): PlanId {

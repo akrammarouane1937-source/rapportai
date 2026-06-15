@@ -151,6 +151,36 @@ export function guardSectionAccess(req: Request, res: Response, next: NextFuncti
   next();
 }
 
+// Programmatic section-access check for routes that resolve the section
+// dynamically — the coordinator-driven /agent route doesn't know which section
+// it's generating until the model responds, so the guardSectionAccess middleware
+// (which reads req.body.section) can't gate it. Returns null if allowed, or a
+// paywall payload to emit over SSE if the section is above the user's plan.
+export interface SectionPaywall {
+  error:        "plan_limit_reached";
+  limit_type:   "section";
+  section:      string;
+  requiredPlan: PlanId;
+  planId:       PlanId;
+  message:      string;
+}
+
+export function checkSectionAccess(req: Request, sectionId: string): SectionPaywall | null {
+  if (bypassLimits(req)) return null;
+  const required = SECTION_MIN_PLAN[sectionId] ?? "free";
+  if (PLAN_RANK[req.planId] < PLAN_RANK[required]) {
+    return {
+      error:        "plan_limit_reached",
+      limit_type:   "section",
+      section:      sectionId,
+      requiredPlan: required,
+      planId:       req.planId,
+      message:      `Cette section nécessite le plan ${planLabel(required)}.`,
+    };
+  }
+  return null;
+}
+
 // ─── Guard: reject if page limit exceeded ────────────────────────────────────
 // Frontend sends x-pages-generated header (total pages generated so far).
 // Secondary backstop — section gating is the primary control.
