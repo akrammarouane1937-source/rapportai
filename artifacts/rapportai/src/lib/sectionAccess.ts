@@ -24,10 +24,13 @@ export const SECTION_MIN_PLAN: Record<string, PlanId> = {
   "partie-i":        "basique",
   "partie-ii":       "starter",
   "step-9":          "starter",  // Conclusion
-  "bibliographie":   "starter",
-  "abreviations":    "starter",
-  "tableDesFigures": "starter",
-  "listeDesTableaux":"starter",
+  // Derived scholarly apparatus — extracted from body content, so they belong with
+  // whatever the buyer already generated. Tied to Basique so a Partie I buyer gets
+  // a complete chapter (with its bibliography, abbreviations, and lists).
+  "bibliographie":   "basique",
+  "abreviations":    "basique",
+  "tableDesFigures": "basique",
+  "listeDesTableaux":"basique",
   "annexes":         "starter",
   // tableDesMatieres removed — it's auto-generated at export, not a step.
 };

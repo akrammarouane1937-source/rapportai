@@ -39,10 +39,12 @@ const SECTION_MIN_PLAN: Record<string, PlanId> = {
   "partie-i":      "basique",
   "partie-ii":     "starter",
   "conclusion":    "starter",
-  "bibliographie": "starter",
-  "abbreviations": "starter",
-  "liste-figures": "starter",
-  "liste-tableaux":"starter",
+  // Derived scholarly apparatus — tied to Basique so a Partie I buyer gets a
+  // complete chapter (bibliography, abbreviations, and lists for that content).
+  "bibliographie": "basique",
+  "abbreviations": "basique",
+  "liste-figures": "basique",
+  "liste-tableaux":"basique",
 };
 
 function planLabel(plan: PlanId): string {

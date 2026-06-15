@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { motion, Reorder, AnimatePresence } from "framer-motion";
-import { FileText, Search, CheckCircle2, Clock, ChevronRight, LayoutGrid, GripVertical, ArrowUpDown, ListOrdered, ChevronDown, ChevronUp, ImageIcon, Lock } from "lucide-react";
+import { FileText, Search, CheckCircle2, Clock, ChevronRight, LayoutGrid, GripVertical, ArrowUpDown, ChevronDown, ChevronUp, ImageIcon, Lock } from "lucide-react";
 import { useLocation } from "wouter";
 import { Sidebar, SidebarSpacer } from "@/components/layout/Sidebar";
 import { useReportSync } from "@/hooks/use-report-sync";
@@ -8,7 +8,6 @@ import { useReportStore } from "@/lib/store";
 import { getMyPlan, type PlanId } from "@/lib/userPlan";
 import { canAccessSection, lockBadge, sectionMinPlan } from "@/lib/sectionAccess";
 import { PaywallModal } from "@/components/report/PaywallModal";
-import { ReportToc } from "@/components/report/ReportToc";
 import { getApprovedFigures, type ApprovedFigure } from "@/lib/figureStore";
 import { API_BASE } from "@/lib/apiBase";
 import { getReport } from "@/lib/reportStore";
@@ -329,7 +328,6 @@ export default function RapportsPage({ completedOnly = false }: RapportsPageProp
   const [search, setSearch] = useState("");
   const [reorderMode, setReorderMode] = useState(false);
   const [activeFilter, setActiveFilter] = useState<FilterTab>(completedOnly ? "completed" : "all");
-  const [tocOpen, setTocOpen] = useState(false);
   // The section the user clicked to unlock → opens the paywall popup.
   const [paywall, setPaywall] = useState<{ plan: PlanId; label: string } | null>(null);
 
@@ -551,46 +549,6 @@ export default function RapportsPage({ completedOnly = false }: RapportsPageProp
                     sessionId={report.sessionId}
                     reportText={[report.introduction, report.partieI, report.partieII, report.conclusion].join("\n")}
                   />
-                )}
-
-                {/* ── Table des matières collapsible ── */}
-                {!completedOnly && (
-                  <div className="mt-4 rounded-2xl border border-gray-100 overflow-hidden">
-                    <button
-                      onClick={() => setTocOpen((v) => !v)}
-                      className="w-full flex items-center gap-3 px-5 py-3.5 text-left hover:bg-gray-50 transition-colors"
-                    >
-                      <div className="w-7 h-7 rounded-lg flex items-center justify-center flex-shrink-0"
-                           style={{ background: "linear-gradient(135deg,#7c3aed,#a855f7)" }}>
-                        <ListOrdered className="w-3.5 h-3.5 text-white" />
-                      </div>
-                      <span className="flex-1 text-sm font-bold text-gray-800"
-                            style={{ fontFamily: "'Plus Jakarta Sans', sans-serif" }}>
-                        Table des matières
-                      </span>
-                      <span className="text-[11px] text-gray-400 font-medium mr-1">
-                        Aperçu de la structure
-                      </span>
-                      {tocOpen
-                        ? <ChevronUp className="w-4 h-4 text-gray-300" />
-                        : <ChevronDown className="w-4 h-4 text-gray-300" />}
-                    </button>
-                    <AnimatePresence>
-                      {tocOpen && (
-                        <motion.div
-                          initial={{ height: 0, opacity: 0 }}
-                          animate={{ height: "auto", opacity: 1 }}
-                          exit={{ height: 0, opacity: 0 }}
-                          transition={{ duration: 0.2 }}
-                          className="overflow-hidden border-t border-gray-100"
-                        >
-                          <div className="p-3">
-                            <ReportToc />
-                          </div>
-                        </motion.div>
-                      )}
-                    </AnimatePresence>
-                  </div>
                 )}
               </>
             )}
