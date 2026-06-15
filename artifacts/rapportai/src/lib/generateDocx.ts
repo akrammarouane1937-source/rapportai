@@ -1023,9 +1023,8 @@ export async function generateDocx(data: Report, formatting?: FormattingPrefs): 
         headers: { default: header },
         footers: { default: buildFooter() },
         children: [
-          // Front matter
-          ...buildTableDesMatieres(),
-          buildTocInstruction(),
+          // Front matter (Sommaire = short outline up front; the detailed Table
+          // des Matières goes at the END, French academic convention)
           ...buildDedicaces(data),
           ...buildRemerciements(data),
           ...buildResume(data),
@@ -1039,6 +1038,9 @@ export async function generateDocx(data: Report, formatting?: FormattingPrefs): 
           ...buildPartieII(data, imageMap),
           ...buildFiguresSection("Partie II"),
           ...buildConclusion(data, imageMap),
+          // Table des Matières — detailed TOC at the end, before the bibliography
+          ...buildTableDesMatieres(),
+          buildTocInstruction(),
           // Back-matter in user-defined order (draggable in Mon Rapport)
           ...(data.sectionOrder?.length ? data.sectionOrder : ["bibliographie", "listeDesTableaux", "annexes"])
             .flatMap((id) => {
