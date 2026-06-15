@@ -497,10 +497,16 @@ router.post("/agent/:step/stream", async (req: Request, res: Response) => {
       // Memory guard: if the process is already using too much RAM, refuse to spawn
       // the Claude Code subprocess (which needs ~250MB) rather than letting the OS
       // kill the process with exit 134 (SIGABRT / OOM). The server stays alive and
-      // the user sees a friendly retry message instead of a 502.
+      // the user sees a friendly retry message instead of a dropped connection.
+      //
+      // The threshold MUST be set below the instance's RAM ceiling or it never
+      // fires: a 512MB box OOMs at ~512MB, so a 1600MB threshold is useless.
+      // Set MEMORY_GUARD_MB per instance — e.g. 380 on a 512MB box (leaves room
+      // for the ~250MB subprocess), ~700 on 1GB. Defaults to 1600 for large hosts.
+      const guardMB = parseInt(process.env.MEMORY_GUARD_MB ?? "1600", 10) || 1600;
       const rssMB = Math.round(process.memoryUsage().rss / 1024 / 1024);
-      if (rssMB > 1600) {
-        logger.warn({ rssMB }, "memory guard triggered — refusing generation to avoid OOM");
+      if (rssMB > guardMB) {
+        logger.warn({ rssMB, guardMB }, "memory guard triggered — refusing generation to avoid OOM");
         sseWrite(res, {
           type: "text",
           content: "⚠️ Le serveur est sous forte charge en ce moment. Réessaie dans 30 secondes — tes infos sont sauvegardées.",
