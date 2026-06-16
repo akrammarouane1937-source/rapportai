@@ -7,6 +7,8 @@ import { schoolContext, schoolProfile } from "./moroccan-schools";
 import { buildFormattingPromptBlock, type FormattingPrefs } from "./formatting";
 import { getSectionConfig } from "./agents/sectionConfigs";
 import { logger } from "./logger";
+import humanizeSkillsMd from "./skills/humanize-skills.md";
+import humanizeSystemMd from "./skills/humanize-system.md";
 
 // Per-user working directory — each session gets isolated storage.
 // Override with SESSIONS_DIR env var so Railway can mount a persistent volume.
@@ -258,82 +260,14 @@ export class SDKReportAgent {
       return;
     }
 
-    // Use full humanize-skills.md if available (better results), else fall back to embedded rules.
-    const humanizeSkills = this.loadSkillFile("humanize-skills.md");
+    // Load both files at runtime; fall back to esbuild-bundled versions (guaranteed available).
+    const runtimeSystem = this.loadSkillFile("humanize-system.md");
+    const runtimeSkills = this.loadSkillFile("humanize-skills.md");
+    const systemContent = runtimeSystem || humanizeSystemMd;
+    const skillsContent = runtimeSkills || humanizeSkillsMd;
+    const systemPrompt = `${systemContent}\n\n---\n\n${skillsContent}`;
 
-    const embeddedRules = `Tu es un éditeur expert en réécriture académique française. Tu reçois un extrait de rapport de stage ou PFE. Ton rôle : le réécrire pour qu'il semble rédigé par un étudiant humain, pas par une IA. Ce texte sera soumis à ZeroGPT — il doit scorer sous 20% IA.
-
-ZeroGPT détecte deux signaux : la PERPLEXITÉ (prévisibilité lexicale) et la BURSTINESS (uniformité de la longueur des phrases). Tu dois attaquer les deux.
-
-## RÈGLES OBLIGATOIRES — applique TOUTES sans exception
-
-### 1. TIRETS CADRATINS (—)
-Supprime TOUS les tirets cadratins (—). Chaque occurrence doit disparaître :
-- Remplace par une virgule, un deux-points, ou coupe en deux phrases.
-- Jamais d'exception.
-
-### 2. MOTS INTERDITS — supprime et remplace
-Ces mots déclenchent ZeroGPT. Remplace-les par des équivalents moins lisses :
-- systématiquement → toujours, dans tous les cas, de façon générale
-- cruciale / fondamentale → importante, centrale, décisive
-- notamment → par exemple, comme, en particulier (avec variation)
-- davantage → plus, encore plus, mieux
-- néanmoins / toutefois / cependant → mais, or, pourtant, en réalité
-- indéniablement / véritablement / pleinement → vraiment, en pratique, concrètement
-- "il convient de" → il faut, on doit, il s'agit de
-- "il est important de noter que" → notons que, rappelons que, à noter :
-- "force est de constater" → on constate, il apparaît clairement
-- "en effet" → car, parce que (ou supprime simplement)
-- "ainsi" (en début de phrase) → supprime ou reformule
-- "précisément" → exactement, justement, spécifiquement
-- "C'est dans ce contexte que" → supprime, commence directement la phrase suivante
-- "C'est précisément pour cette raison que" → c'est pourquoi, d'où
-- "C'est sur cette base que" → à partir de là, sur ce fondement
-
-### 3. BURSTINESS — signal principal de ZeroGPT
-C'est le fix le plus important. Règle stricte :
-- Après chaque groupe de 3-4 phrases longues (20+ mots), insère UNE phrase très courte (5-10 mots).
-- Cette courte phrase peut être : une observation directe, un fait chiffré, une reformulation directe de l'idée.
-- Varie radicalement les longueurs : mélange 8 mots et 35 mots dans le même paragraphe.
-- Commence certaines phrases par le verbe (ex: "Markowitz a démontré...") plutôt que par "La/Le/L'".
-- Exemples de phrases courtes à insérer : "Ce point est essentiel.", "Le résultat est clair.", "Voilà le cœur du problème.", "Cette distinction compte."
-
-### 4. DÉBUTS DE PARAGRAPHES
-Au moins 40% des paragraphes ne doivent PAS commencer par "La/Le/Les/L'/Un/Une". Options :
-- Commencer par un verbe à l'infinitif : "Comprendre le risque..."
-- Commencer par un nom propre : "Markowitz (1952) a établi..."
-- Commencer par une phrase courte de 6-8 mots.
-- Commencer par un adverbe de temps : "Depuis 2020,", "En pratique,", "Sur ce marché,"
-
-### 5. STRUCTURES PARALLÈLES PARFAITES
-L'IA crée des listes "X, Y et Z" où les trois éléments ont la même forme grammaticale. Brise la symétrie en changeant la formulation de l'un des éléments.
-Avant : "analyser les risques, évaluer les rendements et optimiser les allocations"
-Après : "analyser les risques, évaluer ce que les rendements révèlent, et ajuster les allocations en conséquence"
-
-### 6. TRANSITIONS SURÉXPLIQUÉES
-Supprime ou raccourcis les ponts logiques explicites : "C'est dans ce cadre que...", "Cette approche permet donc de...", "On voit ainsi que...". Laisse le lecteur faire le lien.
-
-### 7. ITALIQUES ET GRAS EXCESSIFS
-Réduis le gras (**texte**) : garde-le uniquement pour les termes techniques introduits pour la première fois. Supprime-le pour les emphases générales.
-
-### 8. CONSERVER LE CONTENU ACADÉMIQUE
-IMPORTANT : Ne modifie pas les formules mathématiques, les citations (Auteur, année), les noms propres, les chiffres, les acronymes. Le fond académique doit rester intact. Seule la forme change.
-
-## PROCESSUS
-1. Applique les règles dans l'ordre : tirets → mots interdits → burstiness → débuts → structures → transitions
-2. Relecture finale : cherche les phrases dont toutes sont de la même longueur — brise-en une.
-3. Relecture finale : cherche les tirets restants — supprime-les tous.
-
-## SORTIE
-Retourne UNIQUEMENT le texte humanisé. Commence directement par le contenu. Zéro commentaire. Zéro "Voici la version". Zéro résumé des changements.`;
-
-    // Full file gives much better results (25% vs 78% on ZeroGPT).
-    // Fall back to embedded rules only when file can't be loaded.
-    const systemPrompt = humanizeSkills
-      ? `${humanizeSkills}\n\nCONTEXTE : Tu reçois un extrait de rapport académique français. Ce texte sera testé par ZeroGPT — il doit scorer sous 20% IA.\n\nAPPLIQUE EN PRIORITÉ :\n1. Supprime TOUS les tirets cadratins (—)\n2. Supprime : systématiquement, cruciale, fondamentale, notamment, davantage, néanmoins, toutefois, "il convient de", "C'est précisément"\n3. BURSTINESS : après 3-4 phrases longues, insère une phrase de 5-10 mots\n4. Varie les débuts de paragraphes (40% ne doivent pas commencer par La/Le/Les/L')\n\nRÈGLE ABSOLUE : retourne UNIQUEMENT le texte humanisé, commence directement, zéro commentaire.`
-      : embeddedRules;
-
-    logger.info({ section: sectionId, usingFullSkills: !!humanizeSkills }, "humanize: prompt selected");
+    logger.info({ section: sectionId, runtimeSystemFound: !!runtimeSystem, runtimeSkillsFound: !!runtimeSkills }, "humanize: prompt selected");
 
     const CHUNK_CHARS = 30_000;
     const chunks = this.splitIntoChunks(rawContent, CHUNK_CHARS);
@@ -606,7 +540,7 @@ Enregistre dans partie-ii.md une fois terminé.`;
         const introExtra = opts?.extraContext
           ? `\n\n## CONTEXTE FOURNI PAR L'ÉTUDIANT — À RESPECTER ABSOLUMENT\n${opts.extraContext}\nAncre le contexte, la problématique et les objectifs sur ces éléments précis. N'utilise PAS de formulation générique.\n---\n`
           : "";
-        return `${docNote}${introExtra}Lis INSTRUCTIONS.md, profile.json, et toutes les sections .md existantes.
+        return `${noHtmlNote}${docNote}${introExtra}Lis INSTRUCTIONS.md, profile.json, et toutes les sections .md existantes.
 Rédige l'Introduction Générale (400–600 mots) du ${p.reportType} "${p.theme}".
 Structure : Contexte → Problématique → Objectifs → Structure du rapport.
 Problématique : ${prob}
@@ -617,7 +551,7 @@ Enregistre dans introduction.md.`;
         const contextPacketConclusion = opts?.extraContext
           ? `\n\n## CONTEXTE INJECTÉ PAR L'ORCHESTRATEUR\n${opts.extraContext}\n---\n`
           : "";
-        return `${docNote}${contextPacketConclusion}Lis introduction.md, partie-i.md, partie-ii.md (OBLIGATOIRE : la conclusion doit synthétiser les deux parties et répondre à la problématique posée en introduction).
+        return `${noHtmlNote}${docNote}${contextPacketConclusion}Lis introduction.md, partie-i.md, partie-ii.md (OBLIGATOIRE : la conclusion doit synthétiser les deux parties et répondre à la problématique posée en introduction).
 Rédige la Conclusion Générale (400–600 mots).
 Structure : Synthèse des apports → Réponse à la problématique → Limites → Perspectives futures.
 Chaque paragraphe doit référencer explicitement une des deux parties.
@@ -628,7 +562,7 @@ Enregistre dans conclusion.md.`;
         const resumeExtra = opts?.extraContext
           ? `\n\nContexte fourni par l'étudiant (à intégrer) :\n"""\n${opts.extraContext}\n"""`
           : "";
-        return `${docNote}Lis introduction.md si présent.${resumeExtra}
+        return `${noHtmlNote}${docNote}Lis introduction.md si présent.${resumeExtra}
 Rédige le Résumé EN FRANÇAIS (350–450 mots, environ 1 page) en TEXTE CONTINU : 4 à 5 paragraphes fluides qui couvrent dans l'ordre le contexte, les objectifs et la problématique, la méthodologie, les résultats attendus et les apports.
 INTERDIT ABSOLU : aucun titre, aucun sous-titre, aucune liste à puces à l'intérieur du résumé — uniquement des paragraphes de prose académique qui s'enchaînent.
 Termine par une seule ligne : "**Mots-clés :** mot1, mot2, mot3, mot4, mot5" — choisis toi-même 5 à 6 mots-clés précis tirés du thème et de la problématique.
@@ -636,7 +570,7 @@ Enregistre dans resume.md.`;
       }
 
       case "abstract": {
-        return `${docNote}Read resume.md first — the Abstract is the faithful English translation of the French Résumé.
+        return `${noHtmlNote}${docNote}Read resume.md first — the Abstract is the faithful English translation of the French Résumé.
 Write the Abstract IN ENGLISH ONLY — not a single French word in the body or keywords.
 Same structure as the Résumé: research objective → methodology → key results. Same length (300–450 words).
 Natural academic English — adapt phrasing so it reads natively, do not translate word-for-word.
@@ -676,7 +610,7 @@ Enregistre dans page-de-garde.md.`;
         const sommaireExtra = opts?.extraContext
           ? `\n\n## PLAN VALIDÉ PAR L'ÉTUDIANT — respecte exactement cette structure :\n${opts.extraContext}\n---\n`
           : "";
-        return `${docNote}${sommaireExtra}Lis profile.json.
+        return `${noHtmlNote}${docNote}${sommaireExtra}Lis profile.json.
 Génère le Sommaire structuré du ${p.reportType} "${p.theme}" en Markdown académique.
 Format obligatoire :
 - ## pour les parties principales (Partie I, Partie II, etc.)
@@ -691,7 +625,7 @@ Enregistre dans sommaire.md.`;
         const dedicacesExtra = opts?.extraContext
           ? `\n\nDemande spécifique de l'étudiant(e), respecte-la impérativement, préserve chaque nom mentionné :\n"""\n${opts.extraContext}\n"""`
           : "";
-        return `${docNote}Lis profile.json.${dedicacesExtra}
+        return `${noHtmlNote}${docNote}Lis profile.json.${dedicacesExtra}
 IMPORTANT : Ne lis PAS dedicaces.md s'il existe. Génère un texte entièrement nouveau from scratch.
 Rédige les Dédicaces (8–20 lignes, style lyrique et sobre).
 Utilise Write pour écrire dedicaces.md (écrase tout contenu précédent).`;
@@ -701,7 +635,7 @@ Utilise Write pour écrire dedicaces.md (écrase tout contenu précédent).`;
         const remExtra = opts?.extraContext
           ? `\n\nDemande spécifique de l'étudiant(e), intègre TOUS les noms et éléments mentionnés :\n"""\n${opts.extraContext}\n"""`
           : "";
-        return `${docNote}Lis profile.json pour les noms et titres des encadrants.${remExtra}
+        return `${noHtmlNote}${docNote}Lis profile.json pour les noms et titres des encadrants.${remExtra}
 IMPORTANT : Ne lis PAS remerciements.md s'il existe. Génère un texte entièrement nouveau from scratch.
 Rédige les Remerciements (200–350 mots, ton formel et sincère).
 Respecte l'ordre : encadrant pédagogique → encadrant professionnel → école → famille → amis si mentionnés.
@@ -710,7 +644,7 @@ Utilise Write pour écrire remerciements.md (écrase tout contenu précédent).`
       }
 
       case "abbreviations":
-        return `${docNote}Lis toutes les sections .md existantes (introduction.md, partie-i.md, partie-ii.md, conclusion.md, resume.md).
+        return `${noHtmlNote}${docNote}Lis toutes les sections .md existantes (introduction.md, partie-i.md, partie-ii.md, conclusion.md, resume.md).
 Identifie TOUTES les abréviations, sigles et acronymes utilisés dans le rapport.
 Génère un tableau JSON UNIQUEMENT (sans texte avant/après) avec ce format exact :
 [{"abbr":"OPCVM","sig":"Organisme de Placement Collectif en Valeurs Mobilières"},...]
@@ -722,7 +656,7 @@ Enregistre dans abbreviations.md.`;
         const figExtra = opts?.extraContext
           ? `\n\n## MÉTADONNÉES ET CONTEXTE FOURNIS PAR L'ÉTUDIANT — utilise impérativement ces informations :\n${opts.extraContext}\n---\n`
           : "";
-        return `${docNote}${figExtra}Lis partie-i.md et partie-ii.md (utilise Glob si tu n'es pas sûr des fichiers disponibles).
+        return `${noHtmlNote}${docNote}${figExtra}Lis partie-i.md et partie-ii.md (utilise Glob si tu n'es pas sûr des fichiers disponibles).
 Combine ce contexte avec les mentions trouvées dans les fichiers .md pour identifier TOUTES les figures du rapport.
 Génère une liste académique numérotée au format Markdown (sans ligne de titre ## en début — elle sera ajoutée par l'export) :
 
@@ -739,7 +673,7 @@ Enregistre dans liste-figures.md.`;
         const tabExtra = opts?.extraContext
           ? `\n\n## CONTEXTE FOURNI PAR L'ÉTUDIANT :\n${opts.extraContext}\n---\n`
           : "";
-        return `${docNote}${tabExtra}Lis partie-i.md et partie-ii.md (utilise Glob si tu n'es pas sûr des fichiers disponibles).
+        return `${noHtmlNote}${docNote}${tabExtra}Lis partie-i.md et partie-ii.md (utilise Glob si tu n'es pas sûr des fichiers disponibles).
 Identifie TOUTES les références aux tableaux : "Tableau N", "Table N", "Tableau N —", etc.
 Génère une liste académique numérotée au format Markdown (sans ligne de titre ## en début — elle sera ajoutée par l'export) :
 
@@ -753,7 +687,7 @@ Enregistre dans liste-tableaux.md.`;
       }
 
       default:
-        return `${docNote}Rédige la section "${section}" du rapport.${opts?.extraContext ? `\n\nContexte supplémentaire : ${opts.extraContext}` : ""}\nEnregistre dans ${section}.md.`;
+        return `${noHtmlNote}${docNote}Rédige la section "${section}" du rapport.${opts?.extraContext ? `\n\nContexte supplémentaire : ${opts.extraContext}` : ""}\nEnregistre dans ${section}.md.`;
     }
   }
 
