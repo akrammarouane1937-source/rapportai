@@ -87,11 +87,11 @@ export function incrementPages(wordCount: number): UserPlanData {
   return next;
 }
 
-// Free-launch flag — when set, every client-side paywall/gate is open. Must mirror
-// the server's FREE_LAUNCH (set VITE_FREE_LAUNCH=true on the FRONTEND build, and
-// FREE_LAUNCH=true on the api-server). The frontend gates independently of the
-// server, so setting only one of the two leaves paywalls visible.
-export const FREE_LAUNCH = import.meta.env.VITE_FREE_LAUNCH === "true";
+// Free-launch flag — when on, every client-side paywall/gate is open.
+// DEFAULTS TO ON for the free beta: free unless VITE_FREE_LAUNCH is explicitly
+// "false". To go PAID later: set VITE_FREE_LAUNCH=false on the frontend build AND
+// remove FREE_LAUNCH (or set it false) on the api-server, then redeploy both.
+export const FREE_LAUNCH = import.meta.env.VITE_FREE_LAUNCH !== "false";
 
 export function canGenerateSection(planId: PlanId, pagesGenerated: number): boolean {
   if (FREE_LAUNCH) return true;

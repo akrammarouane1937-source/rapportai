@@ -4,10 +4,8 @@ import { useAuth, useUser } from "@clerk/react";
 import { Check, X, Loader2, ChevronDown } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import PublicNavbar from "@/components/layout/PublicNavbar";
-import { getMyPlan, type PlanId } from "@/lib/userPlan";
+import { getMyPlan, FREE_LAUNCH, type PlanId } from "@/lib/userPlan";
 import { startCheckout } from "@/lib/checkout";
-
-const FREE_LAUNCH = import.meta.env.VITE_FREE_LAUNCH === "true";
 
 /* ─── Plan definitions ──────────────────────────────────────────────────── */
 interface Plan {
