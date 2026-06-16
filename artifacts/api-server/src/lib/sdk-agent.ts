@@ -223,64 +223,56 @@ export class SDKReportAgent {
     }
   }
 
-  // humanizeSection — runs the humanizer as a real SDK agent with Read/Write/Edit tools.
-  // This is how the humanize-skills.md skill was designed to work: the agent reads the
-  // raw file, applies all 37 rules iteratively (with Edit to fix specific patterns and
-  // Read to verify its own output), then writes the final result back to the same file.
+  // humanizeSection — direct API call, no SDK subprocess, no maxTurns limit.
+  // Reads the raw file, sends full content to Claude with the humanization rules
+  // as system prompt, writes the result back. Scales to any document length
+  // (Sonnet context = 200K tokens; a 100-page doc is ~25K tokens).
   async humanizeSection(sectionId: string): Promise<void> {
     const rawPath = path.join(this.workDir, `${sectionId}.md`);
     if (!existsSync(rawPath)) return;
 
+    const rawContent = readFileSync(rawPath, "utf-8").trim();
+    if (!rawContent) return;
+
     const humanizeSkills = this.loadSkillFile("humanize-skills.md");
-    const humanizeSystem = this.loadSkillFile("humanize-system.md");
-    const systemPrompt = [humanizeSkills, humanizeSystem].filter(Boolean).join("\n\n---\n\n");
-    if (!systemPrompt) return;
+    if (!humanizeSkills) return;
 
-    const claudeBinary = findClaudeBinary();
+    const apiKey = process.env.ANTHROPIC_API_KEY;
+    if (!apiKey) return;
 
-    // Large sections (partie-i, partie-ii) are 25-30 pages — the humanizer needs
-    // more turns to read, apply edits across the full document, and write back.
-    // 20 turns runs out on long content before the final Write, leaving the file
-    // unhumanized. Priority order: high-signal rules first (em dashes, forbidden
-    // words, burstiness) so even if turns run short, the most impactful changes land.
-    const isLargeSection = ["partie-i", "partie-ii", "conclusion"].includes(sectionId);
-    const humanizeMaxTurns = isLargeSection ? 50 : 20;
+    const systemPrompt = `${humanizeSkills}
 
-    const task = isLargeSection
-      ? `Lis le fichier "${sectionId}.md" dans le répertoire de travail.
-Ce fichier est long (25-30 pages). Applique les règles d'humanisation PAR PRIORITÉ, dans cet ordre :
-PRIORITÉ 1 — Passe globale avec Grep puis Edit ciblé :
-- Supprime TOUS les tirets cadratins (—) : remplace par virgule, deux-points, ou coupe en deux phrases
-- Supprime les mots interdits : systématiquement, cruciale, fondamentale, notamment, davantage, néanmoins, toutefois, indéniablement, véritablement, pleinement, concrètement
-- Supprime : "il convient de", "il est important de noter", "force est de constater", "il va sans dire"
-PRIORITÉ 2 — Burstiness : repère les blocs de 4+ phrases longues consécutives, coupe une phrase courte dedans
-PRIORITÉ 3 — Supprime les structures parallèles parfaites (X et Y de même Z)
-PRIORITÉ 4 — Supprime les transitions sur-expliquées ("C'est sur cette base que", "C'est dans ce contexte que")
-Utilise Grep pour trouver les occurrences, Edit pour les corriger section par section.
-Quand toutes les passes sont faites, écris la version finale dans "${sectionId}.md" avec Write.`
-      : `Lis le fichier "${sectionId}.md" dans le répertoire de travail.
-Applique TOUTES les règles d'humanisation (les 37 règles du skill).
-Vérifie en particulier :
-- Zéro tiret cadratin (—) dans le texte — remplace chacun par une virgule ou reformule
-- Aucun mot de la liste interdite (cruciale, notamment, systématiquement, etc.)
-- Burstiness : après 3-4 phrases longues, insère une phrase courte
-- Aucune structure parallèle parfaite consécutive
-Utilise l'outil Edit pour corriger les passages problématiques, puis Read pour vérifier le résultat.
-Écris la version finale dans "${sectionId}.md" avec l'outil Write.`;
+CONTEXTE : Tu reçois le contenu brut d'une section de rapport académique français. Applique toutes les règles d'humanisation ci-dessus dans cet ordre de priorité :
+1. Supprime TOUS les tirets cadratins (—) — remplace par virgule, deux-points, ou coupe en deux phrases
+2. Supprime les mots interdits : systématiquement, cruciale, fondamentale, notamment, davantage, néanmoins, toutefois, indéniablement, véritablement, pleinement, concrètement, "il convient de", "il est important de noter", "force est de constater"
+3. Applique le Burstiness : après 3-4 phrases longues, insère une phrase courte
+4. Supprime les structures parallèles parfaites et les transitions sur-expliquées
+5. Applique toutes les autres règles (1-37) sur le reste du document
 
-    const ctrl = new AbortController();
-    for await (const _ of query({
-      prompt: task,
-      options: {
-        abortController: ctrl,
-        maxTurns: humanizeMaxTurns,
-        cwd: this.workDir,
-        systemPrompt,
-        model: "claude-sonnet-4-5",
-        allowedTools: ["Read", "Write", "Edit", "Grep"],
-        ...(claudeBinary ? { pathToClaudeCodeExecutable: claudeBinary } : {}),
+RÈGLE ABSOLUE : retourne UNIQUEMENT le texte humanisé, sans aucun commentaire, sans "Voici", sans "J'ai modifié", sans résumé des changements. Le texte humanisé commence directement.`;
+
+    const response = await fetch("https://api.anthropic.com/v1/messages", {
+      method: "POST",
+      headers: {
+        "anthropic-version": "2023-06-01",
+        "x-api-key": apiKey,
+        "content-type": "application/json",
       },
-    })) { /* consume — we only care about the written file */ }
+      body: JSON.stringify({
+        model: "claude-sonnet-4-6",
+        max_tokens: 16000,
+        system: systemPrompt,
+        messages: [{ role: "user", content: rawContent }],
+      }),
+    });
+
+    if (!response.ok) return;
+
+    const data = await response.json() as { content?: Array<{ type: string; text: string }> };
+    const humanized = data.content?.find((b) => b.type === "text")?.text?.trim();
+    if (humanized) {
+      writeFileSync(rawPath, humanized, "utf-8");
+    }
   }
 
   // stream — generic stream (used by revision + fallback), no section config
