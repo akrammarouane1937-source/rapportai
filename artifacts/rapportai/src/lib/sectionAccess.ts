@@ -1,4 +1,5 @@
 import type { PlanId } from "@/lib/userPlan";
+import { FREE_LAUNCH } from "@/lib/userPlan";
 
 // ─── Section access — single source of truth (mirror of api-server plan-guard.ts) ─
 //
@@ -40,6 +41,7 @@ export function sectionMinPlan(sectionId: string): PlanId {
 }
 
 export function canAccessSection(sectionId: string, planId: PlanId): boolean {
+  if (FREE_LAUNCH) return true;
   return PLAN_RANK[planId] >= PLAN_RANK[sectionMinPlan(sectionId)];
 }
 

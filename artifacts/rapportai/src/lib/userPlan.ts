@@ -87,17 +87,26 @@ export function incrementPages(wordCount: number): UserPlanData {
   return next;
 }
 
+// Free-launch flag — when set, every client-side paywall/gate is open. Must mirror
+// the server's FREE_LAUNCH (set VITE_FREE_LAUNCH=true on the FRONTEND build, and
+// FREE_LAUNCH=true on the api-server). The frontend gates independently of the
+// server, so setting only one of the two leaves paywalls visible.
+export const FREE_LAUNCH = import.meta.env.VITE_FREE_LAUNCH === "true";
+
 export function canGenerateSection(planId: PlanId, pagesGenerated: number): boolean {
+  if (FREE_LAUNCH) return true;
   const limit = PLAN_LIMITS[planId].pages;
   return limit === Infinity || pagesGenerated < limit;
 }
 
 export function canRevise(planId: PlanId, revisionCount: number): boolean {
+  if (FREE_LAUNCH) return true;
   const limit = PLAN_LIMITS[planId].revisions;
   return limit === Infinity || revisionCount < limit;
 }
 
 export function canUseFeature(feature: string, planId: PlanId): boolean {
+  if (FREE_LAUNCH) return true;
   return PLAN_FEATURES[planId].includes(feature);
 }
 
