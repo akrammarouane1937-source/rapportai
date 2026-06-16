@@ -523,6 +523,27 @@ function buildRemerciements(d: Report): Paragraph[] {
   ];
 }
 
+// Strip a leading markdown heading from section content when it just repeats the
+// title the builder already adds (the generators sometimes write "## Résumé" /
+// "## Abstract" at the top → duplicate title in the doc). Only removes the first
+// heading when it matches the given title (accent/case-insensitive); never touches
+// structural headings like chapters.
+function stripDuplicateTitle(md: string, title: string): string {
+  const lines = md.split("\n");
+  let i = 0;
+  while (i < lines.length && !lines[i].trim()) i++;
+  const m = lines[i]?.trim().match(/^#{1,3}\s+(.+)/);
+  if (m) {
+    const norm = (s: string) => s.toLowerCase().normalize("NFD").replace(/[^a-z]/g, "");
+    const a = norm(m[1]); const b = norm(title);
+    if (a && b && (a.includes(b) || b.includes(a))) {
+      lines.splice(0, i + 1);
+      return lines.join("\n").replace(/^\n+/, "");
+    }
+  }
+  return md;
+}
+
 function buildResume(d: Report): Paragraph[] {
   const hasFr = !!d.resumeFr?.trim();
   const hasEn = !!d.abstractEn?.trim();
@@ -530,11 +551,11 @@ function buildResume(d: Report): Paragraph[] {
   const mots = (d.motsCles || []).join(", ");
   const paras: Paragraph[] = [];
   if (hasFr) {
-    paras.push(heading1("Résumé"), emptyLine(), ...markdownToParas(d.resumeFr!));
+    paras.push(heading1("Résumé"), emptyLine(), ...markdownToParas(stripDuplicateTitle(d.resumeFr!, "Résumé")));
     if (mots) paras.push(emptyLine(), bodyPara(`Mots-clés : ${mots}`, { indent: { firstLine: 0 } }));
   }
   if (hasEn) {
-    paras.push(heading1("Abstract"), emptyLine(), ...markdownToParas(d.abstractEn!));
+    paras.push(heading1("Abstract"), emptyLine(), ...markdownToParas(stripDuplicateTitle(d.abstractEn!, "Abstract")));
   }
   return paras;
 }
