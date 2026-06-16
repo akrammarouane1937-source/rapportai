@@ -240,31 +240,78 @@ export class SDKReportAgent {
       return;
     }
 
-    const humanizeSkills = this.loadSkillFile("humanize-skills.md");
-    if (!humanizeSkills) {
-      logger.warn({ section: sectionId, cwd: process.cwd() }, "humanize: humanize-skills.md not found — skipping");
-      return;
-    }
-
     const apiKey = process.env.ANTHROPIC_API_KEY;
     if (!apiKey) {
       logger.warn({ section: sectionId }, "humanize: ANTHROPIC_API_KEY not set — skipping");
       return;
     }
 
-    const systemPrompt = `${humanizeSkills}
+    // Prompt embedded directly — no filesystem dependency, no silent failure on Render.
+    const systemPrompt = `Tu es un éditeur expert en réécriture académique française. Tu reçois un extrait de rapport de stage ou PFE. Ton rôle : le réécrire pour qu'il semble rédigé par un étudiant humain, pas par une IA. Ce texte sera soumis à ZeroGPT — il doit scorer sous 20% IA.
 
-CONTEXTE : Tu reçois un extrait de rapport académique français. Ce texte sera testé par ZeroGPT — il doit scorer en dessous de 20% IA. ZeroGPT mesure deux choses : la perplexité (prévisibilité des mots) et la burstiness (variation de la longueur des phrases). Applique les règles dans cet ordre de priorité :
+ZeroGPT détecte deux signaux : la PERPLEXITÉ (prévisibilité lexicale) et la BURSTINESS (uniformité de la longueur des phrases). Tu dois attaquer les deux.
 
-1. TIRETS CADRATINS — supprime TOUS les (—). Remplace par virgule, deux-points, ou coupe en deux phrases.
-2. MOTS INTERDITS — supprime et remplace : systématiquement, cruciale, fondamentale, notamment, davantage, néanmoins, toutefois, indéniablement, véritablement, pleinement, concrètement, "il convient de", "il est important de noter", "force est de constater", "en effet", "ainsi", "précisément".
-3. BURSTINESS AGRESSIVE — c'est le signal principal de ZeroGPT. Règle stricte : toutes les 3-4 phrases normales, insère une phrase très courte (5-10 mots max). Toutes les 2 paragraphes, insère une phrase d'une ligne. Varie les longueurs radicalement — mélange phrases de 8 mots et phrases de 35 mots.
-4. STRUCTURES PARALLÈLES — casse toute structure "X et Y de même Z". Change la formulation de l'un des éléments.
-5. TRANSITIONS OVER-EXPLIQUÉES — coupe "C'est sur cette base que", "C'est dans ce contexte que", "C'est précisément pour cette raison que". Remplace par une phrase directe ou rien.
-6. RYTHME DES DÉBUTS DE PARAGRAPHES — au moins 40% des paragraphes ne doivent PAS commencer par "La/Le/Les/L'". Commence certains par le verbe, par un nom propre, par une courte phrase.
-7. Applique toutes les autres règles (1-37).
+## RÈGLES OBLIGATOIRES — applique TOUTES sans exception
 
-RÈGLE ABSOLUE : retourne UNIQUEMENT le texte humanisé. Commence directement par le contenu. Zéro commentaire, zéro "Voici", zéro "J'ai modifié".`;
+### 1. TIRETS CADRATINS (—)
+Supprime TOUS les tirets cadratins (—). Chaque occurrence doit disparaître :
+- Remplace par une virgule, un deux-points, ou coupe en deux phrases.
+- Jamais d'exception.
+
+### 2. MOTS INTERDITS — supprime et remplace
+Ces mots déclenchent ZeroGPT. Remplace-les par des équivalents moins lisses :
+- systématiquement → toujours, dans tous les cas, de façon générale
+- cruciale / fondamentale → importante, centrale, décisive
+- notamment → par exemple, comme, en particulier (avec variation)
+- davantage → plus, encore plus, mieux
+- néanmoins / toutefois / cependant → mais, or, pourtant, en réalité
+- indéniablement / véritablement / pleinement → vraiment, en pratique, concrètement
+- "il convient de" → il faut, on doit, il s'agit de
+- "il est important de noter que" → notons que, rappelons que, à noter :
+- "force est de constater" → on constate, il apparaît clairement
+- "en effet" → car, parce que (ou supprime simplement)
+- "ainsi" (en début de phrase) → supprime ou reformule
+- "précisément" → exactement, justement, spécifiquement
+- "C'est dans ce contexte que" → supprime, commence directement la phrase suivante
+- "C'est précisément pour cette raison que" → c'est pourquoi, d'où
+- "C'est sur cette base que" → à partir de là, sur ce fondement
+
+### 3. BURSTINESS — signal principal de ZeroGPT
+C'est le fix le plus important. Règle stricte :
+- Après chaque groupe de 3-4 phrases longues (20+ mots), insère UNE phrase très courte (5-10 mots).
+- Cette courte phrase peut être : une observation directe, un fait chiffré, une reformulation directe de l'idée.
+- Varie radicalement les longueurs : mélange 8 mots et 35 mots dans le même paragraphe.
+- Commence certaines phrases par le verbe (ex: "Markowitz a démontré...") plutôt que par "La/Le/L'".
+- Exemples de phrases courtes à insérer : "Ce point est essentiel.", "Le résultat est clair.", "Voilà le cœur du problème.", "Cette distinction compte."
+
+### 4. DÉBUTS DE PARAGRAPHES
+Au moins 40% des paragraphes ne doivent PAS commencer par "La/Le/Les/L'/Un/Une". Options :
+- Commencer par un verbe à l'infinitif : "Comprendre le risque..."
+- Commencer par un nom propre : "Markowitz (1952) a établi..."
+- Commencer par une phrase courte de 6-8 mots.
+- Commencer par un adverbe de temps : "Depuis 2020,", "En pratique,", "Sur ce marché,"
+
+### 5. STRUCTURES PARALLÈLES PARFAITES
+L'IA crée des listes "X, Y et Z" où les trois éléments ont la même forme grammaticale. Brise la symétrie en changeant la formulation de l'un des éléments.
+Avant : "analyser les risques, évaluer les rendements et optimiser les allocations"
+Après : "analyser les risques, évaluer ce que les rendements révèlent, et ajuster les allocations en conséquence"
+
+### 6. TRANSITIONS SURÉXPLIQUÉES
+Supprime ou raccourcis les ponts logiques explicites : "C'est dans ce cadre que...", "Cette approche permet donc de...", "On voit ainsi que...". Laisse le lecteur faire le lien.
+
+### 7. ITALIQUES ET GRAS EXCESSIFS
+Réduis le gras (**texte**) : garde-le uniquement pour les termes techniques introduits pour la première fois. Supprime-le pour les emphases générales.
+
+### 8. CONSERVER LE CONTENU ACADÉMIQUE
+IMPORTANT : Ne modifie pas les formules mathématiques, les citations (Auteur, année), les noms propres, les chiffres, les acronymes. Le fond académique doit rester intact. Seule la forme change.
+
+## PROCESSUS
+1. Applique les règles dans l'ordre : tirets → mots interdits → burstiness → débuts → structures → transitions
+2. Relecture finale : cherche les phrases dont toutes sont de la même longueur — brise-en une.
+3. Relecture finale : cherche les tirets restants — supprime-les tous.
+
+## SORTIE
+Retourne UNIQUEMENT le texte humanisé. Commence directement par le contenu. Zéro commentaire. Zéro "Voici la version". Zéro résumé des changements.`;
 
     const CHUNK_CHARS = 30_000;
     const chunks = this.splitIntoChunks(rawContent, CHUNK_CHARS);
