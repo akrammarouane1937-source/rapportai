@@ -2,6 +2,8 @@ import Anthropic from "@anthropic-ai/sdk";
 import { existsSync, readFileSync } from "fs";
 import path from "path";
 import { logger } from "./logger";
+import humanizeSkillsMd from "./skills/humanize-skills.md";
+import humanizeSystemMd from "./skills/humanize-system.md";
 
 const client = new Anthropic();
 
@@ -17,6 +19,9 @@ const SKIP_HUMANIZE = new Set([
   "keywords",          // utility metadata
   "problematique",     // utility metadata
   "contexte",          // utility metadata
+  // abstract is English — the humanizer skill is French (INTERDIT terms, French
+  // phrasing rules) and would inject French words / corrupt it.
+  "abstract",
 ]);
 
 // Max words per chunk — Haiku handles 2000 words comfortably in one shot
@@ -28,11 +33,27 @@ const CHUNK_MAX_WORDS = 2000;
 // humanize-system.md contains domain-specific overrides (INTERDIT terms, etc.)
 // and is appended after the skill file in the system prompt.
 
-const skillsPath = path.join(process.cwd(), "src/lib/skills/humanize-skills.md");
-const SKILLS_CONTENT = existsSync(skillsPath) ? readFileSync(skillsPath, "utf-8") : "";
+// Try multiple runtime paths (process.cwd() resolves differently on Render than
+// locally), then fall back to the esbuild-bundled copies which are ALWAYS present.
+// Without the bundled fallback this silently degraded to a weak one-line prompt on
+// Render, leaving generated text un-humanized.
+function loadHumanizeFile(filename: string, bundled: string): string {
+  const candidates = [
+    path.join(__dirname, "..", "src", "lib", "skills", filename), // dist/../src (Render esbuild layout)
+    path.join(process.cwd(), "src/lib/skills", filename),         // local dev
+    path.join(process.cwd(), "artifacts/api-server/src/lib/skills", filename), // from repo root
+  ];
+  for (const p of candidates) {
+    try {
+      if (existsSync(p)) return readFileSync(p, "utf-8");
+    } catch { /* try next */ }
+  }
+  logger.warn({ filename }, "humanize-util: skill file not found at runtime — using bundled copy");
+  return bundled;
+}
 
-const systemPath = path.join(process.cwd(), "src/lib/skills/humanize-system.md");
-const SYSTEM_OVERRIDES = existsSync(systemPath) ? readFileSync(systemPath, "utf-8") : "";
+const SKILLS_CONTENT = loadHumanizeFile("humanize-skills.md", humanizeSkillsMd);
+const SYSTEM_OVERRIDES = loadHumanizeFile("humanize-system.md", humanizeSystemMd);
 
 // Combine: skill file first (the 37 rules), then domain overrides
 const SYSTEM_PROMPT = [SKILLS_CONTENT, SYSTEM_OVERRIDES].filter(Boolean).join("\n\n---\n\n")
