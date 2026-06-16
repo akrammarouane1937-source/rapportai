@@ -386,9 +386,16 @@ Utilise l'outil Edit pour corriger les passages problématiques, puis Read pour 
         const contextPacketI = opts?.extraContext
           ? `\n\n## CONTEXTE INJECTÉ PAR L'ORCHESTRATEUR\n${opts.extraContext}\n---\n`
           : "";
+        const ctx = opts?.extraContext ?? "";
+        const lengthI = /concis/i.test(ctx) || /15.{1,5}20\s*page/i.test(ctx)
+          ? "Longueur cible : 15 à 20 pages (4 000–5 500 mots). Reste concis et précis, sans développement excessif."
+          : /développ/i.test(ctx) || /35.{1,5}45\s*page/i.test(ctx) || /40.{1,5}50\s*page/i.test(ctx)
+            ? "Longueur cible : 35 à 45 pages (9 500–12 000 mots). Approfondis chaque section : définitions, auteurs, exemples, données, analyses."
+            : "Longueur cible : 25 à 30 pages (6 500–8 000 mots). Chaque section doit être substantielle — minimum 3 paragraphes développés, pas de bullet points.";
         return `${docNote}${figImageNote}${contextPacketI}Lis sommaire.md pour extraire la structure exacte de la Partie I (chapitres et sections).
 Génère ensuite la Partie I complète en suivant cette structure. Ne modifie aucun titre, n'ajoute aucun chapitre.
 La Partie I est le cadre THÉORIQUE : elle doit poser les fondements conceptuels que la Partie II empirique va tester ou appliquer.
+${lengthI}
 Problématique : ${prob} | Style de citation : ${style}${figNoteI}
 Enregistre dans partie-i.md une fois terminé.`;
       }
@@ -402,9 +409,16 @@ Enregistre dans partie-i.md une fois terminé.`;
         const contextPacket = opts?.extraContext
           ? `\n\n## CONTEXTE INJECTÉ PAR L'ORCHESTRATEUR\n${opts.extraContext}\n---\n`
           : "";
+        const ctxII = opts?.extraContext ?? "";
+        const lengthII = /concis/i.test(ctxII) || /15.{1,5}20\s*page/i.test(ctxII)
+          ? "Longueur cible : 15 à 20 pages (4 000–5 500 mots). Reste concis et précis, sans développement excessif."
+          : /développ/i.test(ctxII) || /35.{1,5}45\s*page/i.test(ctxII) || /40.{1,5}50\s*page/i.test(ctxII)
+            ? "Longueur cible : 35 à 45 pages (9 500–12 000 mots). Approfondis chaque section : méthodologie, collecte des données, analyses statistiques, interprétations."
+            : "Longueur cible : 25 à 30 pages (6 500–8 000 mots). Chaque section doit être substantielle — minimum 3 paragraphes développés, pas de bullet points.";
         return `${docNote}${figImageNote}${contextPacket}Lis sommaire.md pour extraire la structure exacte de la Partie II (chapitres et sections).
 Lis aussi partie-i.md. Les références croisées vers Partie I sont OBLIGATOIRES. Chaque chapitre de la Partie II doit s'ancrer dans le cadre théorique établi en Partie I.
 Génère ensuite la Partie II complète en suivant la structure du sommaire.
+${lengthII}
 Problématique : ${prob} | Style de citation : ${style}${figNoteII}
 Enregistre dans partie-ii.md une fois terminé.`;
       }
