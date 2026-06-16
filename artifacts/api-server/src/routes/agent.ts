@@ -30,6 +30,71 @@ const ZUSTAND_KEY: Record<string, string> = {
   "liste-tableaux": "listeDesTableaux",
 };
 
+// ─── Section id normalization ─────────────────────────────────────────────────
+// The coordinator is an LLM and sometimes emits non-canonical section ids like
+// "[introduction-generale]", "introduction générale", "partie 1", "résumé".
+// Without this, the writer never produces "<bogus-id>.md" and the user hits
+// "Le fichier X.md n'a pas été écrit". Map every reasonable variant to a real id.
+
+const CANONICAL_SECTIONS = new Set<string>([
+  "page-de-garde", "sommaire", "dedicaces", "remerciements", "resume", "abstract",
+  "introduction", "partie-i", "partie-ii", "conclusion", "bibliographie",
+  "abbreviations", "annexes", "liste-figures", "liste-tableaux",
+]);
+
+const SECTION_ALIASES: Record<string, string> = {
+  // introduction / conclusion (the "-generale" suffix the LLM loves to add)
+  "introduction-generale": "introduction", "intro": "introduction",
+  "conclusion-generale": "conclusion", "conclusion-generale-et-perspectives": "conclusion",
+  // parties (digits, words, ordinals)
+  "partie-1": "partie-i", "partie1": "partie-i", "partie-une": "partie-i",
+  "premiere-partie": "partie-i", "1ere-partie": "partie-i", "chapitre-1": "partie-i",
+  "partie-2": "partie-ii", "partie2": "partie-ii", "partie-deux": "partie-ii",
+  "deuxieme-partie": "partie-ii", "2eme-partie": "partie-ii", "chapitre-2": "partie-ii",
+  // front matter
+  "page-garde": "page-de-garde", "garde": "page-de-garde", "couverture": "page-de-garde",
+  "table-des-matieres": "sommaire", "plan": "sommaire", "table-of-contents": "sommaire",
+  "dedicace": "dedicaces", "remerciement": "remerciements",
+  "resume-francais": "resume", "abstract-anglais": "abstract", "summary": "abstract",
+  // back matter
+  "references": "bibliographie", "bibliography": "bibliographie", "references-bibliographiques": "bibliographie",
+  "abreviations": "abbreviations", "sigles": "abbreviations", "liste-des-abreviations": "abbreviations",
+  "annexe": "annexes",
+  "liste-des-figures": "liste-figures", "figures": "liste-figures", "table-des-figures": "liste-figures",
+  "liste-des-tableaux": "liste-tableaux", "tableaux": "liste-tableaux", "table-des-tableaux": "liste-tableaux",
+};
+
+function normalizeSectionId(raw: string): string | null {
+  let s = raw
+    .toLowerCase()
+    .normalize("NFD").replace(/[̀-ͯ]/g, "")  // strip accents
+    .replace(/[[\]"'`()]/g, " ")                        // strip brackets/quotes/parens
+    .trim()
+    .replace(/[\s_]+/g, "-")                            // spaces/underscores → hyphen
+    .replace(/-+/g, "-")
+    .replace(/^-|-$/g, "");
+  if (!s) return null;
+  if (CANONICAL_SECTIONS.has(s)) return s;
+  if (SECTION_ALIASES[s]) return SECTION_ALIASES[s];
+  // last resort: a canonical id appears as a prefix (e.g. "introduction-du-rapport")
+  for (const id of CANONICAL_SECTIONS) {
+    if (s.startsWith(id)) return id;
+  }
+  return null;
+}
+
+// Normalize + dedupe a list of raw section ids; drop anything unresolvable.
+function normalizeSections(raw: string[]): { sections: string[]; dropped: string[] } {
+  const sections: string[] = [];
+  const dropped: string[] = [];
+  for (const r of raw) {
+    const id = normalizeSectionId(r);
+    if (id && !sections.includes(id)) sections.push(id);
+    else if (!id) dropped.push(r);
+  }
+  return { sections, dropped };
+}
+
 // ─── Coordinator system prompts ───────────────────────────────────────────────
 
 const COORDINATOR_SYSTEMS: Record<string, string> = {
@@ -443,7 +508,22 @@ router.post("/agent/:step/stream", async (req: Request, res: Response) => {
 
     const coordData = (await coordRes.json()) as { content: Array<{ type: string; text: string }> };
     const rawText = coordData.content.find((b) => b.type === "text")?.text ?? "";
-    const { action, sections, context, response, question, choices } = parseCoordinator(rawText);
+    const { action, sections: rawSections, context, response, question, choices } = parseCoordinator(rawText);
+
+    // Normalize coordinator section ids → canonical ids (handles "[introduction-generale]",
+    // "partie 1", "résumé", etc.). Without this the writer never produces the file and the
+    // user hits "Le fichier X.md n'a pas été écrit".
+    const { sections, dropped } = normalizeSections(rawSections);
+    if (dropped.length > 0) {
+      logger.warn({ sessionId, dropped, rawSections }, "coordinator emitted unresolvable section ids — dropped");
+    }
+    if (action === "generate" && rawSections.length > 0 && sections.length === 0) {
+      logger.error({ sessionId, rawSections }, "all coordinator sections unresolvable");
+      sseWrite(res, { type: "text", content: "Je n'ai pas reconnu la section demandée. Dis-moi laquelle tu veux : introduction, partie I, partie II, conclusion, résumé…" });
+      sseWrite(res, { type: "done" });
+      res.end();
+      return;
+    }
 
     // ── 4. Stream the response text to the frontend ────────────────────────
     if (response) {
