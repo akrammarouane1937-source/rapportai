@@ -668,11 +668,17 @@ router.post("/agent/:step/stream", async (req: Request, res: Response) => {
           "abstract",
         ]);
         if (!SKIP_HUMANIZE.has(sectionId)) {
+          const rawBefore = readFileSync(filePath, "utf-8");
           sseWrite(res, { type: "tool_call", name: "Humanizing", detail: sectionId });
           try {
             await agent.humanizeSection(sectionId);
           } catch (hErr) {
             logger.warn({ err: hErr, section: sectionId }, "humanize agent failed — using raw content");
+          }
+          const rawAfter = readFileSync(filePath, "utf-8");
+          if (rawAfter === rawBefore) {
+            logger.warn({ section: sectionId }, "humanize: content unchanged after humanizeSection — check sdk-agent logs");
+            sseWrite(res, { type: "text", content: `⚠️ Humanisation : aucun changement détecté pour ${sectionId}. Vérifie les logs Render.` });
           }
         }
 
