@@ -6,6 +6,7 @@ import { findClaudeBinary } from "./find-claude-binary";
 import { schoolContext, schoolProfile } from "./moroccan-schools";
 import { buildFormattingPromptBlock, type FormattingPrefs } from "./formatting";
 import { getSectionConfig } from "./agents/sectionConfigs";
+import { logger } from "./logger";
 
 // Per-user working directory — each session gets isolated storage.
 // Override with SESSIONS_DIR env var so Railway can mount a persistent volume.
@@ -228,16 +229,28 @@ export class SDKReportAgent {
   // humanizes each independently, then reassembles. Works for 10-page or 100-page docs.
   async humanizeSection(sectionId: string): Promise<void> {
     const rawPath = path.join(this.workDir, `${sectionId}.md`);
-    if (!existsSync(rawPath)) return;
+    if (!existsSync(rawPath)) {
+      logger.warn({ section: sectionId }, "humanize: file not found");
+      return;
+    }
 
     const rawContent = readFileSync(rawPath, "utf-8").trim();
-    if (!rawContent) return;
+    if (!rawContent) {
+      logger.warn({ section: sectionId }, "humanize: file is empty");
+      return;
+    }
 
     const humanizeSkills = this.loadSkillFile("humanize-skills.md");
-    if (!humanizeSkills) return;
+    if (!humanizeSkills) {
+      logger.warn({ section: sectionId, cwd: process.cwd() }, "humanize: humanize-skills.md not found — skipping");
+      return;
+    }
 
     const apiKey = process.env.ANTHROPIC_API_KEY;
-    if (!apiKey) return;
+    if (!apiKey) {
+      logger.warn({ section: sectionId }, "humanize: ANTHROPIC_API_KEY not set — skipping");
+      return;
+    }
 
     const systemPrompt = `${humanizeSkills}
 
@@ -253,40 +266,56 @@ CONTEXTE : Tu reçois un extrait de rapport académique français. Ce texte sera
 
 RÈGLE ABSOLUE : retourne UNIQUEMENT le texte humanisé. Commence directement par le contenu. Zéro commentaire, zéro "Voici", zéro "J'ai modifié".`;
 
-    // Split at paragraph boundaries into ~5000-word chunks (~30 000 chars)
     const CHUNK_CHARS = 30_000;
     const chunks = this.splitIntoChunks(rawContent, CHUNK_CHARS);
+    logger.info({ section: sectionId, chunks: chunks.length, totalChars: rawContent.length }, "humanize: starting");
 
     const humanizedChunks: string[] = [];
-    for (const chunk of chunks) {
-      const response = await fetch("https://api.anthropic.com/v1/messages", {
-        method: "POST",
-        headers: {
-          "anthropic-version": "2023-06-01",
-          "x-api-key": apiKey,
-          "content-type": "application/json",
-        },
-        body: JSON.stringify({
-          model: "claude-sonnet-4-6",
-          max_tokens: 16000,
-          temperature: 1,
-          system: systemPrompt,
-          messages: [{ role: "user", content: chunk }],
-        }),
-      });
+    for (let i = 0; i < chunks.length; i++) {
+      const chunk = chunks[i];
+      let response: Response;
+      try {
+        response = await fetch("https://api.anthropic.com/v1/messages", {
+          method: "POST",
+          headers: {
+            "anthropic-version": "2023-06-01",
+            "x-api-key": apiKey,
+            "content-type": "application/json",
+          },
+          body: JSON.stringify({
+            model: "claude-sonnet-4-6",
+            max_tokens: 16000,
+            temperature: 1,
+            system: systemPrompt,
+            messages: [{ role: "user", content: chunk }],
+          }),
+        });
+      } catch (fetchErr) {
+        logger.warn({ err: fetchErr, section: sectionId, chunk: i }, "humanize: fetch threw — keeping raw chunk");
+        humanizedChunks.push(chunk);
+        continue;
+      }
 
       if (!response.ok) {
-        // On failure keep original chunk so the rest still processes
+        const errBody = await response.text().catch(() => "");
+        logger.warn({ section: sectionId, chunk: i, status: response.status, body: errBody }, "humanize: API error — keeping raw chunk");
         humanizedChunks.push(chunk);
         continue;
       }
 
       const data = await response.json() as { content?: Array<{ type: string; text: string }> };
       const humanized = data.content?.find((b) => b.type === "text")?.text?.trim();
-      humanizedChunks.push(humanized ?? chunk);
+      if (!humanized) {
+        logger.warn({ section: sectionId, chunk: i, data }, "humanize: empty response — keeping raw chunk");
+        humanizedChunks.push(chunk);
+      } else {
+        logger.info({ section: sectionId, chunk: i, inChars: chunk.length, outChars: humanized.length }, "humanize: chunk done");
+        humanizedChunks.push(humanized);
+      }
     }
 
     writeFileSync(rawPath, humanizedChunks.join("\n\n"), "utf-8");
+    logger.info({ section: sectionId }, "humanize: complete");
   }
 
   // Split markdown into chunks under maxChars.
