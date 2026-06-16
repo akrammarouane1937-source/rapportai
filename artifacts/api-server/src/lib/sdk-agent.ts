@@ -237,7 +237,28 @@ export class SDKReportAgent {
     if (!systemPrompt) return;
 
     const claudeBinary = findClaudeBinary();
-    const task = `Lis le fichier "${sectionId}.md" dans le répertoire de travail.
+
+    // Large sections (partie-i, partie-ii) are 25-30 pages — the humanizer needs
+    // more turns to read, apply edits across the full document, and write back.
+    // 20 turns runs out on long content before the final Write, leaving the file
+    // unhumanized. Priority order: high-signal rules first (em dashes, forbidden
+    // words, burstiness) so even if turns run short, the most impactful changes land.
+    const isLargeSection = ["partie-i", "partie-ii", "conclusion"].includes(sectionId);
+    const humanizeMaxTurns = isLargeSection ? 50 : 20;
+
+    const task = isLargeSection
+      ? `Lis le fichier "${sectionId}.md" dans le répertoire de travail.
+Ce fichier est long (25-30 pages). Applique les règles d'humanisation PAR PRIORITÉ, dans cet ordre :
+PRIORITÉ 1 — Passe globale avec Grep puis Edit ciblé :
+- Supprime TOUS les tirets cadratins (—) : remplace par virgule, deux-points, ou coupe en deux phrases
+- Supprime les mots interdits : systématiquement, cruciale, fondamentale, notamment, davantage, néanmoins, toutefois, indéniablement, véritablement, pleinement, concrètement
+- Supprime : "il convient de", "il est important de noter", "force est de constater", "il va sans dire"
+PRIORITÉ 2 — Burstiness : repère les blocs de 4+ phrases longues consécutives, coupe une phrase courte dedans
+PRIORITÉ 3 — Supprime les structures parallèles parfaites (X et Y de même Z)
+PRIORITÉ 4 — Supprime les transitions sur-expliquées ("C'est sur cette base que", "C'est dans ce contexte que")
+Utilise Grep pour trouver les occurrences, Edit pour les corriger section par section.
+Quand toutes les passes sont faites, écris la version finale dans "${sectionId}.md" avec Write.`
+      : `Lis le fichier "${sectionId}.md" dans le répertoire de travail.
 Applique TOUTES les règles d'humanisation (les 37 règles du skill).
 Vérifie en particulier :
 - Zéro tiret cadratin (—) dans le texte — remplace chacun par une virgule ou reformule
@@ -252,11 +273,11 @@ Utilise l'outil Edit pour corriger les passages problématiques, puis Read pour 
       prompt: task,
       options: {
         abortController: ctrl,
-        maxTurns: 20,
+        maxTurns: humanizeMaxTurns,
         cwd: this.workDir,
         systemPrompt,
         model: "claude-sonnet-4-5",
-        allowedTools: ["Read", "Write", "Edit"],
+        allowedTools: ["Read", "Write", "Edit", "Grep"],
         ...(claudeBinary ? { pathToClaudeCodeExecutable: claudeBinary } : {}),
       },
     })) { /* consume — we only care about the written file */ }
