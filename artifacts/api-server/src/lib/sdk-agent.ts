@@ -242,14 +242,17 @@ export class SDKReportAgent {
 
     const systemPrompt = `${humanizeSkills}
 
-CONTEXTE : Tu reçois le contenu brut d'une section de rapport académique français. Applique toutes les règles d'humanisation ci-dessus dans cet ordre de priorité :
-1. Supprime TOUS les tirets cadratins (—) — remplace par virgule, deux-points, ou coupe en deux phrases
-2. Supprime les mots interdits : systématiquement, cruciale, fondamentale, notamment, davantage, néanmoins, toutefois, indéniablement, véritablement, pleinement, concrètement, "il convient de", "il est important de noter", "force est de constater"
-3. Applique le Burstiness : après 3-4 phrases longues, insère une phrase courte
-4. Supprime les structures parallèles parfaites et les transitions sur-expliquées
-5. Applique toutes les autres règles (1-37) sur le reste du document
+CONTEXTE : Tu reçois le contenu brut d'une section de rapport académique français. Ce texte sera testé par ZeroGPT — il doit scorer en dessous de 20% IA. ZeroGPT mesure deux choses : la perplexité (prévisibilité des mots) et la burstiness (variation de la longueur des phrases). Applique les règles dans cet ordre de priorité :
 
-RÈGLE ABSOLUE : retourne UNIQUEMENT le texte humanisé, sans aucun commentaire, sans "Voici", sans "J'ai modifié", sans résumé des changements. Le texte humanisé commence directement.`;
+1. TIRETS CADRATINS — supprime TOUS les (—). Remplace par virgule, deux-points, ou coupe en deux phrases.
+2. MOTS INTERDITS — supprime et remplace : systématiquement, cruciale, fondamentale, notamment, davantage, néanmoins, toutefois, indéniablement, véritablement, pleinement, concrètement, "il convient de", "il est important de noter", "force est de constater", "en effet", "ainsi", "précisément".
+3. BURSTINESS AGRESSIVE — c'est le signal principal de ZeroGPT. Règle stricte : toutes les 3-4 phrases normales, insère une phrase très courte (5-10 mots max). Toutes les 2 paragraphes, insère une phrase d'une ligne. Varie les longueurs radicalement — mélange phrases de 8 mots et phrases de 35 mots.
+4. STRUCTURES PARALLÈLES — casse toute structure "X et Y de même Z". Change la formulation de l'un des éléments.
+5. TRANSITIONS OVER-EXPLIQUÉES — coupe "C'est sur cette base que", "C'est dans ce contexte que", "C'est précisément pour cette raison que". Remplace par une phrase directe ou rien.
+6. RYTHME DES DÉBUTS DE PARAGRAPHES — au moins 40% des paragraphes ne doivent PAS commencer par "La/Le/Les/L'". Commence certains par le verbe, par un nom propre, par une courte phrase.
+7. Applique toutes les autres règles (1-37).
+
+RÈGLE ABSOLUE : retourne UNIQUEMENT le texte humanisé. Commence directement par le contenu. Zéro commentaire, zéro "Voici", zéro "J'ai modifié".`;
 
     const response = await fetch("https://api.anthropic.com/v1/messages", {
       method: "POST",
@@ -260,7 +263,8 @@ RÈGLE ABSOLUE : retourne UNIQUEMENT le texte humanisé, sans aucun commentaire,
       },
       body: JSON.stringify({
         model: "claude-sonnet-4-6",
-        max_tokens: 16000,
+        max_tokens: 32000,
+        temperature: 1,
         system: systemPrompt,
         messages: [{ role: "user", content: rawContent }],
       }),
