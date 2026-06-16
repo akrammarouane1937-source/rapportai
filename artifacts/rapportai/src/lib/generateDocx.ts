@@ -1044,14 +1044,19 @@ export async function generateDocx(data: Report, formatting?: FormattingPrefs): 
         headers: { default: header },
         footers: { default: buildFooter() },
         children: [
-          // Front matter (Sommaire = short outline up front; the detailed Table
-          // des Matières goes at the END, French academic convention)
+          // Front matter. The derived lists (abréviations, figures, tableaux) are
+          // GENERATED last in the wizard (they need the body) but PLACED here —
+          // after the Résumé/Abstract, before the Introduction — per French academic
+          // convention. Generation order ≠ document order; the export handles position.
+          // Sommaire = short outline up front; the detailed Table des Matières goes
+          // at the END (just before the bibliography).
           ...buildDedicaces(data),
           ...buildRemerciements(data),
           ...buildResume(data),
           ...buildAbreviations(data),
-          ...buildSommaire(data),
           ...buildTableDesFigures(data.listeDesFigures),
+          ...buildListeDesTableaux(data.listeDesTableaux),
+          ...buildSommaire(data),
           // Body
           ...buildIntroduction(data, imageMap),
           ...buildPartieI(data, imageMap),
@@ -1062,14 +1067,13 @@ export async function generateDocx(data: Report, formatting?: FormattingPrefs): 
           // Table des Matières — detailed TOC at the end, before the bibliography
           ...buildTableDesMatieres(),
           buildTocInstruction(),
-          // Back-matter in user-defined order (draggable in Mon Rapport)
-          ...(data.sectionOrder?.length ? data.sectionOrder : ["bibliographie", "listeDesTableaux", "annexes"])
+          // Back-matter — only bibliography and annexes. The lists and TOC are
+          // rendered above (front matter / end), so skip them here to avoid the
+          // duplicate rendering that happened when they were in sectionOrder.
+          ...(data.sectionOrder?.length ? data.sectionOrder : ["bibliographie", "annexes"])
             .flatMap((id) => {
-              if (id === "bibliographie")    return buildBibliographie(data);
-              if (id === "tableDesFigures")  return buildTableDesFigures(data.listeDesFigures);
-              if (id === "listeDesTableaux") return buildListeDesTableaux(data.listeDesTableaux);
-              if (id === "annexes")          return buildAnnexes(data);
-              if (id === "tableDesMatieres") return [];
+              if (id === "bibliographie") return buildBibliographie(data);
+              if (id === "annexes")       return buildAnnexes(data);
               return [];
             }),
         ],
