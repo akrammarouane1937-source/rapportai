@@ -528,6 +528,9 @@ Retourne UNIQUEMENT le texte humanisé. Commence directement par le contenu. Zé
         `Ne laisse jamais de référence textuelle sans son image Markdown correspondante.\n`
       : "";
 
+    // Applies to all sections — prevents HTML tags appearing as raw text in preview/docx
+    const noHtmlNote = `RÈGLE DE FORMATAGE : N'utilise JAMAIS de balises HTML (<sub>, <sup>, <br>, <b>, etc.) dans le texte. Pour les indices mathématiques, utilise les caractères Unicode : indices (₀₁₂₃₄₅₆₇₈₉ₐₑₒₙₚₜᵢⱼ) et exposants (⁰¹²³⁴⁵⁶⁷⁸⁹ⁿᵀ). Exemples : wₚ, σₚ², μₙ, Rₜ, wᵢ, σᵢⱼ, εₜ₋₁, βⱼ. Pour les vecteurs transposés, utilise ᵀ (ex: wᵀ). Pour les indices longs non disponibles en Unicode (comme MVP, GARCH), utilise des parenthèses ou underscores dans le texte markdown : w(MVP), σ(GARCH), H(t). Ne laisse aucune balise HTML dans le document final.\n\n`;
+
     switch (section) {
       case "partie-i": {
         const figsI = (opts?.figures ?? []).filter(f => f.placement === "Partie I");
@@ -544,7 +547,7 @@ Retourne UNIQUEMENT le texte humanisé. Commence directement par le contenu. Zé
           : /développ/i.test(ctx) || /35.{1,5}45\s*page/i.test(ctx) || /40.{1,5}50\s*page/i.test(ctx)
             ? "Longueur cible : 35 à 45 pages (9 500–12 000 mots). Approfondis chaque section : définitions, auteurs, exemples, données, analyses."
             : "Longueur cible : 25 à 30 pages (6 500–8 000 mots). Chaque section doit être substantielle — minimum 3 paragraphes développés, pas de bullet points.";
-        return `${docNote}${figImageNote}${contextPacketI}Lis sommaire.md pour extraire la structure exacte de la Partie I (chapitres et sections).
+        return `${noHtmlNote}${docNote}${figImageNote}${contextPacketI}Lis sommaire.md pour extraire la structure exacte de la Partie I (chapitres et sections).
 AVANT de rédiger chaque section ou chapitre, utilise WebSearch pour trouver 2-3 sources académiques récentes (2020-2025) pertinentes. Utilise WebFetch pour lire le contenu des pages trouvées et extraire des citations précises (auteur, année, titre, résultats chiffrés si disponibles). Cite toutes les sources dans le texte en style ${style}.
 Génère ensuite la Partie I complète en suivant cette structure. Ne modifie aucun titre, n'ajoute aucun chapitre.
 La Partie I est le cadre THÉORIQUE : elle doit poser les fondements conceptuels que la Partie II empirique va tester ou appliquer.
@@ -568,7 +571,7 @@ Enregistre dans partie-i.md une fois terminé.`;
           : /développ/i.test(ctxII) || /35.{1,5}45\s*page/i.test(ctxII) || /40.{1,5}50\s*page/i.test(ctxII)
             ? "Longueur cible : 35 à 45 pages (9 500–12 000 mots). Approfondis chaque section : méthodologie, collecte des données, analyses statistiques, interprétations."
             : "Longueur cible : 25 à 30 pages (6 500–8 000 mots). Chaque section doit être substantielle — minimum 3 paragraphes développés, pas de bullet points.";
-        return `${docNote}${figImageNote}${contextPacket}Lis sommaire.md pour extraire la structure exacte de la Partie II (chapitres et sections).
+        return `${noHtmlNote}${docNote}${figImageNote}${contextPacket}Lis sommaire.md pour extraire la structure exacte de la Partie II (chapitres et sections).
 Lis aussi partie-i.md. Les références croisées vers Partie I sont OBLIGATOIRES. Chaque chapitre de la Partie II doit s'ancrer dans le cadre théorique établi en Partie I.
 AVANT de rédiger chaque section ou chapitre, utilise WebSearch pour trouver 2-3 sources académiques récentes (2020-2025) pertinentes. Utilise WebFetch pour lire le contenu des pages trouvées et extraire des citations précises (auteur, année, titre, résultats chiffrés si disponibles). Cite toutes les sources dans le texte en style ${style}.
 Génère ensuite la Partie II complète en suivant la structure du sommaire.
