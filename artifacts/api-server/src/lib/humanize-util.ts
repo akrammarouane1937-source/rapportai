@@ -59,6 +59,30 @@ const SYSTEM_OVERRIDES = loadHumanizeFile("humanize-system.md", humanizeSystemMd
 const SYSTEM_PROMPT = [SKILLS_CONTENT, SYSTEM_OVERRIDES].filter(Boolean).join("\n\n---\n\n")
   || "Tu es un expert en humanisation de texte académique marocain. Réécris le texte fourni pour qu'il soit indétectable par GPTZero et Turnitin. Retourne UNIQUEMENT le texte final, même structure Markdown, sans rien supprimer ni résumer.";
 
+// Audit pass: same rules, framed as "already humanized once — fix what still looks
+// like AI." Matches the iterative loop that scores ~25% vs ~50%+ for a single pass.
+const AUDIT_PROMPT = `${SYSTEM_PROMPT}
+
+---
+
+MODE AUDIT : le texte ci-dessous a DÉJÀ été humanisé une fois. Il sera testé par ZeroGPT/Turnitin et doit scorer sous 20% IA. Traque ce qui le fait ENCORE détecter comme IA et corrige-le : phrases de longueur uniforme (insère des phrases courtes de 5-10 mots), tirets cadratins (—) restants, mots lisses restants (systématiquement, cruciale, notamment, néanmoins, "il convient de", "s'inscrit dans", "joue un rôle"), structures parallèles parfaites, transitions suréxpliquées, débuts de paragraphes répétitifs.
+Conserve TOUT le contenu (≥95% des mots, structure Markdown, formules/citations/chiffres intacts). Retourne UNIQUEMENT le texte final, sans commentaire.`;
+
+// Up to 3 passes (1 humanize + 2 audit); stop when a pass keeps ≥95% words identical.
+const MAX_PASSES = 3;
+const CONVERGE_RATIO = 0.95;
+
+function wordSimilarity(a: string, b: string): number {
+  const wa = a.split(/\s+/).filter(Boolean);
+  const wb = b.split(/\s+/).filter(Boolean);
+  const max = Math.max(wa.length, wb.length);
+  if (max === 0) return 1;
+  const min = Math.min(wa.length, wb.length);
+  let same = 0;
+  for (let i = 0; i < min; i++) if (wa[i] === wb[i]) same++;
+  return same / max;
+}
+
 // ─── Split markdown text into chunks on ## / ### headings ────────────────────
 
 function splitIntoChunks(text: string): string[] {
@@ -84,7 +108,8 @@ function splitIntoChunks(text: string): string[] {
 
 // ─── Humanize a single chunk via Haiku direct API ────────────────────────────
 
-async function humanizeChunk(chunk: string, sectionType: string): Promise<string> {
+// One humanize/audit API call. Returns trimmed text or null on failure.
+async function humanizeCall(content: string, system: string, sectionType: string): Promise<string | null> {
   try {
     const response = await client.messages.create({
       // Sonnet, not Haiku: Haiku over-rewrites and mangles domain terms
@@ -92,7 +117,7 @@ async function humanizeChunk(chunk: string, sectionType: string): Promise<string
       // the "preserve terminology" rules and keeps the text natural.
       model: "claude-sonnet-4-6",
       max_tokens: 8192,
-      system: SYSTEM_PROMPT,
+      system,
       messages: [
         {
           role: "user",
@@ -101,7 +126,7 @@ OBJECTIF : un texte qui se lit comme écrit par un bon étudiant marocain — na
 
 Retourne UNIQUEMENT le texte humanisé complet, même structure Markdown, aucun commentaire :
 
-${chunk}`,
+${content}`,
         },
       ],
     });
@@ -111,10 +136,30 @@ ${chunk}`,
       .map((b) => (b as { type: "text"; text: string }).text)
       .join("");
 
-    return text.trim() || chunk;
+    return text.trim() || null;
   } catch {
-    return chunk;
+    return null;
   }
+}
+
+// Multi-pass: humanize, then audit-fix up to 2 more times, stopping on convergence.
+async function humanizeChunk(chunk: string, sectionType: string): Promise<string> {
+  let working = chunk;
+  let anySuccess = false;
+
+  for (let pass = 0; pass < MAX_PASSES; pass++) {
+    const isAudit = pass > 0;
+    const out = await humanizeCall(working, isAudit ? AUDIT_PROMPT : SYSTEM_PROMPT, sectionType);
+    if (!out) break;
+
+    const ratio = wordSimilarity(out, working);
+    working = out;
+    anySuccess = true;
+
+    if (isAudit && ratio >= CONVERGE_RATIO) break; // converged — no more changes needed
+  }
+
+  return anySuccess ? working : chunk;
 }
 
 // ─── Post-processing — applied after LLM rewrite, guaranteed ─────────────────
