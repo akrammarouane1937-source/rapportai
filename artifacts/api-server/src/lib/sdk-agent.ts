@@ -268,7 +268,7 @@ RÈGLE ABSOLUE : retourne UNIQUEMENT le texte humanisé. Commence directement pa
         },
         body: JSON.stringify({
           model: "claude-sonnet-4-6",
-          max_tokens: 12000,
+          max_tokens: 16000,
           temperature: 1,
           system: systemPrompt,
           messages: [{ role: "user", content: chunk }],
@@ -289,22 +289,53 @@ RÈGLE ABSOLUE : retourne UNIQUEMENT le texte humanisé. Commence directement pa
     writeFileSync(rawPath, humanizedChunks.join("\n\n"), "utf-8");
   }
 
-  // Split markdown at paragraph boundaries, keeping chunks under maxChars.
+  // Split markdown into chunks under maxChars.
+  // Splits on markdown headings first (most reliable boundary in generated docs),
+  // then on double newlines, then on single newlines — so it works regardless
+  // of whether the writer used 1 or 2 newlines between paragraphs.
   private splitIntoChunks(text: string, maxChars: number): string[] {
-    const paragraphs = text.split(/\n{2,}/);
-    const chunks: string[] = [];
+    // Split on any line that starts a new section (heading or blank line before heading)
+    const lines = text.split("\n");
+    const segments: string[] = [];
     let current = "";
 
-    for (const para of paragraphs) {
-      if (current.length + para.length + 2 > maxChars && current.length > 0) {
-        chunks.push(current.trim());
-        current = para;
+    for (const line of lines) {
+      const isHeading = /^#{1,4}\s/.test(line.trim());
+      // Start a new segment at headings if current segment is already substantial
+      if (isHeading && current.length > maxChars / 4) {
+        if (current.trim()) segments.push(current.trim());
+        current = line;
       } else {
-        current = current ? current + "\n\n" + para : para;
+        current = current ? current + "\n" + line : line;
       }
     }
-    if (current.trim()) chunks.push(current.trim());
-    return chunks;
+    if (current.trim()) segments.push(current.trim());
+
+    // Now pack segments into chunks under maxChars
+    const chunks: string[] = [];
+    let chunk = "";
+    for (const seg of segments) {
+      if (chunk.length + seg.length + 2 > maxChars && chunk.length > 0) {
+        chunks.push(chunk.trim());
+        chunk = seg;
+      } else {
+        chunk = chunk ? chunk + "\n\n" + seg : seg;
+      }
+    }
+    if (chunk.trim()) chunks.push(chunk.trim());
+
+    // Safety: if a single segment is still over maxChars, hard-split by chars
+    const result: string[] = [];
+    for (const c of chunks) {
+      if (c.length <= maxChars) {
+        result.push(c);
+      } else {
+        for (let i = 0; i < c.length; i += maxChars) {
+          result.push(c.slice(i, i + maxChars));
+        }
+      }
+    }
+    return result;
   }
 
   // stream — generic stream (used by revision + fallback), no section config
