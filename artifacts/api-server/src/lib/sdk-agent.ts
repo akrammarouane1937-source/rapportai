@@ -406,6 +406,7 @@ RÈGLE ABSOLUE : retourne UNIQUEMENT le texte humanisé, sans aucun commentaire,
             ? "Longueur cible : 35 à 45 pages (9 500–12 000 mots). Approfondis chaque section : définitions, auteurs, exemples, données, analyses."
             : "Longueur cible : 25 à 30 pages (6 500–8 000 mots). Chaque section doit être substantielle — minimum 3 paragraphes développés, pas de bullet points.";
         return `${docNote}${figImageNote}${contextPacketI}Lis sommaire.md pour extraire la structure exacte de la Partie I (chapitres et sections).
+AVANT de rédiger chaque section ou chapitre, utilise WebSearch pour trouver 2-3 sources académiques récentes (2020-2025) pertinentes. Utilise WebFetch pour lire le contenu des pages trouvées et extraire des citations précises (auteur, année, titre, résultats chiffrés si disponibles). Cite toutes les sources dans le texte en style ${style}.
 Génère ensuite la Partie I complète en suivant cette structure. Ne modifie aucun titre, n'ajoute aucun chapitre.
 La Partie I est le cadre THÉORIQUE : elle doit poser les fondements conceptuels que la Partie II empirique va tester ou appliquer.
 ${lengthI}
@@ -430,6 +431,7 @@ Enregistre dans partie-i.md une fois terminé.`;
             : "Longueur cible : 25 à 30 pages (6 500–8 000 mots). Chaque section doit être substantielle — minimum 3 paragraphes développés, pas de bullet points.";
         return `${docNote}${figImageNote}${contextPacket}Lis sommaire.md pour extraire la structure exacte de la Partie II (chapitres et sections).
 Lis aussi partie-i.md. Les références croisées vers Partie I sont OBLIGATOIRES. Chaque chapitre de la Partie II doit s'ancrer dans le cadre théorique établi en Partie I.
+AVANT de rédiger chaque section ou chapitre, utilise WebSearch pour trouver 2-3 sources académiques récentes (2020-2025) pertinentes. Utilise WebFetch pour lire le contenu des pages trouvées et extraire des citations précises (auteur, année, titre, résultats chiffrés si disponibles). Cite toutes les sources dans le texte en style ${style}.
 Génère ensuite la Partie II complète en suivant la structure du sommaire.
 ${lengthII}
 Problématique : ${prob} | Style de citation : ${style}${figNoteII}
