@@ -223,10 +223,9 @@ export class SDKReportAgent {
     }
   }
 
-  // humanizeSection — direct API call, no SDK subprocess, no maxTurns limit.
-  // Reads the raw file, sends full content to Claude with the humanization rules
-  // as system prompt, writes the result back. Scales to any document length
-  // (Sonnet context = 200K tokens; a 100-page doc is ~25K tokens).
+  // humanizeSection — chunked direct API calls, no page-count ceiling.
+  // Splits document into ~5000-word chunks at paragraph boundaries,
+  // humanizes each independently, then reassembles. Works for 10-page or 100-page docs.
   async humanizeSection(sectionId: string): Promise<void> {
     const rawPath = path.join(this.workDir, `${sectionId}.md`);
     if (!existsSync(rawPath)) return;
@@ -242,7 +241,7 @@ export class SDKReportAgent {
 
     const systemPrompt = `${humanizeSkills}
 
-CONTEXTE : Tu reçois le contenu brut d'une section de rapport académique français. Ce texte sera testé par ZeroGPT — il doit scorer en dessous de 20% IA. ZeroGPT mesure deux choses : la perplexité (prévisibilité des mots) et la burstiness (variation de la longueur des phrases). Applique les règles dans cet ordre de priorité :
+CONTEXTE : Tu reçois un extrait de rapport académique français. Ce texte sera testé par ZeroGPT — il doit scorer en dessous de 20% IA. ZeroGPT mesure deux choses : la perplexité (prévisibilité des mots) et la burstiness (variation de la longueur des phrases). Applique les règles dans cet ordre de priorité :
 
 1. TIRETS CADRATINS — supprime TOUS les (—). Remplace par virgule, deux-points, ou coupe en deux phrases.
 2. MOTS INTERDITS — supprime et remplace : systématiquement, cruciale, fondamentale, notamment, davantage, néanmoins, toutefois, indéniablement, véritablement, pleinement, concrètement, "il convient de", "il est important de noter", "force est de constater", "en effet", "ainsi", "précisément".
@@ -254,29 +253,58 @@ CONTEXTE : Tu reçois le contenu brut d'une section de rapport académique fran�
 
 RÈGLE ABSOLUE : retourne UNIQUEMENT le texte humanisé. Commence directement par le contenu. Zéro commentaire, zéro "Voici", zéro "J'ai modifié".`;
 
-    const response = await fetch("https://api.anthropic.com/v1/messages", {
-      method: "POST",
-      headers: {
-        "anthropic-version": "2023-06-01",
-        "x-api-key": apiKey,
-        "content-type": "application/json",
-      },
-      body: JSON.stringify({
-        model: "claude-sonnet-4-6",
-        max_tokens: 32000,
-        temperature: 1,
-        system: systemPrompt,
-        messages: [{ role: "user", content: rawContent }],
-      }),
-    });
+    // Split at paragraph boundaries into ~5000-word chunks (~30 000 chars)
+    const CHUNK_CHARS = 30_000;
+    const chunks = this.splitIntoChunks(rawContent, CHUNK_CHARS);
 
-    if (!response.ok) return;
+    const humanizedChunks: string[] = [];
+    for (const chunk of chunks) {
+      const response = await fetch("https://api.anthropic.com/v1/messages", {
+        method: "POST",
+        headers: {
+          "anthropic-version": "2023-06-01",
+          "x-api-key": apiKey,
+          "content-type": "application/json",
+        },
+        body: JSON.stringify({
+          model: "claude-sonnet-4-6",
+          max_tokens: 12000,
+          temperature: 1,
+          system: systemPrompt,
+          messages: [{ role: "user", content: chunk }],
+        }),
+      });
 
-    const data = await response.json() as { content?: Array<{ type: string; text: string }> };
-    const humanized = data.content?.find((b) => b.type === "text")?.text?.trim();
-    if (humanized) {
-      writeFileSync(rawPath, humanized, "utf-8");
+      if (!response.ok) {
+        // On failure keep original chunk so the rest still processes
+        humanizedChunks.push(chunk);
+        continue;
+      }
+
+      const data = await response.json() as { content?: Array<{ type: string; text: string }> };
+      const humanized = data.content?.find((b) => b.type === "text")?.text?.trim();
+      humanizedChunks.push(humanized ?? chunk);
     }
+
+    writeFileSync(rawPath, humanizedChunks.join("\n\n"), "utf-8");
+  }
+
+  // Split markdown at paragraph boundaries, keeping chunks under maxChars.
+  private splitIntoChunks(text: string, maxChars: number): string[] {
+    const paragraphs = text.split(/\n{2,}/);
+    const chunks: string[] = [];
+    let current = "";
+
+    for (const para of paragraphs) {
+      if (current.length + para.length + 2 > maxChars && current.length > 0) {
+        chunks.push(current.trim());
+        current = para;
+      } else {
+        current = current ? current + "\n\n" + para : para;
+      }
+    }
+    if (current.trim()) chunks.push(current.trim());
+    return chunks;
   }
 
   // stream — generic stream (used by revision + fallback), no section config
