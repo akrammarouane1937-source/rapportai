@@ -161,11 +161,23 @@ export class SDKReportAgent {
   }
 
   // Load a skills file from src/lib/skills/
+  // Tries multiple path strategies — process.cwd() differs between local and Render.
+  // esbuild sets __dirname to the dist/ directory, so __dirname/../src/lib/skills works on Render.
   private loadSkillFile(filename: string): string {
-    try {
-      const p = path.join(process.cwd(), "src/lib/skills", filename);
-      if (existsSync(p)) return readFileSync(p, "utf-8");
-    } catch { /* missing — silent */ }
+    const candidates = [
+      path.join(__dirname, "..", "src", "lib", "skills", filename),                             // dist/../src/lib/skills/ (Render esbuild)
+      path.join(process.cwd(), "src", "lib", "skills", filename),                              // local dev
+      path.join(process.cwd(), "artifacts", "api-server", "src", "lib", "skills", filename),  // from repo root
+    ];
+    for (const p of candidates) {
+      try {
+        if (existsSync(p)) {
+          logger.info({ path: p, file: filename }, "loadSkillFile: loaded");
+          return readFileSync(p, "utf-8");
+        }
+      } catch { /* try next */ }
+    }
+    logger.warn({ candidates, file: filename }, "loadSkillFile: not found in any candidate path");
     return "";
   }
 
@@ -246,8 +258,10 @@ export class SDKReportAgent {
       return;
     }
 
-    // Prompt embedded directly — no filesystem dependency, no silent failure on Render.
-    const systemPrompt = `Tu es un éditeur expert en réécriture académique française. Tu reçois un extrait de rapport de stage ou PFE. Ton rôle : le réécrire pour qu'il semble rédigé par un étudiant humain, pas par une IA. Ce texte sera soumis à ZeroGPT — il doit scorer sous 20% IA.
+    // Use full humanize-skills.md if available (better results), else fall back to embedded rules.
+    const humanizeSkills = this.loadSkillFile("humanize-skills.md");
+
+    const embeddedRules = `Tu es un éditeur expert en réécriture académique française. Tu reçois un extrait de rapport de stage ou PFE. Ton rôle : le réécrire pour qu'il semble rédigé par un étudiant humain, pas par une IA. Ce texte sera soumis à ZeroGPT — il doit scorer sous 20% IA.
 
 ZeroGPT détecte deux signaux : la PERPLEXITÉ (prévisibilité lexicale) et la BURSTINESS (uniformité de la longueur des phrases). Tu dois attaquer les deux.
 
@@ -312,6 +326,14 @@ IMPORTANT : Ne modifie pas les formules mathématiques, les citations (Auteur, a
 
 ## SORTIE
 Retourne UNIQUEMENT le texte humanisé. Commence directement par le contenu. Zéro commentaire. Zéro "Voici la version". Zéro résumé des changements.`;
+
+    // Full file gives much better results (25% vs 78% on ZeroGPT).
+    // Fall back to embedded rules only when file can't be loaded.
+    const systemPrompt = humanizeSkills
+      ? `${humanizeSkills}\n\nCONTEXTE : Tu reçois un extrait de rapport académique français. Ce texte sera testé par ZeroGPT — il doit scorer sous 20% IA.\n\nAPPLIQUE EN PRIORITÉ :\n1. Supprime TOUS les tirets cadratins (—)\n2. Supprime : systématiquement, cruciale, fondamentale, notamment, davantage, néanmoins, toutefois, "il convient de", "C'est précisément"\n3. BURSTINESS : après 3-4 phrases longues, insère une phrase de 5-10 mots\n4. Varie les débuts de paragraphes (40% ne doivent pas commencer par La/Le/Les/L')\n\nRÈGLE ABSOLUE : retourne UNIQUEMENT le texte humanisé, commence directement, zéro commentaire.`
+      : embeddedRules;
+
+    logger.info({ section: sectionId, usingFullSkills: !!humanizeSkills }, "humanize: prompt selected");
 
     const CHUNK_CHARS = 30_000;
     const chunks = this.splitIntoChunks(rawContent, CHUNK_CHARS);
