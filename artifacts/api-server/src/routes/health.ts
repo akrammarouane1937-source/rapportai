@@ -1,10 +1,31 @@
 import { Router, type IRouter } from "express";
+import { existsSync, statSync } from "fs";
+import path from "path";
 import { HealthCheckResponse } from "@workspace/api-zod";
 import { findClaudeBinary } from "../lib/find-claude-binary";
 import { metrics } from "../lib/metrics";
 import { execSync } from "child_process";
 
 const router: IRouter = Router();
+
+// Bump this every meaningful deploy. Hit /api/diag in a browser to confirm the
+// running build is the latest one (no need to generate anything).
+const BUILD_MARKER = "humanizer-3pass+section-normalize 2026-06-16";
+
+// Resolve a skills file the same way the humanizer does, so /diag reveals whether
+// the humanizer will actually find its rules at runtime (the cause of un-humanized output).
+function probeSkillFile(filename: string): { found: boolean; path: string | null; bytes: number } {
+  const candidates = [
+    path.join(process.cwd(), "src/lib/skills", filename),
+    path.join(process.cwd(), "artifacts/api-server/src/lib/skills", filename),
+  ];
+  for (const p of candidates) {
+    try {
+      if (existsSync(p)) return { found: true, path: p, bytes: statSync(p).size };
+    } catch { /* try next */ }
+  }
+  return { found: false, path: null, bytes: 0 };
+}
 
 router.get("/healthz", (_req, res) => {
   const data = HealthCheckResponse.parse({ status: "ok" });
@@ -27,6 +48,9 @@ router.get("/diag", (_req, res) => {
   const mem = process.memoryUsage();
   res.json({
     status: "ok",
+    build_marker: BUILD_MARKER,
+    humanize_skills_md: probeSkillFile("humanize-skills.md"),
+    humanize_system_md: probeSkillFile("humanize-system.md"),
     rss_mb: Math.round(mem.rss / 1024 / 1024),
     heap_used_mb: Math.round(mem.heapUsed / 1024 / 1024),
     memory_guard_limit_mb: parseInt(process.env.MEMORY_GUARD_MB ?? "1600", 10) || 1600,
