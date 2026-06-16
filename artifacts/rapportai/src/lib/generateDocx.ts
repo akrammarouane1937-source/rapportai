@@ -510,7 +510,7 @@ function buildDedicaces(d: Report): Paragraph[] {
   return [
     heading1("Dédicaces"),
     emptyLine(),
-    ...markdownToParas(d.dedicaces),
+    ...markdownToParas(stripDuplicateTitle(d.dedicaces, "Dédicaces")),
   ];
 }
 
@@ -519,7 +519,7 @@ function buildRemerciements(d: Report): Paragraph[] {
   return [
     heading1("Remerciements"),
     emptyLine(),
-    ...markdownToParas(d.remerciements),
+    ...markdownToParas(stripDuplicateTitle(d.remerciements, "Remerciements")),
   ];
 }
 
@@ -612,22 +612,22 @@ function buildSommaire(d: Report): Paragraph[] {
 
 function buildIntroduction(d: Report, imageMap?: Map<string, Uint8Array>): Paragraph[] {
   if (!d.introduction?.trim()) return [];
-  return [heading1("Introduction Générale"), emptyLine(), ...markdownToParas(d.introduction, imageMap)];
+  return [heading1("Introduction Générale"), emptyLine(), ...markdownToParas(stripDuplicateTitle(d.introduction, "Introduction"), imageMap)];
 }
 
 function buildPartieI(d: Report, imageMap?: Map<string, Uint8Array>): Paragraph[] {
   if (!d.partieI?.trim()) return [];
-  return [heading1("Partie I"), emptyLine(), ...markdownToParas(d.partieI, imageMap)];
+  return [heading1("Partie I"), emptyLine(), ...markdownToParas(stripDuplicateTitle(d.partieI, "Partie I"), imageMap)];
 }
 
 function buildPartieII(d: Report, imageMap?: Map<string, Uint8Array>): Paragraph[] {
   if (!d.partieII?.trim()) return [];
-  return [heading1("Partie II"), emptyLine(), ...markdownToParas(d.partieII, imageMap)];
+  return [heading1("Partie II"), emptyLine(), ...markdownToParas(stripDuplicateTitle(d.partieII, "Partie II"), imageMap)];
 }
 
 function buildConclusion(d: Report, imageMap?: Map<string, Uint8Array>): Paragraph[] {
   if (!d.conclusion?.trim()) return [];
-  return [heading1("Conclusion Générale"), emptyLine(), ...markdownToParas(d.conclusion, imageMap)];
+  return [heading1("Conclusion Générale"), emptyLine(), ...markdownToParas(stripDuplicateTitle(d.conclusion, "Conclusion"), imageMap)];
 }
 
 // Paragraph for a single bibliography entry with APA hanging indent.
