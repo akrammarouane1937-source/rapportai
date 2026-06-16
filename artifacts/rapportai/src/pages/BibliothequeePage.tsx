@@ -9,6 +9,8 @@ import { Button } from "@/components/ui/button";
 import { Sidebar, SidebarSpacer } from "@/components/layout/Sidebar";
 import { useReportSync } from "@/hooks/use-report-sync";
 import { getReport } from "@/lib/reportStore";
+import { ensureSession } from "@/lib/useGenerate";
+import { API_BASE } from "@/lib/apiBase";
 import {
   getBibSources, addBibSource, removeBibSource, parseBib,
   fetchDoi, makeId, detectUsedIn,
@@ -170,8 +172,8 @@ function DoiModal({ onClose, onSave }: { onClose: () => void; onSave: (s: BibSou
 // ─── PDF details modal ────────────────────────────────────────────────────────
 
 function PdfModal({
-  fileName, onClose, onSave,
-}: { fileName: string; onClose: () => void; onSave: (s: BibSource) => void }) {
+  fileName, uploadStatus, onClose, onSave,
+}: { fileName: string; uploadStatus: "idle" | "uploading" | "done" | "error"; onClose: () => void; onSave: (s: BibSource) => void }) {
   const [title, setTitle] = useState(fileName.replace(/\.pdf$/i, ""));
   const [authors, setAuthors] = useState("");
   const [year, setYear] = useState(String(new Date().getFullYear()));
@@ -200,6 +202,21 @@ function PdfModal({
           <FileText className="w-4 h-4 text-purple-500 flex-shrink-0" />
           <span className="text-xs text-gray-500 truncate">{fileName}</span>
         </div>
+        {uploadStatus === "uploading" && (
+          <div className="flex items-center gap-2 text-xs text-gray-500">
+            <Loader2 className="w-3.5 h-3.5 animate-spin" /> Lecture du document en cours…
+          </div>
+        )}
+        {uploadStatus === "done" && (
+          <div className="flex items-center gap-2 text-xs text-green-600">
+            <Check className="w-3.5 h-3.5" /> Document lu — son contenu sera utilisé pour générer la Partie I et la Partie II.
+          </div>
+        )}
+        {uploadStatus === "error" && (
+          <div className="flex items-center gap-2 text-xs text-amber-600">
+            <AlertCircle className="w-3.5 h-3.5" /> Le contenu n'a pas pu être lu (la référence reste enregistrée). Réessaie depuis le chat de la Partie I.
+          </div>
+        )}
         {[
           { label: "Titre *", value: title, set: setTitle, placeholder: "Titre de l'article ou du livre" },
           { label: "Auteur(s)", value: authors, set: setAuthors, placeholder: "Nom, Prénom et al." },
@@ -414,6 +431,7 @@ export default function BibliothequeePage() {
   });
   const [activeModal, setActiveModal] = useState<"pdf" | "doi" | "bib" | null>(null);
   const [pendingPdfName, setPendingPdfName] = useState<string | null>(null);
+  const [pdfUploadStatus, setPdfUploadStatus] = useState<"idle" | "uploading" | "done" | "error">("idle");
   const [bibLoading, setBibLoading] = useState(false);
 
   const pdfInputRef = useRef<HTMLInputElement>(null);
@@ -425,9 +443,26 @@ export default function BibliothequeePage() {
     else if (m === "bib")  bibInputRef.current?.click();
   }, []);
 
-  const handlePdfSelected = useCallback((file: File) => {
+  const handlePdfSelected = useCallback(async (file: File) => {
     setPendingPdfName(file.name);
     setActiveModal("pdf");
+    // Push the actual file through the SAME pipeline the chat uses
+    // (/upload-document → workdir + text extraction). The Partie I/II agents
+    // already read every document in the workdir, so this makes the content
+    // available to them — not just the citation metadata.
+    setPdfUploadStatus("uploading");
+    try {
+      const sessionId = await ensureSession();
+      const fd = new FormData();
+      fd.append("file", file);
+      const res = await fetch(`${API_BASE}/api/session/${sessionId}/upload-document`, {
+        method: "POST",
+        body: fd,
+      });
+      setPdfUploadStatus(res.ok ? "done" : "error");
+    } catch {
+      setPdfUploadStatus("error");
+    }
   }, []);
 
   const handleBibSelected = useCallback(async (file: File) => {
@@ -454,6 +489,7 @@ export default function BibliothequeePage() {
     setSources(getBibSources());
     setActiveModal(null);
     setPendingPdfName(null);
+    setPdfUploadStatus("idle");
   }, []);
 
   const handleRemove = useCallback((id: string) => {
@@ -513,7 +549,7 @@ export default function BibliothequeePage() {
           <DoiModal key="doi" onClose={() => setActiveModal(null)} onSave={handleSaveSource} />
         )}
         {activeModal === "pdf" && pendingPdfName && (
-          <PdfModal key="pdf" fileName={pendingPdfName} onClose={() => { setActiveModal(null); setPendingPdfName(null); }} onSave={handleSaveSource} />
+          <PdfModal key="pdf" fileName={pendingPdfName} uploadStatus={pdfUploadStatus} onClose={() => { setActiveModal(null); setPendingPdfName(null); setPdfUploadStatus("idle"); }} onSave={handleSaveSource} />
         )}
       </AnimatePresence>
 
