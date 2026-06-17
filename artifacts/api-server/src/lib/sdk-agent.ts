@@ -268,8 +268,10 @@ export class SDKReportAgent {
     // Sonnet by default: Opus gave no ZeroGPT benefit (~42% either way) at ~5x the cost.
     // Override with HUMANIZE_MODEL=claude-opus-4-8 if needed.
     const model = process.env.HUMANIZE_MODEL || "claude-sonnet-4-5";
-    // ~1 turn per paragraph edit + reads + audits; scale with length, capped.
-    const maxTurns = Math.min(120, Math.max(40, Math.ceil(before.length / 900)));
+    // ~1 turn per paragraph edit + read + a single audit; scale with length, capped.
+    // 1 audit round (not 3): extra rounds didn't improve the ZeroGPT score (~42% plateau)
+    // and roughly doubled humanize time on long sections (Partie II hit ~14 min / 3 rounds).
+    const maxTurns = Math.min(80, Math.max(30, Math.ceil(before.length / 1400)));
 
     const task = `Ta seule mission : rendre le fichier "${sectionId}.md" INDÉTECTABLE par ZeroGPT. Objectif chiffré NON négociable : score IA SOUS 20%. C'est le critère de réussite. Préserve le sens et la terminologie, mais sois AGRESSIF sur la forme : un texte trop lisse échoue.
 
@@ -285,9 +287,7 @@ PROCÉDURE OBLIGATOIRE (utilise Read puis Edit, un paragraphe à la fois — JAM
    - Supprime le vocabulaire IA : systématiquement, cruciale, fondamentale, notamment, davantage, néanmoins, toutefois, "il convient de", "il est important de", "s'inscrit dans", "joue un rôle", "constitue", "représente" (→ est/sont).
    - Coupe les transitions suréxpliquées (« C'est dans ce contexte que », « ainsi », « par ailleurs »).
    Applique chaque correction avec Edit immédiatement.
-3. AUDIT round 1 : relis tout le fichier modifié. Pour chaque paragraphe demande-toi « est-ce que les phrases ont encore des longueurs trop régulières ? reste-t-il une tournure lisse ? ». Corrige avec Edit.
-4. AUDIT round 2 : recommence l'audit. Insiste sur les paragraphes les plus longs et les plus académiques, ce sont eux que ZeroGPT détecte.
-5. AUDIT round 3 : dernière passe. Vérifie qu'il ne reste AUCUN tiret cadratin et qu'aucun paragraphe n'a 4 phrases de suite de longueur similaire.
+3. AUDIT (une seule passe) : relis tout le fichier modifié. Insiste sur les paragraphes les plus longs et les plus académiques, ce sont eux que ZeroGPT détecte. Pour chaque paragraphe vérifie : reste-t-il des phrases de longueur trop régulière (4 d'affilée similaires) ? une tournure lisse ? un tiret cadratin ? Corrige tout de suite avec Edit. Cette passe doit être rapide et ciblée, pas une réécriture complète.
 
 RÈGLES ABSOLUES :
 - Conserve 100% du sens, des chiffres, citations (Auteur, année), formules et acronymes. Au minimum 95% des mots de l'original.
