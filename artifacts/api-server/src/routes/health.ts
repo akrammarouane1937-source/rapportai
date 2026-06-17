@@ -11,7 +11,7 @@ const router: IRouter = Router();
 
 // Bump this every meaningful deploy. Hit /api/diag in a browser to confirm the
 // running build is the latest one (no need to generate anything).
-const BUILD_MARKER = "daily-revisions-15 2026-06-17";
+const BUILD_MARKER = "usage-path-fix 2026-06-17";
 
 // Resolve a skills file the same way the humanizer does, so /diag reveals whether
 // the humanizer will actually find its rules at runtime (the cause of un-humanized output).
@@ -68,7 +68,8 @@ router.get("/diag", (_req, res) => {
 });
 
 // GET /api/usage?sessionId=… — today's revision count for the in-app counter.
-router.get("/api/usage", (req, res) => {
+// Router is mounted at /api, so the path here must be "/usage" (not "/api/usage").
+router.get("/usage", (req, res) => {
   const key = (req.query.sessionId as string)
     || (req.headers["x-forwarded-for"] as string | undefined)?.split(",")[0]?.trim()
     || req.socket?.remoteAddress
