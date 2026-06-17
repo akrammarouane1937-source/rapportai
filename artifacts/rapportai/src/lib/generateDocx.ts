@@ -281,8 +281,32 @@ const TBL_BORDERS = {
   insideHorizontal: TBL_BORDER, insideVertical: TBL_BORDER,
 };
 
+// Inline-formatted runs for a table cell at a given font size (handles **bold**/*italic*).
+function cellRuns(text: string, size: number, forceBold = false): TextRun[] {
+  const clean = text.trim();
+  if (forceBold) return [new TextRun({ text: clean.replace(/\*+/g, ""), font: FONT, size, bold: true })];
+  const runs: TextRun[] = [];
+  const re = /\*\*(.+?)\*\*|\*(.+?)\*/g;
+  let last = 0;
+  let m: RegExpExecArray | null;
+  while ((m = re.exec(clean)) !== null) {
+    if (m.index > last) runs.push(new TextRun({ text: clean.slice(last, m.index), font: FONT, size }));
+    if (m[1] !== undefined) runs.push(new TextRun({ text: m[1], font: FONT, size, bold: true }));
+    else if (m[2] !== undefined) runs.push(new TextRun({ text: m[2], font: FONT, size, italics: true }));
+    last = m.index + m[0].length;
+  }
+  if (last < clean.length) runs.push(new TextRun({ text: clean.slice(last), font: FONT, size }));
+  return runs.length > 0 ? runs : [new TextRun({ text: clean, font: FONT, size })];
+}
+
 function buildMarkdownTable(rows: string[][]): Table {
   const colCount = Math.max(...rows.map((r) => r.length));
+  // Scale font down as the table widens so wide finance tables (8-11 cols) don't
+  // get cramped/over-wrapped on A4 portrait. BODY_PT = 24 half-pts (12pt).
+  const cellSize = colCount <= 4 ? BODY_PT - 2   // 11pt
+    : colCount <= 6 ? 20                          // 10pt
+    : colCount <= 8 ? 18                          // 9pt
+    : 16;                                         // 8pt for 9+ columns
   const tableRows = rows.map((cells, ri) => {
     const padded = [...cells];
     while (padded.length < colCount) padded.push("");
@@ -291,13 +315,11 @@ function buildMarkdownTable(rows: string[][]): Table {
       children: padded.map((cell) =>
         new TableCell({
           borders: TBL_BORDERS,
-          margins: { top: 40, bottom: 40, left: 80, right: 80 },
+          margins: { top: 40, bottom: 40, left: 60, right: 60 },
           verticalAlign: VerticalAlign.CENTER,
           children: [new Paragraph({
             spacing: { line: 240, lineRule: LineRuleType.AUTO, before: 20, after: 20 },
-            children: ri === 0
-              ? [new TextRun({ text: cell.replace(/\*+/g, ""), font: FONT, size: BODY_PT - 2, bold: true })]
-              : parseInlineRuns(cell),
+            children: cellRuns(cell, cellSize, ri === 0),
           })],
         }),
       ),
