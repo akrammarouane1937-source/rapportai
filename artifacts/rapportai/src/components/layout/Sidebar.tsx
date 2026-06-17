@@ -12,6 +12,7 @@ import { getReport } from "@/lib/reportStore";
 import { useReportStore } from "@/lib/store";
 import { getApprovedFigures } from "@/lib/figureStore";
 import { REFERRALS_ENABLED } from "@/lib/featureFlags";
+import { API_BASE } from "@/lib/apiBase";
 
 const NAV_ITEMS = [
   { icon: Home,          label: "Accueil",            path: "/dashboard",          proFeature: "" },
@@ -102,10 +103,26 @@ export function Sidebar() {
   const hasReport      = !!(report.theme || report.school);
   const pagesUsed      = sectionsWithContent;
   const pagesLimit     = limits.pages === Infinity ? "∞" : limits.pages;
-  const revisionsUsed  = plan.revisionCount;
-  const revisionsLimit = limits.revisions === Infinity ? "∞" : limits.revisions;
+
+  // Daily revision budget from the server (the real, enforced count). Falls back to
+  // the client plan count until the first fetch resolves.
+  const [dailyRev, setDailyRev] = useState<{ revisions: number; revisionLimit: number } | null>(null);
+  useEffect(() => {
+    let sid: string | null = null;
+    try { sid = localStorage.getItem("rapportai_session"); } catch { /* ignore */ }
+    const url = `${API_BASE}/api/usage${sid ? `?sessionId=${encodeURIComponent(sid)}` : ""}`;
+    fetch(url)
+      .then((r) => (r.ok ? r.json() : null))
+      .then((d) => { if (d && typeof d.revisions === "number") setDailyRev(d); })
+      .catch(() => {});
+  }, [location]);
+
+  const revisionsUsed  = dailyRev ? dailyRev.revisions : plan.revisionCount;
+  const revisionsLimit = dailyRev ? dailyRev.revisionLimit : (limits.revisions === Infinity ? "∞" : limits.revisions);
   const pagesPct       = limits.pages === Infinity ? 0 : Math.min(100, (pagesUsed / (limits.pages as number)) * 100);
-  const revPct         = limits.revisions === Infinity ? 0 : Math.min(100, (revisionsUsed / (limits.revisions as number)) * 100);
+  const revPct         = dailyRev
+    ? Math.min(100, (dailyRev.revisions / dailyRev.revisionLimit) * 100)
+    : (limits.revisions === Infinity ? 0 : Math.min(100, (revisionsUsed / (limits.revisions as number)) * 100));
 
   const isActive = (path: string) =>
     location === path || location.startsWith(path + "/");
@@ -292,7 +309,7 @@ export function Sidebar() {
 
             <div>
               <div className="flex justify-between text-[10px] text-gray-400 mb-0.5">
-                <span>Révisions</span>
+                <span>Révisions (jour)</span>
                 <span>{revisionsUsed}/{revisionsLimit}</span>
               </div>
               <div className="h-1 bg-gray-100 rounded-full overflow-hidden">

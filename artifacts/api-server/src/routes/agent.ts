@@ -6,7 +6,7 @@ import { SDKReportAgent } from "../lib/sdk-agent";
 import "../lib/humanize-util"; // kept for the /humanize route
 import { fillDocxTemplate, FILLED_DOCX_NAME } from "../lib/docx-template-fill";
 import { checkSectionAccess } from "../lib/plan-guard";
-import { recordGeneration } from "../lib/abuse-guard";
+import { recordAction } from "../lib/abuse-guard";
 import { logger } from "../lib/logger";
 
 const router = Router();
@@ -671,20 +671,25 @@ router.post("/agent/:step/stream", async (req: Request, res: Response) => {
           continue;
         }
 
-        // Cost abuse guard — holds even during FREE_LAUNCH. Stops looping an
-        // expensive section's revisions / report-farming from burning the API budget.
+        const filePath = path.join(agent.workDir, `${sectionId}.md`);
+
+        // Cost abuse guard — holds even during FREE_LAUNCH. Regenerating a section
+        // that already exists counts as a "revision" against the daily budget; the
+        // first generation of a section is free (only the hidden backstop applies).
         const abuseKey = sessionId
           ?? ((req.headers["x-forwarded-for"] as string | undefined)?.split(",")[0]?.trim())
           ?? req.socket?.remoteAddress ?? "unknown";
-        const abuse = recordGeneration(abuseKey, sectionId);
+        const isRevision = existsSync(filePath) && readFileSync(filePath, "utf-8").trim().length > 50;
+        const abuse = recordAction(abuseKey, isRevision);
         if (!abuse.ok) {
           sseWrite(res, { type: "text", content: `⚠️ ${abuse.reason}` });
-          logger.info({ sessionId, section: sectionId }, "section blocked by abuse guard");
+          sseWrite(res, { type: "usage", revisions: abuse.revisions, revisionLimit: abuse.revisionLimit });
+          logger.info({ sessionId, section: sectionId }, "blocked by daily revision cap");
           continue;
         }
+        sseWrite(res, { type: "usage", revisions: abuse.revisions, revisionLimit: abuse.revisionLimit });
 
         sseWrite(res, { type: "tool_call", name: "Write", detail: `${sectionId}.md` });
-        const filePath = path.join(agent.workDir, `${sectionId}.md`);
 
         // Abstract is generated in-process (direct API call) — it only needs to
         // read resume.md and translate it to English. No subprocess needed.

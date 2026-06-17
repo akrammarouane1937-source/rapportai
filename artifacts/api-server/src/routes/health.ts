@@ -4,13 +4,14 @@ import path from "path";
 import { HealthCheckResponse } from "@workspace/api-zod";
 import { findClaudeBinary } from "../lib/find-claude-binary";
 import { metrics } from "../lib/metrics";
+import { getUsage } from "../lib/abuse-guard";
 import { execSync } from "child_process";
 
 const router: IRouter = Router();
 
 // Bump this every meaningful deploy. Hit /api/diag in a browser to confirm the
 // running build is the latest one (no need to generate anything).
-const BUILD_MARKER = "abuse-guard 2026-06-17";
+const BUILD_MARKER = "daily-revisions-15 2026-06-17";
 
 // Resolve a skills file the same way the humanizer does, so /diag reveals whether
 // the humanizer will actually find its rules at runtime (the cause of un-humanized output).
@@ -64,6 +65,15 @@ router.get("/diag", (_req, res) => {
     cwd: process.cwd(),
     sessions_dir: process.env.SESSIONS_DIR ?? "/tmp/rapportai-sessions (default)",
   });
+});
+
+// GET /api/usage?sessionId=… — today's revision count for the in-app counter.
+router.get("/api/usage", (req, res) => {
+  const key = (req.query.sessionId as string)
+    || (req.headers["x-forwarded-for"] as string | undefined)?.split(",")[0]?.trim()
+    || req.socket?.remoteAddress
+    || "unknown";
+  res.json(getUsage(key));
 });
 
 // GET /api/metrics — live stats dashboard (protect with internal token in prod)

@@ -1,20 +1,20 @@
 // Server-side cost guard that holds EVEN during FREE_LAUNCH (unlike plan-guard,
 // which bypasses everything and trusts spoofable frontend headers).
 //
-// Two caps per account per day:
-//  - PER_SECTION_CAP: how many times one section can be (re)generated → stops the
-//    "loop Partie II 30×" attack, the #1 cost leak (expensive section + humanize).
-//  - DAILY_TOTAL_CAP: total section generations/day → stops report-farming.
+// Model: one UNIFIED daily revision budget per account, across all sections.
+//  - A "revision" = regenerating or editing an already-generated section.
+//  - First-time generation of a section does NOT count (building the report is free);
+//    a generous hidden generation backstop still prevents report-farming.
 //
-// A real student finishing a PFE never hits these; abusers hit the wall fast.
-// Tune without redeploy via env: FREE_LAUNCH_SECTION_CAP, FREE_LAUNCH_DAILY_CAP.
+// Tune without redeploy: FREE_DAILY_REVISIONS, FREE_DAILY_GENERATIONS.
 
-const PER_SECTION_CAP = parseInt(process.env.FREE_LAUNCH_SECTION_CAP ?? "6", 10) || 6;
-const DAILY_TOTAL_CAP = parseInt(process.env.FREE_LAUNCH_DAILY_CAP ?? "30", 10) || 30;
+const REVISION_CAP = parseInt(process.env.FREE_DAILY_REVISIONS ?? "15", 10) || 15;
+const GEN_BACKSTOP = parseInt(process.env.FREE_DAILY_GENERATIONS ?? "40", 10) || 40;
 
 interface DayBucket {
-  day: string;                 // YYYY-MM-DD
-  sections: Map<string, number>;
+  day: string;        // YYYY-MM-DD
+  revisions: number;
+  generations: number;
 }
 
 const buckets = new Map<string, DayBucket>();
@@ -23,43 +23,62 @@ function today(): string {
   return new Date().toISOString().slice(0, 10);
 }
 
-export interface AbuseCheck {
+function getBucket(key: string): DayBucket {
+  const day = today();
+  if (buckets.size > 10_000) {
+    for (const [k, b] of buckets) if (b.day !== day) buckets.delete(k);
+  }
+  let b = buckets.get(key);
+  if (!b || b.day !== day) {
+    b = { day, revisions: 0, generations: 0 };
+    buckets.set(key, b);
+  }
+  return b;
+}
+
+export interface Usage {
+  revisions: number;
+  revisionLimit: number;
+}
+
+// Read-only: current revision usage for the counter shown in the UI.
+export function getUsage(key: string): Usage {
+  const b = getBucket(key);
+  return { revisions: b.revisions, revisionLimit: REVISION_CAP };
+}
+
+export interface ActionResult extends Usage {
   ok: boolean;
   reason?: string;
 }
 
-// Record one generation of `section` for `key` (clerkId or IP) and report whether
-// it's allowed. Call this right before generating a section.
-export function recordGeneration(key: string, section: string): AbuseCheck {
-  const day = today();
+// Record one action and report whether it's allowed.
+// isRevision=true → counts against the visible 15/day revision budget.
+// isRevision=false → first-time generation, only bounded by the hidden backstop.
+export function recordAction(key: string, isRevision: boolean): ActionResult {
+  const b = getBucket(key);
 
-  // Cheap periodic cleanup so the map can't grow unbounded.
-  if (buckets.size > 10_000) {
-    for (const [k, b] of buckets) if (b.day !== day) buckets.delete(k);
+  if (isRevision) {
+    if (b.revisions >= REVISION_CAP) {
+      return {
+        ok: false,
+        revisions: b.revisions,
+        revisionLimit: REVISION_CAP,
+        reason: `Tu as utilisé tes ${REVISION_CAP} révisions du jour. Reviens demain — ou passe à un plan payant pour réviser sans limite.`,
+      };
+    }
+    b.revisions += 1;
+  } else {
+    if (b.generations >= GEN_BACKSTOP) {
+      return {
+        ok: false,
+        revisions: b.revisions,
+        revisionLimit: REVISION_CAP,
+        reason: `Limite quotidienne de génération atteinte. Reviens demain.`,
+      };
+    }
+    b.generations += 1;
   }
 
-  let b = buckets.get(key);
-  if (!b || b.day !== day) {
-    b = { day, sections: new Map() };
-    buckets.set(key, b);
-  }
-
-  const total = [...b.sections.values()].reduce((a, c) => a + c, 0);
-  if (total >= DAILY_TOTAL_CAP) {
-    return {
-      ok: false,
-      reason: `Tu as atteint la limite de ${DAILY_TOTAL_CAP} générations pour aujourd'hui. Reviens demain — ou passe à un plan payant pour générer sans limite.`,
-    };
-  }
-
-  const secCount = b.sections.get(section) ?? 0;
-  if (secCount >= PER_SECTION_CAP) {
-    return {
-      ok: false,
-      reason: `Tu as régénéré cette section ${PER_SECTION_CAP} fois aujourd'hui. Limite atteinte pour préserver la qualité du service. Réessaie demain.`,
-    };
-  }
-
-  b.sections.set(section, secCount + 1);
-  return { ok: true };
+  return { ok: true, revisions: b.revisions, revisionLimit: REVISION_CAP };
 }
