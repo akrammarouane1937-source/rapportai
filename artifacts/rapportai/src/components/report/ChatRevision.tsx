@@ -5,6 +5,7 @@ import { API_BASE } from "@/lib/apiBase";
 import { ensureSession } from "@/lib/useGenerate";
 import { getMyPlan, incrementRevision } from "@/lib/userPlan";
 import { usePaywallStore } from "@/lib/paywallStore";
+import { RevisionCounter } from "@/components/RevisionCounter";
 
 type Message = {
   id: string;
@@ -289,6 +290,7 @@ export function ChatRevision({
           <span className="text-sm font-bold text-gray-800">Révision IA</span>
           <span className="text-xs text-gray-400 ml-2">{sectionLabel}</span>
         </div>
+        <RevisionCounter refreshKey={messages.length} className="mr-1" />
         <button onClick={onClose} className="text-gray-400 hover:text-gray-600 transition-colors">
           <X className="w-4 h-4" />
         </button>
