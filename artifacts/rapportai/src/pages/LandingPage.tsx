@@ -28,7 +28,7 @@ import PublicNavbar from "@/components/layout/PublicNavbar";
 // ─── LAUNCH BANNER CONFIG ─────────────────────────────────────────────────────
 // UPDATE THESE when you launch:
 const LAUNCH_END   = "2026-05-26T23:59:00Z"; // <-- 48h after you post
-const TOTAL_SLOTS  = 20;
+const TOTAL_SLOTS  = 30;
 const LAUNCH_START = "2026-05-25T00:00:00Z"; // <-- when you post
 // ─────────────────────────────────────────────────────────────────────────────
 
@@ -265,7 +265,7 @@ export default function LandingPage() {
                 transition={{ duration: 0.4, delay: timeLeft.expired ? 0 : 0.1 }}
                 className="inline-flex items-center gap-2 bg-purple-50 border border-purple-100 text-purple-700 text-sm font-semibold px-4 py-2 rounded-full"
               >
-                <span>🎓</span> Utilisé par <span className="font-black">500+</span> étudiants au Maroc
+                <span>🎉</span> RapportAI célèbre son lancement — <span className="font-black">30 places gratuites</span>
               </motion.div>
             </div>
             <motion.h1 
@@ -283,7 +283,7 @@ export default function LandingPage() {
               transition={{ duration: 0.5, delay: 0.1 }}
               className="text-xl md:text-2xl text-secondary-foreground font-medium mb-10 max-w-2xl mx-auto"
             >
-              3 mois de rédaction. 30 minutes avec RapportAI.
+              3 mois de rédaction. Une soirée avec RapportAI.
             </motion.p>
             
             <motion.div
@@ -299,13 +299,6 @@ export default function LandingPage() {
                     style={{ background: "linear-gradient(135deg,#7c3aed,#a855f7)", boxShadow: "0 8px 30px rgba(124,58,237,0.35)" }}
                   >
                     Commencer gratuitement →
-                  </button>
-                </Link>
-              </div>
-              <div className="mt-4 flex justify-center">
-                <Link href="/demo">
-                  <button className="text-sm text-muted-foreground hover:text-foreground underline underline-offset-4 transition-colors">
-                    Voir la démo d'abord →
                   </button>
                 </Link>
               </div>
@@ -362,7 +355,7 @@ export default function LandingPage() {
               
               {[
                 { num: "01", title: "DÉCRIS TON PROJET", text: "Ton thème, ton école, ta filière. 2 minutes." },
-                { num: "02", title: "L'IA GÉNÈRE TON RAPPORT", text: "Chaque section rédigée pour toi. En 30 minutes." },
+                { num: "02", title: "L'IA GÉNÈRE TON RAPPORT", text: "Chaque section rédigée pour toi, au format de ton école." },
                 { num: "03", title: "TÉLÉCHARGE ET SOUMETS", text: "Ton .docx prêt à imprimer. Ton encadrant verra la différence." }
               ].map((step, i) => (
                 <div key={i} className="relative z-10 flex flex-col items-center text-center">
@@ -389,11 +382,11 @@ export default function LandingPage() {
               isReversed={false}
             />
 
-            <FeatureRow 
+            <FeatureRow
               tag="ANTI-DÉTECTION"
-              title="Moins de 20% de détection IA. Testé."
-              para1="Chaque rapport passe par notre système d'humanisation. Résultat réel : 10.5% de détection IA sur ZeroGPT, bien en dessous du seuil de tout outil."
-              para2="Turnitin, iThenticate, ZeroGPT : testés. Ton rapport passe partout."
+              title="Moins de 30% de détection IA."
+              para1="Chaque rapport passe par notre système d'humanisation pour réduire la signature IA. Nos meilleurs résultats descendent sous 30% de détection sur ZeroGPT."
+              para2="Un texte naturel, qui se lit comme le tien."
               demo={<Feature2Demo />}
               isReversed={true}
             />
@@ -407,14 +400,6 @@ export default function LandingPage() {
               isReversed={false}
             />
 
-            <FeatureRow 
-              tag="JURIAI"
-              title="Entraîne-toi avec un jury IA avant le grand jour."
-              para1="Ton jury va te poser des questions difficiles. JuryAI lit ton rapport et simule exactement ce moment."
-              para2="Réponds. Reçois un feedback. Arrive préparé."
-              demo={<Feature4Demo />}
-              isReversed={true}
-            />
           </div>
         </section>
 
@@ -452,9 +437,9 @@ export default function LandingPage() {
                     <div className="absolute inset-0 rounded-t-full border-[14px] border-green-200" style={{ borderBottomColor: "transparent" }} />
                     <div className="absolute inset-0 rounded-t-full border-[14px] border-green-500" style={{ borderBottomColor: "transparent", clipPath: "polygon(0 100%, 100% 100%, 16% 0, 0 0)", opacity: 0.9 }} />
                   </div>
-                  <p className="text-5xl font-black text-green-600 mb-1">10.5%</p>
+                  <p className="text-5xl font-black text-green-600 mb-1">&lt; 30%</p>
                   <p className="text-sm font-semibold text-green-600 mb-4">IA GPT détectée</p>
-                  <p className="text-xs text-center text-green-500 italic">"Très probablement écrit par un humain"</p>
+                  <p className="text-xs text-center text-green-500 italic">"Un texte naturel, qui se lit comme le tien"</p>
                 </div>
               </div>
             </div>
@@ -474,12 +459,11 @@ export default function LandingPage() {
                 </h3>
                 <ul className="space-y-4">
                   {[
-                    "Rapport complet prêt à soumettre en 30 minutes",
+                    "Rapport complet prêt à soumettre",
                     "Compatible avec le canevas de ton école",
-                    "10.5% détection IA, testé ZeroGPT",
+                    "Moins de 30% de détection IA, testé ZeroGPT",
                     "Écrit depuis tes données, pas depuis le web",
                     "Export .docx formaté automatiquement",
-                    "Prépare ta soutenance avec JuryAI"
                   ].map((item, i) => (
                     <li key={i} className="flex items-start gap-3 text-foreground font-medium">
                       <CheckCircle2 className="w-5 h-5 text-[#10b981] shrink-0 mt-0.5" />
@@ -520,7 +504,6 @@ export default function LandingPage() {
                     "Détectable par Turnitin",
                     "Écrit depuis ses données, pas les tiennes",
                     "Pas d'export .docx formaté",
-                    "Pas de préparation soutenance"
                   ].map((item, i) => (
                     <li key={i} className="flex items-start gap-3">
                       <XCircle className="w-5 h-5 text-[#ef4444]/70 shrink-0 mt-0.5" />
@@ -530,34 +513,6 @@ export default function LandingPage() {
                 </ul>
               </div>
             </div>
-          </div>
-        </section>
-
-        {/* 8. JURIAI SPOTLIGHT */}
-        <section className="py-24 bg-[#2e1065] text-white overflow-hidden relative">
-          <div className="absolute top-0 right-0 w-[600px] h-[600px] bg-primary rounded-full blur-[120px] opacity-40 translate-x-1/3 -translate-y-1/4 pointer-events-none"></div>
-          
-          <div className="container mx-auto px-4 max-w-4xl text-center relative z-10">
-            <div className="inline-flex items-center justify-center px-4 py-1.5 rounded-full bg-white/10 border border-white/20 text-white text-sm font-semibold tracking-wide mb-8 backdrop-blur-sm">
-              <Sparkles className="w-4 h-4 mr-2 text-primary-light" /> JURIAI
-            </div>
-            
-            <h2 className="text-4xl md:text-5xl lg:text-6xl font-bold font-heading mb-8 leading-tight">
-              Tu connais ton rapport.<br />Mais sauras-tu répondre au jury ?
-            </h2>
-            
-            <p className="text-xl text-white/80 mb-6 max-w-2xl mx-auto">
-              Le jour de ta soutenance, ton encadrant ne sera pas là pour t'aider. Le jury va creuser. Contredire. Tester.
-            </p>
-            <p className="text-lg text-white/70 mb-10 max-w-2xl mx-auto">
-              JuryAI lit ton rapport et simule exactement ce moment : les vraies questions, le vrai stress. Arrive le jour J en sachant exactement quoi dire.
-            </p>
-            
-            <Link href="/sign-up">
-              <Button size="lg" variant="outline" className="bg-transparent border-white/30 text-white hover:bg-white hover:text-[#2e1065] text-lg h-14 px-8 rounded-full">
-                Essayer JuryAI <ArrowRight className="w-5 h-5 ml-2" />
-              </Button>
-            </Link>
           </div>
         </section>
 
@@ -697,7 +652,7 @@ export default function LandingPage() {
                     "Pages illimitées",
                     "Révisions illimitées",
                     "Canevas de ton école",
-                    "Accès JuryAI",
+                    "Support prioritaire",
                   ],
                 },
               ] as const).map((p, i) => {
@@ -792,11 +747,11 @@ export default function LandingPage() {
             
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-8 mt-16 pt-12 border-t border-border/50">
               <div>
-                <div className="text-3xl font-bold font-heading text-foreground mb-1">30 min</div>
-                <div className="text-sm text-secondary-foreground">Temps moyen de génération</div>
+                <div className="text-3xl font-bold font-heading text-foreground mb-1">Word</div>
+                <div className="text-sm text-secondary-foreground">Export .docx déjà formaté</div>
               </div>
               <div>
-                <div className="text-3xl font-bold font-heading text-foreground mb-1">80+</div>
+                <div className="text-3xl font-bold font-heading text-foreground mb-1">15+</div>
                 <div className="text-sm text-secondary-foreground">Écoles et canevas supportés</div>
               </div>
               <div>
@@ -817,14 +772,9 @@ export default function LandingPage() {
                 <img src="/logo.svg" alt="RapportAI" className="w-6 h-6" />
                 <span className="font-bold font-heading text-lg text-foreground">RapportAI</span>
               </div>
-              <p className="text-secondary-foreground text-sm">Le rapport académique en 30 minutes</p>
+              <p className="text-secondary-foreground text-sm">Ton rapport académique, au format de ton école</p>
             </div>
             
-            <div className="flex flex-wrap gap-x-8 gap-y-4 text-sm font-medium text-secondary-foreground">
-              <a href="#" className="hover:text-primary transition-colors">Blog</a>
-              <a href={`mailto:support@rapportai.io`} className="hover:text-primary transition-colors">Contact</a>
-            </div>
-
             <div className="flex flex-wrap gap-x-8 gap-y-4 text-sm text-muted-foreground">
               <Link href="/terms" className="hover:text-foreground transition-colors">CGU</Link>
               <Link href="/privacy" className="hover:text-foreground transition-colors">Politique de confidentialité</Link>
@@ -857,28 +807,28 @@ const TESTIMONIALS = [
     text: "J'ai vécu le stress du PFE — c'est pour ça que j'ai construit RapportAI. Aujourd'hui je l'utilise moi-même : une base solide au format de mon école en une soirée, au lieu de semaines.",
   },
   {
-    name: "Salma B.",
-    school: "ENCG · Management",
+    name: "Youssef Jabri",
+    school: "EMSI",
     rating: 5,
-    initials: "SB",
+    initials: "YJ",
     color: "#db2777",
-    text: "Je galérais depuis 3 semaines sur mon intro. RapportAI m'a sorti un rapport complet au format ENCG. Mon encadrant a validé direct.",
+    text: "La qualité du rapport est vraiment bonne, bien structuré et cohérent. L'export Word arrive déjà mis en forme, je n'ai eu qu'à relire. Je recommande.",
   },
   {
-    name: "Yassine K.",
-    school: "ENSA · Génie Info",
+    name: "Yasser Elmouaq",
+    school: "EMSI",
     rating: 5,
-    initials: "YK",
+    initials: "YE",
     color: "#0891b2",
-    text: "J'avais peur que ça se voie que c'était de l'IA. Testé sur ZeroGPT : tout est passé. Le texte est vraiment propre et naturel.",
+    text: "Le téléchargement au format Word m'a fait gagner un temps fou : plus besoin de tout remettre en page. Le contenu est solide. Je recommande à tous.",
   },
   {
-    name: "Imane T.",
-    school: "FSJES · Économie",
+    name: "Ilyass Dkhissi",
+    school: "EMSI",
     rating: 5,
-    initials: "IT",
+    initials: "ID",
     color: "#16a34a",
-    text: "Le fait qu'il connaisse le format de mon école et qu'il lise mes PDF de sources, ça change tout. J'ai juste eu à relire et soumettre.",
+    text: "Rapport complet, sections bien rédigées et un export .docx propre. Ça m'a évité des semaines de travail. Franchement je recommande.",
   },
 ];
 
