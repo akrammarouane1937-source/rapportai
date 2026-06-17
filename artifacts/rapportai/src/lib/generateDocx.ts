@@ -463,6 +463,10 @@ function pgPara(children: TextRun[], align: (typeof AlignmentType)[keyof typeof 
 }
 
 function buildPageDeGarde(d: Report): (Paragraph | Table)[] {
+  // Paramètres (settings) saves some fields under different keys than the Report
+  // type declares (e.g. "annee" not "academicYear", "ville"). Read both so the
+  // cover page shows the student's real info instead of placeholder defaults.
+  const p = d as unknown as Record<string, string | undefined>;
   const school    = d.school      || "École";
   const filiere   = d.filiere     || "Filière";
   const type      = d.reportType  || "PFE";
@@ -471,7 +475,7 @@ function buildPageDeGarde(d: Report): (Paragraph | Table)[] {
   const encPeda   = d.encadrantPeda  || "";
   const encPro    = d.encadrantPro   || "";
   const entreprise = d.entreprise   || "";
-  const annee     = d.academicYear  || "2024–2025";
+  const annee     = p.annee || d.academicYear || "2024–2025";
   const jury1     = d.juryMember1   || "";
   const jury2     = d.juryMember2   || "";
   const jury3     = d.juryMember3   || "";
