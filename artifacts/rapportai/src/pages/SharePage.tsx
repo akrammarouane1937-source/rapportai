@@ -151,7 +151,7 @@ export default function SharePage() {
         <div className="max-w-4xl mx-auto px-6 py-3 flex items-center gap-4">
           {/* Logo */}
           <a href="/" className="flex items-center gap-2 flex-shrink-0">
-            <img src="/logo.svg" alt="RapportAI" className="w-7 h-7" />
+            <img src="/logo.png" alt="RapportAI" className="w-7 h-7" />
             <span className="font-black text-gray-900 text-sm" style={{ fontFamily: "'Plus Jakarta Sans', sans-serif" }}>
               RapportAI
             </span>

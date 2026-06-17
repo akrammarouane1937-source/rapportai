@@ -90,7 +90,7 @@ export default function OnboardingPage() {
   return (
     <div className="min-h-screen bg-[#f9f8ff] flex flex-col">
       <nav className="bg-white border-b border-gray-100 px-6 py-4 flex items-center gap-3">
-        <img src="/logo.svg" alt="RapportAI" className="w-8 h-8" />
+        <img src="/logo.png" alt="RapportAI" className="w-8 h-8" />
         <span className="font-bold text-gray-900" style={{ fontFamily: "'Plus Jakarta Sans', sans-serif" }}>
           RapportAI
         </span>

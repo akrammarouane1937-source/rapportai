@@ -19,7 +19,7 @@ export default function PublicNavbar() {
         {/* Left — Logo */}
         <Link href="/" onClick={handleLogo}>
           <div className="flex items-center gap-2 cursor-pointer">
-            <img src="/logo.svg" alt="RapportAI" className="w-8 h-8" />
+            <img src="/logo.png" alt="RapportAI" className="w-8 h-8" />
             <span className="font-bold text-xl tracking-tight text-gray-900">RapportAI</span>
           </div>
         </Link>

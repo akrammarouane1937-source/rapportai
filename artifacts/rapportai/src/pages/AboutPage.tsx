@@ -111,9 +111,9 @@ export default function AboutPage() {
           </motion.h2>
           <div className="grid grid-cols-2 md:grid-cols-4 gap-6">
             {[
-              { value: "500+", label: "étudiants" },
-              { value: "80+", label: "écoles couvertes" },
-              { value: "30 min", label: "temps de génération" },
+              { value: "0 MAD", label: "pour commencer" },
+              { value: "15+", label: "écoles & canevas" },
+              { value: "Word", label: "export déjà formaté" },
               { value: "100%", label: "original & personnalisé" },
             ].map((s, i) => (
               <motion.div
@@ -175,7 +175,7 @@ export default function AboutPage() {
       <section className="py-20 px-4 text-center">
         <motion.div variants={fadeUp} initial="hidden" whileInView="show" viewport={{ once: true }} className="max-w-xl mx-auto">
           <h2 className="text-3xl font-black text-gray-900 mb-4">Prêt à écrire ton rapport ?</h2>
-          <p className="text-gray-500 mb-8">Rejoins 500+ étudiants qui ont déjà gagné des semaines de travail.</p>
+          <p className="text-gray-500 mb-8">Commence ton rapport et gagne des semaines de travail.</p>
           <Link href="/sign-up">
             <Button className="bg-purple-600 hover:bg-purple-700 text-white font-bold px-8 h-12 rounded-full text-base shadow-lg shadow-purple-200">
               Commencer gratuitement <ArrowRight className="w-4 h-4 ml-2" />

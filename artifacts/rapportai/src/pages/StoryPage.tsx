@@ -36,30 +36,30 @@ L'idée de RapportAI est née ici : un agent IA qui connaît le format, qui lit 
   },
   {
     label: "Aujourd'hui",
-    title: "500+ étudiants ont déjà généré leur rapport.",
-    body: `RapportAI est utilisé dans plus de 80 écoles au Maroc. Des étudiants en BTS, en licence, en master. Des thèmes de finance, de logistique, de marketing, d'informatique.
+    title: "Conçu pour les étudiants marocains.",
+    body: `RapportAI s'adapte aux canevas des écoles marocaines. BTS, licence, master. Des thèmes de finance, de logistique, de marketing, d'informatique.
 
-Chaque rapport est personnalisé. Chaque section est cohérente. Et chaque étudiant a récupéré des semaines, parfois des mois, de sa vie.
+Chaque rapport est personnalisé. Chaque section est cohérente. L'objectif est simple : te faire récupérer des semaines de travail.
 
-Ce n'est pas une promesse. Ce sont des résultats vécus.`,
+Ce n'est pas une promesse en l'air. C'est un outil né d'une douleur qu'on a vécue.`,
   },
 ];
 
 const testimonials = [
   {
-    quote: "J'ai rendu mon rapport en 2 jours. Mon encadrant a dit que c'était le meilleur qu'il avait lu cette année.",
-    name: "Yassine M.",
-    school: "ENCG Settat, Finance",
+    quote: "La qualité du rapport est vraiment bonne, bien structuré. L'export Word arrive déjà mis en forme, je n'ai eu qu'à relire. Je recommande.",
+    name: "Youssef Jabri",
+    school: "EMSI",
   },
   {
-    quote: "J'avais peur que ça soit du copier-coller. Mais c'était vraiment mon projet, ma problématique, mon entreprise. Juste mis en forme parfaitement.",
-    name: "Meryem B.",
-    school: "EMSI Casablanca, Marketing",
+    quote: "Le téléchargement au format Word m'a fait gagner un temps fou : plus besoin de tout remettre en page. Le contenu est solide.",
+    name: "Yasser Elmouaq",
+    school: "EMSI",
   },
   {
-    quote: "3 semaines de blocage, résolues en une soirée. Je n'aurais pas cru c'est possible.",
-    name: "Amine K.",
-    school: "ENSA Agadir, Génie Informatique",
+    quote: "Rapport complet, sections bien rédigées et un export .docx propre. Ça m'a évité des semaines de travail. Franchement je recommande.",
+    name: "Ilyass Dkhissi",
+    school: "EMSI",
   },
 ];
 
@@ -197,7 +197,7 @@ export default function StoryPage() {
       <section className="py-20 px-4 text-center">
         <motion.div variants={fadeUp} initial="hidden" whileInView="show" viewport={{ once: true }} className="max-w-xl mx-auto">
           <h2 className="text-3xl font-black text-gray-900 mb-4">C'est ton tour maintenant.</h2>
-          <p className="text-gray-500 mb-8">Rejoins les 500+ étudiants qui ont transformé leur rapport en quelques minutes.</p>
+          <p className="text-gray-500 mb-8">Commence ton rapport et gagne des semaines de travail.</p>
           <Link href="/sign-up">
             <Button className="bg-purple-600 hover:bg-purple-700 text-white font-bold px-8 h-12 rounded-full text-base shadow-lg shadow-purple-200">
               Commencer gratuitement <ArrowRight className="w-4 h-4 ml-2" />

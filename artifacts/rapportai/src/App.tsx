@@ -33,7 +33,6 @@ import FiguresPage from "@/pages/FiguresPage";
 import ListeFiguresPage from "@/pages/liste-figures";
 import ListeTableauxPage from "@/pages/liste-tableaux";
 import AboutPage from "@/pages/AboutPage";
-import TonMomentPage from "@/pages/TonMomentPage";
 import WhyRapportAIPage from "@/pages/WhyRapportAIPage";
 import StoryPage from "@/pages/StoryPage";
 import TermsPage from "@/pages/TermsPage";
@@ -70,7 +69,7 @@ const clerkAppearance = {
   options: {
     logoPlacement: "inside" as const,
     logoLinkUrl: basePath || "/",
-    logoImageUrl: `${window.location.origin}${basePath}/logo.svg`,
+    logoImageUrl: `${window.location.origin}${basePath}/logo.png`,
     socialButtonsPlacement: "top" as const,
     socialButtonsVariant: "blockButton" as const,
   },
@@ -129,7 +128,7 @@ function AuthRightPanel() {
           Les grandes carrières naissent sur
         </p>
         <div className="flex items-center gap-3 bg-white/15 backdrop-blur-sm border border-white/25 rounded-2xl px-6 py-3">
-          <img src="/logo.svg" alt="RapportAI" className="w-9 h-9" />
+          <img src="/logo.png" alt="RapportAI" className="w-9 h-9" />
           <span className="text-white text-2xl font-extrabold tracking-tight" style={{ fontFamily: "'Plus Jakarta Sans', sans-serif" }}>
             RapportAI
           </span>
@@ -144,7 +143,7 @@ function AuthFormWrapper({ children }: { children: React.ReactNode }) {
     <div className="w-full lg:w-1/2 flex flex-col min-h-screen bg-white">
       <div className="px-8 pt-6">
         <a href={basePath || "/"} className="inline-flex items-center gap-2 group">
-          <img src="/logo.svg" alt="RapportAI" className="w-7 h-7" />
+          <img src="/logo.png" alt="RapportAI" className="w-7 h-7" />
           <span className="font-bold text-gray-900 text-lg group-hover:text-purple-600 transition-colors" style={{ fontFamily: "'Plus Jakarta Sans', sans-serif" }}>
             RapportAI
           </span>
@@ -355,7 +354,6 @@ function ClerkProviderWithRoutes() {
             <Route path="/share/:id" component={SharePage} />
             <Route path="/payment/success" component={PaymentSuccessPage} />
             <Route path="/about" component={AboutPage} />
-            <Route path="/ton-moment" component={TonMomentPage} />
             <Route path="/why" component={WhyRapportAIPage} />
             <Route path="/story" component={StoryPage} />
             <Route path="/terms" component={TermsPage} />
@@ -403,7 +401,6 @@ function NoAuthApp() {
           <Route path="/share/:id" component={SharePage} />
           <Route path="/payment/success" component={PaymentSuccessPage} />
           <Route path="/about" component={AboutPage} />
-          <Route path="/ton-moment" component={TonMomentPage} />
           <Route path="/why" component={WhyRapportAIPage} />
           <Route path="/story" component={StoryPage} />
           <Route path="/terms" component={TermsPage} />

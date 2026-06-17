@@ -27,9 +27,9 @@ import PublicNavbar from "@/components/layout/PublicNavbar";
 
 // ─── LAUNCH BANNER CONFIG ─────────────────────────────────────────────────────
 // UPDATE THESE when you launch:
-const LAUNCH_END   = "2026-05-26T23:59:00Z"; // <-- 48h after you post
+const LAUNCH_END   = "2026-06-24T23:59:00Z"; // <-- 7 days after launch
 const TOTAL_SLOTS  = 30;
-const LAUNCH_START = "2026-05-25T00:00:00Z"; // <-- when you post
+const LAUNCH_START = "2026-06-17T00:00:00Z"; // <-- launch day
 // ─────────────────────────────────────────────────────────────────────────────
 
 function useLaunchBanner() {
@@ -769,7 +769,7 @@ export default function LandingPage() {
           <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-8 mb-12">
             <div>
               <div className="flex items-center gap-2 mb-3">
-                <img src="/logo.svg" alt="RapportAI" className="w-6 h-6" />
+                <img src="/logo.png" alt="RapportAI" className="w-6 h-6" />
                 <span className="font-bold font-heading text-lg text-foreground">RapportAI</span>
               </div>
               <p className="text-secondary-foreground text-sm">Ton rapport académique, au format de ton école</p>

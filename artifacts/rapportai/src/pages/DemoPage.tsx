@@ -73,7 +73,7 @@ function DemoSidebar({ active, setActive, hovered, setHovered }: {
     >
       <div className="flex items-center border-b border-gray-100 flex-shrink-0"
         style={{ height: 64, paddingLeft: hovered ? 20 : 0, justifyContent: hovered ? "flex-start" : "center", transition: "padding 200ms ease" }}>
-        <img src="/logo.svg" alt="RapportAI" className="w-8 h-8 flex-shrink-0" />
+        <img src="/logo.png" alt="RapportAI" className="w-8 h-8 flex-shrink-0" />
         <span className="font-bold text-gray-900 text-base ml-3 whitespace-nowrap overflow-hidden"
           style={{ opacity: hovered ? 1 : 0, maxWidth: hovered ? 120 : 0, transition: "opacity 150ms ease, max-width 200ms ease", fontFamily: "'Plus Jakarta Sans', sans-serif" }}>
           RapportAI
