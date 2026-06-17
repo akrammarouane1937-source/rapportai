@@ -259,23 +259,10 @@ export class SDKReportAgent {
 
     // Load both files at runtime; fall back to esbuild-bundled versions (guaranteed available).
     const runtimeSystem = this.loadSkillFile("humanize-system.md");
-    // NOTE: we deliberately do NOT use humanize-skills.md / humanize-system.md as the
-    // system prompt here. Both push aggressive "burstiness" ("after 3-4 sentences add a
-    // very short/abrupt one"), which fragmented sections into telegraphic, pitch-deck
-    // prose ("Réponse affirmative.", "Seconde voie.") that reads badly to a jury — and
-    // ZeroGPT plateaus ~42% regardless. Quality of expression is the priority.
-    void runtimeSystem; // (files still loaded above; intentionally unused now)
-    const systemPrompt = `Tu es un relecteur expert qui peaufine des mémoires académiques en français (PFE, mémoire de master, rapport de stage). Ton seul objectif : un texte qui se lit comme rédigé par un excellent étudiant — fluide, naturel, de registre académique soutenu. Un JURY HUMAIN le lira ; la qualité de lecture prime sur tout le reste.
-
-Tu peux réduire discrètement les marques d'IA (vocabulaire générique, tirets cadratins, transitions mécaniques, phrases toutes de même longueur), MAIS jamais au prix de la lisibilité.
-
-INTERDICTIONS ABSOLUES :
-- Aucune phrase sans verbe conjugué. Pas de fragments du type « Réponse affirmative. », « Seconde voie. », « +221 %. », « Validation empirique complète. ».
-- Aucune question rhétorique télégraphique du type « Robustesse ? Confirmée. ».
-- Pas de style haché ou journalistique : pas d'enchaînement de phrases ultra-courtes.
-- Ne change ni le sens, ni les chiffres, ni les citations, ni la terminologie, ni les formules.
-
-Chaque phrase doit être grammaticalement complète et se lire naturellement à voix haute. La variation de longueur doit rester SUBTILE et naturelle, comme dans un bon mémoire — jamais forcée. En cas de doute, préfère toujours une phrase complète et bien construite à un effet de style.`;
+    const runtimeSkills = this.loadSkillFile("humanize-skills.md");
+    const systemContent = runtimeSystem || humanizeSystemMd;
+    const skillsContent = runtimeSkills || humanizeSkillsMd;
+    const systemPrompt = `${systemContent}\n\n---\n\n${skillsContent}`;
 
     const claudeBinary = findClaudeBinary();
     // Sonnet by default: Opus gave no ZeroGPT benefit (~42% either way) at ~5x the cost.
@@ -313,7 +300,7 @@ RÈGLES ABSOLUES :
 - Garde la même structure Markdown (titres, listes).
 - Le fichier final "${sectionId}.md" DOIT contenir la version humanisée. Ne crée aucun autre fichier. Tout ton travail passe par Read/Edit sur "${sectionId}.md".`;
 
-    logger.info({ section: sectionId, model, maxTurns, chars: before.length, mode: "quality-first" }, "humanize: starting (tool-based agent)");
+    logger.info({ section: sectionId, model, maxTurns, chars: before.length, runtimeSystemFound: !!runtimeSystem, runtimeSkillsFound: !!runtimeSkills }, "humanize: starting (tool-based agent)");
 
     this.abortController = new AbortController();
     try {
