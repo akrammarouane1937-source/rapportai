@@ -267,20 +267,30 @@ export class SDKReportAgent {
     const claudeBinary = findClaudeBinary();
     const model = process.env.HUMANIZE_MODEL || "claude-opus-4-8";
     // ~1 turn per paragraph edit + reads + audits; scale with length, capped.
-    const maxTurns = Math.min(90, Math.max(25, Math.ceil(before.length / 1200)));
+    const maxTurns = Math.min(120, Math.max(40, Math.ceil(before.length / 900)));
 
-    const task = `Ta seule mission : HUMANISER le fichier "${sectionId}.md" qui se trouve dans le répertoire de travail courant. Ce texte sera testé par ZeroGPT et doit scorer SOUS 20% IA.
+    const task = `Ta seule mission : rendre le fichier "${sectionId}.md" INDÉTECTABLE par ZeroGPT. Objectif chiffré NON négociable : score IA SOUS 20%. C'est le critère de réussite. Préserve le sens et la terminologie, mais sois AGRESSIF sur la forme : un texte trop lisse échoue.
 
-PROCÉDURE OBLIGATOIRE :
-1. Lis "${sectionId}.md" avec l'outil Read.
-2. Réécris-le paragraphe par paragraphe en appliquant TOUTES les règles du système (burstiness : alterne phrases très courtes 5-10 mots et longues ; supprime TOUS les tirets cadratins — ; varie les débuts de phrases, 40% ne commencent pas par La/Le/Les/L' ; casse les structures parallèles ; supprime le vocabulaire IA : systématiquement, cruciale, notamment, néanmoins, "il convient de", "s'inscrit dans", "joue un rôle"). Applique chaque changement DIRECTEMENT dans le fichier avec l'outil Edit, un paragraphe à la fois. N'utilise PAS Write pour tout réécrire d'un coup.
-3. Relis le fichier modifié. Demande-toi : « Qu'est-ce qui rend ce texte ENCORE manifestement généré par une IA ? » Repère les phrases de longueur uniforme, les transitions trop explicites, les tournures trop lisses. Corrige-les avec Edit.
-4. Refais cet audit une 2e fois jusqu'à ce que le texte se lise comme rédigé par un bon étudiant marocain.
+ZeroGPT mesure deux choses. La PERPLEXITÉ (texte trop prévisible) et la BURSTINESS (phrases de longueur trop uniforme). Tu dois casser les deux dans CHAQUE paragraphe.
+
+PROCÉDURE OBLIGATOIRE (utilise Read puis Edit, un paragraphe à la fois — JAMAIS Write sur tout le fichier) :
+1. Lis "${sectionId}.md".
+2. Pour CHAQUE paragraphe, applique sans exception :
+   - BURSTINESS : chaque paragraphe DOIT contenir au moins une phrase très courte (moins de 8 mots). Mélange délibérément des phrases de 5 mots et de 30 mots. C'est la règle la plus importante.
+   - Supprime TOUS les tirets cadratins (—).
+   - Varie les débuts : au moins 40% des phrases ne commencent NI par La/Le/Les/L'/Un/Une. Commence par un verbe, un nom propre, un complément, une date.
+   - Casse les listes parallèles « X, Y et Z » de même forme grammaticale.
+   - Supprime le vocabulaire IA : systématiquement, cruciale, fondamentale, notamment, davantage, néanmoins, toutefois, "il convient de", "il est important de", "s'inscrit dans", "joue un rôle", "constitue", "représente" (→ est/sont).
+   - Coupe les transitions suréxpliquées (« C'est dans ce contexte que », « ainsi », « par ailleurs »).
+   Applique chaque correction avec Edit immédiatement.
+3. AUDIT round 1 : relis tout le fichier modifié. Pour chaque paragraphe demande-toi « est-ce que les phrases ont encore des longueurs trop régulières ? reste-t-il une tournure lisse ? ». Corrige avec Edit.
+4. AUDIT round 2 : recommence l'audit. Insiste sur les paragraphes les plus longs et les plus académiques, ce sont eux que ZeroGPT détecte.
+5. AUDIT round 3 : dernière passe. Vérifie qu'il ne reste AUCUN tiret cadratin et qu'aucun paragraphe n'a 4 phrases de suite de longueur similaire.
 
 RÈGLES ABSOLUES :
 - Conserve 100% du sens, des chiffres, citations (Auteur, année), formules et acronymes. Au minimum 95% des mots de l'original.
 - Garde la même structure Markdown (titres, listes).
-- Le fichier final "${sectionId}.md" DOIT contenir la version humanisée. Ne crée aucun autre fichier. Ne réponds rien d'autre : tout ton travail passe par les outils Read/Edit sur "${sectionId}.md".`;
+- Le fichier final "${sectionId}.md" DOIT contenir la version humanisée. Ne crée aucun autre fichier. Tout ton travail passe par Read/Edit sur "${sectionId}.md".`;
 
     logger.info({ section: sectionId, model, maxTurns, chars: before.length, runtimeSystemFound: !!runtimeSystem, runtimeSkillsFound: !!runtimeSkills }, "humanize: starting (tool-based agent)");
 
@@ -304,7 +314,21 @@ RÈGLES ABSOLUES :
       logger.warn({ err, section: sectionId }, "humanize: tool-based agent failed — keeping current file");
     }
 
-    const after = readFileSync(rawPath, "utf-8").trim();
+    let after = readFileSync(rawPath, "utf-8").trim();
+
+    // Deterministic safety net: strip any em dashes the agent left behind — a hard
+    // ZeroGPT tell. Em dash with spaces → comma; without → comma too.
+    if (after.includes("—")) {
+      const stripped = after
+        .replace(/ — /g, ", ")
+        .replace(/— /g, ", ")
+        .replace(/ —/g, ",")
+        .replace(/—/g, ", ");
+      writeFileSync(rawPath, stripped, "utf-8");
+      after = stripped.trim();
+      logger.info({ section: sectionId }, "humanize: stripped residual em dashes");
+    }
+
     logger.info(
       { section: sectionId, changed: after !== before, beforeChars: before.length, afterChars: after.length },
       "humanize: complete",
