@@ -11,6 +11,7 @@ import { getMyPlan, canUseFeature, PLAN_LIMITS } from "@/lib/userPlan";
 import { getReport } from "@/lib/reportStore";
 import { useReportStore } from "@/lib/store";
 import { getApprovedFigures } from "@/lib/figureStore";
+import { REFERRALS_ENABLED } from "@/lib/featureFlags";
 
 const NAV_ITEMS = [
   { icon: Home,          label: "Accueil",            path: "/dashboard",          proFeature: "" },
@@ -19,7 +20,8 @@ const NAV_ITEMS = [
   { icon: ImageIcon,     label: "Figures",             path: "/figures",            proFeature: "" },
   { icon: BookOpen,      label: "Bibliothèque",        path: "/bibliotheque",       proFeature: "" },
   { icon: FileText,      label: "Mise en forme",       path: "/mise-en-forme",      proFeature: "" },
-  { icon: Gift,          label: "Parrainage",          path: "/referral",           proFeature: "" },
+  // Parrainage hidden until paid launch (REFERRALS_ENABLED).
+  ...(REFERRALS_ENABLED ? [{ icon: Gift, label: "Parrainage", path: "/referral", proFeature: "" }] : []),
   { icon: Settings,      label: "Paramètres",          path: "/parametres",         proFeature: "" },
 ];
 

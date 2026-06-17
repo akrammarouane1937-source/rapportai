@@ -43,6 +43,7 @@ import PricingPage from "@/pages/PricingPage";
 import NotFound from "@/pages/not-found";
 import { ErrorBoundary } from "@/components/ErrorBoundary";
 import { captureRefFromUrl } from "@/lib/referralCapture";
+import { REFERRALS_ENABLED } from "@/lib/featureFlags";
 
 // Capture ?ref= at boot, before Clerk's sign-up redirect can strip it.
 captureRefFromUrl();
@@ -343,9 +344,11 @@ function ClerkProviderWithRoutes() {
             <Route path="/mise-en-forme">
               <ProtectedRoute component={MiseEnFormePage} />
             </Route>
-            <Route path="/referral">
-              <ProtectedRoute component={ReferralPage} />
-            </Route>
+            {REFERRALS_ENABLED && (
+              <Route path="/referral">
+                <ProtectedRoute component={ReferralPage} />
+              </Route>
+            )}
             <Route path="/figures">
               <ProtectedRoute component={FiguresPage} />
             </Route>
@@ -395,7 +398,7 @@ function NoAuthApp() {
           <Route path="/bibliotheque" component={BibliothequeePage} />
           <Route path="/parametres" component={ParametresPage} />
           <Route path="/mise-en-forme" component={MiseEnFormePage} />
-          <Route path="/referral" component={ReferralPage} />
+          {REFERRALS_ENABLED && <Route path="/referral" component={ReferralPage} />}
           <Route path="/figures" component={FiguresPage} />
           <Route path="/share/:id" component={SharePage} />
           <Route path="/payment/success" component={PaymentSuccessPage} />
