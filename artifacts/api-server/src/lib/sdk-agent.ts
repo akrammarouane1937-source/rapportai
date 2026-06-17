@@ -265,7 +265,9 @@ export class SDKReportAgent {
     const systemPrompt = `${systemContent}\n\n---\n\n${skillsContent}`;
 
     const claudeBinary = findClaudeBinary();
-    const model = process.env.HUMANIZE_MODEL || "claude-opus-4-8";
+    // Sonnet by default: Opus gave no ZeroGPT benefit (~42% either way) at ~5x the cost.
+    // Override with HUMANIZE_MODEL=claude-opus-4-8 if needed.
+    const model = process.env.HUMANIZE_MODEL || "claude-sonnet-4-5";
     // ~1 turn per paragraph edit + reads + audits; scale with length, capped.
     const maxTurns = Math.min(120, Math.max(40, Math.ceil(before.length / 900)));
 
