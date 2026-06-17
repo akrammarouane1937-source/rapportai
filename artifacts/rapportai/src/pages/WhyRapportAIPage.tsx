@@ -19,9 +19,7 @@ export default function WhyRapportAIPage() {
         <div className="container mx-auto px-4 h-16 flex items-center justify-between">
           <Link href="/">
             <div className="flex items-center gap-2 cursor-pointer">
-              <div className="w-8 h-8 rounded flex items-center justify-center text-white" style={{ background: "#7c3aed" }}>
-                <Sparkles size={18} />
-              </div>
+              <img src="/logo.png" alt="RapportAI" className="w-8 h-8 object-contain" />
               <span className="font-bold text-xl tracking-tight text-gray-900">RapportAI</span>
             </div>
           </Link>
