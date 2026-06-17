@@ -6,6 +6,7 @@ import { SDKReportAgent } from "../lib/sdk-agent";
 import "../lib/humanize-util"; // kept for the /humanize route
 import { fillDocxTemplate, FILLED_DOCX_NAME } from "../lib/docx-template-fill";
 import { checkSectionAccess } from "../lib/plan-guard";
+import { recordGeneration } from "../lib/abuse-guard";
 import { logger } from "../lib/logger";
 
 const router = Router();
@@ -667,6 +668,18 @@ router.post("/agent/:step/stream", async (req: Request, res: Response) => {
           sseWrite(res, { type: "text", content: paywall.message });
           sseWrite(res, { type: "plan_limit", limit_type: paywall.limit_type, planId: paywall.planId });
           logger.info({ sessionId, section: sectionId, planId: paywall.planId, required: paywall.requiredPlan }, "section blocked by plan");
+          continue;
+        }
+
+        // Cost abuse guard — holds even during FREE_LAUNCH. Stops looping an
+        // expensive section's revisions / report-farming from burning the API budget.
+        const abuseKey = sessionId
+          ?? ((req.headers["x-forwarded-for"] as string | undefined)?.split(",")[0]?.trim())
+          ?? req.socket?.remoteAddress ?? "unknown";
+        const abuse = recordGeneration(abuseKey, sectionId);
+        if (!abuse.ok) {
+          sseWrite(res, { type: "text", content: `⚠️ ${abuse.reason}` });
+          logger.info({ sessionId, section: sectionId }, "section blocked by abuse guard");
           continue;
         }
 

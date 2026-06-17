@@ -6,6 +6,7 @@ import path from "path";
 import { findClaudeBinary } from "../lib/find-claude-binary";
 import { logRevision, SESSIONS_ROOT } from "../lib/memory";
 import { runInternalHumanize } from "../lib/humanize-util";
+import { recordGeneration } from "../lib/abuse-guard";
 
 const router = Router();
 const REVISE_ROOT = SESSIONS_ROOT.replace("rapportai-sessions", "rapportai-revisions");
@@ -37,6 +38,19 @@ router.post("/revise", async (req: Request, res: Response) => {
   res.setHeader("X-Accel-Buffering", "no");
   res.flushHeaders();
   res.socket?.setNoDelay(true);
+
+  // Cost abuse guard — caps revisions per section per day even during FREE_LAUNCH,
+  // so a single user can't loop revisions on an expensive section and burn the budget.
+  const abuseKey = sessionId
+    ?? ((req.headers["x-forwarded-for"] as string | undefined)?.split(",")[0]?.trim())
+    ?? req.socket?.remoteAddress ?? "unknown";
+  const abuse = recordGeneration(abuseKey, sectionId ?? "revision");
+  if (!abuse.ok) {
+    res.write(`data: ${JSON.stringify({ error: abuse.reason })}\n\n`);
+    res.write(`data: ${JSON.stringify({ done: true })}\n\n`);
+    res.end();
+    return;
+  }
 
   // Use the session directory if available — gives the agent access to all uploaded files,
   // the real profile.json, and all previously generated sections.
