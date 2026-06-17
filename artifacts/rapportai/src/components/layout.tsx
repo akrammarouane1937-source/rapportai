@@ -102,9 +102,7 @@ export function Layout({ children, previewPanel, stepName, stepNumber }: LayoutP
       {/* Header */}
       <header className="shrink-0 flex items-center justify-between h-12 px-5 z-10 bg-background border-b border-border">
         <Link href="/" className="flex items-center gap-2">
-          <div className="w-6 h-6 rounded-md flex items-center justify-center" style={{ background: "linear-gradient(135deg,#7c3aed,#a855f7)" }}>
-            <Sparkles className="w-3.5 h-3.5 text-white" />
-          </div>
+          <img src="/logo.png" alt="RapportAI" className="w-6 h-6 object-contain" />
           <span className="text-sm font-bold text-foreground" style={{ fontFamily: "'Plus Jakarta Sans',sans-serif", letterSpacing: "-0.01em" }}>
             RapportAI
           </span>
