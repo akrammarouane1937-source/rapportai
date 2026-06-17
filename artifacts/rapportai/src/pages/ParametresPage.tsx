@@ -10,6 +10,7 @@ import { API_BASE } from "@/lib/apiBase";
 import { useReportStore } from "@/lib/store";
 import { useOptionalUser as useUser } from "@/lib/useOptionalClerk";
 import { FeedbackCard } from "@/components/FeedbackCard";
+import { ReviewCard } from "@/components/ReviewCard";
 
 const FIELDS: { key: string; label: string; placeholder: string; section: string }[] = [
   { key: "studentName",   label: "Nom complet",              placeholder: "Ex: Youssef El Amrani",       section: "Profil étudiant" },
@@ -156,7 +157,8 @@ export default function ParametresPage() {
               </p>
             </div>
 
-            {/* Feedback */}
+            {/* Review + Feedback */}
+            <ReviewCard />
             <FeedbackCard />
 
             {/* Danger zone */}

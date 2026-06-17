@@ -15,35 +15,46 @@ const APP_URL = process.env.APP_URL ?? "https://rapportai.io";
 // Where student feedback lands. Override with ADMIN_EMAIL env var.
 const ADMIN_EMAIL = process.env.ADMIN_EMAIL ?? "akrammarouane1937@gmail.com";
 
-// ─── Feedback — student "aide-nous à améliorer RapportAI" submissions ─────────
-// Sends each submission to the admin inbox. Never throws.
+// ─── Feedback / Review — student submissions, emailed to the admin inbox ──────
+// kind="review" carries a star rating; kind="feedback" is free-text. Never throws.
 export async function sendFeedbackEmail(data: {
   message: string;
   email?: string;
   name?: string;
   page?: string;
+  kind?: "feedback" | "review";
+  rating?: number;
+  school?: string;
 }): Promise<void> {
   if (!process.env.RESEND_API_KEY) {
     logger.warn({ event: "feedback_email_skipped" }, "RESEND_API_KEY not set — skipping");
     return;
   }
   const esc = (s: string) => s.replace(/</g, "&lt;").replace(/>/g, "&gt;");
+  const isReview = data.kind === "review";
+  const stars = isReview && data.rating ? "★".repeat(Math.max(1, Math.min(5, data.rating))) : "";
+  const who = `${data.name ? esc(data.name) : "Anonyme"}${data.school ? ` · ${esc(data.school)}` : ""}`;
+  const subject = isReview
+    ? `⭐ Avis (${data.rating ?? "?"}/5) — ${data.name ? esc(data.name) : "Anonyme"}`
+    : `💬 Feedback RapportAI${data.name ? ` — ${esc(data.name)}` : ""}`;
   try {
     const resend = getResend();
     await resend.emails.send({
       from: FROM,
       to: ADMIN_EMAIL,
-      subject: `💬 Feedback RapportAI${data.name ? ` — ${data.name}` : ""}`,
+      subject,
       html: `<div style="font-family:Arial,sans-serif;max-width:600px;color:#1a1a1a;">
-        <h2 style="font-size:18px;">Nouveau feedback étudiant</h2>
+        <h2 style="font-size:18px;">${isReview ? "Nouvel avis étudiant" : "Nouveau feedback étudiant"}</h2>
+        ${stars ? `<p style="font-size:22px;color:#f59e0b;margin:0 0 8px;">${stars} <span style="color:#9ca3af;font-size:14px;">(${data.rating}/5)</span></p>` : ""}
         <p style="white-space:pre-wrap;background:#f9fafb;border-radius:8px;padding:16px;font-size:15px;line-height:1.6;">${esc(data.message)}</p>
         <p style="font-size:13px;color:#6b7280;">
-          De : ${data.name ? esc(data.name) : "Anonyme"}${data.email ? ` &lt;${esc(data.email)}&gt;` : ""}<br>
+          De : ${who}${data.email ? ` &lt;${esc(data.email)}&gt;` : ""}<br>
           Page : ${data.page ? esc(data.page) : "—"}
         </p>
+        ${isReview ? `<p style="font-size:12px;color:#9ca3af;">Pour l'afficher sur la landing, copie : { name: "${data.name ? esc(data.name) : "Anonyme"}", school: "${data.school ? esc(data.school) : ""}", rating: ${data.rating ?? 5}, text: "${esc(data.message).replace(/"/g, "'")}" }</p>` : ""}
       </div>`,
     });
-    logger.info({ event: "feedback_email_sent" });
+    logger.info({ event: isReview ? "review_email_sent" : "feedback_email_sent" });
   } catch (err) {
     logger.error({ event: "feedback_email_failed", error: String(err) });
   }

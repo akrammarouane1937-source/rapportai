@@ -7,8 +7,9 @@ const router = Router();
 // POST /api/feedback — student "aide-nous à améliorer RapportAI" submissions.
 // Emailed to the admin inbox (ADMIN_EMAIL). No auth required so anyone can send.
 router.post("/feedback", async (req: Request, res: Response): Promise<void> => {
-  const { message, email, name, page } = req.body as {
+  const { message, email, name, page, kind, rating, school } = req.body as {
     message?: string; email?: string; name?: string; page?: string;
+    kind?: "feedback" | "review"; rating?: number; school?: string;
   };
 
   const text = (message ?? "").trim();
@@ -21,6 +22,9 @@ router.post("/feedback", async (req: Request, res: Response): Promise<void> => {
       email: typeof email === "string" ? email.slice(0, 200) : undefined,
       name: typeof name === "string" ? name.slice(0, 120) : undefined,
       page: typeof page === "string" ? page.slice(0, 200) : undefined,
+      kind: kind === "review" ? "review" : "feedback",
+      rating: typeof rating === "number" ? rating : undefined,
+      school: typeof school === "string" ? school.slice(0, 120) : undefined,
     });
     res.json({ ok: true });
   } catch (err) {

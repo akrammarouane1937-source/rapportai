@@ -14,6 +14,7 @@ import { usePaywallStore } from "@/lib/paywallStore";
 import { PaywallModal } from "@/components/report/PaywallModal";
 import { UpsellModal } from "@/components/report/UpsellModal";
 import { ReferralNudgeModal } from "@/components/ReferralNudgeModal";
+import { ReviewPromptModal } from "@/components/ReviewPromptModal";
 import { REFERRALS_ENABLED } from "@/lib/featureFlags";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
@@ -543,6 +544,7 @@ export default function DashboardPage() {
         : <UpsellModal open={paywallOpen} onClose={closePaywall} variant={paywallUpsellVariant} currentPlan={paywallPlan} />
       }
       {REFERRALS_ENABLED && <ReferralNudgeModal />}
+      <ReviewPromptModal />
       <Sidebar />
       <SidebarSpacer />
 
