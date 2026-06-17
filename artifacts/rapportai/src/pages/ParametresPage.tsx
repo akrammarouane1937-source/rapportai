@@ -113,6 +113,50 @@ export default function ParametresPage() {
               </Button>
             </div>
 
+            {/* Personalized profile header — makes it feel like the student's own
+                account rather than a blank template, and nudges profile completion. */}
+            {(() => {
+              const filled = FIELDS.filter((f) => (values[f.key] ?? "").trim()).length;
+              const pct = Math.round((filled / FIELDS.length) * 100);
+              const avatarUrl = (user as { imageUrl?: string } | null)?.imageUrl;
+              const initial = (values.studentName || user?.firstName || "?").trim().charAt(0).toUpperCase();
+              return (
+                <div
+                  className="rounded-2xl p-6 mb-5 text-white"
+                  style={{ background: "linear-gradient(135deg,#7c3aed,#a855f7)", boxShadow: "0 10px 30px rgba(124,58,237,0.28)" }}
+                >
+                  <div className="flex items-center gap-4">
+                    <div className="w-14 h-14 rounded-full bg-white/20 border border-white/30 flex items-center justify-center text-xl font-bold overflow-hidden flex-shrink-0">
+                      {avatarUrl
+                        ? <img src={avatarUrl} alt="" className="w-full h-full object-cover" />
+                        : <span>{initial}</span>}
+                    </div>
+                    <div className="min-w-0">
+                      <p className="text-lg font-bold truncate" style={{ fontFamily: "'Plus Jakarta Sans', sans-serif" }}>
+                        {values.studentName || user?.fullName || "Ton profil"}
+                      </p>
+                      <p className="text-white/70 text-sm truncate">
+                        {(user as { primaryEmailAddress?: { emailAddress?: string } } | null)?.primaryEmailAddress?.emailAddress ?? ""}
+                      </p>
+                    </div>
+                  </div>
+                  <div className="mt-4">
+                    <div className="flex justify-between text-xs text-white/80 mb-1.5">
+                      <span>Profil complété</span><span className="font-semibold">{pct}%</span>
+                    </div>
+                    <div className="h-2 bg-white/20 rounded-full overflow-hidden">
+                      <div className="h-full bg-white rounded-full transition-all duration-500" style={{ width: `${pct}%` }} />
+                    </div>
+                    {pct < 100 && (
+                      <p className="text-xs text-white/75 mt-2.5">
+                        Complète ton profil pour une page de garde et un rapport parfaitement personnalisés.
+                      </p>
+                    )}
+                  </div>
+                </div>
+              );
+            })()}
+
             {Object.entries(grouped).map(([section, fields], si) => (
               <motion.div
                 key={section}
