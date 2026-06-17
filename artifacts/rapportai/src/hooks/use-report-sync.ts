@@ -1,5 +1,5 @@
 import { useEffect, useRef } from "react";
-import { useOptionalUser } from "@/lib/useOptionalClerk";
+import { useOptionalUser, useOptionalClerk } from "@/lib/useOptionalClerk";
 import { useReportStore } from "@/lib/store";
 import type { Report } from "@/lib/store";
 import { hydrateRawFromZustand } from "@/lib/reportStore";
@@ -29,10 +29,24 @@ function shouldHydrateFromServer(server: Partial<Report>, local: Report): boolea
 
 export function useReportSync() {
   const { user, isLoaded } = useOptionalUser();
+  const clerk = useOptionalClerk();
   const { report, updateReport } = useReportStore();
   const initialized = useRef(false);
   const saveTimer = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
   const lastSaved = useRef<string>("");
+
+  // Frontend (Vercel) and API (Render) are on different domains, so Clerk's session
+  // cookie does NOT reach the API — we must send the session token as a Bearer header,
+  // or /api/me/report returns 401 and reports never persist to the DB.
+  const authHeader = async (): Promise<Record<string, string>> => {
+    try {
+      const session = (clerk as { session?: { getToken: () => Promise<string | null> } }).session;
+      const token = session ? await session.getToken() : null;
+      return token ? { Authorization: `Bearer ${token}` } : {};
+    } catch {
+      return {};
+    }
+  };
 
   // On login: fetch from DB and hydrate both stores if server data is richer
   useEffect(() => {
@@ -60,7 +74,8 @@ export function useReportSync() {
       localStorage.setItem(OWNER_KEY, user.id);
     } catch { /* localStorage unavailable — skip guard */ }
 
-    fetch(`${API_BASE}/api/me/report`, { credentials: "include" })
+    authHeader()
+      .then((headers) => fetch(`${API_BASE}/api/me/report`, { credentials: "include", headers }))
       .then((r) => (r.ok ? r.json() : null))
       .then((data: { reportData: string | null } | null) => {
         if (!data?.reportData) return;
@@ -87,11 +102,12 @@ export function useReportSync() {
     if (serialized === lastSaved.current) return;
 
     clearTimeout(saveTimer.current);
-    saveTimer.current = setTimeout(() => {
+    saveTimer.current = setTimeout(async () => {
       lastSaved.current = serialized;
+      const headers = { "Content-Type": "application/json", ...(await authHeader()) };
       fetch(`${API_BASE}/api/me/report`, {
         method: "PUT",
-        headers: { "Content-Type": "application/json" },
+        headers,
         credentials: "include",
         body: JSON.stringify({ reportData: serialized }),
       }).catch(() => {});
