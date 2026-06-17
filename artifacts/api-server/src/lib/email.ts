@@ -12,6 +12,42 @@ function getResend(): Resend {
 
 const FROM = "RapportAI <no-reply@rapportai.io>";
 const APP_URL = process.env.APP_URL ?? "https://rapportai.io";
+// Where student feedback lands. Override with ADMIN_EMAIL env var.
+const ADMIN_EMAIL = process.env.ADMIN_EMAIL ?? "akrammarouane1937@gmail.com";
+
+// ─── Feedback — student "aide-nous à améliorer RapportAI" submissions ─────────
+// Sends each submission to the admin inbox. Never throws.
+export async function sendFeedbackEmail(data: {
+  message: string;
+  email?: string;
+  name?: string;
+  page?: string;
+}): Promise<void> {
+  if (!process.env.RESEND_API_KEY) {
+    logger.warn({ event: "feedback_email_skipped" }, "RESEND_API_KEY not set — skipping");
+    return;
+  }
+  const esc = (s: string) => s.replace(/</g, "&lt;").replace(/>/g, "&gt;");
+  try {
+    const resend = getResend();
+    await resend.emails.send({
+      from: FROM,
+      to: ADMIN_EMAIL,
+      subject: `💬 Feedback RapportAI${data.name ? ` — ${data.name}` : ""}`,
+      html: `<div style="font-family:Arial,sans-serif;max-width:600px;color:#1a1a1a;">
+        <h2 style="font-size:18px;">Nouveau feedback étudiant</h2>
+        <p style="white-space:pre-wrap;background:#f9fafb;border-radius:8px;padding:16px;font-size:15px;line-height:1.6;">${esc(data.message)}</p>
+        <p style="font-size:13px;color:#6b7280;">
+          De : ${data.name ? esc(data.name) : "Anonyme"}${data.email ? ` &lt;${esc(data.email)}&gt;` : ""}<br>
+          Page : ${data.page ? esc(data.page) : "—"}
+        </p>
+      </div>`,
+    });
+    logger.info({ event: "feedback_email_sent" });
+  } catch (err) {
+    logger.error({ event: "feedback_email_failed", error: String(err) });
+  }
+}
 
 // ─── Template builders ────────────────────────────────────────────────────────
 

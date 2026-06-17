@@ -19,6 +19,7 @@ import planApprovalRouter from "./plan-approval";
 import adminRouter from "./admin";
 import meRouter from "./me";
 import agentRouter from "./agent";
+import feedbackRouter from "./feedback";
 
 const router: IRouter = Router();
 
@@ -42,5 +43,6 @@ router.use(planApprovalRouter);
 router.use(adminRouter);
 router.use(meRouter);
 router.use(agentRouter);
+router.use(feedbackRouter);
 
 export default router;

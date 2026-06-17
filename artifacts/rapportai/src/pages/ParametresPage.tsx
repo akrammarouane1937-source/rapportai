@@ -9,6 +9,7 @@ import { getReport, saveReport } from "@/lib/reportStore";
 import { API_BASE } from "@/lib/apiBase";
 import { useReportStore } from "@/lib/store";
 import { useOptionalUser as useUser } from "@/lib/useOptionalClerk";
+import { FeedbackCard } from "@/components/FeedbackCard";
 
 const FIELDS: { key: string; label: string; placeholder: string; section: string }[] = [
   { key: "studentName",   label: "Nom complet",              placeholder: "Ex: Youssef El Amrani",       section: "Profil étudiant" },
@@ -154,6 +155,9 @@ export default function ParametresPage() {
                 Tes paramètres sont sauvegardés localement dans ton navigateur. Ils ne sont jamais envoyés à un serveur tiers.
               </p>
             </div>
+
+            {/* Feedback */}
+            <FeedbackCard />
 
             {/* Danger zone */}
             <div className="bg-red-50 rounded-2xl border border-red-100 p-5 flex items-center justify-between gap-4">
