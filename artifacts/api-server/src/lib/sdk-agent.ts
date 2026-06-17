@@ -359,7 +359,9 @@ RÈGLES ABSOLUES :
           "content-type": "application/json",
         },
         body: JSON.stringify({
-          model: "claude-sonnet-4-6",
+          // Opus by default — the model that reaches ~25% on ZeroGPT. Sonnet barely
+          // moved the score even after rewriting 90% of the text. Override with HUMANIZE_MODEL.
+          model: process.env.HUMANIZE_MODEL || "claude-opus-4-8",
           max_tokens: 16000,
           temperature: 1,
           system,
