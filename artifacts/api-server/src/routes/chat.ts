@@ -78,10 +78,13 @@ const SECTION_LABELS: Record<string, string> = {
   conclusion:   "Conclusion",
 };
 
+// Page de garde is built automatically at export (from the student's profile), not
+// a chat-generated section — so it's excluded from progress count and "next step".
 const SECTION_ORDER = [
-  "pageDeGarde", "dedicaces", "resumeFr", "sommaire",
+  "dedicaces", "resumeFr", "sommaire",
   "introduction", "partieI", "partieII", "conclusion",
 ];
+const SECTION_TOTAL = SECTION_ORDER.length;
 
 // ─── Tools ────────────────────────────────────────────────────────────────────
 
@@ -286,7 +289,7 @@ function buildReportStats(sections: Record<string, SectionSummary | null>): stri
   const readingMin = Math.ceil(totalWords / 250);
   lines.push(`\n---`);
   lines.push(`**Total :** ${totalWords.toLocaleString("fr-FR")} mots · ~${totalPages} pages · ${readingMin} min de lecture`);
-  lines.push(`**Progression :** ${completed.length}/8 sections (${Math.round((completed.length / 8) * 100)}%)`);
+  lines.push(`**Progression :** ${completed.length}/${SECTION_TOTAL} sections (${Math.round((completed.length / SECTION_TOTAL) * 100)}%)`);
 
   const partieIWords = sections.partieI?.wordCount ?? 0;
   const partieIIWords = sections.partieII?.wordCount ?? 0;
@@ -816,7 +819,7 @@ router.post("/chat", async (req: Request, res: Response) => {
   const nextKey = SECTION_ORDER.find((k) => (sections[k]?.wordCount ?? 0) <= 50);
 
   const sectionContext = sectionLines.length > 0
-    ? `\n\n## Aperçu des sections générées (${completedKeys.length}/8)\n\n${sectionLines.join("\n\n")}`
+    ? `\n\n## Aperçu des sections générées (${completedKeys.length}/${SECTION_TOTAL})\n\n${sectionLines.join("\n\n")}`
     : "";
 
   const summaryLines: string[] = [];
@@ -836,7 +839,7 @@ router.post("/chat", async (req: Request, res: Response) => {
 ---
 
 **Profil :** ${student} · ${ecole} · ${fil} · ${type} · "${subject}"${prob ? `\n**Problématique déclarée :** "${prob}"` : ""}
-**Progression :** ${completedKeys.length}/8 sections terminées${completedKeys.length > 0 ? ` (${completedKeys.map((k) => SECTION_LABELS[k] ?? k).join(", ")})` : ""}
+**Progression :** ${completedKeys.length}/${SECTION_TOTAL} sections terminées${completedKeys.length > 0 ? ` (${completedKeys.map((k) => SECTION_LABELS[k] ?? k).join(", ")})` : ""}
 ${nextKey ? `**Prochaine section recommandée :** ${SECTION_LABELS[nextKey] ?? nextKey}` : "**Rapport complet ✅**"}${summaryContext}${sectionContext}`;
 
   const isJury = mode === "jury";

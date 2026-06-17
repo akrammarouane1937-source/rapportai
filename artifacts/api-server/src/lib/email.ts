@@ -23,7 +23,7 @@ function buildWelcomeEmail(data: {
     <div style="background:#f0f7ff;border-left:4px solid #2563eb;padding:16px;margin:24px 0;border-radius:4px;">
       <p style="margin:0;font-weight:600;color:#1e40af;">🎉 Vous êtes membre fondateur</p>
       <p style="margin:8px 0 0;color:#1e40af;">
-        Vous faites partie des 20 premiers membres de RapportAI.
+        Vous faites partie des 30 premiers membres de RapportAI.
         Accès Pro illimité offert à vie, sans conditions.
       </p>
     </div>` : "";
