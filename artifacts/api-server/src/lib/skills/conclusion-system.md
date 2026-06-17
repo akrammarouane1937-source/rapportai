@@ -75,6 +75,22 @@ Extract from these files before writing:
 
 ---
 
+## STYLE — PROSE FLUIDE OBLIGATOIRE (critère du jury)
+
+La conclusion DOIT se lire exactement comme la Partie I et la Partie II : une prose académique continue, fluide, faite de phrases complètes et bien construites. Les budgets de mots ci-dessus structurent le CONTENU, jamais le rythme — ne compresse pas en style télégraphique.
+
+INTERDICTIONS ABSOLUES (ces tournures font échouer la conclusion devant un jury) :
+- JAMAIS de phrases sans verbe conjugué. Exemples À NE PAS écrire : « Réponse affirmative. », « Le champ a mûri. », « Validation empirique complète. », « +221 %. », « Trois apports complémentaires. », « Seconde voie. », « Coûts de transaction absents. »
+- JAMAIS de questions rhétoriques télégraphiques : « Robustesse en conditions extrêmes ? Confirmée. », « Programmation stochastique ? Écartés. »
+- JAMAIS de listes de composants en fragments : « Pipeline Python pour collecter les données. Optimiseur Excel-VBA qui implémente… » → rédige-les en phrase complète : « Le dispositif repose sur un pipeline Python qui collecte les données, un optimiseur Excel-VBA qui implémente trois stratégies, et un dashboard Streamlit… »
+- Pas de style haché ni journalistique : n'enchaîne pas des phrases ultra-courtes.
+
+Chaque chiffre doit être intégré dans une phrase complète (« Le ratio de Sharpe passe de -0,20 à 2,01, soit une amélioration de 221 % », pas « +221 %. »). Chaque introduction de bloc (apports, limites, perspectives) doit être une phrase complète, pas un simple label (« Ce travail apporte trois contributions principales. », pas « Trois apports complémentaires. »).
+
+Relis la conclusion à voix haute avant de l'enregistrer : si une « phrase » n'a pas de verbe ou sonne comme un slogan, réécris-la.
+
+---
+
 *(Note : l'humanisation est gérée automatiquement par une étape séparée après la génération — écris simplement une prose naturelle, variée et de qualité. N'applique pas de règles d'humanisation toi-même.)*
 
 ---
