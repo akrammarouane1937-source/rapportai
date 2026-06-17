@@ -253,21 +253,93 @@ function imagePlaceholderPara(alt: string): Paragraph {
 }
 
 // imageMap: pre-fetched figure images keyed by their "figures/page-N.png" path
-function markdownToParas(md: string, imageMap?: Map<string, Uint8Array>): Paragraph[] {
+// ─── Markdown table helpers ───────────────────────────────────────────────────
+// A markdown table is a row line ("| a | b |") immediately followed by a
+// separator line ("|---|:--:|"). Without this, tables leak into the .docx as raw
+// pipe text. Escaped pipes inside a cell ("\|", e.g. in the CVaR formula) are kept.
+
+function looksLikeTableRow(line: string): boolean {
+  const t = line.trim();
+  return t.startsWith("|") && t.indexOf("|", 1) > 0;
+}
+
+function isTableSeparatorLine(line: string): boolean {
+  const t = line.trim();
+  return t.includes("|") && t.includes("-") && /^\|?[\s:|-]+$/.test(t);
+}
+
+function splitTableCells(line: string): string[] {
+  let t = line.trim();
+  if (t.startsWith("|")) t = t.slice(1);
+  if (t.endsWith("|")) t = t.slice(0, -1);
+  return t.split(/(?<!\\)\|/).map((c) => c.replace(/\\\|/g, "|").trim());
+}
+
+const TBL_BORDER = { style: BorderStyle.SINGLE, size: 4, color: "999999", space: 0 };
+const TBL_BORDERS = {
+  top: TBL_BORDER, bottom: TBL_BORDER, left: TBL_BORDER, right: TBL_BORDER,
+  insideHorizontal: TBL_BORDER, insideVertical: TBL_BORDER,
+};
+
+function buildMarkdownTable(rows: string[][]): Table {
+  const colCount = Math.max(...rows.map((r) => r.length));
+  const tableRows = rows.map((cells, ri) => {
+    const padded = [...cells];
+    while (padded.length < colCount) padded.push("");
+    return new TableRow({
+      tableHeader: ri === 0,
+      children: padded.map((cell) =>
+        new TableCell({
+          borders: TBL_BORDERS,
+          margins: { top: 40, bottom: 40, left: 80, right: 80 },
+          verticalAlign: VerticalAlign.CENTER,
+          children: [new Paragraph({
+            spacing: { line: 240, lineRule: LineRuleType.AUTO, before: 20, after: 20 },
+            children: ri === 0
+              ? [new TextRun({ text: cell.replace(/\*+/g, ""), font: FONT, size: BODY_PT - 2, bold: true })]
+              : parseInlineRuns(cell),
+          })],
+        }),
+      ),
+    });
+  });
+  return new Table({
+    width: { size: 100, type: WidthType.PERCENTAGE },
+    layout: TableLayoutType.AUTOFIT,
+    rows: tableRows,
+  });
+}
+
+function markdownToParas(md: string, imageMap?: Map<string, Uint8Array>): (Paragraph | Table)[] {
   if (!md?.trim()) return [];
 
   const lines = md.split("\n");
-  const paras: Paragraph[] = [];
+  const out: (Paragraph | Table)[] = [];
   let buf = "";
 
   const flushBuf = () => {
     const trimmed = buf.trim();
-    if (trimmed) { paras.push(bodyPara(trimmed)); }
+    if (trimmed) { out.push(bodyPara(trimmed)); }
     buf = "";
   };
 
-  for (const raw of lines) {
-    const line = raw.trimEnd();
+  for (let i = 0; i < lines.length; i++) {
+    const line = lines[i].trimEnd();
+
+    // Markdown table: header row + separator row + data rows → real Word table
+    if (looksLikeTableRow(line) && i + 1 < lines.length && isTableSeparatorLine(lines[i + 1])) {
+      flushBuf();
+      const rows: string[][] = [splitTableCells(line)];
+      let j = i + 2; // skip the header line and the separator line
+      while (j < lines.length && looksLikeTableRow(lines[j])) {
+        rows.push(splitTableCells(lines[j]));
+        j++;
+      }
+      out.push(buildMarkdownTable(rows));
+      out.push(emptyLine());
+      i = j - 1; // resume after the table (loop will ++)
+      continue;
+    }
 
     // Heading detection — tolerant of a missing space after the hashes
     // (e.g. "##Titre" as well as "## Titre") so raw "#" never leaks into the doc.
@@ -276,10 +348,10 @@ function markdownToParas(md: string, imageMap?: Map<string, Uint8Array>): Paragr
       flushBuf();
       const level = headingMatch[1].length;
       const text = headingMatch[2].trim();
-      if (level === 4) paras.push(heading4(text));
-      else if (level === 3) paras.push(heading3(text));
-      else if (level === 2) paras.push(heading2(text));
-      else paras.push(heading1(text, false));
+      if (level === 4) out.push(heading4(text));
+      else if (level === 3) out.push(heading3(text));
+      else if (level === 2) out.push(heading2(text));
+      else out.push(heading1(text, false));
     } else if (line === "") {
       flushBuf();
     } else {
@@ -287,7 +359,7 @@ function markdownToParas(md: string, imageMap?: Map<string, Uint8Array>): Paragr
       const captionMatch = line.match(CAPTION_RE);
       if (captionMatch) {
         flushBuf();
-        paras.push(agentCaptionPara(captionMatch[1]));
+        out.push(agentCaptionPara(captionMatch[1]));
       // Check for markdown image reference
       } else if (IMAGE_RE.test(line)) {
         flushBuf();
@@ -296,9 +368,9 @@ function markdownToParas(md: string, imageMap?: Map<string, Uint8Array>): Paragr
         const imgPath = imgMatch?.[2] ?? "";
         const imgData = imageMap?.get(imgPath);
         if (imgData) {
-          paras.push(imageRunPara(imgData));
+          out.push(imageRunPara(imgData));
         } else {
-          paras.push(imagePlaceholderPara(altText));
+          out.push(imagePlaceholderPara(altText));
         }
       // Bullet list item (- text or * text, with optional leading spaces for nesting)
       } else if (/^(\s{0,4})[-*]\s+/.test(line)) {
@@ -306,19 +378,19 @@ function markdownToParas(md: string, imageMap?: Map<string, Uint8Array>): Paragr
         const indent = (line.match(/^(\s*)/)?.[1].length ?? 0);
         const level = Math.min(Math.floor(indent / 2), 1);
         const text = line.replace(/^\s*[-*]\s+/, "").trim();
-        if (text) paras.push(bulletListPara(text, level));
+        if (text) out.push(bulletListPara(text, level));
       // Numbered list item (1. text, 2. text, …)
       } else if (/^\s*\d+\.\s+/.test(line)) {
         flushBuf();
         const text = line.replace(/^\s*\d+\.\s+/, "").trim();
-        if (text) paras.push(numberedListPara(text));
+        if (text) out.push(numberedListPara(text));
       } else {
         buf += (buf ? " " : "") + line;
       }
     }
   }
   flushBuf();
-  return paras;
+  return out;
 }
 
 // ─── Header / Footer ─────────────────────────────────────────────────────────
@@ -505,7 +577,7 @@ function buildPageDeGarde(d: Report): (Paragraph | Table)[] {
   return elems;
 }
 
-function buildDedicaces(d: Report): Paragraph[] {
+function buildDedicaces(d: Report): (Paragraph | Table)[] {
   if (!d.dedicaces?.trim()) return [];
   return [
     heading1("Dédicaces"),
@@ -514,7 +586,7 @@ function buildDedicaces(d: Report): Paragraph[] {
   ];
 }
 
-function buildRemerciements(d: Report): Paragraph[] {
+function buildRemerciements(d: Report): (Paragraph | Table)[] {
   if (!d.remerciements?.trim()) return [];
   return [
     heading1("Remerciements"),
@@ -544,12 +616,12 @@ function stripDuplicateTitle(md: string, title: string): string {
   return md;
 }
 
-function buildResume(d: Report): Paragraph[] {
+function buildResume(d: Report): (Paragraph | Table)[] {
   const hasFr = !!d.resumeFr?.trim();
   const hasEn = !!d.abstractEn?.trim();
   if (!hasFr && !hasEn) return [];
   const mots = (d.motsCles || []).join(", ");
-  const paras: Paragraph[] = [];
+  const paras: (Paragraph | Table)[] = [];
   if (hasFr) {
     paras.push(heading1("Résumé"), emptyLine(), ...markdownToParas(stripDuplicateTitle(d.resumeFr!, "Résumé")));
     if (mots) paras.push(emptyLine(), bodyPara(`Mots-clés : ${mots}`, { indent: { firstLine: 0 } }));
@@ -610,22 +682,22 @@ function buildSommaire(d: Report): Paragraph[] {
   return sommaireLines;
 }
 
-function buildIntroduction(d: Report, imageMap?: Map<string, Uint8Array>): Paragraph[] {
+function buildIntroduction(d: Report, imageMap?: Map<string, Uint8Array>): (Paragraph | Table)[] {
   if (!d.introduction?.trim()) return [];
   return [heading1("Introduction Générale"), emptyLine(), ...markdownToParas(stripDuplicateTitle(d.introduction, "Introduction"), imageMap)];
 }
 
-function buildPartieI(d: Report, imageMap?: Map<string, Uint8Array>): Paragraph[] {
+function buildPartieI(d: Report, imageMap?: Map<string, Uint8Array>): (Paragraph | Table)[] {
   if (!d.partieI?.trim()) return [];
   return [heading1("Partie I"), emptyLine(), ...markdownToParas(stripDuplicateTitle(d.partieI, "Partie I"), imageMap)];
 }
 
-function buildPartieII(d: Report, imageMap?: Map<string, Uint8Array>): Paragraph[] {
+function buildPartieII(d: Report, imageMap?: Map<string, Uint8Array>): (Paragraph | Table)[] {
   if (!d.partieII?.trim()) return [];
   return [heading1("Partie II"), emptyLine(), ...markdownToParas(stripDuplicateTitle(d.partieII, "Partie II"), imageMap)];
 }
 
-function buildConclusion(d: Report, imageMap?: Map<string, Uint8Array>): Paragraph[] {
+function buildConclusion(d: Report, imageMap?: Map<string, Uint8Array>): (Paragraph | Table)[] {
   if (!d.conclusion?.trim()) return [];
   return [heading1("Conclusion Générale"), emptyLine(), ...markdownToParas(stripDuplicateTitle(d.conclusion, "Conclusion"), imageMap)];
 }
@@ -783,7 +855,7 @@ function stripLeadingListeHeading(md: string, label: string): string {
 }
 
 // Liste des figures — uses AI-generated content if available, otherwise builds from approved figures.
-function buildTableDesFigures(listeDesFigures?: string): Paragraph[] {
+function buildTableDesFigures(listeDesFigures?: string): (Paragraph | Table)[] {
   // AI-generated list takes priority (richer, includes chapter context)
   if (listeDesFigures?.trim()) {
     const content = stripLeadingListeHeading(listeDesFigures.trim(), "liste des figures");
@@ -820,7 +892,7 @@ function buildTableDesFigures(listeDesFigures?: string): Paragraph[] {
   return paras;
 }
 
-function buildListeDesTableaux(listeDesTableaux?: string): Paragraph[] {
+function buildListeDesTableaux(listeDesTableaux?: string): (Paragraph | Table)[] {
   if (!listeDesTableaux?.trim()) return [];
   const content = stripLeadingListeHeading(listeDesTableaux.trim(), "liste des tableaux");
   return [heading1("Liste des tableaux"), emptyLine(), ...markdownToParas(content)];
@@ -828,13 +900,13 @@ function buildListeDesTableaux(listeDesTableaux?: string): Paragraph[] {
 
 const ANNEXE_LETTERS = "ABCDEFGHIJKLMNOPQRSTUVWXYZ";
 
-function buildAnnexes(d: Report): Paragraph[] {
+function buildAnnexes(d: Report): (Paragraph | Table)[] {
   const items = d.annexeItems ?? [];
   const legacy = d.annexes?.trim();
 
   if (items.length === 0 && !legacy) return [];
 
-  const paras: Paragraph[] = [heading1("Annexes"), emptyLine()];
+  const paras: (Paragraph | Table)[] = [heading1("Annexes"), emptyLine()];
 
   if (items.length > 0) {
     items.forEach((item, i) => {
