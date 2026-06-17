@@ -331,12 +331,27 @@ function SourceCard({ source, onRemove }: { source: BibSource; onRemove: () => v
 
 // ─── Empty state ──────────────────────────────────────────────────────────────
 
+// Extract clean keywords from the report theme + problématique (drop French stop
+// words) so the Google Scholar search uses real terms, not a raw sentence dump.
+const SCHOLAR_STOP = new Set([
+  "dans","quelle","quel","quels","quelles","mesure","les","des","une","pour","par",
+  "peut","elle","est","cette","comment","pourquoi","que","qui","quoi","son","ses",
+  "leur","leurs","avec","plus","être","afin","entre","vers","face","aux","sur","sont",
+  "ont","cet","ce","la","le","du","de","et","ou","en","au","un","une","sa","ces",
+]);
+function scholarQueryFromReport(r: { problematique?: string; theme?: string; filiere?: string }): string {
+  const src = `${r.theme ?? ""} ${r.problematique ?? ""}`.toLowerCase();
+  const terms = src
+    .replace(/[?.,;:!«»"'’()]/g, " ")
+    .split(/\s+/)
+    .filter((w) => w.length > 3 && !SCHOLAR_STOP.has(w));
+  const keywords = [...new Set(terms)].slice(0, 6).join(" ");
+  return keywords || r.theme || "recherche académique Maroc";
+}
+
 function EmptyState({ onMethod }: { onMethod: (m: "pdf" | "doi" | "bib" | "scholar") => void }) {
   const report = getReport();
-  // Build a targeted Scholar query from the report context: the problématique
-  // carries the most precise keywords, then theme, then filière as fallback.
-  const scholarQuery = [report.problematique?.slice(0, 120), report.theme, report.filiere]
-    .filter(Boolean).slice(0, 2).join(" ") || "recherche académique Maroc";
+  const scholarQuery = scholarQueryFromReport(report);
 
   return (
     <div className="flex flex-col items-center justify-center h-full py-16 px-6">
@@ -377,8 +392,7 @@ function SourcesView({
   sources, onRemove, onMethod,
 }: { sources: BibSource[]; onRemove: (id: string) => void; onMethod: (m: "pdf" | "doi" | "bib") => void }) {
   const report = getReport();
-  const scholarQuery = [report.problematique?.slice(0, 120), report.theme, report.filiere]
-    .filter(Boolean).slice(0, 2).join(" ") || "recherche académique";
+  const scholarQuery = scholarQueryFromReport(report);
 
   return (
     <div className="flex h-full">
