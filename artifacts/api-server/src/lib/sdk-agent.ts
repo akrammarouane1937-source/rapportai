@@ -273,21 +273,27 @@ export class SDKReportAgent {
     // and roughly doubled humanize time on long sections (Partie II hit ~14 min / 3 rounds).
     const maxTurns = Math.min(80, Math.max(30, Math.ceil(before.length / 1400)));
 
-    const task = `Ta seule mission : rendre le fichier "${sectionId}.md" INDÉTECTABLE par ZeroGPT. Objectif chiffré NON négociable : score IA SOUS 20%. C'est le critère de réussite. Préserve le sens et la terminologie, mais sois AGRESSIF sur la forme : un texte trop lisse échoue.
+    const task = `Ta mission : réécrire le fichier "${sectionId}.md" pour qu'il se lise comme rédigé par un bon étudiant marocain — naturel, fluide et ACADÉMIQUE. Un jury (un humain) le lira : la qualité de lecture passe AVANT le score de détection. Réduis les tournures d'IA, mais sans jamais sacrifier le registre académique ni la grammaire.
 
-ZeroGPT mesure deux choses. La PERPLEXITÉ (texte trop prévisible) et la BURSTINESS (phrases de longueur trop uniforme). Tu dois casser les deux dans CHAQUE paragraphe.
+Le texte d'IA a un défaut principal : toutes les phrases ont la même longueur et le même rythme. Tu dois introduire une VARIATION NATURELLE de longueur, comme le ferait un bon rédacteur.
 
-PROCÉDURE OBLIGATOIRE (utilise Read puis Edit, un paragraphe à la fois — JAMAIS Write sur tout le fichier) :
+PROCÉDURE (utilise Read puis Edit, un paragraphe à la fois — JAMAIS Write sur tout le fichier) :
 1. Lis "${sectionId}.md".
-2. Pour CHAQUE paragraphe, applique sans exception :
-   - BURSTINESS : chaque paragraphe DOIT contenir au moins une phrase très courte (moins de 8 mots). Mélange délibérément des phrases de 5 mots et de 30 mots. C'est la règle la plus importante.
+2. Pour CHAQUE paragraphe, applique :
+   - VARIATION DE RYTHME : alterne phrases longues et phrases plus courtes de façon naturelle. Une phrase courte de temps en temps (10-15 mots) suffit à casser la monotonie. Ne force pas : reste fluide.
    - Supprime TOUS les tirets cadratins (—).
-   - Varie les débuts : au moins 40% des phrases ne commencent NI par La/Le/Les/L'/Un/Une. Commence par un verbe, un nom propre, un complément, une date.
-   - Casse les listes parallèles « X, Y et Z » de même forme grammaticale.
-   - Supprime le vocabulaire IA : systématiquement, cruciale, fondamentale, notamment, davantage, néanmoins, toutefois, "il convient de", "il est important de", "s'inscrit dans", "joue un rôle", "constitue", "représente" (→ est/sont).
+   - Varie les débuts de phrases : évite que tous les paragraphes commencent par La/Le/Les/L'.
+   - Casse les listes parallèles « X, Y et Z » de même forme grammaticale en variant la formulation.
+   - Supprime le vocabulaire d'IA : systématiquement, cruciale, fondamentale, notamment, davantage, néanmoins, toutefois, "il convient de", "il est important de", "s'inscrit dans", "joue un rôle", "constitue/représente" (→ est/sont).
    - Coupe les transitions suréxpliquées (« C'est dans ce contexte que », « ainsi », « par ailleurs »).
    Applique chaque correction avec Edit immédiatement.
-3. AUDIT (une seule passe) : relis tout le fichier modifié. Insiste sur les paragraphes les plus longs et les plus académiques, ce sont eux que ZeroGPT détecte. Pour chaque paragraphe vérifie : reste-t-il des phrases de longueur trop régulière (4 d'affilée similaires) ? une tournure lisse ? un tiret cadratin ? Corrige tout de suite avec Edit. Cette passe doit être rapide et ciblée, pas une réécriture complète.
+
+INTERDICTIONS ABSOLUES (sinon le texte paraît bâclé au jury) :
+- JAMAIS de fragments sans verbe. Chaque phrase doit avoir un sujet et un verbe conjugué. Exemples À NE PAS produire : « Réponse affirmative. », « Pipeline Python pour collecter les données. », « +221 %. », « Validation empirique complète. », « Seconde voie. ». Reformule-les en phrases complètes.
+- JAMAIS de questions rhétoriques télégraphiques du type « Robustesse en conditions extrêmes ? Confirmée. » ou « Programmation stochastique ? Écartés. ». Reformule en affirmation complète.
+- Pas de style haché ou journalistique. Le registre reste celui d'un mémoire académique.
+
+3. AUDIT (une seule passe) : relis le fichier. Vérifie qu'il ne reste AUCUN fragment sans verbe, AUCUNE question rhétorique télégraphique, AUCUN tiret cadratin, et que chaque paragraphe se lit naturellement à voix haute. Corrige avec Edit.
 
 RÈGLES ABSOLUES :
 - Conserve 100% du sens, des chiffres, citations (Auteur, année), formules et acronymes. Au minimum 95% des mots de l'original.
