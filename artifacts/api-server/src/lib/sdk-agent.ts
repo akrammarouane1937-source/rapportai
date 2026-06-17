@@ -238,9 +238,12 @@ export class SDKReportAgent {
     }
   }
 
-  // humanizeSection — chunked direct API calls, no page-count ceiling.
-  // Splits document into ~5000-word chunks at paragraph boundaries,
-  // humanizes each independently, then reassembles. Works for 10-page or 100-page docs.
+  // humanizeSection — iterative tool-based agent (same method as Claude Code and
+  // routes/humanize.ts). It reads the section file, rewrites it IN PLACE with many
+  // targeted Edits, then self-audits. Blind one-shot API rewrites only moved ZeroGPT
+  // 97%→72%; the agentic read→edit→audit loop is what reaches the low-20s.
+  // Editing in place (vs regenerating the whole file) also sidesteps output-token
+  // truncation on long sections like Partie I.
   async humanizeSection(sectionId: string): Promise<void> {
     const rawPath = path.join(this.workDir, `${sectionId}.md`);
     if (!existsSync(rawPath)) {
@@ -248,15 +251,9 @@ export class SDKReportAgent {
       return;
     }
 
-    const rawContent = readFileSync(rawPath, "utf-8").trim();
-    if (!rawContent) {
+    const before = readFileSync(rawPath, "utf-8").trim();
+    if (!before) {
       logger.warn({ section: sectionId }, "humanize: file is empty");
-      return;
-    }
-
-    const apiKey = process.env.ANTHROPIC_API_KEY;
-    if (!apiKey) {
-      logger.warn({ section: sectionId }, "humanize: ANTHROPIC_API_KEY not set — skipping");
       return;
     }
 
@@ -267,187 +264,51 @@ export class SDKReportAgent {
     const skillsContent = runtimeSkills || humanizeSkillsMd;
     const systemPrompt = `${systemContent}\n\n---\n\n${skillsContent}`;
 
-    // Audit pass: same rules, but framed as "this text was already humanized once —
-    // hunt the remaining AI tells and fix them." Mimics the iterative Claude Code loop
-    // (humanize → audit → fix) that scores ~25% on ZeroGPT, vs ~50%+ for a single pass.
-    const auditPrompt = `${systemContent}
+    const claudeBinary = findClaudeBinary();
+    const model = process.env.HUMANIZE_MODEL || "claude-opus-4-8";
+    // ~1 turn per paragraph edit + reads + audits; scale with length, capped.
+    const maxTurns = Math.min(90, Math.max(25, Math.ceil(before.length / 1200)));
 
----
+    const task = `Ta seule mission : HUMANISER le fichier "${sectionId}.md" qui se trouve dans le répertoire de travail courant. Ce texte sera testé par ZeroGPT et doit scorer SOUS 20% IA.
 
-MODE AUDIT : le texte ci-dessous a DÉJÀ été retravaillé une première fois. Il sera testé par ZeroGPT et doit scorer sous 20% IA. Ta mission : traquer ce qui le fait ENCORE détecter comme IA, puis le corriger.
-
-Cherche en priorité :
-- Phrases de longueur uniforme → casse le rythme, insère des phrases courtes (5-10 mots).
-- Tirets cadratins (—) restants → supprime-les tous.
-- Mots/tournures lisses restants : systématiquement, cruciale, fondamentale, notamment, davantage, néanmoins, toutefois, "il convient de", "c'est précisément", "s'inscrit dans", "joue un rôle".
-- Structures parallèles parfaites (X, Y et Z de même forme) → brise la symétrie.
-- Transitions suréxpliquées → coupe.
-- Débuts de paragraphes répétitifs (La/Le/Les/L') → varie au moins 40%.
+PROCÉDURE OBLIGATOIRE :
+1. Lis "${sectionId}.md" avec l'outil Read.
+2. Réécris-le paragraphe par paragraphe en appliquant TOUTES les règles du système (burstiness : alterne phrases très courtes 5-10 mots et longues ; supprime TOUS les tirets cadratins — ; varie les débuts de phrases, 40% ne commencent pas par La/Le/Les/L' ; casse les structures parallèles ; supprime le vocabulaire IA : systématiquement, cruciale, notamment, néanmoins, "il convient de", "s'inscrit dans", "joue un rôle"). Applique chaque changement DIRECTEMENT dans le fichier avec l'outil Edit, un paragraphe à la fois. N'utilise PAS Write pour tout réécrire d'un coup.
+3. Relis le fichier modifié. Demande-toi : « Qu'est-ce qui rend ce texte ENCORE manifestement généré par une IA ? » Repère les phrases de longueur uniforme, les transitions trop explicites, les tournures trop lisses. Corrige-les avec Edit.
+4. Refais cet audit une 2e fois jusqu'à ce que le texte se lise comme rédigé par un bon étudiant marocain.
 
 RÈGLES ABSOLUES :
-- Conserve TOUT le contenu : au minimum 95% des mots, même structure Markdown, formules/citations/chiffres/acronymes intacts.
-- Retourne UNIQUEMENT le texte final corrigé. Aucun commentaire, aucun audit écrit. Commence directement par le contenu.`;
+- Conserve 100% du sens, des chiffres, citations (Auteur, année), formules et acronymes. Au minimum 95% des mots de l'original.
+- Garde la même structure Markdown (titres, listes).
+- Le fichier final "${sectionId}.md" DOIT contenir la version humanisée. Ne crée aucun autre fichier. Ne réponds rien d'autre : tout ton travail passe par les outils Read/Edit sur "${sectionId}.md".`;
 
-    logger.info({ section: sectionId, runtimeSystemFound: !!runtimeSystem, runtimeSkillsFound: !!runtimeSkills }, "humanize: prompt selected");
+    logger.info({ section: sectionId, model, maxTurns, chars: before.length, runtimeSystemFound: !!runtimeSystem, runtimeSkillsFound: !!runtimeSkills }, "humanize: starting (tool-based agent)");
 
-    const CHUNK_CHARS = 30_000;
-    const chunks = this.splitIntoChunks(rawContent, CHUNK_CHARS);
-    logger.info({ section: sectionId, chunks: chunks.length, totalChars: rawContent.length }, "humanize: starting");
-
-    // Up to 3 passes per chunk: 1 humanize + 2 audit-fix passes. Stop early when a
-    // pass converges (barely changes the text) so we don't pay for no-op passes.
-    const MAX_PASSES = 3;
-    const CONVERGE_RATIO = 0.95; // if a pass keeps ≥95% of words identical, it's done
-
-    const humanizedChunks: string[] = [];
-    for (let i = 0; i < chunks.length; i++) {
-      const chunk = chunks[i];
-      let working = chunk;
-      let anySuccess = false;
-
-      for (let pass = 0; pass < MAX_PASSES; pass++) {
-        const isAudit = pass > 0;
-        const out = await this.callHumanizeAPI(
-          isAudit ? auditPrompt : systemPrompt,
-          working,
-          apiKey,
-          sectionId,
-          i,
-          pass,
-        );
-        if (!out) break; // fetch/API/empty failure — keep best so far
-
-        const ratio = this.wordSimilarity(out, working);
-        working = out;
-        anySuccess = true;
-        logger.info({ section: sectionId, chunk: i, pass, isAudit, outChars: out.length, sameRatio: Number(ratio.toFixed(3)) }, "humanize: pass done");
-
-        // First pass always counts; on audit passes, stop once converged.
-        if (isAudit && ratio >= CONVERGE_RATIO) {
-          logger.info({ section: sectionId, chunk: i, pass }, "humanize: converged — stopping early");
-          break;
-        }
-      }
-
-      if (!anySuccess) {
-        logger.warn({ section: sectionId, chunk: i }, "humanize: all passes failed — keeping raw chunk");
-      }
-      humanizedChunks.push(working);
-    }
-
-    writeFileSync(rawPath, humanizedChunks.join("\n\n"), "utf-8");
-    logger.info({ section: sectionId }, "humanize: complete");
-  }
-
-  // One humanize/audit API call. Returns trimmed text, or null on any failure
-  // (caller keeps the best text it already has).
-  private async callHumanizeAPI(
-    system: string,
-    content: string,
-    apiKey: string,
-    sectionId: string,
-    chunkIdx: number,
-    pass: number,
-  ): Promise<string | null> {
-    let response: Response;
+    this.abortController = new AbortController();
     try {
-      response = await fetch("https://api.anthropic.com/v1/messages", {
-        method: "POST",
-        headers: {
-          "anthropic-version": "2023-06-01",
-          "x-api-key": apiKey,
-          "content-type": "application/json",
+      for await (const message of query({
+        prompt: task,
+        options: {
+          abortController: this.abortController,
+          maxTurns,
+          cwd: this.workDir,
+          systemPrompt,
+          model,
+          allowedTools: ["Read", "Edit", "Write"],
+          ...(claudeBinary ? { pathToClaudeCodeExecutable: claudeBinary } : {}),
         },
-        body: JSON.stringify({
-          // Opus by default — the model that reaches ~25% on ZeroGPT. Sonnet barely
-          // moved the score even after rewriting 90% of the text. Override with HUMANIZE_MODEL.
-          model: process.env.HUMANIZE_MODEL || "claude-opus-4-8",
-          max_tokens: 16000,
-          temperature: 1,
-          system,
-          messages: [{ role: "user", content }],
-        }),
-      });
-    } catch (fetchErr) {
-      logger.warn({ err: fetchErr, section: sectionId, chunk: chunkIdx, pass }, "humanize: fetch threw");
-      return null;
-    }
-
-    if (!response.ok) {
-      const errBody = await response.text().catch(() => "");
-      logger.warn({ section: sectionId, chunk: chunkIdx, pass, status: response.status, body: errBody }, "humanize: API error");
-      return null;
-    }
-
-    const data = await response.json() as { content?: Array<{ type: string; text: string }> };
-    const text = data.content?.find((b) => b.type === "text")?.text?.trim();
-    if (!text) {
-      logger.warn({ section: sectionId, chunk: chunkIdx, pass }, "humanize: empty response");
-      return null;
-    }
-    return text;
-  }
-
-  // Fraction of positionally-identical words between two texts (0–1). Used to
-  // detect when an audit pass has converged (made almost no changes).
-  private wordSimilarity(a: string, b: string): number {
-    const wa = a.split(/\s+/).filter(Boolean);
-    const wb = b.split(/\s+/).filter(Boolean);
-    const max = Math.max(wa.length, wb.length);
-    if (max === 0) return 1;
-    const min = Math.min(wa.length, wb.length);
-    let same = 0;
-    for (let i = 0; i < min; i++) if (wa[i] === wb[i]) same++;
-    return same / max;
-  }
-
-  // Split markdown into chunks under maxChars.
-  // Splits on markdown headings first (most reliable boundary in generated docs),
-  // then on double newlines, then on single newlines — so it works regardless
-  // of whether the writer used 1 or 2 newlines between paragraphs.
-  private splitIntoChunks(text: string, maxChars: number): string[] {
-    // Split on any line that starts a new section (heading or blank line before heading)
-    const lines = text.split("\n");
-    const segments: string[] = [];
-    let current = "";
-
-    for (const line of lines) {
-      const isHeading = /^#{1,4}\s/.test(line.trim());
-      // Start a new segment at headings if current segment is already substantial
-      if (isHeading && current.length > maxChars / 4) {
-        if (current.trim()) segments.push(current.trim());
-        current = line;
-      } else {
-        current = current ? current + "\n" + line : line;
+      })) {
+        void message; // drain — humanize internals aren't streamed to the user
       }
+    } catch (err) {
+      logger.warn({ err, section: sectionId }, "humanize: tool-based agent failed — keeping current file");
     }
-    if (current.trim()) segments.push(current.trim());
 
-    // Now pack segments into chunks under maxChars
-    const chunks: string[] = [];
-    let chunk = "";
-    for (const seg of segments) {
-      if (chunk.length + seg.length + 2 > maxChars && chunk.length > 0) {
-        chunks.push(chunk.trim());
-        chunk = seg;
-      } else {
-        chunk = chunk ? chunk + "\n\n" + seg : seg;
-      }
-    }
-    if (chunk.trim()) chunks.push(chunk.trim());
-
-    // Safety: if a single segment is still over maxChars, hard-split by chars
-    const result: string[] = [];
-    for (const c of chunks) {
-      if (c.length <= maxChars) {
-        result.push(c);
-      } else {
-        for (let i = 0; i < c.length; i += maxChars) {
-          result.push(c.slice(i, i + maxChars));
-        }
-      }
-    }
-    return result;
+    const after = readFileSync(rawPath, "utf-8").trim();
+    logger.info(
+      { section: sectionId, changed: after !== before, beforeChars: before.length, afterChars: after.length },
+      "humanize: complete",
+    );
   }
 
   // stream — generic stream (used by revision + fallback), no section config
