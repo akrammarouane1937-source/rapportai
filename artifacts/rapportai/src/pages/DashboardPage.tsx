@@ -15,6 +15,7 @@ import { PaywallModal } from "@/components/report/PaywallModal";
 import { UpsellModal } from "@/components/report/UpsellModal";
 import { ReferralNudgeModal } from "@/components/ReferralNudgeModal";
 import { ReviewPromptModal } from "@/components/ReviewPromptModal";
+import { WelcomeTour, hasSeenWelcomeTour } from "@/components/WelcomeTour";
 import { REFERRALS_ENABLED } from "@/lib/featureFlags";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
@@ -130,6 +131,7 @@ export default function DashboardPage() {
   });
   const [input, setInput]       = useState("");
   const [loading, setLoading]   = useState(false);
+  const [showTour, setShowTour] = useState(() => !hasSeenWelcomeTour());
 
   useEffect(() => {
     try {
@@ -543,6 +545,7 @@ export default function DashboardPage() {
         ? <PaywallModal open={paywallOpen} onClose={closePaywall} />
         : <UpsellModal open={paywallOpen} onClose={closePaywall} variant={paywallUpsellVariant} currentPlan={paywallPlan} />
       }
+      {showTour && <WelcomeTour onClose={() => setShowTour(false)} />}
       {REFERRALS_ENABLED && <ReferralNudgeModal />}
       <ReviewPromptModal />
       <Sidebar />

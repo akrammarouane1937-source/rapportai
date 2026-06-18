@@ -30,6 +30,43 @@ import PublicNavbar from "@/components/layout/PublicNavbar";
 const LAUNCH_END   = "2026-06-24T23:59:00Z"; // <-- 7 days after launch
 const TOTAL_SLOTS  = 30;
 const LAUNCH_START = "2026-06-17T00:00:00Z"; // <-- launch day
+
+// School logos for the "Compatible avec les canevas de" marquee.
+// Drop grayscale PNG/SVG logos in public/schools/ named exactly as `logo` below.
+// Any school whose image fails to load falls back to its text name automatically.
+const SCHOOLS = [
+  { name: "EMSI",   logo: "/schools/emsi.png" },
+  { name: "ENCG",   logo: "/schools/encg.png" },
+  { name: "ENSA",   logo: "/schools/ensa.png" },
+  { name: "ENSIAS", logo: "/schools/ensias.png" },
+  { name: "ENSAM",  logo: "/schools/ensam.png" },
+  { name: "EMI",    logo: "/schools/emi.png" },
+  { name: "EHTP",   logo: "/schools/ehtp.png" },
+  { name: "INSEA",  logo: "/schools/insea.png" },
+  { name: "ISCAE",  logo: "/schools/iscae.png" },
+  { name: "HEM",    logo: "/schools/hem.png" },
+  { name: "UIR",    logo: "/schools/uir.png" },
+  { name: "UM5",    logo: "/schools/um5.png" },
+  { name: "FMPC",   logo: "/schools/fmpc.png" },
+  { name: "FST",    logo: "/schools/fst.png" },
+  { name: "FSJES",  logo: "/schools/fsjes.png" },
+  { name: "UCA",    logo: "/schools/uca.png" },
+];
+
+function SchoolLogo({ name, logo }: { name: string; logo: string }) {
+  const [failed, setFailed] = useState(false);
+  if (failed) {
+    return <span className="text-lg font-heading font-bold text-muted-foreground/45 whitespace-nowrap">{name}</span>;
+  }
+  return (
+    <img
+      src={logo}
+      alt={name}
+      onError={() => setFailed(true)}
+      className="h-10 w-auto max-w-[130px] object-contain grayscale opacity-60 hover:opacity-100 transition-opacity"
+    />
+  );
+}
 // ─────────────────────────────────────────────────────────────────────────────
 
 function useLaunchBanner() {
@@ -326,9 +363,9 @@ export default function LandingPage() {
             <div className="absolute right-0 top-0 bottom-0 w-32 bg-gradient-to-l from-white to-transparent z-10 pointer-events-none"></div>
             
             <div className="flex overflow-hidden whitespace-nowrap">
-              <div className="animate-marquee-left flex gap-8 items-center text-lg font-heading font-bold text-muted-foreground/40">
-                {Array(4).fill("EMSI · ENCG · ENSA · ENSIAS · UIR · UM5 · ISCAE · HEM · FST · FSJES · ENCGT · UCA · UIZ · USMBA · INSEA · EHTP · EMI · IIHEM · ").map((text, i) => (
-                  <span key={i}>{text}</span>
+              <div className="animate-marquee-left flex gap-12 items-center">
+                {Array(3).fill(SCHOOLS).flat().map((s, i) => (
+                  <SchoolLogo key={i} name={s.name} logo={s.logo} />
                 ))}
               </div>
             </div>
