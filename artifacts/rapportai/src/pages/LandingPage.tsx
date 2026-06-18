@@ -703,10 +703,26 @@ export default function LandingPage() {
                     whileInView={{ opacity: 1, y: 0 }}
                     viewport={{ once: true }}
                     transition={{ delay: i * 0.08 }}
-                    className="bg-white rounded-2xl p-6 flex flex-col border border-gray-200 shadow-sm"
+                    className={`relative bg-white rounded-2xl p-6 flex flex-col shadow-sm ${
+                      p.popular ? "border-2 border-purple-500 shadow-lg" : "border border-gray-200"
+                    }`}
                   >
-                    {/* Plan name — colored like Replit */}
-                    <p className="text-base font-bold text-purple-600 mb-1">{p.name}</p>
+                    {/* Top badge */}
+                    {p.popular && (
+                      <span className="absolute -top-3 left-1/2 -translate-x-1/2 bg-purple-600 text-white text-xs font-bold px-3 py-1 rounded-full shadow-md whitespace-nowrap">
+                        ⭐ Le plus populaire
+                      </span>
+                    )}
+
+                    {/* Plan name + free badge */}
+                    <div className="flex items-center gap-2 mb-1">
+                      <p className="text-base font-bold text-purple-600">{p.name}</p>
+                      {!p.price && (
+                        <span className="bg-green-100 text-green-700 text-[10px] font-bold uppercase tracking-wide px-2 py-0.5 rounded-full">
+                          Gratuit
+                        </span>
+                      )}
+                    </div>
                     <p className="text-sm text-gray-500 mb-5 leading-snug">{p.description}</p>
 
                     {/* Price */}
@@ -720,7 +736,7 @@ export default function LandingPage() {
                           {discount && (
                             <p className="text-sm text-gray-400 mb-0.5">
                               <span className="line-through">{p.anchor} MAD</span>
-                              {" "}<span className="text-purple-600 font-semibold">Save {discount}%</span>
+                              {" "}<span className="text-green-600 font-semibold">−{discount}%</span>
                             </p>
                           )}
                           <p className="text-4xl font-extrabold text-gray-900" style={{ fontFamily: "'Plus Jakarta Sans',sans-serif" }}>

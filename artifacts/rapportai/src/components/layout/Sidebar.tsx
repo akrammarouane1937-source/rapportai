@@ -169,6 +169,7 @@ export function Sidebar() {
         {/* Action buttons */}
         <div className="px-3 py-2.5 space-y-1.5 flex-shrink-0" style={{ borderBottom: "1px solid #f3f4f6" }}>
           <button
+            data-tour="start"
             onClick={() => setLocation(hasReport ? "/rapports" : "/rapport/step-1")}
             className="w-full flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs font-semibold transition-all"
             style={{
@@ -199,6 +200,7 @@ export function Sidebar() {
             return (
               <button
                 key={item.path}
+                data-tour={`nav:${item.path}`}
                 onClick={() => handleNavClick(item)}
                 className={`w-full flex items-center gap-2.5 px-2.5 py-1.5 rounded-lg text-sm font-medium transition-all text-left
                   ${active

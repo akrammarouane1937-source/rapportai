@@ -15,7 +15,7 @@ import { PaywallModal } from "@/components/report/PaywallModal";
 import { UpsellModal } from "@/components/report/UpsellModal";
 import { ReferralNudgeModal } from "@/components/ReferralNudgeModal";
 import { ReviewPromptModal } from "@/components/ReviewPromptModal";
-import { WelcomeTour, hasSeenWelcomeTour } from "@/components/WelcomeTour";
+import { GuidedTour, hasSeenGuidedTour } from "@/components/GuidedTour";
 import { REFERRALS_ENABLED } from "@/lib/featureFlags";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
@@ -131,7 +131,7 @@ export default function DashboardPage() {
   });
   const [input, setInput]       = useState("");
   const [loading, setLoading]   = useState(false);
-  const [showTour, setShowTour] = useState(() => !hasSeenWelcomeTour());
+  const [showTour, setShowTour] = useState(() => !hasSeenGuidedTour());
 
   useEffect(() => {
     try {
@@ -545,7 +545,7 @@ export default function DashboardPage() {
         ? <PaywallModal open={paywallOpen} onClose={closePaywall} />
         : <UpsellModal open={paywallOpen} onClose={closePaywall} variant={paywallUpsellVariant} currentPlan={paywallPlan} />
       }
-      {showTour && <WelcomeTour onClose={() => setShowTour(false)} />}
+      {showTour && <GuidedTour onClose={() => setShowTour(false)} />}
       {REFERRALS_ENABLED && <ReferralNudgeModal />}
       <ReviewPromptModal />
       <Sidebar />
@@ -688,6 +688,7 @@ export default function DashboardPage() {
 
             {/* Input box */}
             <div
+              data-tour="chat"
               className="flex items-end gap-3 rounded-2xl border border-gray-200 bg-white px-4 py-3 transition-all focus-within:border-purple-300 focus-within:shadow-sm"
               style={{ boxShadow: "0 2px 12px rgba(0,0,0,0.06)" }}
             >
