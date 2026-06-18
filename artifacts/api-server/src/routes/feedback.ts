@@ -1,8 +1,27 @@
 import { Router, type Request, type Response } from "express";
-import { sendFeedbackEmail } from "../lib/email";
+import { sendFeedbackEmail, sendErrorAlert } from "../lib/email";
 import { logger } from "../lib/logger";
 
 const router = Router();
+
+// POST /api/client-error — the frontend reports errors users actually see
+// (e.g. "Une erreur est survenue", connection drops) so the admin gets emailed.
+router.post("/client-error", async (req: Request, res: Response): Promise<void> => {
+  const { message, page, userAgent, sessionId } = req.body as {
+    message?: string; page?: string; userAgent?: string; sessionId?: string;
+  };
+  const text = (message ?? "").toString().slice(0, 1000).trim();
+  if (text) {
+    void sendErrorAlert({
+      context: "client",
+      message: text,
+      url: typeof page === "string" ? page.slice(0, 200) : undefined,
+      userAgent: typeof userAgent === "string" ? userAgent : undefined,
+      sessionId: typeof sessionId === "string" ? sessionId.slice(0, 80) : undefined,
+    });
+  }
+  res.json({ ok: true });
+});
 
 // POST /api/feedback — student "aide-nous à améliorer RapportAI" submissions.
 // Emailed to the admin inbox (ADMIN_EMAIL). No auth required so anyone can send.

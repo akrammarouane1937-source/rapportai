@@ -576,6 +576,19 @@ export function useStepAgent({
             }
             const errId = nextId();
             setMessages((prev) => [...prev, { id: errId, role: "agent", content: "Une erreur est survenue. Réessaie." }]);
+            // Report to the admin inbox so real-user errors are visible without watching logs.
+            try {
+              fetch(`${API_BASE}/api/client-error`, {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({
+                  message: (err as Error)?.message || "stream error",
+                  page: typeof location !== "undefined" ? location.pathname : undefined,
+                  userAgent: typeof navigator !== "undefined" ? navigator.userAgent : undefined,
+                  sessionId: (() => { try { return localStorage.getItem("rapportai_session"); } catch { return null; } })(),
+                }),
+              }).catch(() => {});
+            } catch { /* never block on reporting */ }
             throw err; // stop retrying
           },
 

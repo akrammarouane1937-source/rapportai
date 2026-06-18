@@ -7,6 +7,7 @@ import "../lib/humanize-util"; // kept for the /humanize route
 import { fillDocxTemplate, FILLED_DOCX_NAME } from "../lib/docx-template-fill";
 import { checkSectionAccess } from "../lib/plan-guard";
 import { recordAction } from "../lib/abuse-guard";
+import { sendErrorAlert } from "../lib/email";
 import { logger } from "../lib/logger";
 
 const router = Router();
@@ -744,12 +745,14 @@ router.post("/agent/:step/stream", async (req: Request, res: Response) => {
             }
           } catch (genErr) {
             logger.error({ err: genErr, section: sectionId }, "streamSection error");
+            void sendErrorAlert({ context: `generate:${sectionId}`, message: genErr instanceof Error ? genErr.message : String(genErr), sessionId, section: sectionId });
             sseWrite(res, { type: "text", content: `La génération de ${sectionId} a échoué. Réessaie.` });
             continue;
           }
         }
 
         if (!existsSync(filePath)) {
+          void sendErrorAlert({ context: `generate:${sectionId}`, message: "fichier non écrit après génération", sessionId, section: sectionId });
           sseWrite(res, { type: "text", content: `Le fichier ${sectionId}.md n'a pas été écrit. Réessaie.` });
           continue;
         }
@@ -827,6 +830,7 @@ router.post("/agent/:step/stream", async (req: Request, res: Response) => {
   } catch (err) {
     const msg = err instanceof Error ? err.message : "Erreur inconnue";
     logger.error({ err }, "agent stream error");
+    void sendErrorAlert({ context: "agent:stream", message: msg, sessionId });
     if (!res.writableEnded) {
       sseWrite(res, { type: "error", message: msg });
       sseWrite(res, { type: "done" });

@@ -15,6 +15,54 @@ const APP_URL = process.env.APP_URL ?? "https://rapportai.io";
 // Where student feedback lands. Override with ADMIN_EMAIL env var.
 const ADMIN_EMAIL = process.env.ADMIN_EMAIL ?? "akrammarouane1937@gmail.com";
 
+// ─── Error alerts — so the admin SEES real-user errors without watching logs ──
+// Throttled: max ALERT_CAP emails per rolling hour, so a crash loop can't spam.
+const ALERT_CAP = 25;
+let alertWindowStart = Date.now();
+let alertCount = 0;
+
+export async function sendErrorAlert(data: {
+  context: string;          // where it failed, e.g. "generate:conclusion" or "client"
+  message: string;          // the error text
+  sessionId?: string;
+  section?: string;
+  url?: string;
+  userAgent?: string;
+}): Promise<void> {
+  if (!process.env.RESEND_API_KEY) return;
+
+  // rolling-hour throttle
+  const now = Date.now();
+  if (now - alertWindowStart > 3_600_000) { alertWindowStart = now; alertCount = 0; }
+  if (alertCount >= ALERT_CAP) return;
+  alertCount += 1;
+
+  const esc = (s: string) => (s ?? "").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+  try {
+    const resend = getResend();
+    await resend.emails.send({
+      from: FROM,
+      to: ADMIN_EMAIL,
+      subject: `🚨 Erreur RapportAI — ${esc(data.context).slice(0, 60)}`,
+      html: `<div style="font-family:Arial,sans-serif;max-width:600px;color:#1a1a1a;">
+        <h2 style="font-size:17px;color:#b91c1c;">Un utilisateur a rencontré une erreur</h2>
+        <p style="background:#fef2f2;border-left:4px solid #dc2626;border-radius:6px;padding:14px;font-size:14px;white-space:pre-wrap;">${esc(data.message)}</p>
+        <table style="font-size:13px;color:#374151;border-collapse:collapse;">
+          <tr><td style="padding:2px 10px 2px 0;color:#9ca3af;">Contexte</td><td>${esc(data.context)}</td></tr>
+          ${data.section ? `<tr><td style="padding:2px 10px 2px 0;color:#9ca3af;">Section</td><td>${esc(data.section)}</td></tr>` : ""}
+          ${data.sessionId ? `<tr><td style="padding:2px 10px 2px 0;color:#9ca3af;">Session</td><td>${esc(data.sessionId)}</td></tr>` : ""}
+          ${data.url ? `<tr><td style="padding:2px 10px 2px 0;color:#9ca3af;">Page</td><td>${esc(data.url)}</td></tr>` : ""}
+          ${data.userAgent ? `<tr><td style="padding:2px 10px 2px 0;color:#9ca3af;">Appareil</td><td>${esc(data.userAgent).slice(0, 120)}</td></tr>` : ""}
+          <tr><td style="padding:2px 10px 2px 0;color:#9ca3af;">Heure</td><td>${new Date().toISOString()}</td></tr>
+        </table>
+      </div>`,
+    });
+    logger.info({ event: "error_alert_sent", context: data.context });
+  } catch (err) {
+    logger.error({ event: "error_alert_failed", error: String(err) });
+  }
+}
+
 // ─── Feedback / Review — student submissions, emailed to the admin inbox ──────
 // kind="review" carries a star rating; kind="feedback" is free-text. Never throws.
 export async function sendFeedbackEmail(data: {
