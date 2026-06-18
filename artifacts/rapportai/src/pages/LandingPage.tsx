@@ -42,15 +42,10 @@ const SCHOOLS = [
   { name: "ENSAM",  logo: "/schools/ensam.png" },
   { name: "EMI",    logo: "/schools/emi.png" },
   { name: "EHTP",   logo: "/schools/ehtp.png" },
-  { name: "INSEA",  logo: "/schools/insea.png" },
   { name: "ISCAE",  logo: "/schools/iscae.png" },
-  { name: "HEM",    logo: "/schools/hem.png" },
-  { name: "UIR",    logo: "/schools/uir.png" },
   { name: "UM5",    logo: "/schools/um5.png" },
-  { name: "FMPC",   logo: "/schools/fmpc.png" },
-  { name: "FST",    logo: "/schools/fst.png" },
-  { name: "FSJES",  logo: "/schools/fsjes.png" },
-  { name: "UCA",    logo: "/schools/uca.png" },
+  // Add more by dropping a PNG in public/schools/ and a line here. Any missing
+  // image falls back to the school's name automatically (see SchoolLogo).
 ];
 
 function SchoolLogo({ name, logo }: { name: string; logo: string }) {
