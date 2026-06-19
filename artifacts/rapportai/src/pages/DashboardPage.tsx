@@ -16,6 +16,7 @@ import { UpsellModal } from "@/components/report/UpsellModal";
 import { ReferralNudgeModal } from "@/components/ReferralNudgeModal";
 import { ReviewPromptModal } from "@/components/ReviewPromptModal";
 import { GuidedTour, hasSeenGuidedTour } from "@/components/GuidedTour";
+import { WelcomeTour, hasSeenWelcomeTour } from "@/components/WelcomeTour";
 import { REFERRALS_ENABLED } from "@/lib/featureFlags";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
@@ -131,7 +132,12 @@ export default function DashboardPage() {
   });
   const [input, setInput]       = useState("");
   const [loading, setLoading]   = useState(false);
-  const [showTour, setShowTour] = useState(() => !hasSeenGuidedTour());
+  // Spotlight tour highlights the sidebar, which is a hidden drawer on phones — so
+  // use the simple centered card tour on mobile, the spotlight tour on desktop.
+  const isMobileView = typeof window !== "undefined" && window.innerWidth < 768;
+  const [showTour, setShowTour] = useState(() =>
+    isMobileView ? !hasSeenWelcomeTour() : !hasSeenGuidedTour()
+  );
 
   useEffect(() => {
     try {
@@ -545,7 +551,9 @@ export default function DashboardPage() {
         ? <PaywallModal open={paywallOpen} onClose={closePaywall} />
         : <UpsellModal open={paywallOpen} onClose={closePaywall} variant={paywallUpsellVariant} currentPlan={paywallPlan} />
       }
-      {showTour && <GuidedTour onClose={() => setShowTour(false)} />}
+      {showTour && (isMobileView
+        ? <WelcomeTour onClose={() => setShowTour(false)} />
+        : <GuidedTour onClose={() => setShowTour(false)} />)}
       {REFERRALS_ENABLED && <ReferralNudgeModal />}
       <ReviewPromptModal />
       <Sidebar />
