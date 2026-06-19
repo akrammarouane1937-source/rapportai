@@ -5,6 +5,7 @@ import {
   Home, LayoutGrid, ListChecks, ImageIcon, BookOpen,
   Settings, LogOut, Search, Plus,
   FileInput, GraduationCap, BookMarked, ChevronDown, Zap, FileText, Gift,
+  Menu, X,
 } from "lucide-react";
 import { UpsellModal } from "@/components/report/UpsellModal";
 import { getMyPlan, canUseFeature, PLAN_LIMITS } from "@/lib/userPlan";
@@ -36,6 +37,10 @@ export function Sidebar() {
   const { signOut } = useClerk();
   const [upsellOpen, setUpsellOpen]   = useState(false);
   const [upsellFeature, setUpsellFeature] = useState("");
+  const [mobileOpen, setMobileOpen]   = useState(false);
+
+  // Close the mobile drawer whenever the route changes (after tapping a nav item).
+  useEffect(() => { setMobileOpen(false); }, [location]);
 
   const plan   = getMyPlan();
   const limits = PLAN_LIMITS[plan.planId];
@@ -129,8 +134,22 @@ export function Sidebar() {
 
   return (
     <>
+      {/* Mobile hamburger — opens the drawer (hidden on desktop) */}
+      <button
+        onClick={() => setMobileOpen(true)}
+        className="md:hidden fixed top-2.5 left-2.5 z-40 w-9 h-9 rounded-lg bg-white border border-gray-200 shadow-sm flex items-center justify-center text-gray-700"
+        aria-label="Menu"
+      >
+        <Menu className="w-5 h-5" />
+      </button>
+
+      {/* Backdrop behind the drawer (mobile only) */}
+      {mobileOpen && (
+        <div className="md:hidden fixed inset-0 bg-black/40 z-40" onClick={() => setMobileOpen(false)} />
+      )}
+
       <aside
-        className="fixed inset-y-0 left-0 flex flex-col z-40 overflow-hidden"
+        className={`fixed inset-y-0 left-0 flex flex-col z-50 overflow-hidden transition-transform duration-300 md:translate-x-0 ${mobileOpen ? "translate-x-0" : "-translate-x-full"}`}
         style={{ width: 200, background: "#ffffff", borderRight: "1px solid #e5e7eb" }}
       >
         {/* Logo + Search */}
@@ -147,6 +166,10 @@ export function Sidebar() {
               RapportAI
             </span>
           </div>
+          {/* Close (mobile drawer only) */}
+          <button onClick={() => setMobileOpen(false)} className="md:hidden text-gray-400 hover:text-gray-700" aria-label="Fermer">
+            <X className="w-5 h-5" />
+          </button>
         </div>
 
         {/* Workspace / User */}
@@ -357,5 +380,6 @@ export function Sidebar() {
 }
 
 export function SidebarSpacer() {
-  return <div className="w-[200px] flex-shrink-0" />;
+  // No reserved space on mobile (the sidebar is an overlay drawer there).
+  return <div className="hidden md:block w-[200px] flex-shrink-0" />;
 }

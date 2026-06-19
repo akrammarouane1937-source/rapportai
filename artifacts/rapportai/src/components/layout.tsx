@@ -94,6 +94,8 @@ function StepNav({ currentStepNumber }: { currentStepNumber?: number }) {
 export function Layout({ children, previewPanel, stepName, stepNumber }: LayoutProps) {
   useReportSync();
   const { open: paywallOpen, close: closePaywall } = usePaywallStore();
+  // On phones the chat + preview can't sit side by side — toggle between them.
+  const [mobileTab, setMobileTab] = useState<"chat" | "preview">("chat");
 
   return (
     <div className="h-screen overflow-hidden flex flex-col bg-background">
@@ -120,20 +122,44 @@ export function Layout({ children, previewPanel, stepName, stepNumber }: LayoutP
       </header>
 
       <main className="flex-1 flex overflow-hidden min-h-0">
-        {/* Left — Chat */}
+        {/* Left — Chat. On mobile it's full-width and hidden when the preview tab is active. */}
         <div
-          className={`flex flex-col bg-background ${previewPanel ? "w-full md:w-[40%] border-r border-border" : "w-full max-w-2xl mx-auto"} min-h-0`}
+          className={`flex-col bg-background min-h-0 ${
+            previewPanel
+              ? `w-full md:w-[40%] md:border-r border-border md:flex ${mobileTab === "preview" ? "hidden" : "flex"}`
+              : "w-full max-w-2xl mx-auto flex"
+          }`}
         >
           {children}
         </div>
 
-        {/* Right — Document preview */}
+        {/* Right — Document preview. On mobile shown only when the preview tab is active. */}
         {previewPanel && (
-          <div className="hidden md:flex flex-col flex-1 min-h-0" style={{ background: "#f1f5f9" }}>
+          <div
+            className={`flex-col flex-1 min-h-0 md:flex ${mobileTab === "preview" ? "flex" : "hidden"}`}
+            style={{ background: "#f1f5f9" }}
+          >
             {previewPanel}
           </div>
         )}
       </main>
+
+      {/* Mobile tab bar — switch between writing and reading the report (hidden on desktop) */}
+      {previewPanel && (
+        <div className="md:hidden flex-shrink-0 grid grid-cols-2 border-t border-border bg-white">
+          {(["chat", "preview"] as const).map((t) => (
+            <button
+              key={t}
+              onClick={() => setMobileTab(t)}
+              className={`py-2.5 text-sm font-semibold transition-colors ${
+                mobileTab === t ? "text-purple-600 border-t-2 border-purple-600 -mt-px" : "text-gray-500"
+              }`}
+            >
+              {t === "chat" ? "💬 Discuter" : "📄 Mon rapport"}
+            </button>
+          ))}
+        </div>
+      )}
     </div>
   );
 }
