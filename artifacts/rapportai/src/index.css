@@ -200,6 +200,19 @@
   }
 }
 
+/* A4 document preview: width:21cm + big cm padding overflowed the screen on phones
+   (padding added on top of the width with content-box sizing → cut off). border-box
+   makes maxWidth:100% include the padding; on mobile shrink the page padding so the
+   text fills the phone width and reflows. */
+.a4-page { box-sizing: border-box; }
+@media (max-width: 767px) {
+  .a4-page {
+    padding: 20px 16px !important;
+    min-height: auto !important;
+    box-shadow: 0 2px 10px rgba(0,0,0,0.12) !important;
+  }
+}
+
 /* Marquee animation */
 @keyframes marquee-left {
   0% { transform: translateX(0); }

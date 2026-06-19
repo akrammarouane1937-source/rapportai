@@ -264,6 +264,7 @@ export function PreviewPanel({ activeSection, content, maxStep, isGenerating }: 
         <div
           key={`${id}-placeholder`}
           data-section={id}
+          className="a4-page"
           style={{
             width: "21cm",
             maxWidth: "100%",
@@ -335,6 +336,7 @@ export function PreviewPanel({ activeSection, content, maxStep, isGenerating }: 
         <div
           key="page-de-garde"
           data-section="page-de-garde"
+          className="a4-page"
           style={{
             width: "21cm",
             maxWidth: "100%",
@@ -378,7 +380,7 @@ export function PreviewPanel({ activeSection, content, maxStep, isGenerating }: 
         <div
           key={`${id}-${pn}`}
           {...(pageIdx === 0 ? { "data-section": id } : {})}
-          className="bg-white word-preview-content relative"
+          className="bg-white word-preview-content relative a4-page"
           style={{
             width: "21cm",
             maxWidth: "100%",
@@ -440,7 +442,7 @@ export function PreviewPanel({ activeSection, content, maxStep, isGenerating }: 
     allPageCards.push(
       <div
         key="empty"
-        className="bg-white flex flex-col items-center justify-center"
+        className="bg-white flex flex-col items-center justify-center a4-page"
         style={{
           width: "21cm",
           maxWidth: "100%",
