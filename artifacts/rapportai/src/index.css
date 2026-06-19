@@ -166,9 +166,23 @@
     @apply font-sans antialiased bg-background text-foreground;
   }
 
+  /* Never allow horizontal overflow — kills the "half the page is cut off" on mobile. */
+  html, body, #root {
+    overflow-x: hidden;
+    max-width: 100%;
+  }
+
   h1, h2, h3, h4, h5, h6 {
     font-family: 'Plus Jakarta Sans', sans-serif;
   }
+}
+
+/* Mobile viewport-height fix: 100vh on phones includes the area behind the browser
+   address bar, so h-screen pages get their bottom cut off and become unscrollable.
+   Use the dynamic viewport height (dvh) where supported (all modern mobile browsers). */
+@supports (height: 100dvh) {
+  .h-screen { height: 100dvh; }
+  .min-h-screen { min-height: 100dvh; }
 }
 
 /* Marquee animation */
