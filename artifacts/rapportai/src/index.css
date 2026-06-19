@@ -185,6 +185,21 @@
   .min-h-screen { min-height: 100dvh; }
 }
 
+/* Mobile polish (mobile-app-design skill):
+   - iOS Safari ZOOMS the page when you focus an input with font-size < 16px, which
+     breaks the layout. Force ≥16px on inputs on phones to stop the auto-zoom.
+   - Give interactive controls a comfortable tap target (≥44px). */
+@media (max-width: 767px) {
+  input:not([type="checkbox"]):not([type="radio"]),
+  textarea,
+  select {
+    font-size: 16px !important;
+  }
+  button, a[role="button"], [role="tab"] {
+    touch-action: manipulation; /* removes the 300ms tap delay */
+  }
+}
+
 /* Marquee animation */
 @keyframes marquee-left {
   0% { transform: translateX(0); }

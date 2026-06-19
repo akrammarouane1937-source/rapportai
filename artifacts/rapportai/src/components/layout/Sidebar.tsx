@@ -137,7 +137,7 @@ export function Sidebar() {
       {/* Mobile hamburger — opens the drawer (hidden on desktop) */}
       <button
         onClick={() => setMobileOpen(true)}
-        className="md:hidden fixed top-2.5 left-2.5 z-40 w-9 h-9 rounded-lg bg-white border border-gray-200 shadow-sm flex items-center justify-center text-gray-700"
+        className="md:hidden fixed top-2 left-2 z-40 w-11 h-11 rounded-lg bg-white border border-gray-200 shadow-sm flex items-center justify-center text-gray-700"
         aria-label="Menu"
       >
         <Menu className="w-5 h-5" />

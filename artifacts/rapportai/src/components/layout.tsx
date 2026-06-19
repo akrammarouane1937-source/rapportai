@@ -151,7 +151,7 @@ export function Layout({ children, previewPanel, stepName, stepNumber }: LayoutP
             <button
               key={t}
               onClick={() => setMobileTab(t)}
-              className={`py-2.5 text-sm font-semibold transition-colors ${
+              className={`py-3.5 text-base font-semibold transition-colors ${
                 mobileTab === t ? "text-purple-600 border-t-2 border-purple-600 -mt-px" : "text-gray-500"
               }`}
             >
