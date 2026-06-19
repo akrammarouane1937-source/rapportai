@@ -562,7 +562,7 @@ export function PreviewPanel({ activeSection, content, maxStep, isGenerating }: 
       {/* Document scroll */}
       <div
         ref={scrollRef}
-        className="flex-1 overflow-y-auto min-h-0 py-6"
+        className="flex-1 overflow-y-auto overflow-x-hidden min-h-0 py-6"
         style={{ background: editMode ? "#f8fafc" : "#d0d0d0" }}
       >
         {editMode ? (

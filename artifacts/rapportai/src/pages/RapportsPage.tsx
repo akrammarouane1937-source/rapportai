@@ -485,7 +485,7 @@ export default function RapportsPage({ completedOnly = false }: RapportsPageProp
                         />
                       </div>
                     </div>
-                    <div className="flex items-center gap-2">
+                    <div className="flex items-center gap-2 overflow-x-auto no-scrollbar -mx-1 px-1">
                       {FILTER_TABS.map((tab) => {
                         const isActive = activeFilter === tab.id;
                         const count = tab.id === "all"
@@ -495,7 +495,7 @@ export default function RapportsPage({ completedOnly = false }: RapportsPageProp
                           <button
                             key={tab.id}
                             onClick={() => setActiveFilter(tab.id)}
-                            className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-all"
+                            className="flex-shrink-0 flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-all"
                             style={{
                               background: isActive ? (tab.id === "completed" ? "#f0fdf4" : tab.id === "in_progress" ? "#eff6ff" : tab.id === "not_started" ? "#f9fafb" : "#f5f0ff") : "#fff",
                               color: isActive ? (tab.id === "completed" ? "#15803d" : tab.id === "in_progress" ? "#1d4ed8" : tab.id === "not_started" ? "#6b7280" : "#7c3aed") : "#9ca3af",

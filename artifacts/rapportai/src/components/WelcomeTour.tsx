@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { Sparkles, MessageSquare, Eye, Download, ArrowRight, ArrowLeft, X } from "lucide-react";
+import { Sparkles, MessageSquare, Eye, Download, ArrowRight, ArrowLeft, X, Menu } from "lucide-react";
 import { useOptionalUser } from "@/lib/useOptionalClerk";
 import { getReport } from "@/lib/reportStore";
 
@@ -26,9 +26,14 @@ export function WelcomeTour({ onClose }: { onClose?: () => void }) {
       body: "On va te montrer en 30 secondes comment transformer ton sujet en un rapport complet, prêt à soumettre. C'est simple, promis.",
     },
     {
+      icon: <Menu className="w-7 h-7 text-purple-600" />,
+      title: "Le menu ☰ (en haut à gauche)",
+      body: "Important : RapportAI n'est pas qu'un chat. Tape sur les trois traits ☰ en haut à gauche pour ouvrir le menu — Mon Rapport, tes sections, Figures, Bibliothèque, Mise en forme. C'est là que tout se trouve.",
+    },
+    {
       icon: <Sparkles className="w-7 h-7 text-purple-600" />,
       title: "1. Commence ton rapport",
-      body: "Clique sur « Commencer mon rapport ». Tu donnes ton thème, ton école et ta filière — RapportAI s'occupe du reste, section par section.",
+      body: "Ouvre le menu ☰ et tape « Commencer mon rapport ». Tu donnes ton thème, ton école et ta filière — RapportAI s'occupe du reste, section par section.",
     },
     {
       icon: <MessageSquare className="w-7 h-7 text-purple-600" />,

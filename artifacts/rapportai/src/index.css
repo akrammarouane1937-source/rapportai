@@ -214,6 +214,10 @@
    (padding added on top of the width with content-box sizing → cut off). border-box
    makes maxWidth:100% include the padding; on mobile shrink the page padding so the
    text fills the phone width and reflows. */
+/* Horizontally-scrollable rows (filter chips, toolbars) without an ugly scrollbar. */
+.no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+.no-scrollbar::-webkit-scrollbar { display: none; }
+
 .a4-page { box-sizing: border-box; }
 @media (max-width: 767px) {
   .a4-page {
