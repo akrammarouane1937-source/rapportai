@@ -272,9 +272,10 @@ export class SDKReportAgent {
     // methodically (the analysis-first 37-rule pass below). Override with HUMANIZE_MODEL.
     const model = process.env.HUMANIZE_MODEL || "claude-sonnet-4-5";
     // Per-pass turn budgets. The full first pass rewrites everything; audit passes
-    // only fix what's left, so they need fewer turns.
-    const fullTurns = Math.min(130, Math.max(45, Math.ceil(before.length / 1000)));
-    const auditTurns = Math.min(80, Math.max(25, Math.ceil(before.length / 1600)));
+    // only fix what's left, so they need fewer turns. Budgets are generous because
+    // source-aware plagiarism checks (WebSearch + WebFetch) consume extra turns.
+    const fullTurns = Math.min(160, Math.max(50, Math.ceil(before.length / 900)));
+    const auditTurns = Math.min(100, Math.max(30, Math.ceil(before.length / 1400)));
 
     // Agent loop: humanize, then re-read and re-check all 37 rules + anti-plagiat,
     // fixing what remains — repeating until a pass changes almost nothing (converged =
@@ -309,6 +310,7 @@ PHASE 2 — RÉÉCRITURE paragraphe par paragraphe (Edit ; JAMAIS Write sur tout
 Réécris chaque paragraphe en corrigeant TOUTES les violations relevées en Phase 1, en appliquant en même temps :
 - ANTI-IA : varie la longueur des PHRASES COMPLÈTES (mélange phrases courtes de 8-12 mots et longues de 25-35), varie les débuts (≥40% ne commencent pas par La/Le/Les/L'), brise les structures parallèles « X, Y et Z », supprime TOUS les tirets cadratins (—), supprime le vocabulaire d'IA, coupe les transitions mécaniques.
 - ANTI-PLAGIAT : change la STRUCTURE SYNTAXIQUE de chaque phrase, alterne voix active/passive, nominalise, remplace les tournures génériques par des synonymes académiques précis, fusionne/scinde les phrases autrement. Aucune phrase ne doit rester reconnaissable telle quelle.
+- ANTI-PLAGIAT SOURCE-AWARE : pour les passages qui ressemblent à du contenu existant (définitions standard, citations d'auteurs, passages très « manuel scolaire »), utilise WebSearch pour retrouver la source réelle, puis WebFetch pour lire le passage d'origine et comparer les n-grammes (séquences de mots identiques). Réécris ENSUITE ces passages pour casser toute correspondance mot-à-mot avec la source trouvée. Ne fais ces recherches que pour les passages réellement à risque, pas pour chaque phrase (coût/temps). Les citations directes entre « » et leurs références (Auteur, année) restent INCHANGÉES.
 Applique chaque réécriture avec Edit, immédiatement.
 
 PHASE 3 — VÉRIFICATION FINALE : relis tout le fichier, reprends ta liste de Phase 1 et confirme que CHAQUE violation est corrigée. Vérifie : 0 tiret cadratin, 0 mot du vocabulaire d'IA, aucune structure parallèle parfaite, aucune phrase recopiable telle quelle, aucune phrase sans verbe conjugué (PAS de fragments « Réponse affirmative. », « +221 %. », « Seconde voie. »), aucune question rhétorique télégraphique. Corrige avec Edit ce qui reste.
@@ -325,6 +327,7 @@ RÈGLES ABSOLUES :
 1. Lis "${sectionId}.md" avec Read.
 2. Parcours les 37 règles UNE PAR UNE (R1, R3, R4, R7, R8, R9, R10, R12, R13, R14, R23, R26, R27, R28, R30, R31, R32, R33, R35, R36…) + les règles anti-plagiat. Pour CHAQUE règle, scanne tout le texte et repère ce qui la viole ENCORE : phrases de longueur uniforme (4+ longues d'affilée), tirets cadratins (—), vocabulaire d'IA, structures parallèles parfaites, débuts de paragraphes répétitifs (La/Le/Les), phrases recopiables telles quelles, fragments sans verbe.
 3. Corrige CHAQUE violation restante avec Edit. Si une règle est déjà respectée partout, passe à la suivante sans rien changer.
+4. ANTI-PLAGIAT : s'il reste un passage qui ressemble à une source existante (définition standard, formulation « manuel »), utilise WebSearch puis WebFetch pour retrouver la source et vérifier les correspondances mot-à-mot, puis réécris pour les casser. Uniquement pour les passages à risque, pas chaque phrase.
 
 Conserve 100% du sens, des chiffres, des citations « », des noms propres et acronymes. Ne touche pas à ce qui est déjà conforme. Tout passe par Read/Edit sur "${sectionId}.md".`;
 
@@ -344,7 +347,7 @@ Conserve 100% du sens, des chiffres, des citations « », des noms propres et ac
             cwd: this.workDir,
             systemPrompt,
             model,
-            allowedTools: ["Read", "Edit", "Write"],
+            allowedTools: ["Read", "Edit", "Write", "WebSearch", "WebFetch"],
             ...(claudeBinary ? { pathToClaudeCodeExecutable: claudeBinary } : {}),
           },
         })) {
