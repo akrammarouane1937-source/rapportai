@@ -11,7 +11,7 @@ const router: IRouter = Router();
 
 // Bump this every meaningful deploy. Hit /api/diag in a browser to confirm the
 // running build is the latest one (no need to generate anything).
-const BUILD_MARKER = "humanize-thorough 2026-06-20";
+const BUILD_MARKER = "humanize-analysis-first 2026-06-20";
 
 // Resolve a skills file the same way the humanizer does, so /diag reveals whether
 // the humanizer will actually find its rules at runtime (the cause of un-humanized output).

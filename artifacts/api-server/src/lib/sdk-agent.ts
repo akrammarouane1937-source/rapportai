@@ -267,9 +267,10 @@ export class SDKReportAgent {
     const systemPrompt = `${systemContent}\n\n---\n\n${skillsContent}${plagiatSkills ? `\n\n---\n\n${plagiatSkills}` : ""}`;
 
     const claudeBinary = findClaudeBinary();
-    // Sonnet by default: Opus gave no ZeroGPT benefit (~42% either way) at ~5x the cost.
-    // Override with HUMANIZE_MODEL=claude-opus-4-8 if needed.
-    const model = process.env.HUMANIZE_MODEL || "claude-sonnet-4-5";
+    // Opus by default — the user hit 4.1% on ZeroGPT with Opus + the analysis-first
+    // 37-rule pass (Claude Code), vs ~40% on Sonnet. Detection quality is the core
+    // value prop. Override with HUMANIZE_MODEL=claude-sonnet-4-5 to cut cost.
+    const model = process.env.HUMANIZE_MODEL || "claude-opus-4-8";
     // ~1 turn per paragraph edit + read + a single audit; scale with length, capped.
     // 1 audit round (not 3): extra rounds didn't improve the ZeroGPT score (~42% plateau)
     // and roughly doubled humanize time on long sections (Partie II hit ~14 min / 3 rounds).
@@ -279,21 +280,19 @@ export class SDKReportAgent {
 
 ⚠️ C'est une réécriture COMPLÈTE et MÉTHODIQUE, pas une retouche légère. Tes instructions système contiennent les 37 règles d'humanisation + les techniques anti-plagiat. Tu DOIS les appliquer TOUTES, systématiquement. Ne te contente pas de quelques corrections : si un paragraphe ressemble encore à du texte d'IA ou à une formulation trouvable en ligne, il n'est pas terminé.
 
-PHASE 1 — RÉÉCRITURE paragraphe par paragraphe (Read puis Edit ; JAMAIS Write sur tout le fichier) :
-Pour CHAQUE paragraphe, réécris-le complètement en appliquant EN MÊME TEMPS :
-- ANTI-IA (toutes les règles du skill) : varie la longueur des PHRASES COMPLÈTES (mélange phrases courtes de 8-12 mots et longues de 25-35), varie les débuts (≥40% ne commencent pas par La/Le/Les/L'), brise les structures parallèles « X, Y et Z », supprime TOUS les tirets cadratins (—), supprime le vocabulaire d'IA (systématiquement, cruciale, fondamentale, notamment, davantage, néanmoins, toutefois, « il convient de », « il est important de », « s'inscrit dans », « joue un rôle », constitue/représente → est/sont), coupe les transitions mécaniques.
-- ANTI-PLAGIAT (techniques du skill) : change la STRUCTURE SYNTAXIQUE de chaque phrase (≠ construction de l'original), alterne voix active/passive, nominalise, remplace les tournures génériques par des synonymes académiques précis, fusionne ou scinde les phrases autrement. Aucune phrase ne doit rester reconnaissable telle quelle.
+PHASE 1 — ANALYSE COMPLÈTE AVANT DE RÉÉCRIRE (l'étape qui fait toute la différence) :
+Lis "${sectionId}.md" avec Read. Puis, AVANT de modifier quoi que ce soit, fais une analyse méthodique RÈGLE PAR RÈGLE, exactement comme un correcteur expert. Tes instructions système numérotent les règles (R1, R3, R4, R7, R8, R9, R10, R12, R13, R14, R23, R26, R27, R28, R30, R31, R32, R33, R35, R36…). Parcours-les UNE PAR UNE, et pour CHAQUE règle, repère dans le texte TOUS les passages qui la violent et cite-les. Termine par une checklist BURSTINESS (quelles phrases sont trop longues / de longueur identique, quels paragraphes commencent tous par La/Le/Les). Cette analyse exhaustive est ta feuille de route — sans elle, tu rates des violations et le texte reste détectable.
+
+Exemple du format d'analyse attendu (comme un vrai correcteur) :
+« R1 : "constitue un élément clé", "constitue une démarche rigoureuse"… | R3 : "permettant de quantifier", "facilitant l'identification" (faux -ant) | R4 : "vision complète et nuancée" | R10/R32 : trois fonctions en triptyque parfait, quatre évolutions parallèles | R14 : tirets rhétoriques | R30 : triple colon-chain | … | Burstiness : toutes les phrases longues et de même longueur ; 6 paragraphes ouvrant sur La/Le. »
+
+PHASE 2 — RÉÉCRITURE paragraphe par paragraphe (Edit ; JAMAIS Write sur tout le fichier) :
+Réécris chaque paragraphe en corrigeant TOUTES les violations relevées en Phase 1, en appliquant en même temps :
+- ANTI-IA : varie la longueur des PHRASES COMPLÈTES (mélange phrases courtes de 8-12 mots et longues de 25-35), varie les débuts (≥40% ne commencent pas par La/Le/Les/L'), brise les structures parallèles « X, Y et Z », supprime TOUS les tirets cadratins (—), supprime le vocabulaire d'IA, coupe les transitions mécaniques.
+- ANTI-PLAGIAT : change la STRUCTURE SYNTAXIQUE de chaque phrase, alterne voix active/passive, nominalise, remplace les tournures génériques par des synonymes académiques précis, fusionne/scinde les phrases autrement. Aucune phrase ne doit rester reconnaissable telle quelle.
 Applique chaque réécriture avec Edit, immédiatement.
 
-PHASE 2 — CHECKLIST DES RÈGLES (c'est l'étape que la plupart oublient — ne la saute JAMAIS) :
-Relis tout le fichier et parcours la liste des règles de tes instructions (humanisation + anti-plagiat) UNE PAR UNE. Pour chaque règle, scanne le texte ENTIER et corrige chaque violation restante avec Edit. Vérifie au minimum :
-- 0 tiret cadratin restant.
-- 0 mot du vocabulaire d'IA restant.
-- Aucun paragraphe avec 4+ phrases de longueur similaire d'affilée → casse le rythme.
-- Aucune structure parallèle parfaite restante.
-- Aucune phrase qui pourrait se retrouver telle quelle dans une autre source → reformule.
-
-PHASE 3 — VÉRIFICATION FINALE : aucune phrase sans verbe conjugué (PAS de fragments comme « Réponse affirmative. », « +221 %. », « Seconde voie. »), aucune question rhétorique télégraphique (« Robustesse ? Confirmée. »), le texte se lit naturellement à voix haute, registre académique préservé.
+PHASE 3 — VÉRIFICATION FINALE : relis tout le fichier, reprends ta liste de Phase 1 et confirme que CHAQUE violation est corrigée. Vérifie : 0 tiret cadratin, 0 mot du vocabulaire d'IA, aucune structure parallèle parfaite, aucune phrase recopiable telle quelle, aucune phrase sans verbe conjugué (PAS de fragments « Réponse affirmative. », « +221 %. », « Seconde voie. »), aucune question rhétorique télégraphique. Corrige avec Edit ce qui reste.
 
 RÈGLES ABSOLUES :
 - Conserve 100% du sens, des chiffres, des citations directes entre guillemets « » (identiques à la source — NE les paraphrase pas), des noms propres, formules et acronymes. Au minimum 95% des mots.
