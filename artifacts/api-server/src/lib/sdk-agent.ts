@@ -53,6 +53,24 @@ const SECTION_IDS = [
 
 // ─── SDKReportAgent ───────────────────────────────────────────────────────────
 
+// Split markdown into chunks of at most ~maxChars, breaking on headings so each chunk
+// is a coherent unit. Used to humanize long sections (Partie I/II) piece by piece.
+function splitForHumanize(text: string, maxChars: number): string[] {
+  const parts = text.split(/(?=\n#{1,3} )/); // split right before each heading
+  const chunks: string[] = [];
+  let buf = "";
+  for (const part of parts) {
+    if (buf && buf.length + part.length > maxChars) {
+      chunks.push(buf.trim());
+      buf = part;
+    } else {
+      buf += part;
+    }
+  }
+  if (buf.trim()) chunks.push(buf.trim());
+  return chunks.length ? chunks : [text];
+}
+
 export class SDKReportAgent {
   readonly id: string;
   readonly profile: ReportProfile;
@@ -255,6 +273,43 @@ export class SDKReportAgent {
     const before = readFileSync(rawPath, "utf-8").trim();
     if (!before) {
       logger.warn({ section: sectionId }, "humanize: file is empty");
+      return;
+    }
+
+    // Long sections (Partie I/II, 80K+ chars) CANNOT be humanized as one unit — the
+    // agent times out before finishing even one pass (an 81K-char Partie I produced
+    // ZERO changes). Split by headings into intro-sized chunks and humanize each as its
+    // own mini-section — the recursive call reuses the entire loop below — then
+    // reassemble. The ".__part" guard stops a chunk from re-chunking (no infinite loop).
+    const CHUNK_THRESHOLD = 12000;
+    if (before.length > CHUNK_THRESHOLD && !sectionId.includes(".__part")) {
+      const chunks = splitForHumanize(before, 10000);
+      logger.info({ section: sectionId, chars: before.length, chunks: chunks.length }, "humanize: chunking long section");
+      const out: string[] = [];
+      const sectionStart = Date.now();
+      const SECTION_DEADLINE_MS = 18 * 60 * 1000; // overall budget for the whole section
+      for (let i = 0; i < chunks.length; i++) {
+        const partId = `${sectionId}.__part${i}`;
+        const partPath = path.join(this.workDir, `${partId}.md`);
+        if (Date.now() - sectionStart > SECTION_DEADLINE_MS) {
+          logger.warn({ section: sectionId, chunk: i + 1, of: chunks.length }, "humanize: section deadline — regex-only for remaining chunks");
+          out.push(regexHumanizeFR(chunks[i]).trim());
+          continue;
+        }
+        writeFileSync(partPath, chunks[i], "utf-8");
+        try {
+          await this.humanizeSection(partId);
+          out.push(readFileSync(partPath, "utf-8").trim());
+        } catch (err) {
+          logger.warn({ err, section: sectionId, chunk: i + 1 }, "humanize: chunk failed — regex-only fallback");
+          out.push(regexHumanizeFR(chunks[i]).trim());
+        } finally {
+          try { rmSync(partPath); } catch { /* ignore */ }
+        }
+      }
+      const reassembled = out.join("\n\n").trim();
+      writeFileSync(rawPath, reassembled, "utf-8");
+      logger.info({ section: sectionId, chunks: chunks.length, beforeChars: before.length, afterChars: reassembled.length }, "humanize: complete (chunked)");
       return;
     }
 
