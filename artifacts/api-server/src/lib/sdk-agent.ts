@@ -9,6 +9,7 @@ import { getSectionConfig } from "./agents/sectionConfigs";
 import { logger } from "./logger";
 import humanizeSkillsMd from "./skills/humanize-skills.md";
 import humanizeSystemMd from "./skills/humanize-system.md";
+import { regexHumanizeFR } from "./regex-humanize-fr";
 
 // Per-user working directory — each session gets isolated storage.
 // Override with SESSIONS_DIR env var so Railway can mount a persistent volume.
@@ -372,19 +373,13 @@ Conserve 100% du sens, des chiffres, des citations « », des noms propres et ac
       }
       clearTimeout(killer);
 
-      let after = readFileSync(rawPath, "utf-8").trim();
+      const rawAfter = readFileSync(rawPath, "utf-8").trim();
 
-      // Deterministic safety net each pass: strip any em dashes the agent left behind
-      // (a hard ZeroGPT tell). Em dash with spaces → comma; without → comma too.
-      if (after.includes("—")) {
-        after = after
-          .replace(/ — /g, ", ")
-          .replace(/— /g, ", ")
-          .replace(/ —/g, ",")
-          .replace(/—/g, ", ")
-          .trim();
-        writeFileSync(rawPath, after, "utf-8");
-      }
+      // Deterministic regex pass each pass: strip the mechanical AI tells (em-dashes,
+      // AI vocab, over-explained transitions, signposting, authority tropes) the agent
+      // may have left behind. Guaranteed, free, <1ms — the reliable layer the LLM isn't.
+      const after = regexHumanizeFR(rawAfter).trim();
+      if (after !== rawAfter) writeFileSync(rawPath, after, "utf-8");
 
       const sim = wordSim(after, working);
       passesRun = pass + 1;

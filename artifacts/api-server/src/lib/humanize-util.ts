@@ -4,6 +4,7 @@ import path from "path";
 import { logger } from "./logger";
 import humanizeSkillsMd from "./skills/humanize-skills.md";
 import humanizeSystemMd from "./skills/humanize-system.md";
+import { regexHumanizeFR } from "./regex-humanize-fr";
 
 const client = new Anthropic();
 
@@ -169,17 +170,13 @@ async function humanizeChunk(chunk: string, sectionType: string): Promise<string
 }
 
 // ─── Post-processing — applied after LLM rewrite, guaranteed ─────────────────
-// The LLM sometimes keeps em dashes in complex parenthetical clauses even when
-// told not to. This removes them deterministically so the rule is never broken.
+// Deterministic regex pass that strips the mechanical AI tells (em-dashes, AI vocab,
+// over-explained transitions, signposting, authority tropes) the direct-API LLM keeps
+// leaving in. This is the bulk of the ZeroGPT win on this pipeline — it runs every
+// time regardless of how thorough the LLM pass was. <1ms, no cost, no timeout risk.
 
 function postProcess(text: string): string {
-  // Em dash with spaces → comma (appositive aside)
-  // Em dash without spaces → comma too
-  return text
-    .replace(/ — /g, ", ")
-    .replace(/— /g, ", ")
-    .replace(/ —/g, ",")
-    .replace(/—/g, ", ");
+  return regexHumanizeFR(text);
 }
 
 // ─── Public API ───────────────────────────────────────────────────────────────
