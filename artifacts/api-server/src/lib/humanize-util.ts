@@ -117,9 +117,9 @@ async function humanizeCall(content: string, system: string, sectionType: string
       // Sonnet, not Haiku: Haiku over-rewrites and mangles domain terms
       // (IA → "agent informatisé", mots-clés → "Vocables-clés"). Sonnet follows
       // the "preserve terminology" rules and keeps the text natural.
-      // Opus by default — same as the generation humanizer, for consistent quality on
-      // revisions too. Override with HUMANIZE_MODEL=claude-sonnet-4-5 to cut cost.
-      model: process.env.HUMANIZE_MODEL || "claude-opus-4-8",
+      // Sonnet by default — same as the generation humanizer. The model isn't the lever;
+      // applying all the rules methodically is. Override with HUMANIZE_MODEL.
+      model: process.env.HUMANIZE_MODEL || "claude-sonnet-4-5",
       max_tokens: 8192,
       system,
       messages: [

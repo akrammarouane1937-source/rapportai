@@ -267,10 +267,10 @@ export class SDKReportAgent {
     const systemPrompt = `${systemContent}\n\n---\n\n${skillsContent}${plagiatSkills ? `\n\n---\n\n${plagiatSkills}` : ""}`;
 
     const claudeBinary = findClaudeBinary();
-    // Opus by default — the user hit 4.1% on ZeroGPT with Opus + the analysis-first
-    // 37-rule pass (Claude Code), vs ~40% on Sonnet. Detection quality is the core
-    // value prop. Override with HUMANIZE_MODEL=claude-sonnet-4-5 to cut cost.
-    const model = process.env.HUMANIZE_MODEL || "claude-opus-4-8";
+    // Sonnet by default — the user reaches 4.1% on ZeroGPT with Sonnet in Claude Code.
+    // The model was never the issue: what matters is the agent applying ALL the rules
+    // methodically (the analysis-first 37-rule pass below). Override with HUMANIZE_MODEL.
+    const model = process.env.HUMANIZE_MODEL || "claude-sonnet-4-5";
     // ~1 turn per paragraph edit + read + a single audit; scale with length, capped.
     // 1 audit round (not 3): extra rounds didn't improve the ZeroGPT score (~42% plateau)
     // and roughly doubled humanize time on long sections (Partie II hit ~14 min / 3 rounds).
