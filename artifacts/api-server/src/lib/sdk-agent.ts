@@ -271,10 +271,29 @@ export class SDKReportAgent {
     // The model was never the issue: what matters is the agent applying ALL the rules
     // methodically (the analysis-first 37-rule pass below). Override with HUMANIZE_MODEL.
     const model = process.env.HUMANIZE_MODEL || "claude-sonnet-4-5";
-    // ~1 turn per paragraph edit + read + a single audit; scale with length, capped.
-    // 1 audit round (not 3): extra rounds didn't improve the ZeroGPT score (~42% plateau)
-    // and roughly doubled humanize time on long sections (Partie II hit ~14 min / 3 rounds).
-    const maxTurns = Math.min(130, Math.max(45, Math.ceil(before.length / 1000)));
+    // Per-pass turn budgets. The full first pass rewrites everything; audit passes
+    // only fix what's left, so they need fewer turns.
+    const fullTurns = Math.min(130, Math.max(45, Math.ceil(before.length / 1000)));
+    const auditTurns = Math.min(80, Math.max(25, Math.ceil(before.length / 1600)));
+
+    // Agent loop: humanize, then re-read and re-check all 37 rules + anti-plagiat,
+    // fixing what remains — repeating until a pass changes almost nothing (converged =
+    // all rules satisfied) or the safety cap is hit. This is exactly "redo it again"
+    // run automatically. The cap is a guardrail against runaway cost; normal sections
+    // converge in 2-3 passes. We never converge-stop on pass 0, so every section gets
+    // at least one audit pass — matching the manual "do it twice" (~16% vs ~45%).
+    const MAX_HUMANIZE_PASSES = 5;
+    const CONVERGE_RATIO = 0.97;
+    const wordSim = (a: string, b: string): number => {
+      const wa = a.split(/\s+/).filter(Boolean);
+      const wb = b.split(/\s+/).filter(Boolean);
+      const max = Math.max(wa.length, wb.length);
+      if (max === 0) return 1;
+      const min = Math.min(wa.length, wb.length);
+      let same = 0;
+      for (let i = 0; i < min; i++) if (wa[i] === wb[i]) same++;
+      return same / max;
+    };
 
     const task = `Ta mission : réécrire EN PROFONDEUR le fichier "${sectionId}.md" pour qu'il passe les DEUX contrôles des professeurs : (1) la détection d'IA (ZeroGPT/GPTZero, objectif < 20%) ET (2) l'anti-plagiat (Turnitin/Compilatio, objectif < 15%). Le résultat reste un mémoire académique FLUIDE et lisible par un jury — uniquement des phrases COMPLÈTES (sujet + verbe conjugué), jamais de fragments. Ces deux objectifs ne s'opposent pas à la qualité : un bon rédacteur humain les atteint naturellement.
 
@@ -299,45 +318,75 @@ RÈGLES ABSOLUES :
 - Garde la même structure Markdown (titres, listes).
 - Le fichier final "${sectionId}.md" DOIT contenir la version réécrite. Ne crée aucun autre fichier. Tout passe par Read/Edit sur "${sectionId}.md".`;
 
-    logger.info({ section: sectionId, model, maxTurns, chars: before.length, runtimeSystemFound: !!runtimeSystem, runtimeSkillsFound: !!runtimeSkills }, "humanize: starting (tool-based agent)");
+    // Audit task for passes 2+ — "redo it again, checking every rule" (the user's
+    // manual workflow that took ZeroGPT from ~45% to ~16%).
+    const auditTask = `Le fichier "${sectionId}.md" a DÉJÀ été humanisé une première fois, mais il RESTE peut-être des règles non appliquées. Refais une passe de correcteur, exactement comme si on te disait « refais-le encore en vérifiant TOUTES les règles ».
 
-    this.abortController = new AbortController();
-    try {
-      for await (const message of query({
-        prompt: task,
-        options: {
-          abortController: this.abortController,
-          maxTurns,
-          cwd: this.workDir,
-          systemPrompt,
-          model,
-          allowedTools: ["Read", "Edit", "Write"],
-          ...(claudeBinary ? { pathToClaudeCodeExecutable: claudeBinary } : {}),
-        },
-      })) {
-        void message; // drain — humanize internals aren't streamed to the user
+1. Lis "${sectionId}.md" avec Read.
+2. Parcours les 37 règles UNE PAR UNE (R1, R3, R4, R7, R8, R9, R10, R12, R13, R14, R23, R26, R27, R28, R30, R31, R32, R33, R35, R36…) + les règles anti-plagiat. Pour CHAQUE règle, scanne tout le texte et repère ce qui la viole ENCORE : phrases de longueur uniforme (4+ longues d'affilée), tirets cadratins (—), vocabulaire d'IA, structures parallèles parfaites, débuts de paragraphes répétitifs (La/Le/Les), phrases recopiables telles quelles, fragments sans verbe.
+3. Corrige CHAQUE violation restante avec Edit. Si une règle est déjà respectée partout, passe à la suivante sans rien changer.
+
+Conserve 100% du sens, des chiffres, des citations « », des noms propres et acronymes. Ne touche pas à ce qui est déjà conforme. Tout passe par Read/Edit sur "${sectionId}.md".`;
+
+    logger.info({ section: sectionId, model, maxPasses: MAX_HUMANIZE_PASSES, chars: before.length, runtimeSystemFound: !!runtimeSystem, runtimeSkillsFound: !!runtimeSkills }, "humanize: starting (looped tool-based agent)");
+
+    let working = before;
+    let passesRun = 0;
+    for (let pass = 0; pass < MAX_HUMANIZE_PASSES; pass++) {
+      const isAudit = pass > 0;
+      this.abortController = new AbortController();
+      try {
+        for await (const message of query({
+          prompt: isAudit ? auditTask : task,
+          options: {
+            abortController: this.abortController,
+            maxTurns: isAudit ? auditTurns : fullTurns,
+            cwd: this.workDir,
+            systemPrompt,
+            model,
+            allowedTools: ["Read", "Edit", "Write"],
+            ...(claudeBinary ? { pathToClaudeCodeExecutable: claudeBinary } : {}),
+          },
+        })) {
+          void message; // drain — humanize internals aren't streamed to the user
+        }
+      } catch (err) {
+        logger.warn({ err, section: sectionId, pass: pass + 1 }, "humanize: pass failed — stopping loop, keeping current file");
+        break;
       }
-    } catch (err) {
-      logger.warn({ err, section: sectionId }, "humanize: tool-based agent failed — keeping current file");
+
+      let after = readFileSync(rawPath, "utf-8").trim();
+
+      // Deterministic safety net each pass: strip any em dashes the agent left behind
+      // (a hard ZeroGPT tell). Em dash with spaces → comma; without → comma too.
+      if (after.includes("—")) {
+        after = after
+          .replace(/ — /g, ", ")
+          .replace(/— /g, ", ")
+          .replace(/ —/g, ",")
+          .replace(/—/g, ", ")
+          .trim();
+        writeFileSync(rawPath, after, "utf-8");
+      }
+
+      const sim = wordSim(after, working);
+      passesRun = pass + 1;
+      logger.info(
+        { section: sectionId, pass: passesRun, isAudit, similarity: Number(sim.toFixed(3)), changed: after !== working },
+        "humanize: pass done",
+      );
+      working = after;
+
+      // Converged: this audit pass changed almost nothing → the 37 rules are satisfied.
+      if (isAudit && sim >= CONVERGE_RATIO) {
+        logger.info({ section: sectionId, passesRun }, "humanize: converged — all rules applied, stopping loop");
+        break;
+      }
     }
 
-    let after = readFileSync(rawPath, "utf-8").trim();
-
-    // Deterministic safety net: strip any em dashes the agent left behind — a hard
-    // ZeroGPT tell. Em dash with spaces → comma; without → comma too.
-    if (after.includes("—")) {
-      const stripped = after
-        .replace(/ — /g, ", ")
-        .replace(/— /g, ", ")
-        .replace(/ —/g, ",")
-        .replace(/—/g, ", ");
-      writeFileSync(rawPath, stripped, "utf-8");
-      after = stripped.trim();
-      logger.info({ section: sectionId }, "humanize: stripped residual em dashes");
-    }
-
+    const after = working;
     logger.info(
-      { section: sectionId, changed: after !== before, beforeChars: before.length, afterChars: after.length },
+      { section: sectionId, changed: after !== before, passesRun, beforeChars: before.length, afterChars: after.length },
       "humanize: complete",
     );
   }

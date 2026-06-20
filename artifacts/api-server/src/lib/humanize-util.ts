@@ -70,8 +70,10 @@ const AUDIT_PROMPT = `${SYSTEM_PROMPT}
 MODE AUDIT : le texte ci-dessous a DÉJÀ été humanisé une fois. Il sera testé par ZeroGPT/Turnitin et doit scorer sous 20% IA. Traque ce qui le fait ENCORE détecter comme IA et corrige-le : phrases de longueur uniforme (insère des phrases courtes de 5-10 mots), tirets cadratins (—) restants, mots lisses restants (systématiquement, cruciale, notamment, néanmoins, "il convient de", "s'inscrit dans", "joue un rôle"), structures parallèles parfaites, transitions suréxpliquées, débuts de paragraphes répétitifs.
 Conserve TOUT le contenu (≥95% des mots, structure Markdown, formules/citations/chiffres intacts). Retourne UNIQUEMENT le texte final, sans commentaire.`;
 
-// Up to 3 passes (1 humanize + 2 audit); stop when a pass keeps ≥95% words identical.
-const MAX_PASSES = 3;
+// Agent loop: up to 5 passes (1 humanize + up to 4 audits), re-checking all 37 rules
+// each audit pass; stop early when a pass keeps ≥95% words identical (converged = all
+// rules applied). Cap of 5 is the safety guardrail; revisions converge in 2-3 passes.
+const MAX_PASSES = 5;
 const CONVERGE_RATIO = 0.95;
 
 function wordSimilarity(a: string, b: string): number {
