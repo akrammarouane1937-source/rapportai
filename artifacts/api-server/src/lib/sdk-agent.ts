@@ -273,37 +273,32 @@ export class SDKReportAgent {
     // ~1 turn per paragraph edit + read + a single audit; scale with length, capped.
     // 1 audit round (not 3): extra rounds didn't improve the ZeroGPT score (~42% plateau)
     // and roughly doubled humanize time on long sections (Partie II hit ~14 min / 3 rounds).
-    const maxTurns = Math.min(80, Math.max(30, Math.ceil(before.length / 1400)));
+    const maxTurns = Math.min(130, Math.max(45, Math.ceil(before.length / 1000)));
 
-    const task = `Ta mission : réécrire le fichier "${sectionId}.md" pour qu'il passe DEUX contrôles que font les professeurs : (1) la détection d'IA et (2) le contrôle anti-plagiat (Turnitin / Compilatio). Le texte doit se lire comme rédigé par un bon étudiant marocain — naturel, fluide et ACADÉMIQUE. Un jury humain le lira : la qualité de lecture passe AVANT tout score. Ne sacrifie jamais le registre académique ni la grammaire.
+    const task = `Ta mission : réécrire EN PROFONDEUR le fichier "${sectionId}.md" pour qu'il passe les DEUX contrôles des professeurs : (1) la détection d'IA (ZeroGPT/GPTZero, objectif < 20%) ET (2) l'anti-plagiat (Turnitin/Compilatio, objectif < 15%). Le résultat reste un mémoire académique FLUIDE et lisible par un jury — uniquement des phrases COMPLÈTES (sujet + verbe conjugué), jamais de fragments. Ces deux objectifs ne s'opposent pas à la qualité : un bon rédacteur humain les atteint naturellement.
 
-DEUX objectifs en une seule réécriture :
-- ANTI-IA : casse la monotonie (toutes les phrases d'IA ont la même longueur et le même rythme) ; introduis une variation NATURELLE de longueur, comme un bon rédacteur.
-- ANTI-PLAGIAT : reformule en profondeur pour que le texte ne corresponde à AUCUNE source existante. Change la STRUCTURE SYNTAXIQUE de chaque phrase (ordre des propositions, voix active/passive, nominalisations), utilise des synonymes académiques précis, fusionne ou scinde les phrases différemment. NE recopie jamais une formulation générique telle quelle. Cible : moins de 15% de similarité.
+⚠️ C'est une réécriture COMPLÈTE et MÉTHODIQUE, pas une retouche légère. Tes instructions système contiennent les 37 règles d'humanisation + les techniques anti-plagiat. Tu DOIS les appliquer TOUTES, systématiquement. Ne te contente pas de quelques corrections : si un paragraphe ressemble encore à du texte d'IA ou à une formulation trouvable en ligne, il n'est pas terminé.
 
-PROCÉDURE (utilise Read puis Edit, un paragraphe à la fois — JAMAIS Write sur tout le fichier) :
-1. Lis "${sectionId}.md".
-2. Pour CHAQUE paragraphe, applique :
-   - VARIATION DE RYTHME : alterne phrases longues et phrases plus courtes de façon naturelle. Une phrase courte de temps en temps (10-15 mots) suffit à casser la monotonie. Ne force pas : reste fluide.
-   - Supprime TOUS les tirets cadratins (—).
-   - Varie les débuts de phrases : évite que tous les paragraphes commencent par La/Le/Les/L'.
-   - Casse les listes parallèles « X, Y et Z » de même forme grammaticale en variant la formulation.
-   - Supprime le vocabulaire d'IA : systématiquement, cruciale, fondamentale, notamment, davantage, néanmoins, toutefois, "il convient de", "il est important de", "s'inscrit dans", "joue un rôle", "constitue/représente" (→ est/sont).
-   - Coupe les transitions suréxpliquées (« C'est dans ce contexte que », « ainsi », « par ailleurs »).
-   - ANTI-PLAGIAT : reformule la structure de chaque phrase (ne garde pas la même construction que l'original), alterne voix active/passive, remplace les tournures génériques par des synonymes académiques précis. EXCEPTION : ne touche JAMAIS aux citations directes entre guillemets « » (elles doivent rester identiques à la source), ni aux chiffres, noms propres, formules et termes techniques.
-   Applique chaque correction avec Edit immédiatement.
+PHASE 1 — RÉÉCRITURE paragraphe par paragraphe (Read puis Edit ; JAMAIS Write sur tout le fichier) :
+Pour CHAQUE paragraphe, réécris-le complètement en appliquant EN MÊME TEMPS :
+- ANTI-IA (toutes les règles du skill) : varie la longueur des PHRASES COMPLÈTES (mélange phrases courtes de 8-12 mots et longues de 25-35), varie les débuts (≥40% ne commencent pas par La/Le/Les/L'), brise les structures parallèles « X, Y et Z », supprime TOUS les tirets cadratins (—), supprime le vocabulaire d'IA (systématiquement, cruciale, fondamentale, notamment, davantage, néanmoins, toutefois, « il convient de », « il est important de », « s'inscrit dans », « joue un rôle », constitue/représente → est/sont), coupe les transitions mécaniques.
+- ANTI-PLAGIAT (techniques du skill) : change la STRUCTURE SYNTAXIQUE de chaque phrase (≠ construction de l'original), alterne voix active/passive, nominalise, remplace les tournures génériques par des synonymes académiques précis, fusionne ou scinde les phrases autrement. Aucune phrase ne doit rester reconnaissable telle quelle.
+Applique chaque réécriture avec Edit, immédiatement.
 
-INTERDICTIONS ABSOLUES (sinon le texte paraît bâclé au jury) :
-- JAMAIS de fragments sans verbe. Chaque phrase doit avoir un sujet et un verbe conjugué. Exemples À NE PAS produire : « Réponse affirmative. », « Pipeline Python pour collecter les données. », « +221 %. », « Validation empirique complète. », « Seconde voie. ». Reformule-les en phrases complètes.
-- JAMAIS de questions rhétoriques télégraphiques du type « Robustesse en conditions extrêmes ? Confirmée. » ou « Programmation stochastique ? Écartés. ». Reformule en affirmation complète.
-- Pas de style haché ou journalistique. Le registre reste celui d'un mémoire académique.
+PHASE 2 — CHECKLIST DES RÈGLES (c'est l'étape que la plupart oublient — ne la saute JAMAIS) :
+Relis tout le fichier et parcours la liste des règles de tes instructions (humanisation + anti-plagiat) UNE PAR UNE. Pour chaque règle, scanne le texte ENTIER et corrige chaque violation restante avec Edit. Vérifie au minimum :
+- 0 tiret cadratin restant.
+- 0 mot du vocabulaire d'IA restant.
+- Aucun paragraphe avec 4+ phrases de longueur similaire d'affilée → casse le rythme.
+- Aucune structure parallèle parfaite restante.
+- Aucune phrase qui pourrait se retrouver telle quelle dans une autre source → reformule.
 
-3. AUDIT (une seule passe) : relis le fichier. Vérifie qu'il ne reste AUCUN fragment sans verbe, AUCUNE question rhétorique télégraphique, AUCUN tiret cadratin, et que chaque paragraphe se lit naturellement à voix haute. Corrige avec Edit.
+PHASE 3 — VÉRIFICATION FINALE : aucune phrase sans verbe conjugué (PAS de fragments comme « Réponse affirmative. », « +221 %. », « Seconde voie. »), aucune question rhétorique télégraphique (« Robustesse ? Confirmée. »), le texte se lit naturellement à voix haute, registre académique préservé.
 
 RÈGLES ABSOLUES :
-- Conserve 100% du sens, des chiffres, citations (Auteur, année), formules et acronymes. Au minimum 95% des mots de l'original.
+- Conserve 100% du sens, des chiffres, des citations directes entre guillemets « » (identiques à la source — NE les paraphrase pas), des noms propres, formules et acronymes. Au minimum 95% des mots.
 - Garde la même structure Markdown (titres, listes).
-- Le fichier final "${sectionId}.md" DOIT contenir la version humanisée. Ne crée aucun autre fichier. Tout ton travail passe par Read/Edit sur "${sectionId}.md".`;
+- Le fichier final "${sectionId}.md" DOIT contenir la version réécrite. Ne crée aucun autre fichier. Tout passe par Read/Edit sur "${sectionId}.md".`;
 
     logger.info({ section: sectionId, model, maxTurns, chars: before.length, runtimeSystemFound: !!runtimeSystem, runtimeSkillsFound: !!runtimeSkills }, "humanize: starting (tool-based agent)");
 
