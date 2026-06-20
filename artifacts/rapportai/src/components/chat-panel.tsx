@@ -384,6 +384,22 @@ export function ThinkingCard({ text, streaming, title, detail }: {
 
 interface StepItem { id: string; name: string; detail?: string; done?: boolean }
 
+// Rotating reassurance shown on long sections — reframes the wait as quality work
+// (humanisation + anti-plagiat + relecture) instead of a silent, "broken" spinner.
+const SLOW_MESSAGES = [
+  "✍️ Humanisation en cours — on applique les 37 règles pour un texte 100 % naturel.",
+  "🔍 Vérification anti-plagiat — comparaison aux sources pour garantir l'originalité.",
+  "🔁 Relecture qualité — l'IA repasse sur chaque paragraphe, comme un correcteur exigeant.",
+  "🎓 On s'assure que ça passe les contrôles de ton école : détection d'IA ET plagiat.",
+  "📚 Les longues sections (Partie I & II) demandent plusieurs minutes — c'est le prix d'un texte indétectable.",
+];
+
+function formatElapsed(s: number): string {
+  const m = Math.floor(s / 60);
+  const sec = s % 60;
+  return m > 0 ? `${m} min ${sec.toString().padStart(2, "0")} s` : `${sec} s`;
+}
+
 export function AgentSteps({
   toolCalls,
   thinkingText,
@@ -396,6 +412,8 @@ export function AgentSteps({
   const [open, setOpen] = useState(true);
   const [thoughtsOpen, setThoughtsOpen] = useState(false);
   const [slow, setSlow] = useState(false);
+  const [elapsed, setElapsed] = useState(0);
+  const [msgIdx, setMsgIdx] = useState(0);
   const wasGenerating = useRef(false);
 
   // Auto-collapse once the work finishes (like Perplexity's "N steps completed").
@@ -405,11 +423,26 @@ export function AgentSteps({
   }, [isGenerating]);
 
   // Long-generation reassurance: never leave the student staring at a silent spinner.
+  // Show the rich "quality work in progress" panel after 25s.
   useEffect(() => {
     if (!isGenerating) { setSlow(false); return; }
-    const t = setTimeout(() => setSlow(true), 40000);
+    const t = setTimeout(() => setSlow(true), 25000);
     return () => clearTimeout(t);
   }, [isGenerating]);
+
+  // Live elapsed timer — a ticking number is a strong "it's working" signal.
+  useEffect(() => {
+    if (!isGenerating) { setElapsed(0); return; }
+    const id = setInterval(() => setElapsed((e) => e + 1), 1000);
+    return () => clearInterval(id);
+  }, [isGenerating]);
+
+  // Rotate the reassurance messages so the panel never looks frozen.
+  useEffect(() => {
+    if (!slow || !isGenerating) return;
+    const id = setInterval(() => setMsgIdx((i) => i + 1), 6000);
+    return () => clearInterval(id);
+  }, [slow, isGenerating]);
 
   if (toolCalls.length === 0 && !thinkingText) return null;
 
@@ -432,6 +465,9 @@ export function AgentSteps({
           ? <Loader2 className="h-3.5 w-3.5 shrink-0 animate-spin" style={{ color: "#7c3aed" }} />
           : <CheckCircle2 className="h-3.5 w-3.5 shrink-0 text-emerald-500" />}
         <span className="text-xs font-semibold flex-1 text-left" style={{ color: "#5b21b6" }}>{label}</span>
+        {isGenerating && elapsed > 0 && (
+          <span className="text-[10px] font-mono tabular-nums" style={{ color: "#a78bfa" }}>⏱️ {formatElapsed(elapsed)}</span>
+        )}
         {!isGenerating && doneCount > 0 && (
           <span className="text-[10px] text-purple-400">{doneCount}/{toolCalls.length}</span>
         )}
@@ -439,8 +475,18 @@ export function AgentSteps({
       </button>
 
       {slow && isGenerating && (
-        <div className="px-3 py-1.5 text-[11px]" style={{ background: "#fffbeb", borderTop: "1px solid #fde68a", color: "#92400e" }}>
-          ⏳ Ça prend un peu plus de temps que d'habitude — c'est normal pour les longues sections. Tu peux patienter, ou cliquer sur Arrêter et relancer.
+        <div className="px-3 py-2 text-[11px]" style={{ background: "#fffbeb", borderTop: "1px solid #fde68a", color: "#92400e" }}>
+          <motion.div
+            key={msgIdx % SLOW_MESSAGES.length}
+            initial={{ opacity: 0, y: 4 }}
+            animate={{ opacity: 1, y: 0 }}
+            className="font-semibold leading-snug"
+          >
+            {SLOW_MESSAGES[msgIdx % SLOW_MESSAGES.length]}
+          </motion.div>
+          <div className="mt-1.5 text-[10px] leading-snug opacity-90">
+            ⏱️ {formatElapsed(elapsed)} écoulées · C'est normal, la qualité prend du temps. Garde cet onglet ouvert — <strong>ne ferme pas la page</strong>. Tu peux aussi cliquer sur Arrêter et relancer.
+          </div>
         </div>
       )}
 
