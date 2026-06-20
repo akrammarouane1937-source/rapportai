@@ -54,9 +54,11 @@ function loadHumanizeFile(filename: string, bundled: string): string {
 
 const SKILLS_CONTENT = loadHumanizeFile("humanize-skills.md", humanizeSkillsMd);
 const SYSTEM_OVERRIDES = loadHumanizeFile("humanize-system.md", humanizeSystemMd);
+const PLAGIAT_CONTENT = loadHumanizeFile("plagiat-skills.md", "");
 
-// Combine: skill file first (the 37 rules), then domain overrides
-const SYSTEM_PROMPT = [SKILLS_CONTENT, SYSTEM_OVERRIDES].filter(Boolean).join("\n\n---\n\n")
+// Combine: humanize skills + domain overrides + anti-plagiat skill, so revisions also
+// pass Turnitin/Compilatio (deep paraphrasing) on top of AI-detection humanization.
+const SYSTEM_PROMPT = [SKILLS_CONTENT, SYSTEM_OVERRIDES, PLAGIAT_CONTENT].filter(Boolean).join("\n\n---\n\n")
   || "Tu es un expert en humanisation de texte académique marocain. Réécris le texte fourni pour qu'il soit indétectable par GPTZero et Turnitin. Retourne UNIQUEMENT le texte final, même structure Markdown, sans rien supprimer ni résumer.";
 
 // Audit pass: same rules, framed as "already humanized once — fix what still looks

@@ -257,12 +257,14 @@ export class SDKReportAgent {
       return;
     }
 
-    // Load both files at runtime; fall back to esbuild-bundled versions (guaranteed available).
+    // Load humanize files (fall back to esbuild-bundled versions) + the anti-plagiat
+    // skill, so each section passes BOTH AI detection AND plagiarism (Turnitin/Compilatio).
     const runtimeSystem = this.loadSkillFile("humanize-system.md");
     const runtimeSkills = this.loadSkillFile("humanize-skills.md");
+    const plagiatSkills = this.loadSkillFile("plagiat-skills.md");
     const systemContent = runtimeSystem || humanizeSystemMd;
     const skillsContent = runtimeSkills || humanizeSkillsMd;
-    const systemPrompt = `${systemContent}\n\n---\n\n${skillsContent}`;
+    const systemPrompt = `${systemContent}\n\n---\n\n${skillsContent}${plagiatSkills ? `\n\n---\n\n${plagiatSkills}` : ""}`;
 
     const claudeBinary = findClaudeBinary();
     // Sonnet by default: Opus gave no ZeroGPT benefit (~42% either way) at ~5x the cost.
@@ -273,9 +275,11 @@ export class SDKReportAgent {
     // and roughly doubled humanize time on long sections (Partie II hit ~14 min / 3 rounds).
     const maxTurns = Math.min(80, Math.max(30, Math.ceil(before.length / 1400)));
 
-    const task = `Ta mission : réécrire le fichier "${sectionId}.md" pour qu'il se lise comme rédigé par un bon étudiant marocain — naturel, fluide et ACADÉMIQUE. Un jury (un humain) le lira : la qualité de lecture passe AVANT le score de détection. Réduis les tournures d'IA, mais sans jamais sacrifier le registre académique ni la grammaire.
+    const task = `Ta mission : réécrire le fichier "${sectionId}.md" pour qu'il passe DEUX contrôles que font les professeurs : (1) la détection d'IA et (2) le contrôle anti-plagiat (Turnitin / Compilatio). Le texte doit se lire comme rédigé par un bon étudiant marocain — naturel, fluide et ACADÉMIQUE. Un jury humain le lira : la qualité de lecture passe AVANT tout score. Ne sacrifie jamais le registre académique ni la grammaire.
 
-Le texte d'IA a un défaut principal : toutes les phrases ont la même longueur et le même rythme. Tu dois introduire une VARIATION NATURELLE de longueur, comme le ferait un bon rédacteur.
+DEUX objectifs en une seule réécriture :
+- ANTI-IA : casse la monotonie (toutes les phrases d'IA ont la même longueur et le même rythme) ; introduis une variation NATURELLE de longueur, comme un bon rédacteur.
+- ANTI-PLAGIAT : reformule en profondeur pour que le texte ne corresponde à AUCUNE source existante. Change la STRUCTURE SYNTAXIQUE de chaque phrase (ordre des propositions, voix active/passive, nominalisations), utilise des synonymes académiques précis, fusionne ou scinde les phrases différemment. NE recopie jamais une formulation générique telle quelle. Cible : moins de 15% de similarité.
 
 PROCÉDURE (utilise Read puis Edit, un paragraphe à la fois — JAMAIS Write sur tout le fichier) :
 1. Lis "${sectionId}.md".
@@ -286,6 +290,7 @@ PROCÉDURE (utilise Read puis Edit, un paragraphe à la fois — JAMAIS Write su
    - Casse les listes parallèles « X, Y et Z » de même forme grammaticale en variant la formulation.
    - Supprime le vocabulaire d'IA : systématiquement, cruciale, fondamentale, notamment, davantage, néanmoins, toutefois, "il convient de", "il est important de", "s'inscrit dans", "joue un rôle", "constitue/représente" (→ est/sont).
    - Coupe les transitions suréxpliquées (« C'est dans ce contexte que », « ainsi », « par ailleurs »).
+   - ANTI-PLAGIAT : reformule la structure de chaque phrase (ne garde pas la même construction que l'original), alterne voix active/passive, remplace les tournures génériques par des synonymes académiques précis. EXCEPTION : ne touche JAMAIS aux citations directes entre guillemets « » (elles doivent rester identiques à la source), ni aux chiffres, noms propres, formules et termes techniques.
    Applique chaque correction avec Edit immédiatement.
 
 INTERDICTIONS ABSOLUES (sinon le texte paraît bâclé au jury) :
