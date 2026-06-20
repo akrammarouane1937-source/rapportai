@@ -15,7 +15,7 @@ import {
 } from "../lib/memory";
 import { guardSectionLimit, guardRevisionLimit, guardPayment, guardSectionAccess } from "../lib/plan-guard";
 import { logger } from "../lib/logger";
-import { streamingHumanize } from "../lib/humanize-util";
+import { SKIP_HUMANIZE } from "../lib/humanize-util";
 import { metrics, estimateCost, estimateTokens } from "../lib/metrics";
 import { writeFileSync, mkdirSync, readdirSync, unlinkSync, existsSync, readFileSync as fsReadFileSync } from "fs";
 import path from "path";
@@ -612,19 +612,32 @@ router.post(
         }
 
         res.write(`data: ${JSON.stringify({ phase: "humanizing" })}\n\n`);
+        const sectionFile = path.join(agent.workDir, `${section}.md`);
         let humanized = contentToHumanize;
-        let _humanizedAccum = "";
-        await streamingHumanize(contentToHumanize, section, (chunk, isFirst) => {
-          const separator = isFirst ? "" : "\n\n";
-          _humanizedAccum += separator + chunk;
-          res.write(`data: ${JSON.stringify({ content_chunk: separator + chunk })}\n\n`);
-        });
-        humanized = _humanizedAccum || contentToHumanize;
-        if (humanized !== contentToHumanize) {
-          const sectionFile = path.join(agent.workDir, `${section}.md`);
-          writeFileSync(sectionFile, humanized, "utf-8");
-          partialSections[section] = humanized;
+        if (!SKIP_HUMANIZE.has(section) && contentToHumanize.trim()) {
+          // Run the agentic 3-pass loop (re-reads + iteratively fixes the structural
+          // AI patterns — parallel lists, rule-of-three — until stable), NOT the
+          // single-shot direct-API pass. It edits the section file in place.
+          writeFileSync(sectionFile, contentToHumanize, "utf-8");
+          // Heartbeat: the loop runs for minutes with no SSE writes; an SSE comment
+          // every 15s keeps the connection alive through proxies during that time.
+          const heartbeat = setInterval(() => {
+            try { res.write(`: humanizing\n\n`); } catch { /* connection closed */ }
+          }, 15000);
+          try {
+            await agent.humanizeSection(section);
+            humanized = fsReadFileSync(sectionFile, "utf-8").trim() || contentToHumanize;
+          } catch (hErr) {
+            logger.warn({ err: hErr, section }, "humanize loop failed — keeping raw content");
+            writeFileSync(sectionFile, contentToHumanize, "utf-8");
+            humanized = contentToHumanize;
+          } finally {
+            clearInterval(heartbeat);
+          }
         }
+        // The loop doesn't stream incrementally — send the final humanized text once.
+        res.write(`data: ${JSON.stringify({ content_chunk: humanized })}\n\n`);
+        partialSections[section] = humanized;
 
         // Render page-de-garde preview so the agent can compare visually with the template
         if (section === "page-de-garde") {

@@ -9,8 +9,9 @@ import { regexHumanizeFR } from "./regex-humanize-fr";
 const client = new Anthropic();
 
 // Structured sections that must NOT be humanized — rewriting them breaks their format or data.
-// Everything else (all prose) is humanized.
-const SKIP_HUMANIZE = new Set([
+// Everything else (all prose) is humanized. Exported so the agentic-loop path
+// (session.ts → humanizeSection) skips the same sections this direct-API path does.
+export const SKIP_HUMANIZE = new Set([
   "page-de-garde",    // student name, school, dates — must stay exact
   "sommaire",          // ##/### structure parsed by downstream agents + export TOC
   "bibliographie",     // citations (author, year, DOI) must stay exact
