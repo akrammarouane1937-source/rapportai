@@ -49,6 +49,14 @@ async function runMigrations() {
         created_at     TIMESTAMPTZ NOT NULL DEFAULT NOW(),
         paid_at        TIMESTAMPTZ
       );
+
+      -- Autosave of each user's report data (was missing in prod → /me/report 500s,
+      -- users couldn't save or load their work).
+      CREATE TABLE IF NOT EXISTS user_report_data (
+        clerk_user_id TEXT PRIMARY KEY,
+        report_data   TEXT NOT NULL,
+        updated_at    TIMESTAMPTZ NOT NULL DEFAULT NOW()
+      );
     `);
     client.release();
     logger.info("DB migrations applied");
