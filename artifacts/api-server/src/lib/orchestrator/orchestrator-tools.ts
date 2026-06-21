@@ -113,6 +113,8 @@ Si la consigne de l'étudiant contredit un modèle par défaut, SUIS L'ÉTUDIANT
 export async function runTool(name: string, input: Record<string, unknown>, ctx: ToolContext): Promise<ToolResult> {
   const { state, agent, emit } = ctx;
 
+  emit({ type: "tool_call", name, detail: typeof input.section_id === "string" ? input.section_id : (typeof input.path === "string" ? input.path : "") });
+
   switch (name) {
     case "set_preference": {
       setPreference(state, String(input.path), input.value);

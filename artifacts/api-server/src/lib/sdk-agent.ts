@@ -141,9 +141,14 @@ export class SDKReportAgent {
   }
 
   getDocumentNames(): string[] {
+    // Internal session files that are NOT student uploads (don't surface as "library docs").
+    const SYSTEM_FILES = new Set([
+      "profile.json", "INSTRUCTIONS.md", "report_state.json",
+      "student_memory.json", "generation_context.md",
+    ]);
     try {
       return readdirSync(this.workDir).filter(
-        (f) => !f.endsWith(".md") && f !== "profile.json" && f !== "INSTRUCTIONS.md"
+        (f: string) => !f.endsWith(".md") && !SYSTEM_FILES.has(f),
       );
     } catch {
       return [];
