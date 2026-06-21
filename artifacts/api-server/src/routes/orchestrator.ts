@@ -25,11 +25,17 @@ router.post("/orchestrator/:sessionId", async (req: Request, res: Response) => {
     return;
   }
 
-  const agent = sessionStore.get(sessionId) as SDKReportAgent | undefined
+  // Find the session — or create one on the fly. Render redeploys wipe in-memory sessions
+  // AND /tmp files, so a session can vanish between requests. The orchestrator can start
+  // from scratch, so we just make a fresh agent instead of 404-ing.
+  let agent = (sessionStore.get(sessionId) as SDKReportAgent | undefined)
     ?? SDKReportAgent.reviveFromDisk(sessionId) ?? undefined;
   if (!agent) {
-    res.status(404).json({ error: "Session introuvable ou expirée." });
-    return;
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const profile = ((req.body as Record<string, unknown>).profile ?? {}) as any;
+    agent = new SDKReportAgent(sessionId, profile);
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    sessionStore.set(agent as any);
   }
 
   res.setHeader("Content-Type", "text/event-stream");
