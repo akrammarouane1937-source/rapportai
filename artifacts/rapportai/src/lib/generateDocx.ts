@@ -695,14 +695,17 @@ function buildSommaire(d: Report): Paragraph[] {
   if (parsed.length === 0) return [];
 
   const sommaireLines: Paragraph[] = [heading1("Sommaire"), emptyLine()];
+  // Reference style: front/back matter plain & left-aligned; Parties bold; Chapitres
+  // bold with a • bullet; Sections with a ➢ arrow, each level indented further.
   const indents = [0, 0, convertMillimetersToTwip(8), convertMillimetersToTwip(16), convertMillimetersToTwip(24)];
   for (const { level, text } of parsed) {
     const indent = indents[Math.min(level, 4)] ?? 0;
-    const bold = level <= 2;
+    const bold = level === 2 || level === 3; // Parties + Chapitres en gras
+    const marker = level === 3 ? "•  " : level === 4 ? "➢  " : ""; // • chapitres, ➢ sections
     sommaireLines.push(new Paragraph({
       indent: { left: indent, firstLine: 0 },
       spacing: { ...LINE_SPACING, before: level <= 2 ? 120 : 60, after: level <= 2 ? 60 : 30 },
-      children: [new TextRun({ text, font: FONT, size: BODY_PT, bold })],
+      children: [new TextRun({ text: marker + text, font: FONT, size: BODY_PT, bold })],
     }));
   }
   return sommaireLines;

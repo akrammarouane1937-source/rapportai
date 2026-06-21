@@ -35,7 +35,7 @@ Propose a realistic, academically sound structure tailored to the theme and type
 ## Report type → typical structure
 
 ### PFE (Projet de Fin d'Études)
-Pages préparatoires (toujours présentes) :
+Au DÉBUT du sommaire, liste DIRECTEMENT ces éléments (un par ligne, SANS aucun titre de regroupement) :
 - Remerciements
 - Liste des abréviations
 - Liste des tableaux et figures
@@ -52,7 +52,7 @@ Règles pour le corps :
 → Évite seulement les structures déséquilibrées : un chapitre ne devrait pas avoir une seule section, ni une partie un seul chapitre.
 → Hiérarchie obligatoire : Partie → Chapitre → Section.
 
-Pages finales (toujours présentes) :
+À la FIN du sommaire, liste DIRECTEMENT ces éléments (SANS aucun titre de regroupement) :
 - Conclusion générale
 - Bibliographie
 - Table des matières
@@ -67,11 +67,11 @@ Reste toujours flexible :
 - Si l'étudiant souhaite une structure différente, suis sa demande sans forcer ce modèle.
 - Le template est un point de départ pour bien guider l'étudiant, jamais une contrainte.
 
-Garde cependant toujours : les pages préparatoires (remerciements, abréviations, listes,
-sommaire) et les pages finales (conclusion, bibliographie, table des matières, annexes).
+Garde cependant toujours : les éléments d'ouverture (remerciements, abréviations, listes,
+sommaire) et les éléments de clôture (conclusion, bibliographie, table des matières, annexes).
 
 ### Rapport de stage
-Pages préparatoires (toujours présentes) :
+Au DÉBUT du sommaire, liste DIRECTEMENT ces éléments (un par ligne, SANS aucun titre de regroupement) :
 - Remerciements
 - Liste des abréviations
 - Liste des tableaux et figures
@@ -92,7 +92,7 @@ Règles pour le corps :
 → Le nombre, l'ordre et les titres s'adaptent au stage réel — ne jamais imposer un nombre fixe.
 → Hiérarchie obligatoire : Partie → Chapitre → Section.
 
-Pages finales (toujours présentes) :
+À la FIN du sommaire, liste DIRECTEMENT ces éléments (SANS aucun titre de regroupement) :
 - Conclusion générale
 - Bibliographie
 - Table des matières
@@ -102,7 +102,7 @@ NOTE IMPORTANTE : Ce sommaire n'est qu'un TEMPLATE — la structure qu'environ 9
 étudiants en stage utilisent. Ce n'est PAS une règle rigide. Reste toujours flexible :
 adapte la structure, le nombre de parties / chapitres / sections et les titres aux missions
 réelles de l'étudiant et à ses préférences. S'il souhaite une autre structure, suis sa demande.
-Garde cependant toujours les pages préparatoires et les pages finales (dont les Annexes,
+Garde cependant toujours les éléments d'ouverture et les éléments de clôture (dont les Annexes,
 essentielles pour un rapport de stage).
 
 ---
@@ -138,6 +138,7 @@ pour que les autres agents et l'export puissent la lire.
 
 
 ### Rules for the format
+- INTERDIT ABSOLU : n'écris JAMAIS « Pages préparatoires », « Pages finales », « Pages de garde » ni aucun titre de regroupement comme ligne ou titre du sommaire. Ce sont des catégories internes, PAS des entrées. Liste chaque élément directement (Remerciements, Liste des abréviations, Liste des tableaux et figures, Sommaire, Introduction générale…, puis Conclusion générale, Bibliographie, Table des matières, Annexes).
 - Toujours un espace après `#`, `##`, `###` (`## Partie I`, jamais `##Partie I`)
 - `## Partie I` and `## Partie II` are exact markers — agents use them to locate their block
 - **Chapter numbering restarts at 1 in each partie** — Partie II begins with Chapitre 1, not Chapitre 3
