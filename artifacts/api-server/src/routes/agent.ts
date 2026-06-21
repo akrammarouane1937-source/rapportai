@@ -3,7 +3,7 @@ import { existsSync, readFileSync, writeFileSync, unlinkSync } from "fs";
 import path from "path";
 import { sessionStore } from "../lib/session-store";
 import { SDKReportAgent } from "../lib/sdk-agent";
-import "../lib/humanize-util"; // kept for the /humanize route
+import { runInternalHumanize } from "../lib/humanize-util";
 import { fillDocxTemplate, FILLED_DOCX_NAME } from "../lib/docx-template-fill";
 import { checkSectionAccess } from "../lib/plan-guard";
 import { recordAction } from "../lib/abuse-guard";
@@ -838,9 +838,20 @@ router.post("/agent/:step/stream", async (req: Request, res: Response) => {
           sseWrite(res, { type: "tool_call", name: "Humanizing", detail: sectionId });
           const hb = setInterval(() => { try { res.write(`: humanizing\n\n`); } catch { /* closed */ } }, 15000);
           try {
-            await agent.humanizeSection(sectionId);
+            if (rawBefore.length < 3500) {
+              // Small sections (dédicaces, remerciements, résumé): use the fast direct-API
+              // humanizer — a single HTTPS call, NO Claude Code subprocess. The subprocess
+              // is the slow/fragile part on Render (it was hanging the humanize step). The
+              // regex pass inside still strips the mechanical AI tells.
+              const humanized = await runInternalHumanize(rawBefore, sectionId);
+              if (humanized && humanized.trim() && humanized !== rawBefore) {
+                writeFileSync(filePath, humanized, "utf-8");
+              }
+            } else {
+              await agent.humanizeSection(sectionId);
+            }
           } catch (hErr) {
-            logger.warn({ err: hErr, section: sectionId }, "humanize agent failed — using raw content");
+            logger.warn({ err: hErr, section: sectionId }, "humanize failed — using raw content");
           } finally {
             clearInterval(hb);
           }
