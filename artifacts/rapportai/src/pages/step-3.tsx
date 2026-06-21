@@ -7,9 +7,6 @@ import { ChatInput } from "@/components/chat-input";
 import { useReportStore } from "@/lib/store";
 import { useStepAgent } from "@/hooks/use-step-agent";
 
-const stripTitle = (text: string, title: string) =>
-  text.replace(new RegExp(`^#{0,3}\\s*${title}\\s*\\n+`, "i"), "").trim();
-
 export default function Step3() {
   const [, setLocation] = useLocation();
   const { report, updateReport } = useReportStore();
@@ -30,13 +27,11 @@ export default function Step3() {
     bottomRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages, toolCalls, isThinking, isGenerating]);
 
-  const previewContent =
-    (report.dedicaces ? `## Dédicaces\n\n${stripTitle(report.dedicaces, "Dédicaces")}\n\n` : "") +
-    (report.remerciements ? `## Remerciements\n\n${stripTitle(report.remerciements, "Remerciements")}` : "");
-
   return (
     <Layout stepName="Remerciements & Dédicaces" stepNumber={3}
-      previewPanel={<PreviewPanel activeSection="dedicaces" content={previewContent} maxStep={3} isGenerating={isThinking || isGenerating} />}
+      // Render dédicaces and remerciements as two SEPARATE pages from the store (don't
+      // pass a combined blob — that hid remerciements / duplicated it under dédicaces).
+      previewPanel={<PreviewPanel activeSection="dedicaces" content="" maxStep={3} isGenerating={isThinking || isGenerating} />}
     >
       <div className="flex-1 overflow-y-auto py-4 px-2 md:py-5 md:px-3">
         {messages.map((m) => <ChatMessage key={m.id} role={m.role} content={m.content} />)}
