@@ -136,9 +136,15 @@ export async function runTool(name: string, input: Record<string, unknown>, ctx:
       for await (const ev of agent.streamSection(sectionId, task)) {
         if (ev.type === "tool_call") emit({ type: "tool_call", name: ev.name, detail: ev.detail });
       }
+      // GUARDRAIL: a section is never delivered un-humanized. Humanize inline so the
+      // orchestrator can't "forget" — code enforces it, not the model.
+      upsertSection(state, { id: sectionId, status: "humanizing" });
+      emit({ type: "tool_call", name: "humanize_section", detail: sectionId });
+      try { await agent.humanizeSection(sectionId); } catch { /* keep raw on failure */ }
       const content = agent.getSection(sectionId) ?? "";
-      upsertSection(state, { id: sectionId, status: "ready", words: content.split(/\s+/).filter(Boolean).length });
-      return { result: `Section "${sectionId}" rédigée (${content.split(/\s+/).filter(Boolean).length} mots). Pense à l'humaniser puis à demander validation.` };
+      const words = content.split(/\s+/).filter(Boolean).length;
+      upsertSection(state, { id: sectionId, status: "ready", words });
+      return { result: `Section "${sectionId}" rédigée ET humanisée (${words} mots). Propose maintenant à l'étudiant de valider ou de modifier avant de continuer.` };
     }
 
     case "humanize_section": {
