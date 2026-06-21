@@ -782,10 +782,15 @@ router.post("/agent/:step/stream", async (req: Request, res: Response) => {
           }
           // Humanize ONLY this new subsection (small → fast → sub-20%, like the intro).
           sseWrite(res, { type: "tool_call", name: "Humanizing", detail: sectionId });
-          try {
-            await agent.humanizeSection(tempName);
-          } catch (hErr) {
-            logger.warn({ err: hErr, section: sectionId }, "next-section humanize failed — using raw section");
+          {
+            const hb = setInterval(() => { try { res.write(`: humanizing\n\n`); } catch { /* closed */ } }, 15000);
+            try {
+              await agent.humanizeSection(tempName);
+            } catch (hErr) {
+              logger.warn({ err: hErr, section: sectionId }, "next-section humanize failed — using raw section");
+            } finally {
+              clearInterval(hb);
+            }
           }
           const humanizedSection = (existsSync(tempPath) ? readFileSync(tempPath, "utf-8").trim() : rawSection) || rawSection;
           const existingPartie = snapshot ? snapshot.trim() : "";
@@ -828,10 +833,13 @@ router.post("/agent/:step/stream", async (req: Request, res: Response) => {
         if (!SKIP_HUMANIZE.has(sectionId) && !PARTIE_SECTIONS.has(sectionId)) {
           const rawBefore = readFileSync(filePath, "utf-8");
           sseWrite(res, { type: "tool_call", name: "Humanizing", detail: sectionId });
+          const hb = setInterval(() => { try { res.write(`: humanizing\n\n`); } catch { /* closed */ } }, 15000);
           try {
             await agent.humanizeSection(sectionId);
           } catch (hErr) {
             logger.warn({ err: hErr, section: sectionId }, "humanize agent failed — using raw content");
+          } finally {
+            clearInterval(hb);
           }
           const rawAfter = readFileSync(filePath, "utf-8");
           if (rawAfter === rawBefore) {
