@@ -1,8 +1,12 @@
 import { Router, type Request, type Response } from "express";
 import { existsSync, readFileSync } from "node:fs";
 import { join } from "node:path";
+import { runInternalHumanize } from "../lib/humanize-util";
 
 const router = Router();
+
+// Store-field keys that are structured (not prose) — never humanize these on revision.
+const SKIP_REVISE_HUMANIZE = new Set(["pageDeGarde", "sommaire"]);
 const ANTHROPIC_API = "https://api.anthropic.com/v1/messages";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
@@ -949,7 +953,7 @@ ${nextKey ? `**Prochaine section recommandée :** ${SECTION_LABELS[nextKey] ?? n
           } else if (!data || data.wordCount <= 10) {
             result = `La section "${SECTION_LABELS[input.section] ?? input.section}" n'a pas encore été générée — impossible de la réviser. Propose navigate_to_section pour la générer.`;
           } else {
-            const revised = await reviseSectionContent(
+            let revised = await reviseSectionContent(
               input.section,
               data.content,
               input.instructions ?? "",
@@ -957,6 +961,16 @@ ${nextKey ? `**Prochaine section recommandée :** ${SECTION_LABELS[nextKey] ?? n
               apiKey,
             );
             if (revised) {
+              // Humanize the revised prose — the dashboard-chat revision used to skip
+              // this, so edited sections came back at ~100% on ZeroGPT. Direct-API
+              // humanizer (+ regex), no subprocess. Structured sections are skipped.
+              if (!SKIP_REVISE_HUMANIZE.has(input.section)) {
+                const hbChat = setInterval(() => { try { res.write(`: humanizing\n\n`); } catch { /* closed */ } }, 15000);
+                try {
+                  const humanized = await runInternalHumanize(revised, input.section);
+                  if (humanized && humanized.trim()) revised = humanized;
+                } catch { /* keep revised text on failure */ } finally { clearInterval(hbChat); }
+              }
               res.write(`data: ${JSON.stringify({ action: { type: "update_section", section: input.section, content: revised } })}\n\n`);
               const newWords = revised.split(/\s+/).filter(Boolean).length;
               // Keep server-side copy in sync so later reads in this same turn see the new content
