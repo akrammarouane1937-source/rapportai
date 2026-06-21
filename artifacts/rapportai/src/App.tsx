@@ -23,6 +23,7 @@ import Step2Page from "@/pages/step-2";
 import Step3Page from "@/pages/step-3";
 import PartieIPage from "@/pages/partie-i";
 import PartieIIPage from "@/pages/partie-ii";
+import AgenticPage from "@/pages/AgenticPage";
 import AnnexesPage from "@/pages/AnnexesPage";
 import BibliothequeePage from "@/pages/BibliothequeePage";
 import SharePage from "@/pages/SharePage";
@@ -326,6 +327,9 @@ function ClerkProviderWithRoutes() {
             </Route>
             <Route path="/bibliotheque">
               <ProtectedRoute component={BibliothequeePage} />
+            </Route>
+            <Route path="/agentic">
+              <ProtectedRoute component={AgenticPage} />
             </Route>
             <Route path="/demo/step-1" component={Step1Page} />
             <Route path="/demo/step-2"><Redirect to="/demo/step-3" /></Route>
