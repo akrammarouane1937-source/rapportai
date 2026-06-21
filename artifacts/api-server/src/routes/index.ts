@@ -20,6 +20,7 @@ import adminRouter from "./admin";
 import meRouter from "./me";
 import agentRouter from "./agent";
 import feedbackRouter from "./feedback";
+import orchestratorRouter from "./orchestrator";
 
 const router: IRouter = Router();
 
@@ -44,5 +45,6 @@ router.use(adminRouter);
 router.use(meRouter);
 router.use(agentRouter);
 router.use(feedbackRouter);
+router.use(orchestratorRouter);
 
 export default router;
