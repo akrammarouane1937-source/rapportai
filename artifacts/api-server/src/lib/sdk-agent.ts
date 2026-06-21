@@ -330,16 +330,14 @@ export class SDKReportAgent {
     // Per-pass turn budgets. The full first pass rewrites everything; audit passes
     // only fix what's left, so they need fewer turns. Kept tight so a section never
     // runs away (a 25-min run happened when budgets + passes were too generous).
-    const fullTurns = Math.min(110, Math.max(40, Math.ceil(before.length / 1200)));
-    const auditTurns = Math.min(60, Math.max(20, Math.ceil(before.length / 2000)));
+    const fullTurns = Math.min(110, Math.max(18, Math.ceil(before.length / 1200)));
+    const auditTurns = Math.min(60, Math.max(12, Math.ceil(before.length / 2000)));
 
-    // Agent loop: humanize, then re-read and re-check all 37 rules + anti-plagiat,
-    // fixing what remains — repeating until a pass changes almost nothing (converged =
-    // all rules satisfied) or the safety cap is hit. This is "redo it again" automated.
-    // 3 passes (1 rewrite + up to 2 audits): enough for the "do it twice" effect
-    // (~16% vs ~45%) without the runaway time of 5 passes. Never converge-stops on
-    // pass 0, so every section gets at least one audit.
-    const MAX_HUMANIZE_PASSES = 3;
+    // Passes scale with size. A 6-line dédicace took ~6 min on 3 passes of the full
+    // 37-rule analysis — pure waste (simple personal text has no structural AI tells).
+    // Tiny sections (< 2500 chars: dédicaces, remerciements) get ONE light pass + the
+    // regex. Everything dense/academic keeps the proven 3-pass loop (intro = 18.4%).
+    const MAX_HUMANIZE_PASSES = before.length < 2500 ? 1 : 3;
     const CONVERGE_RATIO = 0.97;
     const wordSim = (a: string, b: string): number => {
       const wa = a.split(/\s+/).filter(Boolean);
@@ -390,7 +388,7 @@ Conserve 100% du sens, des chiffres, des citations « », des noms propres et ac
     // Hard wall-clock guards so a hung pass can never produce a runaway (a 25-min run
     // happened once). Each pass is force-aborted after PASS_TIMEOUT_MS; the whole
     // section is capped at HUMANIZE_DEADLINE_MS. Whatever's on disk is kept.
-    const PASS_TIMEOUT_MS = 4 * 60 * 1000;
+    const PASS_TIMEOUT_MS = (before.length < 2500 ? 2 : 4) * 60 * 1000;
     const HUMANIZE_DEADLINE_MS = 9 * 60 * 1000;
     const startedAt = Date.now();
 
