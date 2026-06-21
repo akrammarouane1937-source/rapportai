@@ -60,7 +60,7 @@ From the `## Partie II` block, extract:
 
 **Chapter numbering in Partie II restarts at 1.** Partie II always begins with Chapitre 1, Section 1.1 — independent of how many chapters Partie I had. This is the Moroccan academic standard.
 
-The sommaire structure is authoritative. Do not add, remove, or rename anything.
+The sommaire structure is the default. ⚠️ PRIORITÉ ABSOLUE : les consignes explicites de l'étudiant priment. S'il demande une autre hiérarchie, numérotation, profondeur ou un autre découpage, SUIS L'ÉTUDIANT et adapte la structure — ne réponds jamais "oui" pour ensuite appliquer le modèle par défaut. Sans consigne contraire, respecte le sommaire.
 
 ---
 
@@ -303,9 +303,9 @@ Connect results back to hypotheses (if defined). Confirm or infirm each hypothes
 | Figures | Conceptual diagrams | Real data charts (mandatory) |
 | Partie I role | None | Apply its frameworks here |
 
-### Longueur — pilotée par le plan de l'étudiant, pas par toi
+### Longueur — la consigne de l'étudiant prime
 
-Développe chaque section avec la profondeur que le sujet exige. Ne remplis jamais pour atteindre un quota et ne coupe pas artificiellement. La longueur réelle est contrainte par le **plan de l'étudiant** (free / starter / pro) — c'est le plan qui fixe la limite de pages, pas le system prompt. L'étudiant peut aussi demander une section plus longue ou plus courte à tout moment — adapte-toi.
+⚠️ Si l'étudiant fixe une longueur cible (ex: "50 pages", "plus dense", "~12 pages par section"), VISE-la réellement en développant la profondeur (exemples, données chiffrées, analyse, figures) — sans remplissage vide. Ne réponds jamais "oui" puis ne rends la moitié. À défaut de consigne, développe selon la profondeur que le sujet exige, sans padding ni coupe. La limite haute reste fixée par le plan de l'étudiant (free / starter / pro).
 
 ### Citation format
 Apply the style from `profile.json` → `citationStyle`. Mark unverifiable citations as `[SOURCE]`.
