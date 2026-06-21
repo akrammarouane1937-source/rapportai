@@ -1130,6 +1130,116 @@ router.get("/session/:sessionId/page-state", (req: Request, res: Response) => {
   });
 });
 
+// ─── Section-by-section mode for Partie I / II ────────────────────────────────
+// Generate ONE subsection at a time, humanize it immediately (small → fast → sub-20%),
+// append it, and let the user confirm/modify before the next one. This replaces the
+// 29-minute one-shot generation of a whole 35-page Partie.
+const sectionCounter = new Map<string, Map<string, number>>();
+function advanceSectionCounter(sessionId: string, sectionId: string): number {
+  if (!sectionCounter.has(sessionId)) sectionCounter.set(sessionId, new Map());
+  const m = sectionCounter.get(sessionId)!;
+  const next = (m.get(sectionId) ?? 0) + 1;
+  m.set(sectionId, next);
+  return next;
+}
+
+router.post("/session/:sessionId/next-section", async (req: Request, res: Response) => {
+  const sessionId = req.params.sessionId as string;
+  const { sectionId, reset } = req.body as { sectionId: string; reset?: boolean };
+
+  if (!sectionId || !PAGE_MODE_SECTIONS.has(sectionId)) {
+    res.status(400).json({ error: "sectionId must be 'partie-i' or 'partie-ii'" });
+    return;
+  }
+  const agent = sessionStore.get(sessionId) as SDKReportAgent | undefined;
+  if (!agent) { res.status(404).json({ error: "Session introuvable ou expirée." }); return; }
+  if (reset) sectionCounter.get(sessionId)?.set(sectionId, 0);
+
+  res.setHeader("Content-Type", "text/event-stream");
+  res.setHeader("Cache-Control", "no-cache");
+  res.setHeader("Connection", "keep-alive");
+  res.setHeader("X-Accel-Buffering", "no");
+  res.flushHeaders();
+  res.socket?.setNoDelay(true);
+  const _origWriteSec = res.write.bind(res);
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  (res as any).write = (...args: any[]): boolean => {
+    const r = (_origWriteSec as (...a: unknown[]) => boolean)(...args);
+    (res as unknown as { flush?: () => void }).flush?.();
+    return r;
+  };
+
+  const sectionLabel = sectionId === "partie-i" ? "Partie I" : "Partie II";
+  const tempName = `${sectionId}.__section`;
+  const tempPath = path.join(agent.workDir, `${tempName}.md`);
+  const sectionFilePath = path.join(agent.workDir, `${sectionId}.md`);
+  try { if (existsSync(tempPath)) unlinkSync(tempPath); } catch { /* ignore */ }
+
+  const crossRef = sectionId === "partie-ii"
+    ? "Lis aussi partie-i.md : les références croisées vers la Partie I sont obligatoires.\n"
+    : "";
+
+  const task = `MODE SECTION — génère UNE seule sous-section de la ${sectionLabel}, pas plus.
+
+1. Lis "sommaire.md" : c'est le plan complet de la ${sectionLabel} (chapitres et leurs sous-sections, ex. 1.1, 1.2, 2.1…).
+2. Lis "${sectionId}.md" s'il existe : c'est ce qui a DÉJÀ été rédigé.
+3. Identifie, dans l'ordre du plan, la PROCHAINE sous-section qui n'a pas encore été rédigée.
+4. ${crossRef}Si TOUTES les sous-sections du plan sont déjà rédigées dans "${sectionId}.md", écris EXACTEMENT le mot DONE (et rien d'autre) dans "${tempName}.md", puis arrête-toi.
+5. Sinon, rédige le contenu COMPLET de cette seule sous-section : son titre (## ou ###) puis le corps (~400-900 mots selon le plan), avec recherche de sources réelles si nécessaire et citations (Auteur, année). Écris ce contenu dans "${tempName}.md" avec Write (fichier neuf, une seule sous-section). N'écris RIEN dans "${sectionId}.md".
+
+Contenu académique, fidèle au plan du sommaire. Ne génère qu'UNE sous-section.`;
+
+  // Snapshot the section file so only our controlled append can modify it (in case the
+  // writer touches it despite instructions).
+  const snapshot = existsSync(sectionFilePath) ? fsReadFileSync(sectionFilePath, "utf-8") : null;
+
+  try {
+    res.write(`data: ${JSON.stringify({ phase: "writing" })}\n\n`);
+    const finished = await streamToSSE(res, agent.streamSection(sectionId, task));
+    if (!finished) { res.write(`data: ${JSON.stringify({ error: "Génération interrompue." })}\n\n`); res.end(); return; }
+
+    // Restore the section file — only our append below may change it.
+    if (snapshot !== null) writeFileSync(sectionFilePath, snapshot, "utf-8");
+    else if (existsSync(sectionFilePath)) { try { unlinkSync(sectionFilePath); } catch { /* ignore */ } }
+
+    const rawSection = existsSync(tempPath) ? fsReadFileSync(tempPath, "utf-8").trim() : "";
+    if (!rawSection || (/\bDONE\b/i.test(rawSection) && rawSection.length < 50)) {
+      try { unlinkSync(tempPath); } catch { /* ignore */ }
+      res.write(`data: ${JSON.stringify({ done: true, allComplete: true })}\n\n`);
+      res.end();
+      return;
+    }
+
+    // Humanize just this new section (small → fast → sub-20%, like the intro).
+    res.write(`data: ${JSON.stringify({ phase: "humanizing" })}\n\n`);
+    const heartbeat = setInterval(() => { try { res.write(`: humanizing\n\n`); } catch { /* closed */ } }, 15000);
+    try {
+      await agent.humanizeSection(tempName);
+    } catch (hErr) {
+      logger.warn({ err: hErr, section: sectionId }, "next-section: humanize failed — using raw section");
+    } finally {
+      clearInterval(heartbeat);
+    }
+    const humanized = (existsSync(tempPath) ? fsReadFileSync(tempPath, "utf-8").trim() : rawSection) || rawSection;
+
+    // Append the humanized section to the real section file.
+    const existing = snapshot ? snapshot.trim() : "";
+    const combined = existing ? `${existing}\n\n${humanized}` : humanized;
+    writeFileSync(sectionFilePath, combined, "utf-8");
+    try { unlinkSync(tempPath); } catch { /* ignore */ }
+
+    const idx = advanceSectionCounter(sessionId, sectionId);
+    const totalWords = combined.split(/\s+/).filter(Boolean).length;
+    res.write(`data: ${JSON.stringify({ done: true, sectionAdded: true, content: humanized, sectionIndex: idx, totalWords })}\n\n`);
+  } catch (err: unknown) {
+    const message = err instanceof Error ? err.message : "Unknown error";
+    logger.warn({ err: message, section: sectionId }, "next-section failed");
+    res.write(`data: ${JSON.stringify({ error: message })}\n\n`);
+  } finally {
+    res.end();
+  }
+});
+
 // ─── POST /api/session/:sessionId/complete ───────────────────────────────────
 // Called by the frontend when the user exports/downloads their finished report.
 // Triggers referral cashback logic for the user identified by x-clerk-id header.
