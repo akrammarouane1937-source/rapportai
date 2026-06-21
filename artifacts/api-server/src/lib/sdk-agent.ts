@@ -333,11 +333,12 @@ export class SDKReportAgent {
     const fullTurns = Math.min(110, Math.max(18, Math.ceil(before.length / 1200)));
     const auditTurns = Math.min(60, Math.max(12, Math.ceil(before.length / 2000)));
 
-    // Passes scale with size. A 6-line dédicace took ~6 min on 3 passes of the full
-    // 37-rule analysis — pure waste (simple personal text has no structural AI tells).
-    // Tiny sections (< 2500 chars: dédicaces, remerciements) get ONE light pass + the
-    // regex. Everything dense/academic keeps the proven 3-pass loop (intro = 18.4%).
-    const MAX_HUMANIZE_PASSES = before.length < 2500 ? 1 : 3;
+    // Passes scale with size, since sections are now generated one at a time.
+    //  < 2500 chars  → 1 pass   (dédicaces, remerciements — simple, no structural tells)
+    //  < 8000 chars  → 2 passes (intro & each Partie I/II section — the proven "do it
+    //                            twice" floor that hits sub-20%; reviewed per-section)
+    //  >= 8000 chars → 3 passes (long single-shot prose / big chunks — extra margin)
+    const MAX_HUMANIZE_PASSES = before.length < 2500 ? 1 : before.length < 8000 ? 2 : 3;
     const CONVERGE_RATIO = 0.97;
     const wordSim = (a: string, b: string): number => {
       const wa = a.split(/\s+/).filter(Boolean);
