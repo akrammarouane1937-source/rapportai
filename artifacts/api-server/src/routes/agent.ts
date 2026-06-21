@@ -1,5 +1,5 @@
 import { Router, type Request, type Response } from "express";
-import { existsSync, readFileSync, writeFileSync } from "fs";
+import { existsSync, readFileSync, writeFileSync, unlinkSync } from "fs";
 import path from "path";
 import { sessionStore } from "../lib/session-store";
 import { SDKReportAgent } from "../lib/sdk-agent";
@@ -12,6 +12,10 @@ import { logger } from "../lib/logger";
 
 const router = Router();
 const ANTHROPIC_API = "https://api.anthropic.com/v1/messages";
+
+// Partie I/II are generated SECTION BY SECTION (one subsection per turn, humanized
+// incrementally), not in one 29-min shot.
+const PARTIE_SECTIONS = new Set(["partie-i", "partie-ii"]);
 
 // ─── Section → Zustand key mapping ───────────────────────────────────────────
 
@@ -182,23 +186,27 @@ Section utilitaire — EXCEPTION à la règle du plan : génère IMMÉDIATEMENT 
 RESPONSE court et chaleureux ("Je dresse ta liste des tableaux, [prénom] — une seconde…").
 ACTION: generate, SECTIONS: liste-tableaux`,
 
-  "partie-i": `Tu es RapportAI. Mission : Partie I (cadre théorique).
-RÈGLE ABSOLUE : tu ne génères QU'UN SEUL identifiant de section — "partie-i". N'utilise JAMAIS des IDs comme "partie1-chapitre1-*" ou autre découpage — le système ne les connaît pas et la génération échoue. SECTIONS: partie-i est le SEUL format valide.
-PREMIER MESSAGE — PLAN D'ABORD : salue [prénom], rappelle le plan ("Partie I : [titre], [N] chapitres" depuis le profil), précise que la génération dure 5 à 10 minutes (ne pas fermer l'onglet) et indique la longueur attendue (~25 à 30 pages), puis ACTION: ask_user avec QUESTION: "On lance ?" et CHOICES: [Oui, lance la génération | Je veux d'abord joindre mes sources PDF | Je veux ajuster le plan]
-- "oui", "ok", "c'est bon", "vas-y", "génère", "Démarre.", "réessaie" → génère MAINTENANT avec SECTIONS: partie-i. Dans CONTEXT indique "Longueur: standard (25-30 pages)".
-- "joindre mes sources" → réponds en ACTION: chat : "Parfait — joins tes PDF directement ici dans le chat, je les lirai avant de générer. Envoie 'Démarre.' quand tu es prêt."
-- Ajustement du plan → écoute, intègre dans CONTEXT, reconfirme en 1 phrase, génère avec SECTIONS: partie-i.
-Si l'étudiant demande une modification après génération → génère à nouveau avec SECTIONS: partie-i et le contexte de modification.
-Si l'étudiant joint un PDF → lis-le et confirme son contenu en 2 phrases, puis propose "On lance avec ce document ?" (ACTION: ask_user, CHOICES: [Oui, génère maintenant | Je veux joindre un autre fichier]).`,
+  "partie-i": `Tu es RapportAI. Mission : Partie I (cadre théorique), construite SECTION PAR SECTION.
+RÈGLE ABSOLUE : tu ne génères QU'UN SEUL identifiant — "partie-i". N'utilise JAMAIS des IDs comme "partie1-chapitre1-*". SECTIONS: partie-i est le SEUL format valide.
+FONCTIONNEMENT : à chaque génération, le système rédige la PROCHAINE sous-section du plan (du sommaire), l'humanise, et l'ajoute à l'aperçu. L'étudiant la lit, puis demande la suivante ou une modification. On NE génère JAMAIS toute la Partie I d'un coup.
+PREMIER MESSAGE : salue [prénom], rappelle le plan ("Partie I : [titre], [N] chapitres"), et explique le principe : "On construit ta Partie I section par section : je rédige une section, tu la valides dans l'aperçu, puis on passe à la suivante. Chaque section est courte (1-2 min) et déjà humanisée." Puis ACTION: ask_user, QUESTION: "On commence par la première section ?", CHOICES: [Oui, génère la première section | Je veux joindre mes sources PDF | Je veux ajuster le plan]
+- "oui", "ok", "vas-y", "génère", "continue", "suivante", "section suivante", "la suivante", "Démarre.", "réessaie" → génère la prochaine section MAINTENANT avec SECTIONS: partie-i. RESPONSE court : "Je rédige la prochaine section, une minute…".
+- Après CHAQUE section, invite à continuer. RESPONSE du type : "Section ajoutée à l'aperçu. Dis 'continue' pour la suivante, ou demande-moi de la modifier."
+- Modification d'une section précise → ACTION: generate, SECTIONS: partie-i, CONTEXT: SURGICAL_EDIT: [description exacte].
+- "joindre mes sources" → ACTION: chat : "Parfait — joins tes PDF ici, je les lirai. Dis 'continue' quand tu es prêt."
+- Si le système répond que "la Partie I est complète", félicite l'étudiant et propose de passer à la suite.
+Si l'étudiant joint un PDF → confirme son contenu en 2 phrases, puis propose de commencer (ACTION: ask_user, CHOICES: [Oui, génère la première section | Je veux joindre un autre fichier]).`,
 
-  "partie-ii": `Tu es RapportAI. Mission : Partie II (cadre empirique/appliqué).
-RÈGLE ABSOLUE : tu ne génères QU'UN SEUL identifiant de section — "partie-ii". N'utilise JAMAIS des IDs comme "partie2-chapitre1-*" ou autre découpage — le système ne les connaît pas et la génération échoue. SECTIONS: partie-ii est le SEUL format valide.
-PREMIER MESSAGE — PLAN D'ABORD : salue [prénom], rappelle le plan ("Partie II : [titre], [N] chapitres" depuis le profil), précise que la génération dure 5 à 10 minutes (ne pas fermer l'onglet) et indique la longueur attendue (~25 à 30 pages), puis ACTION: ask_user avec QUESTION: "On lance ?" et CHOICES: [Oui, lance la génération | Je veux d'abord joindre mes sources PDF | Je veux ajuster le plan]
-- "oui", "ok", "c'est bon", "vas-y", "génère", "Démarre.", "réessaie" → génère MAINTENANT avec SECTIONS: partie-ii. Dans CONTEXT indique "Longueur: standard (25-30 pages)".
-- "joindre mes sources" → réponds en ACTION: chat : "Parfait — joins tes PDF directement ici dans le chat, je les lirai avant de générer. Envoie 'Démarre.' quand tu es prêt."
-- Ajustement du plan → écoute, intègre dans CONTEXT, reconfirme en 1 phrase, génère avec SECTIONS: partie-ii.
-Si l'étudiant demande une modification après génération → génère à nouveau avec SECTIONS: partie-ii et le contexte de modification.
-Si l'étudiant joint un PDF → lis-le et confirme son contenu en 2 phrases, puis propose "On lance avec ce document ?" (ACTION: ask_user, CHOICES: [Oui, génère maintenant | Je veux joindre un autre fichier]).`,
+  "partie-ii": `Tu es RapportAI. Mission : Partie II (cadre empirique/appliqué), construite SECTION PAR SECTION.
+RÈGLE ABSOLUE : tu ne génères QU'UN SEUL identifiant — "partie-ii". N'utilise JAMAIS des IDs comme "partie2-chapitre1-*". SECTIONS: partie-ii est le SEUL format valide.
+FONCTIONNEMENT : à chaque génération, le système rédige la PROCHAINE sous-section du plan (du sommaire), l'humanise, et l'ajoute à l'aperçu. L'étudiant la lit, puis demande la suivante ou une modification. On NE génère JAMAIS toute la Partie II d'un coup.
+PREMIER MESSAGE : salue [prénom], rappelle le plan ("Partie II : [titre], [N] chapitres"), et explique le principe : "On construit ta Partie II section par section : je rédige une section, tu la valides dans l'aperçu, puis on passe à la suivante. Chaque section est courte (1-2 min) et déjà humanisée." Puis ACTION: ask_user, QUESTION: "On commence par la première section ?", CHOICES: [Oui, génère la première section | Je veux joindre mes sources PDF | Je veux ajuster le plan]
+- "oui", "ok", "vas-y", "génère", "continue", "suivante", "section suivante", "la suivante", "Démarre.", "réessaie" → génère la prochaine section MAINTENANT avec SECTIONS: partie-ii. RESPONSE court : "Je rédige la prochaine section, une minute…".
+- Après CHAQUE section, invite à continuer. RESPONSE du type : "Section ajoutée à l'aperçu. Dis 'continue' pour la suivante, ou demande-moi de la modifier."
+- Modification d'une section précise → ACTION: generate, SECTIONS: partie-ii, CONTEXT: SURGICAL_EDIT: [description exacte].
+- "joindre mes sources" → ACTION: chat : "Parfait — joins tes PDF ici, je les lirai. Dis 'continue' quand tu es prêt."
+- Si le système répond que "la Partie II est complète", félicite l'étudiant et propose de passer à la suite.
+Si l'étudiant joint un PDF → confirme son contenu en 2 phrases, puis propose de commencer (ACTION: ask_user, CHOICES: [Oui, génère la première section | Je veux joindre un autre fichier]).`,
 };
 
 // ─── Build coordinator system prompt ─────────────────────────────────────────
@@ -735,6 +743,55 @@ router.post("/agent/:step/stream", async (req: Request, res: Response) => {
             sseWrite(res, { type: "text", content: "La génération de l'Abstract a échoué. Réessaie." });
             continue;
           }
+        } else if (PARTIE_SECTIONS.has(sectionId)) {
+          // SECTION-BY-SECTION: generate ONE subsection, humanize only it, append.
+          // Replaces the 29-min one-shot; the student reviews each section then continues.
+          const sectionLabel = sectionId === "partie-i" ? "Partie I" : "Partie II";
+          const tempName = `${sectionId}.__section`;
+          const tempPath = path.join(agent.workDir, `${tempName}.md`);
+          try { if (existsSync(tempPath)) unlinkSync(tempPath); } catch { /* ignore */ }
+          const snapshot = existsSync(filePath) ? readFileSync(filePath, "utf-8") : null;
+          const crossRef = sectionId === "partie-ii"
+            ? "Lis aussi partie-i.md : les références croisées vers la Partie I sont obligatoires.\n"
+            : "";
+          const sectionTask = `MODE SECTION — génère UNE seule sous-section de la ${sectionLabel}, pas plus.
+1. Lis "sommaire.md" : le plan complet (chapitres et sous-sections, ex. 1.1, 1.2, 2.1…).
+2. Lis "${sectionId}.md" s'il existe : ce qui a DÉJÀ été rédigé.
+3. Dans l'ordre du plan, identifie la PROCHAINE sous-section non encore rédigée.
+4. ${crossRef}Si TOUTES les sous-sections du plan sont déjà rédigées dans "${sectionId}.md", écris EXACTEMENT le mot DONE (rien d'autre) dans "${tempName}.md" et arrête-toi.
+5. Sinon, rédige le contenu COMPLET de cette seule sous-section : son titre (## ou ###) puis le corps (~400-900 mots), avec recherche de sources réelles et citations (Auteur, année). Écris-le dans "${tempName}.md" avec Write (fichier neuf, une seule sous-section). N'écris RIEN dans "${sectionId}.md".${context ? `\n\nDemande / contexte de l'étudiant : ${context}` : ""}`;
+          try {
+            for await (const event of agent.streamSection(sectionId, sectionTask)) {
+              if (event.type === "tool_call") sseWrite(res, { type: "tool_call", name: event.name, detail: event.detail });
+            }
+          } catch (genErr) {
+            logger.error({ err: genErr, section: sectionId }, "next-section streamSection error");
+            void sendErrorAlert({ context: `generate:${sectionId}`, message: genErr instanceof Error ? genErr.message : String(genErr), sessionId, section: sectionId });
+            sseWrite(res, { type: "text", content: `La génération de la ${sectionLabel} a échoué. Réessaie.` });
+            continue;
+          }
+          // Restore the section file — only our controlled append may modify it.
+          if (snapshot !== null) writeFileSync(filePath, snapshot, "utf-8");
+          else if (existsSync(filePath)) { try { unlinkSync(filePath); } catch { /* ignore */ } }
+
+          const rawSection = existsSync(tempPath) ? readFileSync(tempPath, "utf-8").trim() : "";
+          if (!rawSection || (/\bDONE\b/i.test(rawSection) && rawSection.length < 50)) {
+            try { unlinkSync(tempPath); } catch { /* ignore */ }
+            sseWrite(res, { type: "text", content: `La ${sectionLabel} est complète : toutes les sections du plan ont été rédigées et humanisées.` });
+            continue;
+          }
+          // Humanize ONLY this new subsection (small → fast → sub-20%, like the intro).
+          sseWrite(res, { type: "tool_call", name: "Humanizing", detail: sectionId });
+          try {
+            await agent.humanizeSection(tempName);
+          } catch (hErr) {
+            logger.warn({ err: hErr, section: sectionId }, "next-section humanize failed — using raw section");
+          }
+          const humanizedSection = (existsSync(tempPath) ? readFileSync(tempPath, "utf-8").trim() : rawSection) || rawSection;
+          const existingPartie = snapshot ? snapshot.trim() : "";
+          const combinedPartie = existingPartie ? `${existingPartie}\n\n${humanizedSection}` : humanizedSection;
+          writeFileSync(filePath, combinedPartie, "utf-8");
+          try { unlinkSync(tempPath); } catch { /* ignore */ }
         } else {
           const task = agent.buildSectionTask(sectionId, { extraContext: context || undefined });
           try {
@@ -768,7 +825,7 @@ router.post("/agent/:step/stream", async (req: Request, res: Response) => {
           // French phrasing rules) and would inject French words / corrupt it.
           "abstract",
         ]);
-        if (!SKIP_HUMANIZE.has(sectionId)) {
+        if (!SKIP_HUMANIZE.has(sectionId) && !PARTIE_SECTIONS.has(sectionId)) {
           const rawBefore = readFileSync(filePath, "utf-8");
           sseWrite(res, { type: "tool_call", name: "Humanizing", detail: sectionId });
           try {
