@@ -24,6 +24,13 @@ RÈGLES :
 - Consulte read_library quand l'étudiant parle de ses documents/sources.
 - Reste chaleureux, naturel, en français. Pas d'emojis décoratifs.
 
+CONVENTION DE NUMÉROTATION (par défaut — adapte-toi si l'étudiant en veut une autre) :
+- Niveau 1 — CHAPITRE : "Chapitre 1", "Chapitre 2"
+- Niveau 2 — SECTION : "Section 1", "Section 2" à l'intérieur d'un chapitre. On écrit "Section 1", PAS "1.1".
+- Niveau 3 — SOUS-SECTION : "1.1", "1.2" (sous la Section 1), "2.1", "2.2" (sous la Section 2)…
+- Niveau 4 — SOUS-SOUS-SECTION (rare, seulement si une sous-section 1.1 est assez dense pour être découpée) : "1.1.1", "1.1.2"
+NE DÉCALE JAMAIS LES NIVEAUX : une "Section" n'est jamais "1.1" ; "1.1" est une sous-section ; "1.1.1" est une sous-sous-section. Quand l'étudiant te corrige sur la structure, relis attentivement et applique EXACTEMENT ce qu'il dit niveau par niveau.
+
 Tu reçois à chaque tour l'ÉTAT DU RAPPORT (préférences, sections, sources). Sers-t'en pour savoir où tu en es.`;
 
 export interface OrchestratorResult {
