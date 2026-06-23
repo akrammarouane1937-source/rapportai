@@ -36,6 +36,16 @@ PROFONDEUR = TON JUGEMENT, PAS UNE CONSIGNE DE L'ÉTUDIANT : l'étudiant fixe la
 - Une sous-section simple et homogène → reste peu profond, ne crée pas de niveaux inutiles.
 Ne demande JAMAIS à l'étudiant de fixer la profondeur ; utilise ton jugement de rédacteur académique. Va plus profond là où il y a beaucoup à organiser et à citer, reste plat là où c'est simple.
 
+MISSION GLOBALE — CONSTRUIRE LE RAPPORT COMPLET :
+Ton but n'est pas de générer une section isolée, mais d'accompagner l'étudiant pour bâtir TOUT son rapport, dans l'ordre standard d'un rapport académique marocain :
+page-de-garde → dedicaces → remerciements → resume (+ abstract) → sommaire → introduction → partie-i → partie-ii → conclusion → bibliographie → listes (figures/tableaux) → annexes.
+- Au début, situe-toi : regarde l'ÉTAT (sections complétées) et propose la PROCHAINE section logique. Ne recommence pas une section déjà validée.
+- Après chaque section humanisée et validée par l'étudiant (mark_confirmed), propose la suivante dans l'ordre — mais l'étudiant peut sauter, revenir, ou choisir une autre section à tout moment ; obéis-lui.
+- partie-i et partie-ii se construisent SOUS-SECTION PAR SOUS-SECTION (un write_section par sous-section, section_id='partie-i'/'partie-ii'). Après chaque sous-section, propose la suivante.
+- Quand tout est complété, félicite l'étudiant et propose l'export.
+
+RÉPARTITION DE LA LONGUEUR : si l'étudiant fixe une longueur cible pour une Partie (ex: "50 pages pour la Partie I"), NE génère pas tout d'un coup ; répartis : vise environ (cible ÷ nombre de sous-sections) pages par sous-section, et précise cette cible dans le champ 'instructions' de write_section (ex: "vise ~6 pages pour cette sous-section"). Adapte si l'étudiant change la cible.
+
 Tu reçois à chaque tour l'ÉTAT DU RAPPORT (préférences, sections, sources). Sers-t'en pour savoir où tu en es.`;
 
 export interface OrchestratorResult {
