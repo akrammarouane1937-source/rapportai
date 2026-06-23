@@ -44,6 +44,7 @@ export default function AgenticPage() {
   const [choices, setChoices] = useState<string[] | null>(null);
   const [activeSection, setActiveSection] = useState("introduction");
   const bottomRef = useRef<HTMLDivElement>(null);
+  const inputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => { bottomRef.current?.scrollIntoView({ behavior: "smooth" }); }, [messages, steps, busy]);
 
@@ -131,12 +132,27 @@ export default function AgenticPage() {
         )}
 
         {choices && (
-          <div className="flex flex-wrap gap-2">
-            {choices.map((c, i) => (
-              <button key={i} onClick={() => send(c)} className="px-3 py-1.5 rounded-full border border-purple-300 text-purple-700 text-sm hover:bg-purple-50">
-                {c}
+          <div className="rounded-xl border border-purple-200 bg-purple-50/60 p-3 space-y-2">
+            <div className="text-xs font-semibold text-purple-700">
+              Choisis une option — ou écris ta propre réponse dans la zone de texte en bas :
+            </div>
+            <div className="flex flex-wrap gap-2">
+              {choices.map((c, i) => (
+                <button
+                  key={i}
+                  onClick={() => send(c)}
+                  className="px-3 py-1.5 rounded-full border border-purple-300 bg-white text-purple-700 text-sm hover:bg-purple-100 transition-colors"
+                >
+                  {c}
+                </button>
+              ))}
+              <button
+                onClick={() => { setChoices(null); inputRef.current?.focus(); }}
+                className="px-3 py-1.5 rounded-full border border-dashed border-purple-300 bg-transparent text-purple-500 text-sm hover:bg-purple-100 transition-colors"
+              >
+                ✏️ Autre / écrire moi-même…
               </button>
-            ))}
+            </div>
           </div>
         )}
         <div ref={bottomRef} />
@@ -145,10 +161,11 @@ export default function AgenticPage() {
       <div className="shrink-0 border-t border-border">
         <form onSubmit={(e) => { e.preventDefault(); send(input); }} className="flex gap-2 p-3">
           <input
+            ref={inputRef}
             value={input}
             onChange={(e) => setInput(e.target.value)}
             disabled={busy}
-            placeholder="Écris à l'agent…"
+            placeholder={choices ? "Choisis ci-dessus ou écris ta propre réponse…" : "Écris à l'agent…"}
             className="flex-1 px-3 py-2 rounded-xl border text-sm outline-none focus:border-purple-400"
           />
           <button type="submit" disabled={busy || !input.trim()} className="px-4 py-2 rounded-xl bg-purple-600 text-white text-sm disabled:opacity-40">
