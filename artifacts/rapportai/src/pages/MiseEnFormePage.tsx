@@ -179,7 +179,7 @@ export default function MiseEnFormePage() {
             <div className="bg-purple-50 rounded-2xl border border-purple-100 p-5">
               <p className="text-sm text-purple-700 font-medium mb-1">Appliqué automatiquement à chaque rapport</p>
               <p className="text-xs text-purple-500">
-                Tes réglages sont sauvegardés sur ton appareil et envoyés à l'IA à chaque génération, puis appliqués à l'export Word et PDF.
+                Tes réglages sont sauvegardés sur ton appareil et envoyés à l'IA à chaque génération, puis appliqués à l'export Word.
               </p>
             </div>
           </motion.div>

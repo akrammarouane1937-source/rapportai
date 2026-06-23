@@ -666,7 +666,7 @@ export default function LandingPage() {
                     "Tout dans Gratuit",
                     "60 pages générées",
                     "20 révisions IA",
-                    "Export Word + PDF",
+                    "Export Word",
                     "Humanisation anti-détection IA",
                     "Génération depuis tes documents",
                   ],

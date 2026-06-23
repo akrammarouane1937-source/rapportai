@@ -36,8 +36,8 @@ export default function UpgradeModal({
   const isEssentiel = currentPlan === "free";
 
   const features = isEssentiel
-    ? ["60 pages générées", "20 révisions IA", "Export Word + PDF", "Humanisation anti-détection IA"]
-    : ["Pages illimitées", "Révisions illimitées", "Export Word + PDF", "Humanisation anti-détection IA"];
+    ? ["60 pages générées", "20 révisions IA", "Export Word", "Humanisation anti-détection IA"]
+    : ["Pages illimitées", "Révisions illimitées", "Export Word", "Humanisation anti-détection IA"];
 
   return (
     <AnimatePresence>

@@ -92,7 +92,7 @@ export default function PaymentSuccessPage() {
               {planId === "starter" && (
                 <ul className="text-sm text-gray-700 space-y-1">
                   <li>✓ 60 pages générées par IA</li>
-                  <li>✓ Export Word + PDF</li>
+                  <li>✓ Export Word</li>
                   <li>✓ 20 révisions IA</li>
                   <li>✓ Humanisation anti-détection IA</li>
                   <li>✓ Génération depuis tes documents</li>
@@ -102,7 +102,7 @@ export default function PaymentSuccessPage() {
                 <ul className="text-sm text-gray-700 space-y-1">
                   <li>✓ Pages illimitées</li>
                   <li>✓ Révisions illimitées</li>
-                  <li>✓ Export Word + PDF</li>
+                  <li>✓ Export Word</li>
                   <li>✓ JuryAI : simulation de soutenance</li>
                   <li>✓ Humanisation anti-détection IA</li>
                   <li>✓ Certificat Anti-Détection IA</li>

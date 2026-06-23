@@ -21,7 +21,7 @@ const ORDER: PlanId[] = ["free", "basique", "starter", "pro"];
 
 const FEATURES: Record<Exclude<PlanId, "free">, string[]> = {
   basique: ["Partie I incluse", "Pages illimitées", "8 révisions", "Humanisation anti-détection IA"],
-  starter: ["60 pages", "Parties I + II", "Export Word + PDF", "Humanisation anti-détection IA", "20 révisions"],
+  starter: ["60 pages", "Parties I + II", "Export Word", "Humanisation anti-détection IA", "20 révisions"],
   pro:     ["Pages illimitées", "Révisions illimitées", "Humanisation anti-détection IA", "JuryAI"],
 };
 

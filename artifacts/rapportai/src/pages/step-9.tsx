@@ -7,7 +7,6 @@ import { PreviewPanel } from "@/components/preview-panel";
 import { ChatInput } from "@/components/chat-input";
 import { Download, Share2, Loader2, CheckCircle2 } from "lucide-react";
 import { generateDocx, downloadBlob } from "@/lib/generateDocx";
-import { generatePdf } from "@/lib/generatePdf";
 import { API_BASE } from "@/lib/apiBase";
 
 function totalWords(r: Report) {
@@ -123,13 +122,6 @@ export default function Step9() {
                 >
                   {exporting ? <Loader2 className="w-4 h-4 animate-spin" /> : exported ? <CheckCircle2 className="w-4 h-4" /> : <Download className="w-4 h-4" />}
                   {exporting ? "Export..." : exported ? "Téléchargé !" : "Word .docx"}
-                </button>
-                <button
-                  onClick={() => void generatePdf(report as any)}
-                  className="flex-1 h-11 rounded-xl font-bold text-sm flex items-center justify-center gap-2 text-white transition-all"
-                  style={{ background: "linear-gradient(135deg, #dc2626, #b91c1c)", boxShadow: "0 4px 16px rgba(220,38,38,0.35)" }}
-                >
-                  <Download className="w-4 h-4" /> PDF
                 </button>
               </div>
               <button

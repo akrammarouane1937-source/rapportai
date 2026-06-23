@@ -3,7 +3,6 @@ import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import { useReportStore } from "@/lib/store";
 import { generateDocx, downloadBlob } from "@/lib/generateDocx";
-import { generatePdf } from "@/lib/generatePdf";
 import { Download, FileText, Maximize2, Minimize2, Copy, CheckCheck, Loader2, Share2, Pencil, Eye } from "lucide-react";
 import { API_BASE } from "@/lib/apiBase";
 import type { Components } from "react-markdown";
@@ -203,7 +202,6 @@ export function PreviewPanel({ activeSection, content, maxStep, isGenerating }: 
     }
   };
 
-  const handlePdf = () => void generatePdf(report as any);
 
   const handleCopy = async () => {
     const currentText = SECTIONS.find(s => s.id === activeSection);
@@ -413,7 +411,7 @@ export function PreviewPanel({ activeSection, content, maxStep, isGenerating }: 
                     margin: "6px 0",
                   }}
                 >
-                  📊 {alt || "Figure"} — visible dans l'export Word/PDF
+                  📊 {alt || "Figure"} — visible dans l'export Word
                 </span>
               ),
             }}
@@ -515,15 +513,6 @@ export function PreviewPanel({ activeSection, content, maxStep, isGenerating }: 
           </button>
 
           <button
-            style={{ ...btnBase, background: "#fef2f2", borderColor: "#fecaca", color: "#dc2626" }}
-            onClick={handlePdf}
-            title="Télécharger PDF"
-          >
-            <Download style={{ width: 13, height: 13 }} />
-            PDF
-          </button>
-
-          <button
             style={{ ...btnBase, background: exportingDocx ? "#ede9fe" : "linear-gradient(135deg,#7c3aed,#a855f7)", borderColor: "transparent", color: "#fff" }}
             onClick={handleDocx}
             disabled={exportingDocx}
@@ -568,7 +557,7 @@ export function PreviewPanel({ activeSection, content, maxStep, isGenerating }: 
         {editMode ? (
           <div className="max-w-3xl mx-auto px-4 flex flex-col gap-5">
             <p className="text-xs text-gray-500 -mb-1">
-              Modifie le texte de chaque section. Les changements sont sauvegardés automatiquement et repris dans l'export Word/PDF.
+              Modifie le texte de chaque section. Les changements sont sauvegardés automatiquement et repris dans l'export Word.
             </p>
             {SECTIONS.filter(({ field }) => ((report as unknown as Record<string, string>)[field] || "").trim()).map(({ id, field, label }) => (
               <div key={id} data-section={id} className="bg-white rounded-xl border border-gray-200 overflow-hidden">

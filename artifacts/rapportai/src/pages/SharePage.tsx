@@ -7,7 +7,6 @@ import {
 import { Button } from "@/components/ui/button";
 import { markdownToHtml } from "@/lib/markdownToHtml";
 import { generateDocx, downloadBlob } from "@/lib/generateDocx";
-import { generatePdf } from "@/lib/generatePdf";
 import type { ReportData } from "@/lib/reportStore";
 
 import { API_BASE as BASE_PATH } from "@/lib/apiBase";
@@ -180,14 +179,6 @@ export default function SharePage() {
                 ? <Loader2 className="w-3 h-3 animate-spin" />
                 : <Download className="w-3 h-3" />}
               .docx
-            </Button>
-            <Button
-              onClick={() => report && void generatePdf(report)}
-              variant="outline"
-              className="h-8 px-3 text-xs font-bold rounded-xl gap-1.5 border-red-200 text-red-600 hover:bg-red-50"
-            >
-              <FileText className="w-3 h-3" />
-              PDF
             </Button>
           </div>
         </div>

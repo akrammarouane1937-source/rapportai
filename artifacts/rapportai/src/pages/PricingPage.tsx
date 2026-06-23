@@ -62,7 +62,7 @@ const PLANS: Plan[] = [
       "60 pages générées",
       "20 révisions IA",
       "Parties I + II complètes",
-      "Export Word + PDF",
+      "Export Word",
       "Humanisation anti-détection IA",
       "Canevas de ton école",
     ],
@@ -78,7 +78,7 @@ const PLANS: Plan[] = [
     features: [
       "Pages illimitées",
       "Révisions illimitées",
-      "Export Word + PDF",
+      "Export Word",
       "Humanisation anti-détection IA",
       "Canevas de ton école",
       "Accès JuryAI",
