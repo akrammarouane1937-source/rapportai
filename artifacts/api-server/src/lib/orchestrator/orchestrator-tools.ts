@@ -113,7 +113,8 @@ PRÉFÉRENCES ENREGISTRÉES (à respecter) :
 - École/convention : ${p.schoolConventions || "standard PFE marocain"}
 - Citations : ${p.citationStyle}
 
-Si la consigne de l'étudiant contredit un modèle par défaut, SUIS L'ÉTUDIANT. Lis sommaire.md et les documents de la bibliothèque pour les sources réelles. Écris dans "${sectionId}.md".`;
+Si la consigne de l'étudiant contredit un modèle par défaut, SUIS L'ÉTUDIANT.
+SOURCES : lis sommaire.md, et SURTOUT lis les fichiers ".txt" présents dans le dossier (Glob "*.txt") — ce sont les textes extraits des PDF/Word que l'étudiant a téléversés dans sa bibliothèque. Cite ces sources réelles en priorité (Auteur, année). Écris dans "${sectionId}.md".`;
 }
 
 export async function runTool(name: string, input: Record<string, unknown>, ctx: ToolContext): Promise<ToolResult> {
@@ -197,9 +198,21 @@ export async function runTool(name: string, input: Record<string, unknown>, ctx:
     }
 
     case "read_library": {
-      const docs = agent.getDocumentNames();
-      if (docs.length === 0) return { result: "Aucun document dans la bibliothèque. L'étudiant peut en téléverser pour des sources réelles." };
-      return { result: `Documents disponibles (${docs.length}) : ${docs.join(", ")}. Le rédacteur peut les lire pendant la génération pour citer les vraies sources.` };
+      const all = agent.getDocumentNames();
+      const realDocs = all.filter((f) => !f.endsWith(".txt"));  // .txt are the extracted copies
+      if (realDocs.length === 0) return { result: "Aucun document dans la bibliothèque. L'étudiant peut en téléverser pour des sources réelles." };
+      const parts: string[] = [];
+      for (const doc of realDocs) {
+        let excerpt = "";
+        const txtPath = path.join(agent.workDir, `${doc}.txt`);
+        const directPath = path.join(agent.workDir, doc);
+        try {
+          if (existsSync(txtPath)) excerpt = readFileSync(txtPath, "utf-8").slice(0, 2000);
+          else if (existsSync(directPath) && /\.(txt|md)$/i.test(doc)) excerpt = readFileSync(directPath, "utf-8").slice(0, 2000);
+        } catch { /* ignore */ }
+        parts.push(`### ${doc}\n${excerpt.trim() || "(texte non extractible — l'étudiant peut le re-téléverser)"}`);
+      }
+      return { result: `Bibliothèque — ${realDocs.length} document(s), avec extraits du contenu réel :\n\n${parts.join("\n\n---\n\n")}\n\nTu peux maintenant confirmer leurs titres/auteurs et t'en servir comme sources. Le rédacteur lira le texte COMPLET (fichiers .txt) pendant la génération pour citer correctement.` };
     }
 
     case "ask_user": {
