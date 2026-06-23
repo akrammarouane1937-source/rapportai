@@ -34,7 +34,7 @@ export const TOOL_SCHEMAS = [
     input_schema: {
       type: "object",
       properties: {
-        path: { type: "string", description: "Chemin: 'structure.notes', 'structure.hierarchyDepth', 'lengthTarget.partieI', 'style', 'schoolConventions', 'citationStyle'" },
+        path: { type: "string", description: "Chemin. Préférences: 'structure.notes', 'structure.hierarchyDepth', 'lengthTarget.partieI', 'style', 'schoolConventions', 'citationStyle'. Profil étudiant: 'profile.theme', 'profile.reportType', 'profile.school', 'profile.filiere', 'profile.problematique'." },
         value: { description: "La valeur (string ou number)" },
       },
       required: ["path", "value"],

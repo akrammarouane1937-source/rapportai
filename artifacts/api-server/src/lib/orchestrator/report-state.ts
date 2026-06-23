@@ -103,8 +103,14 @@ export function saveReportState(state: ReportState): void {
 
 // ─── Mutation helpers (used by tools) ────────────────────────────────────────
 
-/** Set a preference by dotted path, e.g. setPreference(s, "structure.notes", "…"). */
+/** Set a preference by dotted path, e.g. setPreference(s, "structure.notes", "…").
+ * Paths starting with "profile." write the student's profile (theme, school, …). */
 export function setPreference(state: ReportState, dotPath: string, value: unknown): ReportState {
+  if (dotPath.startsWith("profile.")) {
+    state.profile[dotPath.slice("profile.".length)] = value;
+    saveReportState(state);
+    return state;
+  }
   const keys = dotPath.split(".");
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   let obj: any = state.preferences;
@@ -146,7 +152,9 @@ export function summarizeState(state: ReportState): string {
   const secLines = secs.length
     ? secs.map((s) => `  - ${s.id} "${s.title}" → ${s.status}${s.detectionScore != null ? ` (${s.detectionScore}% IA)` : ""}`).join("\n")
     : "  (aucune section encore)";
+  const pf = state.profile as Record<string, string>;
   return `ÉTAT DU RAPPORT
+Profil étudiant: thème="${pf.theme || "MANQUANT"}", école="${pf.school || "?"}", filière="${pf.filiere || "?"}", type="${pf.reportType || "?"}", problématique="${pf.problematique || "?"}"
 Préférences:
   - Structure: profondeur ${prefs.structure.hierarchyDepth}, numérotation "${prefs.structure.numbering}"${prefs.structure.notes ? ` — ${prefs.structure.notes}` : ""}
   - Longueur cible: ${Object.entries(prefs.lengthTarget).map(([k, v]) => `${k}=${v}`).join(", ") || "non fixée"}
