@@ -25,6 +25,7 @@ export default function AgenticPage() {
   const [busy, setBusy] = useState(false);
   const [input, setInput] = useState("");
   const [choices, setChoices] = useState<string[] | null>(null);
+  const [doc, setDoc] = useState("");          // latest generated section content (for ZeroGPT)
   const bottomRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => { bottomRef.current?.scrollIntoView({ behavior: "smooth" }); }, [messages, steps, busy]);
@@ -66,6 +67,8 @@ export default function AgenticPage() {
               setMessages((m) => [...m, { role: "agent", content: ev.askUser.question }]);
               if (ev.askUser.choices?.length) setChoices(ev.askUser.choices);
             }
+          } else if (ev.type === "file_written") {
+            if (typeof ev.content === "string") setDoc(ev.content);
           } else if (ev.type === "error") {
             setMessages((m) => [...m, { role: "agent", content: "⚠️ " + (ev.message ?? "Erreur") }]);
           }
@@ -115,6 +118,26 @@ export default function AgenticPage() {
         )}
         <div ref={bottomRef} />
       </div>
+
+      {doc && (
+        <div className="border-t pt-2 mt-1">
+          <div className="flex items-center justify-between mb-1">
+            <span className="text-xs font-semibold text-gray-600">
+              Contenu généré ({doc.split(/\s+/).filter(Boolean).length} mots) — copie-le dans ZeroGPT
+            </span>
+            <button
+              type="button"
+              onClick={() => navigator.clipboard.writeText(doc).catch(() => {})}
+              className="text-xs px-2 py-1 rounded bg-purple-100 text-purple-700 hover:bg-purple-200"
+            >
+              Copier
+            </button>
+          </div>
+          <div className="max-h-64 overflow-y-auto text-xs whitespace-pre-wrap bg-gray-50 border rounded p-2 text-gray-700">
+            {doc}
+          </div>
+        </div>
+      )}
 
       <form
         onSubmit={(e) => { e.preventDefault(); send(input); }}
