@@ -4,10 +4,16 @@
 // loop). Student preferences in the state are injected into every write — that is what
 // makes the system obey the student instead of a template.
 
+import { existsSync, readFileSync, writeFileSync, unlinkSync } from "fs";
+import path from "path";
 import type { SDKReportAgent } from "../sdk-agent";
 import {
   type ReportState, setPreference, upsertSection, saveReportState, summarizeState,
 } from "./report-state";
+
+// Parts are built sub-section by sub-section, each appended to the canonical file
+// (partie-i.md / partie-ii.md) so the preview + Word export pick them up.
+const PARTIE_SECTIONS = new Set(["partie-i", "partie-ii"]);
 
 export interface ToolContext {
   state: ReportState;
@@ -45,12 +51,12 @@ export const TOOL_SCHEMAS = [
   },
   {
     name: "write_section",
-    description: "Rédige UNE section/sous-section du rapport, en respectant la structure, la longueur cible et le style enregistrés dans l'état. Délègue au rédacteur (recherche de sources incluse).",
+    description: "Rédige du contenu en respectant la structure/longueur/style de l'état, puis l'humanise. section_id DOIT être un identifiant CANONIQUE (jamais inventé) : 'page-de-garde', 'dedicaces', 'remerciements', 'resume', 'sommaire', 'introduction', 'partie-i', 'partie-ii', 'conclusion'. Pour la Partie I/II, on construit SOUS-SECTION PAR SOUS-SECTION : appelle write_section avec section_id='partie-i' (ou 'partie-ii') et décris la sous-section précise dans 'instructions' (ex: 'Chapitre 1, Section 1 avec sous-sections 1.1 et 1.2') ; chaque appel AJOUTE la sous-section humanisée à la Partie. N'invente JAMAIS d'id comme 'chapitre-1-section-1'.",
     input_schema: {
       type: "object",
       properties: {
-        section_id: { type: "string", description: "ex: 'introduction', 'partie-i', 'partie-ii', 'conclusion'" },
-        instructions: { type: "string", description: "Consigne précise de l'étudiant pour CETTE section (structure, contenu, longueur)" },
+        section_id: { type: "string", description: "Id canonique uniquement (voir description). Pour Partie I/II → 'partie-i' / 'partie-ii'." },
+        instructions: { type: "string", description: "Consigne précise pour CE morceau (quelle sous-section, structure, longueur, contenu)" },
       },
       required: ["section_id", "instructions"],
     },
@@ -133,20 +139,51 @@ export async function runTool(name: string, input: Record<string, unknown>, ctx:
       const sectionId = String(input.section_id);
       const instructions = String(input.instructions ?? "");
       upsertSection(state, { id: sectionId, status: "drafting", lastInstruction: instructions });
+
+      if (PARTIE_SECTIONS.has(sectionId)) {
+        // Build the part one sub-section at a time, APPENDING the humanized result to the
+        // canonical partie-i.md / partie-ii.md (so preview + Word export read it).
+        const tempName = `${sectionId}.__section`;
+        const tempPath = path.join(agent.workDir, `${tempName}.md`);
+        const filePath = path.join(agent.workDir, `${sectionId}.md`);
+        const snapshot = existsSync(filePath) ? readFileSync(filePath, "utf-8") : "";
+        try { if (existsSync(tempPath)) unlinkSync(tempPath); } catch { /* ignore */ }
+        const subTask = buildWriterTask(state, sectionId, instructions)
+          + `\n\nÉcris UNIQUEMENT cette sous-section dans "${tempName}.md" (Write, fichier neuf). N'écris RIEN dans "${sectionId}.md".`;
+        for await (const ev of agent.streamSection(sectionId, subTask)) {
+          if (ev.type === "tool_call") emit({ type: "tool_call", name: ev.name, detail: ev.detail });
+        }
+        if (snapshot) writeFileSync(filePath, snapshot, "utf-8");  // writer may have touched it
+        const rawSub = existsSync(tempPath) ? readFileSync(tempPath, "utf-8").trim() : "";
+        if (!rawSub) return { result: `Rien n'a été rédigé pour ${sectionId}. Réessaie.` };
+        upsertSection(state, { id: sectionId, status: "humanizing" });
+        emit({ type: "tool_call", name: "humanize_section", detail: sectionId });
+        try { await agent.humanizeSection(tempName); } catch { /* keep raw */ }
+        const humanizedSub = (existsSync(tempPath) ? readFileSync(tempPath, "utf-8").trim() : rawSub) || rawSub;
+        const combined = snapshot.trim() ? `${snapshot.trim()}\n\n${humanizedSub}` : humanizedSub;
+        writeFileSync(filePath, combined, "utf-8");
+        try { unlinkSync(tempPath); } catch { /* ignore */ }
+        const totalWords = combined.split(/\s+/).filter(Boolean).length;
+        upsertSection(state, { id: sectionId, status: "ready", words: totalWords });
+        emit({ type: "file_written", section: sectionId, content: combined });
+        return { result: `Sous-section ajoutée à la ${sectionId === "partie-i" ? "Partie I" : "Partie II"} (total ${totalWords} mots), rédigée ET humanisée. Propose à l'étudiant de valider, puis enchaîne la sous-section suivante.` };
+      }
+
+      // Standalone section (introduction, conclusion, résumé…) → whole canonical file.
       emit({ type: "tool_call", name: "write_section", detail: sectionId });
       const task = buildWriterTask(state, sectionId, instructions);
       for await (const ev of agent.streamSection(sectionId, task)) {
         if (ev.type === "tool_call") emit({ type: "tool_call", name: ev.name, detail: ev.detail });
       }
-      // GUARDRAIL: a section is never delivered un-humanized. Humanize inline so the
-      // orchestrator can't "forget" — code enforces it, not the model.
+      // GUARDRAIL: never deliver un-humanized — code enforces it, not the model.
       upsertSection(state, { id: sectionId, status: "humanizing" });
       emit({ type: "tool_call", name: "humanize_section", detail: sectionId });
       try { await agent.humanizeSection(sectionId); } catch { /* keep raw on failure */ }
       const content = agent.getSection(sectionId) ?? "";
       const words = content.split(/\s+/).filter(Boolean).length;
       upsertSection(state, { id: sectionId, status: "ready", words });
-      return { result: `Section "${sectionId}" rédigée ET humanisée (${words} mots). Propose maintenant à l'étudiant de valider ou de modifier avant de continuer.` };
+      emit({ type: "file_written", section: sectionId, content });
+      return { result: `Section "${sectionId}" rédigée ET humanisée (${words} mots). Propose à l'étudiant de valider ou de modifier avant de continuer.` };
     }
 
     case "humanize_section": {
