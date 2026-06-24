@@ -82,7 +82,7 @@ export async function runOrchestrator(opts: {
       const resp = await fetch(ANTHROPIC_API, {
         method: "POST",
         headers: { "anthropic-version": "2023-06-01", "x-api-key": apiKey, "content-type": "application/json" },
-        body: JSON.stringify({ model: MODEL, max_tokens: 4096, system: SYSTEM, tools: TOOL_SCHEMAS, messages }),
+        body: JSON.stringify({ model: MODEL, max_tokens: 8192, system: SYSTEM, tools: TOOL_SCHEMAS, messages }),
       });
       if (!resp.ok) {
         logger.error({ status: resp.status, body: await resp.text().catch(() => "") }, "orchestrator API error");
