@@ -407,36 +407,13 @@ If Python fails → placeholder immediately, no retry.
 
 ### Full mode
 
-Structure à respecter — longueurs déterminées par le plan de l'étudiant et la profondeur du sujet, pas par des quotas fixes :
+⚠️ PAS DE SQUELETTE FIGÉ. La structure réelle (titres, numérotation, profondeur, nombre de chapitres/sections, présence d'intros/conclusions) vient TOUJOURS de `sommaire.md` et des consignes de l'étudiant/orchestrateur. Génère EXACTEMENT ce que le sommaire contient.
 
-```markdown
-# Partie II — [Titre du sommaire]
+**Niveaux de titres Markdown** (pour la pagination Word — un niveau Markdown par niveau logique) :
+- `#` → Partie · `##` → Chapitre · `###` → Section (« Section 1 ») · `####` → sous-section (« 1.1 ») · `#####` → « 1.1.1 », etc.
+Ne fusionne jamais deux niveaux (« Section 1 » puis « 1.1 », JAMAIS « Section 1.1 »). Si l'étudiant impose une autre convention/profondeur, suis la sienne.
 
-## Introduction de la Partie II
-[Connecte la théorie de la Partie I à l'investigation pratique]
-
-## Chapitre 1 — [Titre]
-[Introduction du chapitre]
-
-### 1.1 [Titre]
-[Contenu — profondeur selon le sujet]
-
-[Figure ou placeholder]
-
-### 1.2 [Titre]
-[Contenu]
-
-**Conclusion du Chapitre 1**
-[Synthèse + transition]
-
----
-
-## Chapitre 2 — [Titre]
-...
-
-**Conclusion de la Partie II**
-[Synthèse des résultats + transition vers la Conclusion Générale]
-```
+**Bonnes pratiques (recommandées, à adapter — jamais imposées)** : intro de Partie qui relie la théorie de la Partie I à l'investigation pratique, intro de chapitre, transitions, conclusions de chapitre/Partie. Si le sommaire ne les prévoit pas, ne les force pas. Le sommaire prime.
 
 ### Page mode
 ~350 words of paragraph content only. No headers. No metadata. Clean breaks.

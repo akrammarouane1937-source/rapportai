@@ -150,37 +150,17 @@ Quand `partie-i.md` existe déjà et que la demande porte sur UN passage :
 
 ## STEP 6 — Format de sortie (par défaut — les préférences de l'étudiant priment)
 
-Ce format est un **modèle par défaut**. Les préférences de l'étudiant et de la mise en forme priment toujours. **Garde toujours la hiérarchie de titres** (`#` Partie, `##` Chapitre, `###` Section) — l'export Word en dépend pour la mise en page et la pagination.
+⚠️ IL N'Y A PAS DE SQUELETTE FIGÉ. La structure réelle — titres, numérotation, profondeur, nombre de chapitres et de sections, présence ou non d'intros/conclusions — vient TOUJOURS de `sommaire.md` et des consignes de l'étudiant/orchestrateur. Génère EXACTEMENT ce que le sommaire contient, ni plus ni moins. N'impose jamais un gabarit d'ici.
 
-### Full mode
-```markdown
-# Partie I — [Titre du sommaire]
+**Niveaux de titres Markdown** (un seul rôle : permettre à l'export Word de paginer — descends d'un `#` à chaque niveau logique) :
+- `#` → Partie
+- `##` → Chapitre
+- `###` → Section (« Section 1 », « Section 2 »)
+- `####` → sous-section (« 1.1 », « 1.2 »)
+- `#####` → sous-sous-section (« 1.1.1 »), `######` → « 1.1.1.1 »… aussi profond que le sommaire le demande.
+Si l'étudiant utilise une autre convention/profondeur, suis la sienne — garde simplement UN niveau Markdown par niveau logique, et ne fusionne jamais deux niveaux (« Section 1 » puis « 1.1 », jamais « Section 1.1 »).
 
-## Introduction de la Partie I
-[paragraphe qui contextualise et annonce les chapitres]
-
-## Chapitre 1 — [Titre]
-[paragraphe d'introduction du chapitre]
-
-### 1.1 [Titre]
-[prose académique développée — voir STEP 4]
-
-[Figure ou placeholder si pertinent]
-
-### 1.2 [Titre]
-[prose académique développée]
-
-**Conclusion du Chapitre 1**
-[synthèse du chapitre + transition vers le Chapitre 2]
-
----
-
-## Chapitre 2 — [Titre]
-...
-
-**Conclusion de la Partie I**
-[synthèse de la Partie I + annonce de la Partie II]
-```
+**Bonnes pratiques rédactionnelles (recommandées, à adapter — JAMAIS un gabarit obligatoire)** : une courte intro de Partie qui annonce les chapitres, une phrase d'intro par chapitre, des transitions entre sections, une brève conclusion de chapitre/de Partie. Ce sont des marques de qualité académique — mais si le sommaire ou l'étudiant ne les prévoit pas, ne les force pas. Le sommaire prime.
 
 ### Page mode
 Retourne uniquement le bloc de contenu de la page demandée. Pas de titres, pas de métadonnées. Coupures de paragraphe propres au début et à la fin.
@@ -227,7 +207,8 @@ The student reads the content in the preview pane — do not repeat or stream th
 - [ ] Tous les documents `.txt` uploadés lus
 - [ ] Chaque chapitre et section du sommaire couvert — rien ajouté, rien sauté
 - [ ] Chaque section développée avec profondeur (pas de remplissage, pas de coupe artificielle)
-- [ ] Introduction de la Partie I + Conclusion de chaque chapitre + Conclusion de la Partie I présentes
+- [ ] La structure générée correspond EXACTEMENT au sommaire (titres, numérotation, profondeur) — pas de gabarit imposé
+- [ ] Intros/transitions/conclusions présentes SI le sommaire/l'étudiant les prévoit (recommandé, pas obligatoire)
 - [ ] Hiérarchie de titres respectée (`#` / `##` / `###`)
 - [ ] Style de citation conforme à la mise en forme de l'étudiant
 - [ ] `[SOURCE]` sur les citations non vérifiables
