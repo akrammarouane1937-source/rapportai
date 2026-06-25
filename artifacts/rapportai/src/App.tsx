@@ -126,7 +126,7 @@ function AuthRightPanel() {
       <div className="absolute inset-0" style={{ background: "rgba(0,0,0,0.38)" }} />
       <div className="relative z-10 flex flex-col items-center justify-center h-full text-center px-12">
         <p className="text-white text-2xl font-light mb-4" style={{ fontFamily: "'Plus Jakarta Sans', sans-serif" }}>
-          Les grandes carrières naissent sur
+          Les meilleurs rapports naissent sur
         </p>
         <div className="flex items-center gap-3 bg-white/15 backdrop-blur-sm border border-white/25 rounded-2xl px-6 py-3">
           <img src="/logo.png" alt="RapportAI" className="w-9 h-9" />
@@ -247,16 +247,26 @@ function ClerkProviderWithRoutes() {
       signInUrl={`${basePath}/sign-in`}
       signUpUrl={`${basePath}/sign-up`}
       localization={{
+        formFieldLabel__emailAddress: "Adresse e-mail",
+        formFieldLabel__password: "Mot de passe",
+        formButtonPrimary: "Continuer",
+        dividerText: "ou",
+        socialButtonsBlockButton: "Continuer avec {{provider|titleize}}",
+        formFieldAction__forgotPassword: "Mot de passe oublié ?",
         signIn: {
           start: {
             title: "Bon retour",
             subtitle: "Connecte-toi à ton compte RapportAI",
+            actionText: "Pas encore de compte ?",
+            actionLink: "S'inscrire",
           },
         },
         signUp: {
           start: {
             title: "Crée ton compte",
             subtitle: "Génère ton rapport académique en 30 minutes",
+            actionText: "Déjà un compte ?",
+            actionLink: "Se connecter",
           },
         },
       }}
