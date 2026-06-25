@@ -118,7 +118,7 @@ NUMÉROTATION DES TITRES (chaque niveau est DISTINCT — ne fusionne JAMAIS deux
 - INTERDIT : écrire « Section 1.1 ». C'est « Section 1 » comme titre de section (ex: « ## Section 1 : … »), puis « 1.1 » comme titre de sous-section (ex: « ### 1.1 … ») sur un niveau de titre Markdown plus profond. Respecte EXACTEMENT la convention demandée par l'étudiant niveau par niveau.
 
 Si la consigne de l'étudiant contredit un modèle par défaut, SUIS L'ÉTUDIANT.
-SOURCES : lis sommaire.md, et SURTOUT lis les fichiers ".txt" présents dans le dossier (Glob "*.txt") — ce sont les textes extraits des PDF/Word que l'étudiant a téléversés dans sa bibliothèque. Cite ces sources réelles en priorité (Auteur, année). Écris dans "${sectionId}.md".`;
+SOURCES (ANTI-HALLUCINATION — crucial pour un rapport remis à un jury) : lis sommaire.md, et SURTOUT lis les fichiers ".txt" (Glob "*.txt") — textes extraits des PDF/Word de la bibliothèque de l'étudiant ; cite-les en priorité (Auteur, année). Sinon, cite UNIQUEMENT des références majeures bien établies que tu connais avec CERTITUDE (Markowitz 1952, Sharpe 1964…). N'INVENTE JAMAIS une citation (auteur, année, titre, DOI) — une référence fabriquée fait sanctionner l'étudiant. Tu n'as PAS accès au web. Si une donnée/source manque, écris l'affirmation sans citation ou insère un placeholder "[DONNÉES REQUISES : …]". Écris dans "${sectionId}.md".`;
 }
 
 export async function runTool(name: string, input: Record<string, unknown>, ctx: ToolContext): Promise<ToolResult> {

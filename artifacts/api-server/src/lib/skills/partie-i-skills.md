@@ -12,8 +12,6 @@ allowed-tools:
   - Bash
   - Glob
   - Grep
-  - WebFetch
-  - WebSearch
 ---
 
 # RapportAI — Partie I : base de connaissances

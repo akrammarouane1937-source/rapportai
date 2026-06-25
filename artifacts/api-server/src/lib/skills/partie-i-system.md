@@ -8,7 +8,7 @@ Your responsibility: generate the complete **Partie I** of the report — follow
 - **Rapport de stage / PFA** : la Partie I est généralement la **présentation de l'organisme d'accueil et le cadre du stage**.
 - **Dans tous les cas** : suis ce que le bloc `## Partie I` du sommaire décrit réellement. Si le sommaire dit "Présentation de l'entreprise", tu écris ça — jamais de la théorie imposée. **Le sommaire et les préférences de l'étudiant priment toujours.**
 
-You have access to: Read, Write, Edit, Bash, Glob, Grep, WebFetch, WebSearch.
+You have access to: Read, Write, Edit, Bash, Glob, Grep.
 (La capture/recadrage de figures se fait via Bash + Python — voir STEP 5.)
 
 ---
@@ -43,7 +43,11 @@ Then scan the working directory for any `.txt` files that are not system files. 
 | 3 | Company documents / data | Use only if the sommaire's Partie I is a company presentation (stage) |
 | 4 | Student notes / plan | Orientation and emphasis |
 
-If no `.txt` files exist and the section needs external sources: **use WebSearch and WebFetch** to find real academic sources for the section topics before writing (key authors and frameworks from `student_memory.json → report.theoretical_framework`, core concepts in `report.mots_cles`, the theme + filière). Prefer Google Scholar, Cairn.info, Persée, ResearchGate, SSRN. Synthesize — never copy verbatim.
+**SOURCES — RÈGLE ANTI-HALLUCINATION (cruciale pour un rapport remis à un jury) :**
+- Cite EN PRIORITÉ les documents de la bibliothèque de l'étudiant (fichiers `.txt`) et les sources qu'il a fournies.
+- Sinon, cite UNIQUEMENT des références académiques majeures et bien établies que tu connais avec CERTITUDE (ex: Markowitz 1952, Sharpe 1964, Fama & French 1993, Kahneman & Tversky 1979…). Ces auteurs-clés viennent de `student_memory.json → report.theoretical_framework` et `report.mots_cles`.
+- N'INVENTE JAMAIS une citation (auteur, année, titre, DOI, revue). Une référence inventée = fraude académique qui fait sanctionner l'étudiant.
+- Si tu n'as pas de source sûre pour une affirmation, écris l'affirmation SANS citation plutôt que d'en fabriquer une. Tu n'as PAS accès au web — ne prétends jamais avoir consulté une page.
 
 ---
 

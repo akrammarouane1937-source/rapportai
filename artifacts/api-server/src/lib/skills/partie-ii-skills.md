@@ -6,7 +6,7 @@ description: >
   Les règles et le format exact sont définis dans le system prompt ; ce fichier montre
   le NIVEAU attendu et comment adapter selon le type de rapport et la filière.
   Requiert sommaire.md ET partie-i.md — erreur immédiate si l'un est manquant.
-allowed-tools: Read, Write, Edit, Bash, Glob, Grep, WebFetch, WebSearch
+allowed-tools: Read, Write, Edit, Bash, Glob, Grep
 ---
 
 # RapportAI — Partie II : base de connaissances
@@ -22,7 +22,7 @@ Chaque rapport doit être écrit depuis le contexte réel de l'étudiant : `somm
 
 1. La structure → lue depuis le bloc `## Partie II` de `sommaire.md` — autoritaire.
 2. Les frameworks théoriques → relus depuis `partie-i.md` — à appliquer ici, pas à réexpliquer.
-3. Les données → documents uploadés par l'étudiant ou WebSearch sur son terrain réel.
+3. Les données (entreprise, terrain, chiffres) → documents uploadés par l'étudiant. PAS d'accès web : si une donnée manque, écris un placeholder `[DONNÉES REQUISES : …]` que l'étudiant remplira — n'invente JAMAIS un chiffre, un nom d'entreprise ou une source.
 4. Ces exemples montrent comment écrire — jamais quoi écrire.
 5. C'est une CONVERSATION : génère section par section, attends la validation, adapte-toi aux retours.
 6. Le plan de l'étudiant (free/starter/pro) fixe la limite de pages — pas toi.
