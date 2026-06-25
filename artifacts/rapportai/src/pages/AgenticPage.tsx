@@ -70,12 +70,13 @@ export default function AgenticPage() {
   const [uploads, setUploads] = useState<Upload[]>([]);
   const [elapsed, setElapsed] = useState(0);
   const [copied, setCopied] = useState<number | null>(null);
+  const [streaming, setStreaming] = useState("");
   const bottomRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
   const fileRef = useRef<HTMLInputElement>(null);
   const abortRef = useRef<AbortController | null>(null);
 
-  useEffect(() => { bottomRef.current?.scrollIntoView({ behavior: "smooth" }); }, [messages, steps, busy]);
+  useEffect(() => { bottomRef.current?.scrollIntoView({ behavior: "smooth" }); }, [messages, steps, busy, streaming]);
 
   // Persist conversation across reloads.
   useEffect(() => {
@@ -118,7 +119,7 @@ export default function AgenticPage() {
 
   const send = async (text: string) => {
     if (!text.trim() || busy) return;
-    setBusy(true); setChoices(null); setSteps([]);
+    setBusy(true); setChoices(null); setSteps([]); setStreaming("");
     // Conversation memory: send prior turns so the agent remembers the discussion.
     const history = messages.map((m) => ({ role: m.role === "user" ? "user" : "assistant", content: m.content }));
     setMessages((m) => [...m, { role: "user", content: text }]);
@@ -149,6 +150,8 @@ export default function AgenticPage() {
           try { ev = JSON.parse(line.slice(6)); } catch { continue; }
           if (ev.type === "tool_call") {
             setSteps((s) => [...s, { name: ev.name, detail: ev.detail }]);
+          } else if (ev.type === "text_delta") {
+            if (typeof ev.text === "string") setStreaming((s) => s + ev.text);
           } else if (ev.type === "file_written") {
             const field = SECTION_FIELD[ev.section as string];
             if (field && typeof ev.content === "string") {
@@ -156,6 +159,7 @@ export default function AgenticPage() {
               setActiveSection(ev.section as string);
             }
           } else if (ev.type === "reply") {
+            setStreaming("");  // finalize the live-streamed text into a permanent message
             if (ev.content) setMessages((m) => [...m, { role: "agent", content: ev.content }]);
             if (ev.askUser) {
               setMessages((m) => [...m, { role: "agent", content: ev.askUser.question }]);
@@ -225,7 +229,19 @@ export default function AgenticPage() {
           )
         ))}
 
-        {busy && (
+        {streaming && (
+          <div className="flex gap-2.5">
+            <div className="w-6 h-6 rounded-lg bg-purple-100 flex items-center justify-center flex-shrink-0 mt-0.5">
+              <span className="text-xs">📝</span>
+            </div>
+            <div className="text-sm text-gray-800 max-w-[85%] min-w-0">
+              <ReactMarkdown remarkPlugins={[remarkGfm]} components={mdComponents}>{streaming}</ReactMarkdown>
+              <span className="inline-block w-1.5 h-3.5 bg-purple-400 animate-pulse align-middle ml-0.5" />
+            </div>
+          </div>
+        )}
+
+        {busy && !streaming && (
           <div className="flex gap-2.5">
             <div className="w-6 h-6 rounded-lg bg-purple-100 flex items-center justify-center flex-shrink-0 mt-0.5">
               <Loader2 className="w-3.5 h-3.5 text-purple-600 animate-spin" />

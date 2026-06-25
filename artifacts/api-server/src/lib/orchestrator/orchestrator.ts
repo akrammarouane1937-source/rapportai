@@ -7,8 +7,8 @@ import { loadReportState, saveReportState } from "./report-state";
 import { TOOL_SCHEMAS, runTool, summarizeState, type ToolContext } from "./orchestrator-tools";
 import type { SDKReportAgent } from "../sdk-agent";
 import { logger } from "../logger";
+import Anthropic from "@anthropic-ai/sdk";
 
-const ANTHROPIC_API = "https://api.anthropic.com/v1/messages";
 const MODEL = process.env.ORCHESTRATOR_MODEL || "claude-sonnet-4-6";
 const MAX_TURNS = 12;
 
@@ -24,6 +24,7 @@ RÈGLES :
 - N'utilise ask_user que pour un choix réellement ambigu et important. Ne répète jamais une question. Sinon, agis.
 - Consulte read_library quand l'étudiant parle de ses documents/sources.
 - Reste chaleureux, naturel, en français. Pas d'emojis décoratifs.
+- Reste CONCIS — clarté, pas de pavés. Ton tout PREMIER message est un accueil COURT (2-3 phrases max) qui propose de commencer ; n'explique PAS longuement ton fonctionnement. Dans la conversation, réponds brièvement et utilement, comme un bon assistant.
 
 CONVENTION DE NUMÉROTATION (par défaut — adapte-toi si l'étudiant en veut une autre) :
 - Niveau 1 — CHAPITRE : "Chapitre 1", "Chapitre 2"
@@ -73,44 +74,47 @@ export async function runOrchestrator(opts: {
     { role: "user", content: `${summarizeState(state)}\n\n---\nMessage de l'étudiant : ${userMessage}` },
   ];
 
+  const anthropic = new Anthropic({ apiKey });
+
   for (let turn = 0; turn < MAX_TURNS; turn++) {
-    let data: {
-      stop_reason?: string;
-      content?: Array<{ type: string; text?: string; id?: string; name?: string; input?: Record<string, unknown> }>;
-    };
+    let final: Anthropic.Message;
     try {
-      const resp = await fetch(ANTHROPIC_API, {
-        method: "POST",
-        headers: { "anthropic-version": "2023-06-01", "x-api-key": apiKey, "content-type": "application/json" },
-        body: JSON.stringify({ model: MODEL, max_tokens: 8192, system: SYSTEM, tools: TOOL_SCHEMAS, messages }),
+      // Stream so the frontend can show the reply word-by-word (Claude/ChatGPT feel).
+      const stream = anthropic.messages.stream({
+        model: MODEL,
+        max_tokens: 8192,
+        system: SYSTEM,
+        tools: TOOL_SCHEMAS as unknown as Anthropic.Tool[],
+        messages: messages as unknown as Anthropic.MessageParam[],
       });
-      if (!resp.ok) {
-        logger.error({ status: resp.status, body: await resp.text().catch(() => "") }, "orchestrator API error");
-        return { reply: "Désolé, une erreur est survenue. Réessaie dans un instant." };
+      for await (const event of stream) {
+        if (event.type === "content_block_delta" && event.delta.type === "text_delta") {
+          emit({ type: "text_delta", text: event.delta.text });
+        }
       }
-      data = await resp.json();
+      final = await stream.finalMessage();
     } catch (err) {
-      logger.error({ err }, "orchestrator fetch failed");
-      return { reply: "Désolé, une erreur réseau est survenue. Réessaie." };
+      logger.error({ err }, "orchestrator stream failed");
+      return { reply: "Désolé, une erreur est survenue. Réessaie dans un instant." };
     }
 
-    const blocks = data.content ?? [];
-    const text = blocks.filter((b) => b.type === "text").map((b) => b.text).join("").trim();
+    const blocks = final.content;
+    const text = blocks.filter((b) => b.type === "text").map((b) => (b as Anthropic.TextBlock).text).join("").trim();
 
-    if (data.stop_reason === "tool_use") {
-      const toolUses = blocks.filter((b) => b.type === "tool_use");
-      const toolResults: Array<{ type: "tool_result"; tool_use_id: string; content: string }> = [];
+    if (final.stop_reason === "tool_use") {
+      const toolResults: Anthropic.ToolResultBlockParam[] = [];
       let pendingAsk: OrchestratorResult["askUser"];
 
-      for (const tu of toolUses) {
-        const out = await runTool(tu.name!, tu.input ?? {}, ctx);
-        toolResults.push({ type: "tool_result", tool_use_id: tu.id!, content: out.result });
+      for (const block of blocks) {
+        if (block.type !== "tool_use") continue;
+        const out = await runTool(block.name, (block.input ?? {}) as Record<string, unknown>, ctx);
+        toolResults.push({ type: "tool_result", tool_use_id: block.id, content: out.result });
         if (out.askUser) pendingAsk = out.askUser;
       }
       saveReportState(state);
 
-      messages.push({ role: "assistant", content: blocks });
-      messages.push({ role: "user", content: toolResults });
+      messages.push({ role: "assistant", content: blocks as unknown });
+      messages.push({ role: "user", content: toolResults as unknown });
 
       // If the model asked the student something, surface it and stop this turn.
       if (pendingAsk) return { reply: text, askUser: pendingAsk };
