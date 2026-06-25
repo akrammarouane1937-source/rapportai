@@ -95,16 +95,9 @@ export function Sidebar() {
     9:  "Conclusion & Bibliographie",
   };
 
-  const STEP_PATHS: Record<number, string> = {
-    1: "/rapport/step-1", 3: "/rapport/step-3",
-    4: "/rapport/step-4", 5: "/rapport/step-5", 6: "/rapport/step-6",
-    7: "/rapport/partie-i", 8: "/rapport/partie-ii", 9: "/rapport/step-9",
-  };
-
   const zustandStep = useReportStore((s) => s.report.currentStep);
   const currentStepNum: number = zustandStep ?? 1;
   const currentSection = STEP_LABELS[currentStepNum] ?? null;
-  const currentStepPath = STEP_PATHS[currentStepNum] ?? "/rapport/step-1";
   const hasReport      = !!(report.theme || report.school);
   const pagesUsed      = sectionsWithContent;
   const pagesLimit     = limits.pages === Infinity ? "∞" : limits.pages;
@@ -261,7 +254,7 @@ export function Sidebar() {
               <div className="mx-0.5 mb-1">
                 <p className="text-[10px] font-semibold text-gray-400 uppercase tracking-wider px-2 mb-1">En cours</p>
                 <button
-                  onClick={() => setLocation(currentStepPath)}
+                  onClick={() => setLocation("/agentic")}
                   className="w-full flex items-start gap-2 px-2.5 py-2 rounded-lg hover:bg-purple-50 transition-colors text-left group"
                   style={{ border: "1px solid #ede9fe" }}
                 >
