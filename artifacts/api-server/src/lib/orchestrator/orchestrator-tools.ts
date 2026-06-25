@@ -113,6 +113,10 @@ PRÉFÉRENCES ENREGISTRÉES (à respecter) :
 - École/convention : ${p.schoolConventions || "standard PFE marocain"}
 - Citations : ${p.citationStyle}
 
+NUMÉROTATION DES TITRES (chaque niveau est DISTINCT — ne fusionne JAMAIS deux niveaux) :
+- « Chapitre 1 » (niveau chapitre) → « Section 1 », « Section 2 » (niveau section, SANS décimale) → « 1.1 », « 1.2 » (sous-sections) → « 1.1.1 » → « 1.1.1.1 » (si dense).
+- INTERDIT : écrire « Section 1.1 ». C'est « Section 1 » comme titre de section (ex: « ## Section 1 : … »), puis « 1.1 » comme titre de sous-section (ex: « ### 1.1 … ») sur un niveau de titre Markdown plus profond. Respecte EXACTEMENT la convention demandée par l'étudiant niveau par niveau.
+
 Si la consigne de l'étudiant contredit un modèle par défaut, SUIS L'ÉTUDIANT.
 SOURCES : lis sommaire.md, et SURTOUT lis les fichiers ".txt" présents dans le dossier (Glob "*.txt") — ce sont les textes extraits des PDF/Word que l'étudiant a téléversés dans sa bibliothèque. Cite ces sources réelles en priorité (Auteur, année). Écris dans "${sectionId}.md".`;
 }

@@ -56,11 +56,17 @@ Do not re-explain theory at length — reference it, apply it.
 From the `## Partie II` block, extract:
 - Title of Partie II
 - All chapters and their titles
-- All sections under each chapter (1.1, 1.2, etc.)
+- All sections under each chapter, and their sub-sections.
 
-**Chapter numbering in Partie II restarts at 1.** Partie II always begins with Chapitre 1, Section 1.1 — independent of how many chapters Partie I had. This is the Moroccan academic standard.
+**Chapter numbering in Partie II restarts at 1** (Partie II always begins with Chapitre 1, Section 1 — independent of how many chapters Partie I had; Moroccan academic standard).
 
-The sommaire structure is the default. ⚠️ PRIORITÉ ABSOLUE : les consignes explicites de l'étudiant priment. S'il demande une autre hiérarchie, numérotation, profondeur ou un autre découpage, SUIS L'ÉTUDIANT et adapte la structure — ne réponds jamais "oui" pour ensuite appliquer le modèle par défaut. Sans consigne contraire, respecte le sommaire.
+CONVENTION DE NUMÉROTATION (par défaut — chaque niveau est DISTINCT, ne JAMAIS fusionner deux niveaux) :
+- Chapitre N — « Chapitre 1 », « Chapitre 2 ».
+- Section N — un NIVEAU À PART dans le chapitre : « Section 1 », « Section 2 ». JAMAIS « Section 1.1 ».
+- Sous-section — « 1.1 », « 1.2 » ; sous-sous-section (si dense) — « 1.1.1 », puis « 1.1.1.1 ».
+INTERDIT ABSOLU : « Section 1.1 ». C'est « Section 1 » (titre de section), puis « 1.1 » (titre de sous-section), sur des niveaux de titre différents.
+
+The sommaire structure is the default. ⚠️ PRIORITÉ ABSOLUE : les consignes explicites de l'étudiant (ou de l'orchestrateur) priment. S'il demande une autre hiérarchie, numérotation, profondeur ou un autre découpage, SUIS-LE EXACTEMENT niveau par niveau — ne réponds jamais "oui" pour ensuite appliquer le modèle par défaut. Sans consigne contraire, respecte le sommaire.
 
 ---
 

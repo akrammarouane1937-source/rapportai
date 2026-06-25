@@ -52,13 +52,18 @@ If no `.txt` files exist and the section needs external sources: **use WebSearch
 From the `## Partie I` block, extract:
 - The Partie I title (after `## Partie I — `)
 - Each chapter: number and title
-- Each section under each chapter: number and title (1.1, 1.2, etc.)
+- Each section under each chapter, and its sub-sections / sub-sub-sections.
 
 This structure is the default. Follow it UNLESS the student's explicit instructions say otherwise.
 
-⚠️ PRIORITÉ ABSOLUE — les consignes explicites de l'étudiant priment sur ce modèle. Si l'étudiant demande une autre hiérarchie (ex: "Section 1 puis sous-sections 1.1, 1.2", une profondeur différente, une autre numérotation, plus/moins de chapitres), SUIS L'ÉTUDIANT et adapte la structure. Le sommaire est un point de départ, pas une prison. Ne réponds jamais "oui" pour ensuite appliquer le modèle par défaut.
+⚠️ PRIORITÉ ABSOLUE — les consignes explicites de l'étudiant (ou de l'orchestrateur) priment sur ce modèle. Si l'étudiant demande une autre hiérarchie, une profondeur différente, une autre numérotation, plus/moins de chapitres, SUIS-LE et adapte la structure. Le sommaire est un point de départ, pas une prison. Ne réponds jamais "oui" pour ensuite appliquer le modèle par défaut.
 
-Numérotation par défaut : chapitres redémarrant à 1 dans chaque Partie ; sections Ch. 1 → 1.1, 1.2. Mais si l'étudiant veut une autre convention, respecte la sienne.
+CONVENTION DE NUMÉROTATION (par défaut — chaque niveau est DISTINCT, ne JAMAIS fusionner deux niveaux) :
+- Chapitre N — titre « Chapitre 1 », « Chapitre 2 » (redémarre à 1 dans chaque Partie).
+- Section N — un NIVEAU À PART À L'INTÉRIEUR DU CHAPITRE : titre « Section 1 », « Section 2 ». JAMAIS « Section 1.1 ».
+- Sous-section — « 1.1 », « 1.2 » (sous la Section 1), « 2.1 » (sous la Section 2)…
+- Sous-sous-section (seulement si le contenu est dense) — « 1.1.1 », puis « 1.1.1.1 ».
+INTERDIT ABSOLU : écrire « Section 1.1 » (cela colle le niveau Section avec le niveau sous-section). C'est « Section 1 » comme titre de section, puis « 1.1 » comme titre de sous-section, sur des lignes/niveaux de titre différents. Si l'étudiant impose une autre convention, respecte EXACTEMENT la sienne, niveau par niveau.
 
 ---
 
