@@ -72,8 +72,20 @@ export const TOOL_SCHEMAS = [
   },
   {
     name: "read_library",
-    description: "Liste les documents que l'étudiant a téléversés (bibliothèque) avec leurs noms, pour confirmer ce qui est disponible et l'utiliser comme sources.",
+    description: "Liste les documents de la bibliothèque + un court extrait de chacun. Pour LIRE le contenu COMPLET d'un document précis (l'analyser, le résumer, en citer des passages), utilise read_document.",
     input_schema: { type: "object", properties: {} },
+  },
+  {
+    name: "read_document",
+    description: "Lit le CONTENU COMPLET (ou un large extrait paginé) d'UN document de la bibliothèque, par son nom (vu via read_library). Utilise-le dès que l'étudiant veut que tu lises, analyses, résumes ou cites un document — ne dis JAMAIS que tu n'as accès qu'à la couverture, lis-le vraiment avec cet outil. Retourne jusqu'à ~40 000 caractères ; pour la suite d'un long document, rappelle-le avec un offset plus grand.",
+    input_schema: {
+      type: "object",
+      properties: {
+        filename: { type: "string", description: "Nom exact du document (ex: 'Thesis_Zhang2014.pdf')" },
+        offset: { type: "number", description: "optionnel — caractère de départ pour lire la suite (défaut 0)" },
+      },
+      required: ["filename"],
+    },
   },
   {
     name: "ask_user",
@@ -216,7 +228,30 @@ export async function runTool(name: string, input: Record<string, unknown>, ctx:
         } catch { /* ignore */ }
         parts.push(`### ${doc}\n${excerpt.trim() || "(texte non extractible — l'étudiant peut le re-téléverser)"}`);
       }
-      return { result: `Bibliothèque — ${realDocs.length} document(s), avec extraits du contenu réel :\n\n${parts.join("\n\n---\n\n")}\n\nTu peux maintenant confirmer leurs titres/auteurs et t'en servir comme sources. Le rédacteur lira le texte COMPLET (fichiers .txt) pendant la génération pour citer correctement.` };
+      return { result: `Bibliothèque — ${realDocs.length} document(s), avec un court extrait de chacun :\n\n${parts.join("\n\n---\n\n")}\n\nPour LIRE le contenu COMPLET d'un document (l'analyser, le résumer, en citer des passages), appelle read_document avec son nom. Ne dis JAMAIS que tu n'as accès qu'à la couverture — lis-le vraiment.` };
+    }
+
+    case "read_document": {
+      const filename = String(input.filename ?? "").trim();
+      const offset = Math.max(0, Number(input.offset ?? 0) || 0);
+      if (!filename) return { result: "Précise le nom du document (vu via read_library)." };
+      const all = agent.getDocumentNames();
+      const realDocs = all.filter((f) => !f.endsWith(".txt"));
+      const candidates = [path.join(agent.workDir, `${filename}.txt`), path.join(agent.workDir, filename)];
+      const matched = realDocs.find((f) => f === filename || f.startsWith(filename) || filename.startsWith(f));
+      if (matched) candidates.unshift(path.join(agent.workDir, `${matched}.txt`), path.join(agent.workDir, matched));
+      const txtPath = candidates.find((p) => existsSync(p));
+      if (!txtPath) return { result: `Document "${filename}" introuvable. Disponibles : ${realDocs.join(", ") || "aucun"}.` };
+      let content = "";
+      try { content = readFileSync(txtPath, "utf-8"); } catch { return { result: "Lecture impossible." }; }
+      const total = content.length;
+      const CHUNK = 40000;
+      const slice = content.slice(offset, offset + CHUNK);
+      if (!slice.trim()) return { result: `"${filename}" : aucun texte extractible à partir du caractère ${offset} (total ${total}). Le PDF est peut-être scanné (image) — demande à l'étudiant de coller les passages clés.` };
+      const more = offset + CHUNK < total
+        ? `\n\n[...] (lu ${offset}–${offset + CHUNK} sur ${total} caractères ; rappelle read_document avec offset=${offset + CHUNK} pour la suite.)`
+        : `\n\n[fin du document — ${total} caractères]`;
+      return { result: `Contenu de "${filename}" :\n\n${slice}${more}` };
     }
 
     case "ask_user": {
