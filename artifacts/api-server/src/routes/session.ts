@@ -816,10 +816,15 @@ router.post(
       return;
     }
 
-    const agent = sessionStore.get(sessionId) as SDKReportAgent | undefined;
+    // Resilient session lookup — match the orchestrator: revive from disk, or create on the fly.
+    // The in-memory store is wiped on every Render redeploy, so a plain 404 here made uploads
+    // silently fail while the orchestrator (which revives/creates) read an empty library.
+    let agent = (sessionStore.get(sessionId) as SDKReportAgent | undefined)
+      ?? SDKReportAgent.reviveFromDisk(sessionId) ?? undefined;
     if (!agent) {
-      res.status(404).json({ error: "Session introuvable ou expirée." });
-      return;
+      agent = new SDKReportAgent(sessionId, {} as never);
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      sessionStore.set(agent as any);
     }
 
     try {
@@ -901,10 +906,15 @@ router.post(
       return;
     }
 
-    const agent = sessionStore.get(sessionId) as SDKReportAgent | undefined;
+    // Resilient session lookup — match the orchestrator: revive from disk, or create on the fly.
+    // The in-memory store is wiped on every Render redeploy, so a plain 404 here made uploads
+    // silently fail while the orchestrator (which revives/creates) read an empty library.
+    let agent = (sessionStore.get(sessionId) as SDKReportAgent | undefined)
+      ?? SDKReportAgent.reviveFromDisk(sessionId) ?? undefined;
     if (!agent) {
-      res.status(404).json({ error: "Session introuvable ou expirée." });
-      return;
+      agent = new SDKReportAgent(sessionId, {} as never);
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      sessionStore.set(agent as any);
     }
 
     try {

@@ -75,6 +75,7 @@ export default function AgenticPage() {
   const inputRef = useRef<HTMLTextAreaElement>(null);
   const fileRef = useRef<HTMLInputElement>(null);
   const abortRef = useRef<AbortController | null>(null);
+  const streamRef = useRef("");
 
   useEffect(() => { bottomRef.current?.scrollIntoView({ behavior: "smooth" }); }, [messages, steps, busy, streaming]);
 
@@ -119,7 +120,7 @@ export default function AgenticPage() {
 
   const send = async (text: string) => {
     if (!text.trim() || busy) return;
-    setBusy(true); setChoices(null); setSteps([]); setStreaming("");
+    setBusy(true); setChoices(null); setSteps([]); setStreaming(""); streamRef.current = "";
     // Conversation memory: send prior turns so the agent remembers the discussion.
     const history = messages.map((m) => ({ role: m.role === "user" ? "user" : "assistant", content: m.content }));
     setMessages((m) => [...m, { role: "user", content: text }]);
@@ -152,7 +153,7 @@ export default function AgenticPage() {
           if (ev.type === "tool_call") {
             setSteps((s) => [...s, { name: ev.name, detail: ev.detail }]);
           } else if (ev.type === "text_delta") {
-            if (typeof ev.text === "string") setStreaming((s) => s + ev.text);
+            if (typeof ev.text === "string") { streamRef.current += ev.text; setStreaming(streamRef.current); }
           } else if (ev.type === "file_written") {
             const field = SECTION_FIELD[ev.section as string];
             if (field && typeof ev.content === "string") {
@@ -160,8 +161,13 @@ export default function AgenticPage() {
               setActiveSection(ev.section as string);
             }
           } else if (ev.type === "reply") {
-            setStreaming("");  // finalize the live-streamed text into a permanent message
-            if (ev.content) setMessages((m) => [...m, { role: "agent", content: ev.content }]);
+            // Finalize using the EXACT streamed text (no swap/flicker); fall back to ev.content
+            // only if nothing streamed (error / non-streaming path).
+            const streamed = streamRef.current.trim();
+            streamRef.current = "";
+            setStreaming("");
+            const finalText = streamed || (typeof ev.content === "string" ? ev.content : "");
+            if (finalText) setMessages((m) => [...m, { role: "agent", content: finalText }]);
             if (ev.askUser) {
               setMessages((m) => [...m, { role: "agent", content: ev.askUser.question }]);
               if (ev.askUser.choices?.length) setChoices(ev.askUser.choices);
