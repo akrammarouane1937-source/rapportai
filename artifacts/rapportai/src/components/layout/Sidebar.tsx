@@ -193,7 +193,7 @@ export function Sidebar() {
         <div className="px-3 py-2.5 space-y-1.5 flex-shrink-0" style={{ borderBottom: "1px solid #f3f4f6" }}>
           <button
             data-tour="start"
-            onClick={() => setLocation(hasReport ? "/rapports" : "/rapport/step-1")}
+            onClick={() => setLocation("/agentic")}
             className="w-full flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs font-semibold transition-all"
             style={{
               background: "linear-gradient(135deg,#7c3aed,#a855f7)",

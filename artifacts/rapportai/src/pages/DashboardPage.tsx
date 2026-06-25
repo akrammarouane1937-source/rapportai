@@ -286,7 +286,7 @@ export default function DashboardPage() {
         }] : []),
         {
           label: "Continue mon rapport",
-          action: () => setLocation(STEP_PATHS[currentStep] ?? "/rapport/step-1"),
+          action: () => setLocation("/agentic"),
         },
       ].slice(0, 4)
     : [
@@ -530,14 +530,14 @@ export default function DashboardPage() {
 
   // Recent sections (last 3 with content)
   const recentSections = [
-    { label: "Page de garde",     field: "pageDeGarde",  path: "/rapport/step-2"   },
-    { label: "Dédicaces",         field: "dedicaces",    path: "/rapport/step-3"   },
-    { label: "Résumé",            field: "resumeFr",     path: "/rapport/step-4"   },
-    { label: "Sommaire",          field: "sommaire",     path: "/rapport/step-5"   },
-    { label: "Introduction",      field: "introduction", path: "/rapport/step-6"   },
-    { label: "Partie I",          field: "partieI",      path: "/rapport/partie-i" },
-    { label: "Partie II",         field: "partieII",     path: "/rapport/partie-ii"},
-    { label: "Conclusion",        field: "conclusion",   path: "/rapport/step-9"   },
+    { label: "Page de garde",     field: "pageDeGarde",  path: "/agentic" },
+    { label: "Dédicaces",         field: "dedicaces",    path: "/agentic" },
+    { label: "Résumé",            field: "resumeFr",     path: "/agentic" },
+    { label: "Sommaire",          field: "sommaire",     path: "/agentic" },
+    { label: "Introduction",      field: "introduction", path: "/agentic" },
+    { label: "Partie I",          field: "partieI",      path: "/agentic" },
+    { label: "Partie II",         field: "partieII",     path: "/agentic" },
+    { label: "Conclusion",        field: "conclusion",   path: "/agentic" },
   ].filter((s) => !!(report as unknown as Record<string, string>)[s.field]).slice(0, 3);
 
   const workspaceName = user?.firstName || "Mon espace";
