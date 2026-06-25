@@ -124,6 +124,7 @@ export default function AgenticPage() {
     const history = messages.map((m) => ({ role: m.role === "user" ? "user" : "assistant", content: m.content }));
     setMessages((m) => [...m, { role: "user", content: text }]);
     setInput("");
+    if (inputRef.current) inputRef.current.style.height = "auto";
     abortRef.current = new AbortController();
     try {
       const sessionId = await ensureSession();
@@ -297,12 +298,16 @@ export default function AgenticPage() {
           <textarea
             ref={inputRef}
             value={input}
-            onChange={(e) => setInput(e.target.value)}
+            onChange={(e) => {
+              setInput(e.target.value);
+              e.target.style.height = "auto";
+              e.target.style.height = `${Math.min(e.target.scrollHeight, 240)}px`;
+            }}
             onKeyDown={(e) => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); send(input); } }}
             disabled={busy}
-            rows={1}
-            placeholder={choices ? "Choisis ci-dessus ou écris ta réponse…" : "Écris à l'agent…  (Entrée pour envoyer)"}
-            className="flex-1 resize-none px-3.5 py-2 rounded-xl border border-gray-200 text-sm outline-none focus:border-purple-400 max-h-32"
+            rows={3}
+            placeholder={choices ? "Choisis ci-dessus ou écris ta réponse…" : "Écris à l'agent…  (Entrée pour envoyer · Maj+Entrée = saut de ligne)"}
+            className="flex-1 resize-none px-4 py-3 rounded-2xl border border-gray-200 text-sm leading-relaxed outline-none focus:border-purple-400 focus:ring-2 focus:ring-purple-100 min-h-[76px] max-h-60"
           />
           {busy ? (
             <button type="button" onClick={stop} title="Arrêter" className="flex-shrink-0 w-9 h-9 rounded-xl bg-gray-800 text-white flex items-center justify-center hover:bg-gray-900">
