@@ -682,8 +682,26 @@ function parseSommaireMarkdown(md: string): Array<{ level: number; text: string 
   if (!md?.trim()) return [];
   const entries: Array<{ level: number; text: string }> = [];
   for (const raw of md.split("\n")) {
-    const m = raw.match(/^(#{1,4})\s+(.+)/);
-    if (m) entries.push({ level: m[1].length, text: m[2].trim() });
+    const trimmed = raw.trim();
+    if (!trimmed) continue;
+    // Strip leading markers (#, bullets, arrows, dashes) + bold/code markdown — the agent
+    // may write the sommaire with bullets/"Partie/Chapitre/Section" text, not just # headers.
+    const cleaned = trimmed
+      .replace(/^[#>*\-•➢◦·•‣◦\s]+/, "")
+      .replace(/\*\*/g, "")
+      .replace(/`/g, "")
+      .trim();
+    if (!cleaned) continue;
+    const h = /^(#{1,4})\s+/.exec(trimmed);
+    let level: number;
+    if (h) level = h[1].length;                              // markdown header → its depth
+    else if (/^partie\b/i.test(cleaned)) level = 2;          // Partie I/II → bold, no marker
+    else if (/^chapitre\b/i.test(cleaned)) level = 3;        // Chapitre → bold + • marker
+    else if (/^section\b/i.test(cleaned)) level = 4;         // Section → ➢ marker
+    else if (/^\d+\.\d+\.\d+/.test(cleaned)) level = 6;      // 1.1.1 sous-sous-section
+    else if (/^\d+\.\d+/.test(cleaned)) level = 5;           // 1.1 sous-section
+    else level = 1;                                          // front/back matter (Dédicaces, Résumé, Bibliographie…)
+    entries.push({ level, text: cleaned });
   }
   return entries;
 }
