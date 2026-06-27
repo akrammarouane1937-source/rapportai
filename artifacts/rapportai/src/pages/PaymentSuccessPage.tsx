@@ -121,7 +121,7 @@ export default function PaymentSuccessPage() {
             </div>
 
             <button
-              onClick={() => setLocation(returnPath)}
+              onClick={() => { window.location.href = returnPath; }}
               className="w-full h-12 rounded-xl font-black text-sm text-white flex items-center justify-center gap-2"
               style={{
                 background: "linear-gradient(135deg, #7c3aed, #a855f7)",
