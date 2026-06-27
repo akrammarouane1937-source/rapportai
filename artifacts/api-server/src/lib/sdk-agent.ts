@@ -6,6 +6,7 @@ import { findClaudeBinary } from "./find-claude-binary";
 import { schoolContext, schoolProfile } from "./moroccan-schools";
 import { buildFormattingPromptBlock, type FormattingPrefs } from "./formatting";
 import { getSectionConfig } from "./agents/sectionConfigs";
+import Anthropic from "@anthropic-ai/sdk";
 import { logger } from "./logger";
 import humanizeSkillsMd from "./skills/humanize-skills.md";
 import humanizeSystemMd from "./skills/humanize-system.md";
@@ -260,6 +261,47 @@ export class SDKReportAgent {
     })) {
       yield* this._processMessage(message);
     }
+  }
+
+  // generateSectionDirect — writes a section via a DIRECT Anthropic API call (no Claude Code
+  // subprocess). The subprocess is memory-heavy and OOMs on small hosts; this keeps the same
+  // skill/system prompt for quality but injects the library sources as context instead of
+  // letting the subprocess Read them, and returns the markdown (caller writes the file).
+  async generateSectionDirect(section: string, task: string): Promise<string> {
+    let sectionSystem = "";
+    let sectionSkills = "";
+    try {
+      const config = getSectionConfig(section);
+      sectionSystem = this.loadSkillFile(config.skillsFile.replace("-skills.md", "-system.md"));
+      sectionSkills = this.loadSkillFile(config.skillsFile);
+    } catch { /* generic */ }
+    const baseSystem = buildSystemPrompt(this.profile, this.workDir);
+    const knowledgeBase = sectionSkills ? `\n\n---\n## KNOWLEDGE BASE\n${sectionSkills}` : "";
+    const systemPrompt = sectionSystem
+      ? `${sectionSystem}\n\n---\n## CONTEXTE ÉTUDIANT\n${baseSystem}${knowledgeBase}`
+      : `${baseSystem}${knowledgeBase}`;
+
+    // Inject the student's real sources (extracted .txt) + the sommaire as context.
+    let sources = "";
+    try {
+      const txts = readdirSync(this.workDir).filter((f) => f.endsWith(".txt"));
+      for (const f of txts.slice(0, 3)) {
+        sources += `\n\n=== SOURCE RÉELLE : ${f.replace(/\.txt$/, "")} ===\n${readFileSync(path.join(this.workDir, f), "utf-8").slice(0, 30000)}`;
+      }
+      const sommairePath = path.join(this.workDir, "sommaire.md");
+      if (existsSync(sommairePath)) sources += `\n\n=== SOMMAIRE ===\n${readFileSync(sommairePath, "utf-8")}`;
+    } catch { /* ignore */ }
+
+    const userMsg = `${task}\n\n--- SOURCES DISPONIBLES (appuie-toi dessus, cite-les en priorité) ---${sources || "\n(aucun document fourni — utilise tes connaissances académiques solides, sans JAMAIS inventer de citation)"}\n\nÉcris MAINTENANT le contenu COMPLET et développé en Markdown (prose académique fluide, titres ## Chapitre / ### Section / #### sous-section). Ne réponds QUE le contenu rédigé, sans préambule ni méta-commentaire.`;
+
+    const client = new Anthropic();
+    const resp = await client.messages.create({
+      model: process.env.WRITER_MODEL || "claude-sonnet-4-5",
+      max_tokens: 8192,
+      system: systemPrompt,
+      messages: [{ role: "user", content: userMsg }],
+    });
+    return resp.content.filter((b) => b.type === "text").map((b) => (b as Anthropic.TextBlock).text).join("").trim();
   }
 
   // humanizeSection — iterative tool-based agent (same method as Claude Code and

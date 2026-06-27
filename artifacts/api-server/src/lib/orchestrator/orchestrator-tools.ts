@@ -166,20 +166,17 @@ export async function runTool(name: string, input: Record<string, unknown>, ctx:
         const filePath = path.join(agent.workDir, `${sectionId}.md`);
         const snapshot = existsSync(filePath) ? readFileSync(filePath, "utf-8") : "";
         try { if (existsSync(tempPath)) unlinkSync(tempPath); } catch { /* ignore */ }
-        const subTask = buildWriterTask(state, sectionId, instructions)
-          + `\n\nÉcris UNIQUEMENT cette sous-section dans "${tempName}.md" (Write, fichier neuf). N'écris RIEN dans "${sectionId}.md".`;
+        const subTask = buildWriterTask(state, sectionId, instructions);
+        emit({ type: "tool_call", name: "write_section", detail: sectionId });
+        let rawSub = "";
         try {
-          for await (const ev of agent.streamSection(sectionId, subTask)) {
-            if (ev.type === "tool_call") emit({ type: "tool_call", name: ev.name, detail: ev.detail });
-          }
+          rawSub = await agent.generateSectionDirect(sectionId, subTask);  // direct API — no subprocess
         } catch {
-          if (snapshot) { try { writeFileSync(filePath, snapshot, "utf-8"); } catch { /* ignore */ } }
           upsertSection(state, { id: sectionId, status: "pending" });
-          return { result: `La rédaction de cette sous-section a échoué (souci technique passager côté génération). Le contenu déjà validé est préservé. Dis à l'étudiant que tu réessaies tout de suite, puis rappelle write_section pour la MÊME sous-section.` };
+          return { result: `La rédaction de cette sous-section a échoué (souci technique passager). Le contenu déjà validé est préservé. Dis à l'étudiant que tu réessaies tout de suite, puis rappelle write_section pour la MÊME sous-section.` };
         }
-        if (snapshot) writeFileSync(filePath, snapshot, "utf-8");  // writer may have touched it
-        const rawSub = existsSync(tempPath) ? readFileSync(tempPath, "utf-8").trim() : "";
-        if (!rawSub) return { result: `Rien n'a été rédigé pour ${sectionId}. Réessaie.` };
+        if (!rawSub.trim()) return { result: `Rien n'a été rédigé pour ${sectionId}. Réessaie.` };
+        writeFileSync(tempPath, rawSub, "utf-8");  // humanizeSection reads/rewrites this file
         upsertSection(state, { id: sectionId, status: "humanizing" });
         emit({ type: "tool_call", name: "humanize_section", detail: sectionId });
         try { await agent.humanizeSection(tempName); } catch { /* keep raw */ }
@@ -196,19 +193,20 @@ export async function runTool(name: string, input: Record<string, unknown>, ctx:
       // Standalone section (introduction, conclusion, résumé…) → whole canonical file.
       emit({ type: "tool_call", name: "write_section", detail: sectionId });
       const task = buildWriterTask(state, sectionId, instructions);
+      let draft = "";
       try {
-        for await (const ev of agent.streamSection(sectionId, task)) {
-          if (ev.type === "tool_call") emit({ type: "tool_call", name: ev.name, detail: ev.detail });
-        }
+        draft = await agent.generateSectionDirect(sectionId, task);  // direct API — no subprocess
       } catch {
         upsertSection(state, { id: sectionId, status: "pending" });
         return { result: `La rédaction de "${sectionId}" a échoué (souci technique passager). Dis à l'étudiant que tu réessaies tout de suite, puis rappelle write_section.` };
       }
+      if (!draft.trim()) return { result: `Rien n'a été rédigé pour "${sectionId}". Réessaie.` };
+      writeFileSync(path.join(agent.workDir, `${sectionId}.md`), draft, "utf-8");
       // GUARDRAIL: never deliver un-humanized — code enforces it, not the model.
       upsertSection(state, { id: sectionId, status: "humanizing" });
       emit({ type: "tool_call", name: "humanize_section", detail: sectionId });
       try { await agent.humanizeSection(sectionId); } catch { /* keep raw on failure */ }
-      const content = agent.getSection(sectionId) ?? "";
+      const content = agent.getSection(sectionId) ?? draft;
       const words = content.split(/\s+/).filter(Boolean).length;
       upsertSection(state, { id: sectionId, status: "ready", words });
       emit({ type: "file_written", section: sectionId, content });
