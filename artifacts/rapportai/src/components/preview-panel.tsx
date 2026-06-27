@@ -415,7 +415,7 @@ export function PreviewPanel({ activeSection, content, maxStep, isGenerating }: 
                 </span>
               ),
             }}
-          >{pageText}</ReactMarkdown>
+          >{pageText.replace(/([^\n])\n(?=[^\n])/g, "$1  \n")}</ReactMarkdown>
           <div
             style={{
               position: "absolute",
