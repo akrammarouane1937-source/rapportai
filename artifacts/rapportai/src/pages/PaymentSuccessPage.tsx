@@ -39,6 +39,7 @@ export default function PaymentSuccessPage() {
   }, []);
 
   const PLAN_LABELS: Record<string, string> = {
+    basique: "Basique",
     starter: "Essentiel",
     pro:     "Pro",
   };
@@ -89,6 +90,15 @@ export default function PaymentSuccessPage() {
 
             <div className="bg-purple-50 rounded-2xl p-4 mb-8 text-left">
               <p className="text-xs font-bold text-purple-600 uppercase tracking-wider mb-2">Ce que tu débloqués</p>
+              {planId === "basique" && (
+                <ul className="text-sm text-gray-700 space-y-1">
+                  <li>✓ Pages illimitées</li>
+                  <li>✓ Partie I incluse</li>
+                  <li>✓ 8 révisions IA</li>
+                  <li>✓ Humanisation anti-détection IA</li>
+                  <li>✓ Génération depuis tes documents</li>
+                </ul>
+              )}
               {planId === "starter" && (
                 <ul className="text-sm text-gray-700 space-y-1">
                   <li>✓ 60 pages générées par IA</li>

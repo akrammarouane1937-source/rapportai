@@ -21,29 +21,15 @@ interface Plan {
 
 const PLANS: Plan[] = [
   {
-    id:          "free",
-    name:        "Gratuit",
-    priceMad:    null,
-    anchorMad:   null,
-    description: "Pour découvrir la plateforme.",
-    cta:         "Commencer gratuitement",
-    popular:     false,
-    features: [
-      "12 pages générées",
-      "2 révisions IA",
-      "Export Word",
-    ],
-  },
-  {
     id:          "basique",
     name:        "Basique",
-    priceMad:    147,
-    anchorMad:   350,
+    priceMad:    249,
+    anchorMad:   500,
     description: "Partie I incluse — le cœur de ton rapport.",
     cta:         FREE_LAUNCH ? "Commencer gratuitement" : "Choisir Basique",
     popular:     false,
     features: [
-      "Partie I (cadre théorique)",
+      "Partie I complète (PFE, mémoire ou stage)",
       "Pages illimitées",
       "8 révisions IA",
       "Export Word",
