@@ -438,7 +438,7 @@ export default function RapportsPage({ completedOnly = false }: RapportsPageProp
                 <div className="space-y-2 mb-4">
                   {/* Fixed sections — shown but not draggable */}
                   {FIXED_SECTIONS.map((s) => (
-                    <DragRow key={s.id} id={s.id} label={s.label} fixed={true} onOpen={() => navigate("/agentic")} />
+                    <DragRow key={s.id} id={s.id} label={s.label} fixed={true} onOpen={() => navigate(`/agentic?section=${s.field ?? ""}`)} />
                   ))}
                 </div>
 
@@ -460,7 +460,7 @@ export default function RapportsPage({ completedOnly = false }: RapportsPageProp
                         style={{ listStyle: "none" }}
                         whileDrag={{ scale: 1.02, boxShadow: "0 8px 24px rgba(124,58,237,0.18)", zIndex: 50 }}
                       >
-                        <DragRow id={id} label={meta.label} fixed={false} onOpen={() => navigate("/agentic")} />
+                        <DragRow id={id} label={meta.label} fixed={false} onOpen={() => navigate(`/agentic?section=${meta.field ?? ""}`)} />
                       </Reorder.Item>
                     );
                   })}
@@ -536,7 +536,7 @@ export default function RapportsPage({ completedOnly = false }: RapportsPageProp
                           index={i}
                           locked={locked}
                           lockLabel={locked ? lockBadge(section.id) : undefined}
-                          onOpen={() => locked ? setPaywall({ plan: sectionMinPlan(section.id), label: section.label }) : navigate("/agentic")}
+                          onOpen={() => locked ? setPaywall({ plan: sectionMinPlan(section.id), label: section.label }) : navigate(`/agentic?section=${section.field ?? ""}`)}
                         />
                       );
                     })}

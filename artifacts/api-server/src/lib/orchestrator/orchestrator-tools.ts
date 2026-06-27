@@ -149,7 +149,8 @@ export async function runTool(name: string, input: Record<string, unknown>, ctx:
       agent.uploadDocument("sommaire.md", md);
       state.plan = md;
       saveReportState(state);
-      return { result: "Plan (sommaire) mis à jour selon la structure demandée." };
+      emit({ type: "file_written", section: "sommaire", content: md });  // → live preview updates
+      return { result: "Plan (sommaire) mis à jour — visible dans l'aperçu. Demande à l'étudiant de valider." };
     }
 
     case "write_section": {

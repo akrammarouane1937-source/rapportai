@@ -37,6 +37,14 @@ const SECTION_FIELD: Record<string, string> = {
   "partie-i": "partieI", "partie-ii": "partieII", conclusion: "conclusion",
 };
 
+// Reverse map: a report-store field (passed as ?section=… from "Mon Rapport") → preview section id.
+const FIELD_TO_SECTION: Record<string, string> = {
+  pageDeGarde: "page-de-garde", dedicaces: "dedicaces", remerciements: "remerciements",
+  resumeFr: "resume", abstractEn: "abstract", sommaire: "sommaire", introduction: "introduction",
+  partieI: "partie-i", partieII: "partie-ii", conclusion: "conclusion",
+  listeDesFigures: "liste-figures", listeDesTableaux: "liste-tableaux",
+};
+
 const WORKING_MSGS = [
   "Je rédige ta section…",
   "Je structure le contenu académique…",
@@ -60,7 +68,7 @@ const mdComponents: Components = {
 };
 
 export default function AgenticPage() {
-  const { updateReport } = useReportStore();
+  const { updateReport, resetReport } = useReportStore();
   const [messages, setMessages] = useState<Msg[]>(() => {
     try { return JSON.parse(localStorage.getItem(STORAGE_KEY) || "[]"); } catch { return []; }
   });
@@ -81,6 +89,12 @@ export default function AgenticPage() {
   const streamRef = useRef("");
 
   useEffect(() => { bottomRef.current?.scrollIntoView({ behavior: "smooth" }); }, [messages, steps, busy, streaming]);
+
+  // Deep-link: "Mon Rapport" passes ?section=<field> → focus the preview on that section.
+  useEffect(() => {
+    const f = new URLSearchParams(window.location.search).get("section");
+    if (f && FIELD_TO_SECTION[f]) setActiveSection(FIELD_TO_SECTION[f]);
+  }, []);
 
   // Persist conversation across reloads.
   useEffect(() => {
@@ -124,6 +138,7 @@ export default function AgenticPage() {
 
   const clearChat = () => {
     setMessages([]); setSteps([]); setChoices(null);
+    resetReport();   // start a fresh report → blank preview (no stale content from a previous report)
     try { localStorage.removeItem(STORAGE_KEY); } catch { /* ignore */ }
   };
 
