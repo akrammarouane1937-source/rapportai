@@ -7,6 +7,7 @@
 import { existsSync, readFileSync, writeFileSync, unlinkSync } from "fs";
 import path from "path";
 import type { SDKReportAgent } from "../sdk-agent";
+import { logger } from "../logger";
 import {
   type ReportState, setPreference, upsertSection, saveReportState, summarizeState,
 } from "./report-state";
@@ -171,7 +172,8 @@ export async function runTool(name: string, input: Record<string, unknown>, ctx:
         let rawSub = "";
         try {
           rawSub = await agent.generateSectionDirect(sectionId, subTask);  // direct API — no subprocess
-        } catch {
+        } catch (err) {
+          logger.error({ err: err instanceof Error ? err.stack : String(err), sectionId, where: "write_section.partie" }, "GENERATION FAILED");
           upsertSection(state, { id: sectionId, status: "pending" });
           return { result: `La rédaction de cette sous-section a échoué (souci technique passager). Le contenu déjà validé est préservé. Dis à l'étudiant que tu réessaies tout de suite, puis rappelle write_section pour la MÊME sous-section.` };
         }
@@ -196,7 +198,8 @@ export async function runTool(name: string, input: Record<string, unknown>, ctx:
       let draft = "";
       try {
         draft = await agent.generateSectionDirect(sectionId, task);  // direct API — no subprocess
-      } catch {
+      } catch (err) {
+        logger.error({ err: err instanceof Error ? err.stack : String(err), sectionId, where: "write_section.standalone" }, "GENERATION FAILED");
         upsertSection(state, { id: sectionId, status: "pending" });
         return { result: `La rédaction de "${sectionId}" a échoué (souci technique passager). Dis à l'étudiant que tu réessaies tout de suite, puis rappelle write_section.` };
       }
