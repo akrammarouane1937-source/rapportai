@@ -59,9 +59,12 @@ export const MOROCCAN_SCHOOLS: Record<string, SchoolInfo> = {
   "USMBA":  { fullName: "Université Sidi Mohammed Ben Abdellah", city: "Fès", website: "usmba.ac.ma", type: "other" },
 };
 
-// Resolve abbreviation to full info — falls back to the input as-is
-export function resolveSchool(input: string): SchoolInfo & { abbr: string } {
-  const key = input.trim().toUpperCase();
+// Resolve abbreviation to full info — falls back to the input as-is.
+// Null-safe: a missing/empty school (profile not fully filled) must NOT crash generation.
+export function resolveSchool(input: string | undefined | null): SchoolInfo & { abbr: string } {
+  const raw = (input ?? "").trim();
+  if (!raw) return { fullName: "", type: "other", abbr: "" };
+  const key = raw.toUpperCase();
   const found = MOROCCAN_SCHOOLS[key];
   if (found) return { ...found, abbr: key };
 
@@ -72,17 +75,19 @@ export function resolveSchool(input: string): SchoolInfo & { abbr: string } {
     }
   }
 
-  return { fullName: input, type: "other", abbr: input };
+  return { fullName: raw, type: "other", abbr: raw };
 }
 
 // Build a string for system prompts
-export function schoolContext(input: string): string {
-  const s = resolveSchool(input);
+export function schoolContext(input: string | undefined | null): string {
+  const raw = (input ?? "").trim();
+  if (!raw) return "";
+  const s = resolveSchool(raw);
   const city = s.city ? `, ${s.city}` : "";
   const web = s.website ? ` (${s.website})` : "";
-  return s.fullName !== input
-    ? `${input} = ${s.fullName}${city}${web}`
-    : input;
+  return s.fullName !== raw
+    ? `${raw} = ${s.fullName}${city}${web}`
+    : raw;
 }
 
 // ── School-type PFE profiles ──────────────────────────────────────────────────
