@@ -24,11 +24,11 @@ const PRICES: Record<string, {
   stripePriceId: string;
 }> = {
   basique: {
-    amountMad:    14700,
-    priceMad:     147,
-    anchorMad:    350,
+    amountMad:    24900,
+    priceMad:     249,
+    anchorMad:    500,
     label:        "RapportAI Basique",
-    stripePriceId: "price_1ThvTn003Ts2AXbaKWJA2vd8",
+    stripePriceId: "price_1Tmu9a003Ts2AXbaW9fDdNGq",
   },
   starter: {
     amountMad:    37700,
