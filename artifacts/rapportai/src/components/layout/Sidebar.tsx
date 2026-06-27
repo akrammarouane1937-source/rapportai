@@ -8,7 +8,7 @@ import {
   Menu, X,
 } from "lucide-react";
 import { UpsellModal } from "@/components/report/UpsellModal";
-import { getMyPlan, canUseFeature, PLAN_LIMITS } from "@/lib/userPlan";
+import { getMyPlan, canUseFeature, PLAN_LIMITS, FREE_LAUNCH } from "@/lib/userPlan";
 import { usePaywallStore } from "@/lib/paywallStore";
 import { getReport } from "@/lib/reportStore";
 import { useReportStore } from "@/lib/store";
@@ -345,7 +345,7 @@ export function Sidebar() {
 
             <div className="w-full flex items-center justify-center gap-1.5 text-xs font-semibold text-white rounded-lg py-1.5" style={{ background: "linear-gradient(135deg,#7c3aed,#a855f7)" }}>
               <Zap className="w-3 h-3" />
-              Accès gratuit
+              {FREE_LAUNCH ? "Accès gratuit" : `Plan ${planLabel[plan.planId] ?? "Gratuit"}`}
             </div>
           </div>
 
