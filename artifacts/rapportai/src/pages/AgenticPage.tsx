@@ -154,8 +154,21 @@ export default function AgenticPage() {
     const imgs = pendingImages.map((p) => p.dataUrl);
     setPendingImages([]);
     setBusy(true); setChoices(null); setSteps([]); setStreaming(""); streamRef.current = "";
-    // Conversation memory: send prior turns so the agent remembers the discussion.
-    const history = messages.map((m) => ({ role: m.role === "user" ? "user" : "assistant", content: m.content }));
+    // Conversation memory: send prior turns so the agent remembers the discussion — INCLUDING
+    // attached images as vision blocks, so it keeps SEEING an example/figure across later turns
+    // (otherwise it "forgets" the image after the turn it was sent in).
+    const history = messages.map((m) => {
+      if (m.role === "user" && m.images && m.images.length > 0) {
+        const parts: unknown[] = [];
+        if (m.content.trim()) parts.push({ type: "text", text: m.content });
+        for (const dataUrl of m.images) {
+          const mm = /^data:(image\/[a-zA-Z+]+);base64,(.+)$/.exec(dataUrl);
+          if (mm) parts.push({ type: "image", source: { type: "base64", media_type: mm[1], data: mm[2] } });
+        }
+        return { role: "user", content: parts };
+      }
+      return { role: m.role === "user" ? "user" : "assistant", content: m.content };
+    });
     setMessages((m) => [...m, { role: "user", content: text, images: imgs.length ? imgs : undefined }]);
     setInput("");
     if (inputRef.current) inputRef.current.style.height = "auto";
