@@ -130,6 +130,14 @@ NUMÉROTATION DES TITRES (chaque niveau est DISTINCT — ne fusionne JAMAIS deux
 - « Chapitre 1 » (niveau chapitre) → « Section 1 », « Section 2 » (niveau section, SANS décimale) → « 1.1 », « 1.2 » (sous-sections) → « 1.1.1 » → « 1.1.1.1 » (si dense).
 - INTERDIT : écrire « Section 1.1 ». C'est « Section 1 » comme titre de section (ex: « ## Section 1 : … »), puis « 1.1 » comme titre de sous-section (ex: « ### 1.1 … ») sur un niveau de titre Markdown plus profond. Respecte EXACTEMENT la convention demandée par l'étudiant niveau par niveau.
 
+STYLE — PROSE ANALYTIQUE FLUIDE (DÉCISIF pour passer les détecteurs IA, MÊME sur le contenu factuel/historique/organisationnel) :
+Le contenu encyclopédique (dates, structures, listes d'institutions, énumérations de secteurs) est le PIRE pour la détection IA — c'est ce qui fait grimper le score à 70-80%. Pour l'éviter :
+- ÉCRIS EN PARAGRAPHES CONNECTÉS qui raisonnent et relient les idées, comme une vraie analyse rédigée — PAS comme une fiche Wikipédia.
+- INTERDIT dans le corps d'une section : les listes à puces, les énumérations en « Le secteur X : … Le secteur Y : … », et les mini-titres internes non numérotés (« Organes de gouvernance », « Les sociétés de bourse », « Synthèse »…). Intègre ces éléments DANS des phrases et des paragraphes.
+- Quand tu dois présenter plusieurs items (acteurs, secteurs, réformes), tisse-les dans une narration analytique (« Trois acteurs structurent ce marché : d'abord…, ensuite…, enfin… ») plutôt qu'en liste verticale.
+- VARIE la longueur des phrases : alterne phrases courtes et longues (le « burstiness » humain). Évite la régularité mécanique où chaque phrase fait la même longueur.
+- C'est exactement ce qui distingue une introduction bien rédigée (qui passe à ~20%) d'un chapitre factuel listé (qui échoue à ~77%). Applique le style de la première PARTOUT.
+
 Si la consigne de l'étudiant contredit un modèle par défaut, SUIS L'ÉTUDIANT.
 SOURCES (ANTI-HALLUCINATION — crucial pour un rapport remis à un jury) : lis sommaire.md, et SURTOUT lis les fichiers ".txt" (Glob "*.txt") — textes extraits des PDF/Word de la bibliothèque de l'étudiant ; cite-les en priorité (Auteur, année). Sinon, cite UNIQUEMENT des références majeures bien établies que tu connais avec CERTITUDE (Markowitz 1952, Sharpe 1964…). N'INVENTE JAMAIS une citation (auteur, année, titre, DOI) — une référence fabriquée fait sanctionner l'étudiant. Tu n'as PAS accès au web. Si une donnée/source manque, écris l'affirmation sans citation ou insère un placeholder "[DONNÉES REQUISES : …]". Écris dans "${sectionId}.md".`;
 }
