@@ -168,8 +168,14 @@ export async function runTool(name: string, input: Record<string, unknown>, ctx:
         try { if (existsSync(tempPath)) unlinkSync(tempPath); } catch { /* ignore */ }
         const subTask = buildWriterTask(state, sectionId, instructions)
           + `\n\nÉcris UNIQUEMENT cette sous-section dans "${tempName}.md" (Write, fichier neuf). N'écris RIEN dans "${sectionId}.md".`;
-        for await (const ev of agent.streamSection(sectionId, subTask)) {
-          if (ev.type === "tool_call") emit({ type: "tool_call", name: ev.name, detail: ev.detail });
+        try {
+          for await (const ev of agent.streamSection(sectionId, subTask)) {
+            if (ev.type === "tool_call") emit({ type: "tool_call", name: ev.name, detail: ev.detail });
+          }
+        } catch {
+          if (snapshot) { try { writeFileSync(filePath, snapshot, "utf-8"); } catch { /* ignore */ } }
+          upsertSection(state, { id: sectionId, status: "pending" });
+          return { result: `La rédaction de cette sous-section a échoué (souci technique passager côté génération). Le contenu déjà validé est préservé. Dis à l'étudiant que tu réessaies tout de suite, puis rappelle write_section pour la MÊME sous-section.` };
         }
         if (snapshot) writeFileSync(filePath, snapshot, "utf-8");  // writer may have touched it
         const rawSub = existsSync(tempPath) ? readFileSync(tempPath, "utf-8").trim() : "";
@@ -190,8 +196,13 @@ export async function runTool(name: string, input: Record<string, unknown>, ctx:
       // Standalone section (introduction, conclusion, résumé…) → whole canonical file.
       emit({ type: "tool_call", name: "write_section", detail: sectionId });
       const task = buildWriterTask(state, sectionId, instructions);
-      for await (const ev of agent.streamSection(sectionId, task)) {
-        if (ev.type === "tool_call") emit({ type: "tool_call", name: ev.name, detail: ev.detail });
+      try {
+        for await (const ev of agent.streamSection(sectionId, task)) {
+          if (ev.type === "tool_call") emit({ type: "tool_call", name: ev.name, detail: ev.detail });
+        }
+      } catch {
+        upsertSection(state, { id: sectionId, status: "pending" });
+        return { result: `La rédaction de "${sectionId}" a échoué (souci technique passager). Dis à l'étudiant que tu réessaies tout de suite, puis rappelle write_section.` };
       }
       // GUARDRAIL: never deliver un-humanized — code enforces it, not the model.
       upsertSection(state, { id: sectionId, status: "humanizing" });

@@ -206,6 +206,11 @@ export default function AgenticPage() {
               if (ev.askUser.choices?.length) setChoices(ev.askUser.choices);
             }
           } else if (ev.type === "error") {
+            // Finalize whatever streamed (kill the lonely cursor), then show the error.
+            const streamed = streamRef.current.trim();
+            streamRef.current = "";
+            setStreaming("");
+            if (streamed) setMessages((m) => [...m, { role: "agent", content: streamed }]);
             setMessages((m) => [...m, { role: "agent", content: "⚠️ " + (ev.message ?? "Erreur") }]);
           }
         }
