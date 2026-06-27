@@ -13,7 +13,7 @@ const router = Router();
 
 router.post("/orchestrator/:sessionId", async (req: Request, res: Response) => {
   const sessionId = req.params.sessionId as string;
-  const { message, history } = req.body as { message?: string; history?: Array<{ role: "user" | "assistant"; content: unknown }> };
+  const { message, history, images } = req.body as { message?: string; history?: Array<{ role: "user" | "assistant"; content: unknown }>; images?: string[] };
 
   if (!message?.trim()) {
     res.status(400).json({ error: "message is required" });
@@ -52,7 +52,7 @@ router.post("/orchestrator/:sessionId", async (req: Request, res: Response) => {
   const hb = setInterval(() => { try { res.write(`: working\n\n`); } catch { /* closed */ } }, 15000);
 
   try {
-    const result = await runOrchestrator({ sessionId, agent, userMessage: message, history, apiKey, emit });
+    const result = await runOrchestrator({ sessionId, agent, userMessage: message, history, images, apiKey, emit });
     emit({ type: "reply", content: result.reply, ...(result.askUser ? { askUser: result.askUser } : {}) });
     emit({ type: "done" });
   } catch (err) {

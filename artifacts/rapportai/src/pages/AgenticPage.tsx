@@ -15,7 +15,7 @@ import { usePaywallStore } from "@/lib/paywallStore";
 import { Layout } from "@/components/layout";
 import { PreviewPanel } from "@/components/preview-panel";
 
-interface Msg { role: "user" | "agent"; content: string }
+interface Msg { role: "user" | "agent"; content: string; images?: string[] }
 interface Step { name: string; detail?: string }
 interface Upload { name: string; status: "uploading" | "done" | "error" }
 
@@ -70,6 +70,7 @@ export default function AgenticPage() {
   const [choices, setChoices] = useState<string[] | null>(null);
   const [activeSection, setActiveSection] = useState("introduction");
   const [uploads, setUploads] = useState<Upload[]>([]);
+  const [pendingImages, setPendingImages] = useState<{ name: string; dataUrl: string }[]>([]);
   const [elapsed, setElapsed] = useState(0);
   const [copied, setCopied] = useState<number | null>(null);
   const [streaming, setStreaming] = useState("");
@@ -95,8 +96,18 @@ export default function AgenticPage() {
 
   const handleUpload = async (files: FileList | null) => {
     if (!files || files.length === 0) return;
+    const arr = Array.from(files);
+    // Images → vision attachments shown inline in the chat (the agent SEES them).
+    for (const img of arr.filter((f) => f.type.startsWith("image/"))) {
+      const reader = new FileReader();
+      reader.onload = () => setPendingImages((p) => [...p, { name: img.name, dataUrl: String(reader.result) }]);
+      reader.readAsDataURL(img);
+    }
+    // Documents (PDF/Word/txt) → uploaded to the library as sources.
+    const docs = arr.filter((f) => !f.type.startsWith("image/"));
+    if (docs.length === 0) return;
     const sessionId = await ensureSession();
-    for (const file of Array.from(files)) {
+    for (const file of docs) {
       setUploads((u) => [...u.filter((x) => x.name !== file.name), { name: file.name, status: "uploading" }]);
       try {
         const fd = new FormData();
@@ -121,14 +132,16 @@ export default function AgenticPage() {
   };
 
   const send = async (text: string) => {
-    if (!text.trim() || busy) return;
+    if ((!text.trim() && pendingImages.length === 0) || busy) return;
     // Concierge paywall gate: block generation for non-paying users (no-op during free-launch).
     const plan = getMyPlan();
     if (!hasAccess(plan.planId)) { usePaywallStore.getState().trigger("pages", plan.planId); return; }
+    const imgs = pendingImages.map((p) => p.dataUrl);
+    setPendingImages([]);
     setBusy(true); setChoices(null); setSteps([]); setStreaming(""); streamRef.current = "";
     // Conversation memory: send prior turns so the agent remembers the discussion.
     const history = messages.map((m) => ({ role: m.role === "user" ? "user" : "assistant", content: m.content }));
-    setMessages((m) => [...m, { role: "user", content: text }]);
+    setMessages((m) => [...m, { role: "user", content: text, images: imgs.length ? imgs : undefined }]);
     setInput("");
     if (inputRef.current) inputRef.current.style.height = "auto";
     abortRef.current = new AbortController();
@@ -137,7 +150,7 @@ export default function AgenticPage() {
       const resp = await fetch(`${API_BASE}/api/orchestrator/${sessionId}`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ message: text, history }),
+        body: JSON.stringify({ message: text.trim() || "Regarde cette image.", history, images: imgs }),
         signal: abortRef.current.signal,
       });
       if (!resp.ok || !resp.body) throw new Error(`HTTP ${resp.status}`);
@@ -217,10 +230,19 @@ export default function AgenticPage() {
 
         {messages.map((m, i) => (
           m.role === "user" ? (
-            <div key={i} className="flex justify-end">
-              <div className="px-3.5 py-2 rounded-2xl rounded-br-md max-w-[80%] text-sm bg-purple-600 text-white whitespace-pre-wrap">
-                {m.content}
-              </div>
+            <div key={i} className="flex flex-col items-end gap-1.5">
+              {m.images && m.images.length > 0 && (
+                <div className="flex flex-wrap gap-1.5 justify-end max-w-[80%]">
+                  {m.images.map((src, j) => (
+                    <img key={j} src={src} alt="" className="max-w-[180px] max-h-[180px] rounded-xl border border-purple-200 object-cover" />
+                  ))}
+                </div>
+              )}
+              {m.content && (
+                <div className="px-3.5 py-2 rounded-2xl rounded-br-md max-w-[80%] text-sm bg-purple-600 text-white whitespace-pre-wrap">
+                  {m.content}
+                </div>
+              )}
             </div>
           ) : (
             <div key={i} className="flex gap-2.5 group">
@@ -291,6 +313,20 @@ export default function AgenticPage() {
 
       {/* Composer */}
       <div className="shrink-0 border-t border-border bg-white px-4 py-3 space-y-2">
+        {pendingImages.length > 0 && (
+          <div className="flex flex-wrap gap-2">
+            {pendingImages.map((img, i) => (
+              <div key={i} className="relative">
+                <img src={img.dataUrl} alt="" className="w-14 h-14 object-cover rounded-lg border border-gray-200" />
+                <button
+                  type="button"
+                  onClick={() => setPendingImages((p) => p.filter((_, j) => j !== i))}
+                  className="absolute -top-1.5 -right-1.5 w-4 h-4 rounded-full bg-gray-800 text-white text-[10px] leading-none flex items-center justify-center"
+                >×</button>
+              </div>
+            ))}
+          </div>
+        )}
         {uploads.length > 0 && (
           <div className="flex flex-wrap gap-1.5">
             {uploads.map((u, i) => (
@@ -325,7 +361,7 @@ export default function AgenticPage() {
               <Square className="w-3.5 h-3.5" fill="currentColor" />
             </button>
           ) : (
-            <button type="submit" disabled={!input.trim()} className="flex-shrink-0 w-9 h-9 rounded-xl bg-purple-600 text-white flex items-center justify-center disabled:opacity-40 hover:bg-purple-700">
+            <button type="submit" disabled={!input.trim() && pendingImages.length === 0} className="flex-shrink-0 w-9 h-9 rounded-xl bg-purple-600 text-white flex items-center justify-center disabled:opacity-40 hover:bg-purple-700">
               <ArrowUp className="w-4 h-4" />
             </button>
           )}

@@ -62,16 +62,27 @@ export async function runOrchestrator(opts: {
   agent: SDKReportAgent;
   userMessage: string;
   history?: Msg[];
+  images?: string[];   // data URLs (data:image/png;base64,…) the student attached — sent to vision
   apiKey: string;
   emit: (ev: { type: string; [k: string]: unknown }) => void;
 }): Promise<OrchestratorResult> {
-  const { sessionId, agent, userMessage, history = [], apiKey, emit } = opts;
+  const { sessionId, agent, userMessage, history = [], images = [], apiKey, emit } = opts;
   const state = loadReportState(sessionId, agent.profile as unknown as Record<string, unknown>);
   const ctx: ToolContext = { state, agent, emit };
 
+  // The student can attach images — pass them to the model as vision content blocks.
+  const textPart = { type: "text", text: `${summarizeState(state)}\n\n---\nMessage de l'étudiant : ${userMessage}` };
+  const imageParts = images
+    .map((img) => {
+      const m = /^data:(image\/[a-zA-Z+]+);base64,(.+)$/.exec(img);
+      return m ? { type: "image", source: { type: "base64", media_type: m[1], data: m[2] } } : null;
+    })
+    .filter((x): x is { type: string; source: { type: string; media_type: string; data: string } } => x !== null);
+  const lastUserContent: unknown = imageParts.length > 0 ? [textPart, ...imageParts] : textPart.text;
+
   const messages: Msg[] = [
     ...history,
-    { role: "user", content: `${summarizeState(state)}\n\n---\nMessage de l'étudiant : ${userMessage}` },
+    { role: "user", content: lastUserContent },
   ];
 
   const anthropic = new Anthropic({ apiKey });
