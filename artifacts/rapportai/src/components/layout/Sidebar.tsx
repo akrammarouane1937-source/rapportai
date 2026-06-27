@@ -9,6 +9,7 @@ import {
 } from "lucide-react";
 import { UpsellModal } from "@/components/report/UpsellModal";
 import { getMyPlan, canUseFeature, PLAN_LIMITS } from "@/lib/userPlan";
+import { usePaywallStore } from "@/lib/paywallStore";
 import { getReport } from "@/lib/reportStore";
 import { useReportStore } from "@/lib/store";
 import { getApprovedFigures } from "@/lib/figureStore";
@@ -348,8 +349,16 @@ export function Sidebar() {
             </div>
           </div>
 
-          {/* Sign out */}
-          <div className="px-2 pb-3" style={{ borderTop: "1px solid #f3f4f6" }}>
+          {/* Upgrade + Sign out */}
+          <div className="px-2 pb-3 space-y-1" style={{ borderTop: "1px solid #f3f4f6" }}>
+            <button
+              onClick={() => usePaywallStore.getState().trigger("pages", plan.planId)}
+              className="w-full flex items-center gap-2 px-2.5 py-1.5 rounded-lg text-xs font-semibold text-white hover:opacity-90 transition-opacity"
+              style={{ background: "linear-gradient(135deg,#7c3aed,#a855f7)" }}
+            >
+              <Zap className="w-3.5 h-3.5 flex-shrink-0" />
+              Améliorer mon plan
+            </button>
             <button
               onClick={handleSignOut}
               className="w-full flex items-center gap-2.5 px-2.5 py-1.5 rounded-lg text-xs text-gray-400 hover:text-gray-600 hover:bg-gray-50 transition-colors"

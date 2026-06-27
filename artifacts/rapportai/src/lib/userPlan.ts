@@ -110,6 +110,13 @@ export function canUseFeature(feature: string, planId: PlanId): boolean {
   return PLAN_FEATURES[planId].includes(feature);
 }
 
+// Concierge paywall gate: during free-launch everyone gets in; once paid mode is on
+// (VITE_FREE_LAUNCH=false), only a paid plan (not "free") may use the product.
+export function hasAccess(planId: PlanId): boolean {
+  if (FREE_LAUNCH) return true;
+  return planId !== "free";
+}
+
 export function nextPlan(planId: PlanId): PlanId {
   if (planId === "free") return "basique";
   if (planId === "basique") return "starter";

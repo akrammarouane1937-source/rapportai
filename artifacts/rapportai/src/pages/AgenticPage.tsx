@@ -10,6 +10,8 @@ import { Paperclip, ArrowUp, Square, Loader2, FileText, CheckCircle2, AlertCircl
 import { API_BASE } from "@/lib/apiBase";
 import { ensureSession } from "@/lib/useGenerate";
 import { useReportStore } from "@/lib/store";
+import { getMyPlan, hasAccess } from "@/lib/userPlan";
+import { usePaywallStore } from "@/lib/paywallStore";
 import { Layout } from "@/components/layout";
 import { PreviewPanel } from "@/components/preview-panel";
 
@@ -120,6 +122,9 @@ export default function AgenticPage() {
 
   const send = async (text: string) => {
     if (!text.trim() || busy) return;
+    // Concierge paywall gate: block generation for non-paying users (no-op during free-launch).
+    const plan = getMyPlan();
+    if (!hasAccess(plan.planId)) { usePaywallStore.getState().trigger("pages", plan.planId); return; }
     setBusy(true); setChoices(null); setSteps([]); setStreaming(""); streamRef.current = "";
     // Conversation memory: send prior turns so the agent remembers the discussion.
     const history = messages.map((m) => ({ role: m.role === "user" ? "user" : "assistant", content: m.content }));
