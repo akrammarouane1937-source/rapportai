@@ -290,14 +290,14 @@ export default function AgenticPage() {
           </div>
         )}
 
-        {busy && !streaming && (
+        {busy && (steps.length > 0 || !streaming) && (
           <div className="flex gap-2.5">
             <div className="w-6 h-6 rounded-lg bg-purple-100 flex items-center justify-center flex-shrink-0 mt-0.5">
               <Loader2 className="w-3.5 h-3.5 text-purple-600 animate-spin" />
             </div>
             <div className="rounded-xl border border-purple-100 bg-purple-50/60 px-3 py-2 text-xs min-w-0">
               <div className="flex items-center gap-2 font-semibold text-purple-700">
-                <span>{workingMsg}</span>
+                <span>{steps.length > 0 ? workingMsg : "RapportAI réfléchit…"}</span>
                 <span className="text-purple-400 font-mono tabular-nums">{mm}:{ss}</span>
               </div>
               {steps.length > 0 && (
