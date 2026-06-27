@@ -1,6 +1,7 @@
 import { useEffect, useState, useRef } from "react";
 import { Link } from "wouter";
 import { motion, useInView } from "framer-motion";
+import { FREE_LAUNCH } from "@/lib/userPlan";
 import {
   ChevronRight,
   CheckCircle2,
@@ -121,7 +122,7 @@ function LaunchBanner() {
           <div className="text-left">
             <span className="font-black text-sm uppercase tracking-wide">Lancement officiel</span>
             <span className="mx-2 opacity-50">·</span>
-            <span className="font-bold text-sm">Accès <span className="underline underline-offset-2 decoration-yellow-300">100% gratuit</span> limité</span>
+            <span className="font-bold text-sm">{FREE_LAUNCH ? <>Accès <span className="underline underline-offset-2 decoration-yellow-300">100% gratuit</span> limité</> : "Spécial rapport de stage"}</span>
           </div>
         </div>
 
@@ -297,7 +298,7 @@ export default function LandingPage() {
                 transition={{ duration: 0.4, delay: timeLeft.expired ? 0 : 0.1 }}
                 className="inline-flex items-center gap-2 bg-purple-50 border border-purple-100 text-purple-700 text-sm font-semibold px-4 py-2 rounded-full"
               >
-                <span>🎉</span> RapportAI célèbre son lancement — <span className="font-black">30 places gratuites</span>
+                <span>🎉</span> {FREE_LAUNCH ? <>RapportAI célèbre son lancement — <span className="font-black">30 places gratuites</span></> : <>Spécial <span className="font-black">rapport de stage</span> — places limitées</>}
               </motion.div>
             </div>
             <motion.h1 
@@ -330,7 +331,7 @@ export default function LandingPage() {
                     className="px-8 py-4 rounded-xl font-bold text-white text-base transition-transform hover:scale-[1.02]"
                     style={{ background: "linear-gradient(135deg,#7c3aed,#a855f7)", boxShadow: "0 8px 30px rgba(124,58,237,0.35)" }}
                   >
-                    Commencer gratuitement →
+                    {FREE_LAUNCH ? "Commencer gratuitement" : "Commencer"} →
                   </button>
                 </Link>
               </div>
@@ -785,7 +786,7 @@ export default function LandingPage() {
             <div className="flex flex-col items-center">
               <Link href="/sign-up">
                 <Button size="lg" className="w-full sm:w-auto text-lg h-14 px-10 rounded-full bg-primary text-white hover:bg-primary-dark shadow-[0_4px_24px_rgba(124,58,237,0.25)] mb-4">
-                  Commencer gratuitement <ArrowRight className="w-5 h-5 ml-2" />
+                  {FREE_LAUNCH ? "Commencer gratuitement" : "Commencer"} <ArrowRight className="w-5 h-5 ml-2" />
                 </Button>
               </Link>
               <p className="text-sm text-muted-foreground font-medium">
