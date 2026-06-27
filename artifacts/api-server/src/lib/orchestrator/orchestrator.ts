@@ -89,26 +89,36 @@ export async function runOrchestrator(opts: {
   const anthropic = new Anthropic({ apiKey });
 
   for (let turn = 0; turn < MAX_TURNS; turn++) {
-    let final: Anthropic.Message;
-    try {
-      // Stream so the frontend can show the reply word-by-word (Claude/ChatGPT feel).
-      const stream = anthropic.messages.stream({
-        model: MODEL,
-        max_tokens: 8192,
-        system: SYSTEM,
-        tools: TOOL_SCHEMAS as unknown as Anthropic.Tool[],
-        messages: messages as unknown as Anthropic.MessageParam[],
-      });
-      for await (const event of stream) {
-        if (event.type === "content_block_delta" && event.delta.type === "text_delta") {
-          emit({ type: "text_delta", text: event.delta.text });
+    let final: Anthropic.Message | undefined;
+    for (let attempt = 1; attempt <= 2 && !final; attempt++) {
+      let emittedText = false;
+      try {
+        // Stream so the frontend can show the reply word-by-word (Claude/ChatGPT feel).
+        const stream = anthropic.messages.stream({
+          model: MODEL,
+          max_tokens: 8192,
+          system: SYSTEM,
+          tools: TOOL_SCHEMAS as unknown as Anthropic.Tool[],
+          messages: messages as unknown as Anthropic.MessageParam[],
+        });
+        for await (const event of stream) {
+          if (event.type === "content_block_delta" && event.delta.type === "text_delta") {
+            emittedText = true;
+            emit({ type: "text_delta", text: event.delta.text });
+          }
         }
+        final = await stream.finalMessage();
+      } catch (err) {
+        logger.error({ err, attempt }, "orchestrator stream failed");
+        // Transient API hiccups (overload 529 / timeout) are common — retry ONCE, but only if
+        // nothing streamed yet (retrying after partial text would duplicate it).
+        if (attempt >= 2 || emittedText) {
+          return { reply: "Désolé, une erreur est survenue. Réessaie dans un instant." };
+        }
+        await new Promise((r) => setTimeout(r, 800));
       }
-      final = await stream.finalMessage();
-    } catch (err) {
-      logger.error({ err }, "orchestrator stream failed");
-      return { reply: "Désolé, une erreur est survenue. Réessaie dans un instant." };
     }
+    if (!final) return { reply: "Désolé, une erreur est survenue. Réessaie." };
 
     const blocks = final.content;
     const text = blocks.filter((b) => b.type === "text").map((b) => (b as Anthropic.TextBlock).text).join("").trim();
