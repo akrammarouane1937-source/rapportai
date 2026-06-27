@@ -24,11 +24,13 @@ const PRICES: Record<string, {
   stripePriceId: string;
 }> = {
   basique: {
-    amountMad:    24900,
+    // ⚠️ TEMP TEST: charging 5 MAD to verify the payment→unlock loop. REVERT to 24900 /
+    // price_1Tmu9a003Ts2AXbaW9fDdNGq after the test.
+    amountMad:    500,
     priceMad:     249,
     anchorMad:    500,
     label:        "RapportAI Basique",
-    stripePriceId: "price_1Tmu9a003Ts2AXbaW9fDdNGq",
+    stripePriceId: "price_1TmuhY003Ts2AXbaBoqqpQlw",
   },
   starter: {
     amountMad:    37700,
