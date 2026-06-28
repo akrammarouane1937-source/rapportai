@@ -10,7 +10,7 @@ import { Paperclip, ArrowUp, Square, Loader2, FileText, CheckCircle2, AlertCircl
 import { API_BASE } from "@/lib/apiBase";
 import { ensureSession } from "@/lib/useGenerate";
 import { useReportStore } from "@/lib/store";
-import { getMyPlan, canGenerateSection, wordsToPages, canRevise, incrementRevision } from "@/lib/userPlan";
+import { getMyPlan, hasAccess, canGenerateSection, wordsToPages, canRevise, incrementRevision } from "@/lib/userPlan";
 import { usePaywallStore } from "@/lib/paywallStore";
 import { Layout } from "@/components/layout";
 import { PreviewPanel } from "@/components/preview-panel";
@@ -165,8 +165,8 @@ export default function AgenticPage() {
     if ((!text.trim() && pendingImages.length === 0) || busy) return;
     // Concierge paywall gate: block generation for non-paying users (no-op during free-launch).
     const plan = getMyPlan();
-    // Freemium: free users CAN generate front matter + Introduction here; the server gates paid
-    // sections (Partie I →) and emits a "paywall" event we handle below. No blanket free block.
+    // No free use: an unpaid (free) user is paywalled on ANY action — must buy at least Basique.
+    if (!hasAccess(plan.planId)) { usePaywallStore.getState().trigger("pages", plan.planId); return; }
     // Per-plan page cap: once the report reaches the plan's page limit, further generation
     // requires an upgrade (Basique 35 / Essentiel 60 / Pro unlimited). No-op during free-launch.
     if (!canGenerateSection(plan.planId, countReportPages(report as unknown as Record<string, unknown>))) {

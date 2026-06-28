@@ -3,12 +3,10 @@ import { FREE_LAUNCH } from "@/lib/userPlan";
 
 // ─── Section access — single source of truth (mirror of api-server plan-guard.ts) ─
 //
-// Gating is BY SECTION, not by page count. The free tier gives a complete frame
-// (front matter + Introduction); Partie I — the part students truly can't write
-// alone — is the first paywall moment.
+// No free use: an unpaid user is paywalled on everything. Basique is the entry plan.
 //
-//   Free      → front matter + Introduction
-//   Basique   → + Partie I
+//   Free      → nothing (paywalled — must buy at least Basique)
+//   Basique   → front matter + Introduction + Partie I
 //   Essentiel → + Partie II, Conclusion, Bibliographie, lists, Annexes
 //   Pro       → everything (+ unlimited revisions, JuryAI)
 
@@ -42,14 +40,14 @@ export function sectionMinPlan(sectionId: string): PlanId {
 
 export function canAccessSection(sectionId: string, planId: PlanId): boolean {
   if (FREE_LAUNCH) return true;
+  if (planId === "free") return false;  // no free use — must buy at least Basique to generate anything
   return PLAN_RANK[planId] >= PLAN_RANK[sectionMinPlan(sectionId)];
 }
 
 /** Short lock badge label for a section the current plan can't reach. */
 export function lockBadge(sectionId: string): string {
   const required = sectionMinPlan(sectionId);
-  if (required === "basique") return "Basique";
   if (required === "starter") return "Essentiel";
   if (required === "pro") return "Pro";
-  return "";
+  return "Basique";  // free-tier sections are locked for free users → Basique is the entry plan
 }
