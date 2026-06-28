@@ -10,7 +10,7 @@ export interface UserPlanData {
 }
 
 export interface PlanLimit {
-  pages:        number;   // max pages (Infinity = unlimited). 250 words ≈ 1 page.
+  pages:        number;   // max pages (Infinity = unlimited). ~320 words ≈ 1 page.
   revisions:    number;   // max revision calls
   label:        string;   // display name
   labelShort:   string;
@@ -74,9 +74,10 @@ export function incrementRevision(): UserPlanData {
   return next;
 }
 
-/** Estimate pages from word count (250 words ≈ 1 page) */
+/** Estimate pages from word count. ~320 words/page for an academic report (Times New Roman 12pt,
+ *  1.5 line spacing) — calibrated against the real Word-export page count. */
 export function wordsToPages(wordCount: number): number {
-  return Math.ceil(wordCount / 250);
+  return Math.ceil(wordCount / 320);
 }
 
 export function incrementPages(wordCount: number): UserPlanData {
