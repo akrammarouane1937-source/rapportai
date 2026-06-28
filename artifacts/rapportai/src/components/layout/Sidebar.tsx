@@ -8,13 +8,12 @@ import {
   Menu, X,
 } from "lucide-react";
 import { UpsellModal } from "@/components/report/UpsellModal";
-import { getMyPlan, canUseFeature, PLAN_LIMITS, FREE_LAUNCH } from "@/lib/userPlan";
+import { getMyPlan, canUseFeature, PLAN_LIMITS, FREE_LAUNCH, wordsToPages } from "@/lib/userPlan";
 import { usePaywallStore } from "@/lib/paywallStore";
 import { getReport } from "@/lib/reportStore";
 import { useReportStore } from "@/lib/store";
 import { getApprovedFigures } from "@/lib/figureStore";
 import { REFERRALS_ENABLED } from "@/lib/featureFlags";
-import { API_BASE } from "@/lib/apiBase";
 
 const NAV_ITEMS = [
   { icon: Home,          label: "Accueil",            path: "/dashboard",          proFeature: "" },
@@ -82,7 +81,7 @@ export function Sidebar() {
     : "Étudiant";
 
   const planLabel: Record<string, string> = {
-    free: "Gratuit", essentiel: "Essentiel", pro: "Pro", premium: "Premium",
+    free: "Gratuit", basique: "Basique", starter: "Essentiel", pro: "Pro",
   };
 
   const STEP_LABELS: Record<number, string> = {
@@ -100,28 +99,20 @@ export function Sidebar() {
   const currentStepNum: number = zustandStep ?? 1;
   const currentSection = STEP_LABELS[currentStepNum] ?? null;
   const hasReport      = !!(report.theme || report.school);
-  const pagesUsed      = sectionsWithContent;
+  // Pages generated = real page count from content (250 words ≈ 1 page), not section count.
+  const pagesUsed      = wordsToPages(
+    [report.introduction, report.resume, report.dedicaces, report.remerciements,
+     report.partieI, report.partieII, report.conclusion]
+      .filter((s): s is string => typeof s === "string" && s.trim().length > 0)
+      .reduce((sum, s) => sum + s.trim().split(/\s+/).length, 0),
+  );
   const pagesLimit     = limits.pages === Infinity ? "∞" : limits.pages;
 
-  // Daily revision budget from the server (the real, enforced count). Falls back to
-  // the client plan count until the first fetch resolves.
-  const [dailyRev, setDailyRev] = useState<{ revisions: number; revisionLimit: number } | null>(null);
-  useEffect(() => {
-    let sid: string | null = null;
-    try { sid = localStorage.getItem("rapportai_session"); } catch { /* ignore */ }
-    const url = `${API_BASE}/api/usage${sid ? `?sessionId=${encodeURIComponent(sid)}` : ""}`;
-    fetch(url)
-      .then((r) => (r.ok ? r.json() : null))
-      .then((d) => { if (d && typeof d.revisions === "number") setDailyRev(d); })
-      .catch(() => {});
-  }, [location]);
-
-  const revisionsUsed  = dailyRev ? dailyRev.revisions : plan.revisionCount;
-  const revisionsLimit = dailyRev ? dailyRev.revisionLimit : (limits.revisions === Infinity ? "∞" : limits.revisions);
+  // Revisions are a PER-PLAN allowance (Basique 8 / Essentiel 20 / Pro ∞), not a daily limit.
+  const revisionsUsed  = plan.revisionCount;
+  const revisionsLimit = limits.revisions === Infinity ? "∞" : limits.revisions;
   const pagesPct       = limits.pages === Infinity ? 0 : Math.min(100, (pagesUsed / (limits.pages as number)) * 100);
-  const revPct         = dailyRev
-    ? Math.min(100, (dailyRev.revisions / dailyRev.revisionLimit) * 100)
-    : (limits.revisions === Infinity ? 0 : Math.min(100, (revisionsUsed / (limits.revisions as number)) * 100));
+  const revPct         = limits.revisions === Infinity ? 0 : Math.min(100, (revisionsUsed / (limits.revisions as number)) * 100);
 
   const isActive = (path: string) =>
     location === path || location.startsWith(path + "/");
@@ -311,7 +302,7 @@ export function Sidebar() {
 
             <div>
               <div className="flex justify-between text-[10px] text-gray-400 mb-0.5">
-                <span>Sections générées</span>
+                <span>Pages générées</span>
                 <span>{pagesUsed}/{pagesLimit}</span>
               </div>
               <div className="h-1 bg-gray-100 rounded-full overflow-hidden">
@@ -328,7 +319,7 @@ export function Sidebar() {
 
             <div>
               <div className="flex justify-between text-[10px] text-gray-400 mb-0.5">
-                <span>Révisions (jour)</span>
+                <span>Révisions</span>
                 <span>{revisionsUsed}/{revisionsLimit}</span>
               </div>
               <div className="h-1 bg-gray-100 rounded-full overflow-hidden">
