@@ -34,7 +34,7 @@ export const PLAN_FEATURES: Record<PlanId, string[]> = {
   free:    [],
   basique: ["humanize"],
   starter: ["pdf", "humanize"],
-  pro:     ["pdf", "humanize", "juryai"],
+  pro:     ["pdf", "humanize"],
 };
 
 export function getMyPlan(): UserPlanData {

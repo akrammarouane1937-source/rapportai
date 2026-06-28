@@ -113,7 +113,6 @@ export default function PaymentSuccessPage() {
                   <li>✓ Pages illimitées</li>
                   <li>✓ Révisions illimitées</li>
                   <li>✓ Export Word</li>
-                  <li>✓ JuryAI : simulation de soutenance</li>
                   <li>✓ Humanisation anti-détection IA</li>
                   <li>✓ Certificat Anti-Détection IA</li>
                 </ul>

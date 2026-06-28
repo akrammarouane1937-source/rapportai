@@ -19,7 +19,6 @@ const NAV = [
   { icon: LayoutDashboard, label: "Tableau de bord", id: "dashboard" },
   { icon: FileText, label: "Mes rapports", id: "rapports" },
   { icon: BookOpen, label: "Bibliothèque", id: "bibliotheque", pro: true },
-  { icon: MessageSquare, label: "JuryAI", id: "juryai", pro: true },
   { icon: ImageIcon, label: "Figures", id: "figures" },
   { icon: Settings, label: "Paramètres", id: "parametres" },
 ];

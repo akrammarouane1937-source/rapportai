@@ -38,7 +38,7 @@ function getConfig(
         iconBg: "bg-purple-100",
         title: "Tu as atteint ta limite de 60 pages",
         desc: "Passe au plan Pro pour continuer ton rapport sans interruption.",
-        benefits: ["Pages illimitées", "Révisions illimitées", "JuryAI inclus", "Certificat Anti-IA"],
+        benefits: ["Pages illimitées", "Révisions illimitées", "Canevas de ton école", "Certificat Anti-IA"],
         targetPlan: "Pro",
         upgradeLabel: "Passer au Pro",
         price: 300,
@@ -49,7 +49,7 @@ function getConfig(
         iconBg: "bg-amber-100",
         title: "Tu as utilisé tes 20 révisions",
         desc: "Débloque les révisions illimitées pour peaufiner ton rapport sans limite.",
-        benefits: ["Révisions illimitées", "Pages illimitées", "JuryAI inclus", "Certificat Anti-IA"],
+        benefits: ["Révisions illimitées", "Pages illimitées", "Canevas de ton école", "Certificat Anti-IA"],
         targetPlan: "Pro",
         upgradeLabel: "Débloquer les révisions",
         price: 300,
@@ -60,7 +60,7 @@ function getConfig(
         iconBg: "bg-indigo-100",
         title: "Tu as atteint ta limite de 60 pages",
         desc: "Passe au plan Pro pour des pages illimitées et un rapport sans contrainte.",
-        benefits: ["Pages illimitées", "Révisions illimitées", "JuryAI inclus", "Certificat Anti-IA"],
+        benefits: ["Pages illimitées", "Révisions illimitées", "Canevas de ton école", "Certificat Anti-IA"],
         targetPlan: "Pro",
         upgradeLabel: "Passer au Pro",
         price: 300,
@@ -75,7 +75,7 @@ function getConfig(
           : `Cette fonctionnalité est réservée au plan ${PLAN_LIMITS[to].label}`,
         desc: `Mets à niveau pour déverrouiller cette fonctionnalité et bien d'autres.`,
         benefits: to === "pro"
-          ? ["JuryAI - entraîne-toi à la soutenance", "Anti-plagiat intelligent", "Révisions illimitées", "Certificat Anti-IA"]
+          ? ["Canevas de ton école", "Anti-plagiat intelligent", "Révisions illimitées", "Certificat Anti-IA"]
           : ["Pages illimitées", "Slides PowerPoint", "Tout Pro inclus", "Support prioritaire"],
         targetPlan: PLAN_LIMITS[to].label,
         upgradeLabel: `Passer au ${PLAN_LIMITS[to].label}`,
