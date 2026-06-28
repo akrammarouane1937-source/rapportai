@@ -30,7 +30,7 @@ const PLANS: Plan[] = [
     popular:     false,
     features: [
       "Partie I complète (PFE, mémoire ou stage)",
-      "Pages illimitées",
+      "35 pages générées",
       "8 révisions IA",
       "Export Word",
       "Humanisation anti-détection IA",
