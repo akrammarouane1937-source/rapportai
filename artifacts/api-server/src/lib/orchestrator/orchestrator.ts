@@ -65,12 +65,13 @@ export async function runOrchestrator(opts: {
   userMessage: string;
   history?: Msg[];
   images?: string[];   // data URLs (data:image/png;base64,…) the student attached — sent to vision
+  planId?: string;     // student's plan — gates paid sections (freemium)
   apiKey: string;
   emit: (ev: { type: string; [k: string]: unknown }) => void;
 }): Promise<OrchestratorResult> {
-  const { sessionId, agent, userMessage, history = [], images = [], apiKey, emit } = opts;
+  const { sessionId, agent, userMessage, history = [], images = [], planId, apiKey, emit } = opts;
   const state = loadReportState(sessionId, agent.profile as unknown as Record<string, unknown>);
-  const ctx: ToolContext = { state, agent, emit };
+  const ctx: ToolContext = { state, agent, emit, planId };
 
   // The student can attach images — pass them to the model as vision content blocks.
   const textPart = { type: "text", text: `${summarizeState(state)}\n\n---\nMessage de l'étudiant : ${userMessage}` };

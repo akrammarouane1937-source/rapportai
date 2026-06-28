@@ -10,7 +10,7 @@ import { Paperclip, ArrowUp, Square, Loader2, FileText, CheckCircle2, AlertCircl
 import { API_BASE } from "@/lib/apiBase";
 import { ensureSession } from "@/lib/useGenerate";
 import { useReportStore } from "@/lib/store";
-import { getMyPlan, hasAccess, canGenerateSection, wordsToPages, canRevise, incrementRevision } from "@/lib/userPlan";
+import { getMyPlan, canGenerateSection, wordsToPages, canRevise, incrementRevision } from "@/lib/userPlan";
 import { usePaywallStore } from "@/lib/paywallStore";
 import { Layout } from "@/components/layout";
 import { PreviewPanel } from "@/components/preview-panel";
@@ -165,7 +165,8 @@ export default function AgenticPage() {
     if ((!text.trim() && pendingImages.length === 0) || busy) return;
     // Concierge paywall gate: block generation for non-paying users (no-op during free-launch).
     const plan = getMyPlan();
-    if (!hasAccess(plan.planId)) { usePaywallStore.getState().trigger("pages", plan.planId); return; }
+    // Freemium: free users CAN generate front matter + Introduction here; the server gates paid
+    // sections (Partie I →) and emits a "paywall" event we handle below. No blanket free block.
     // Per-plan page cap: once the report reaches the plan's page limit, further generation
     // requires an upgrade (Basique 35 / Essentiel 60 / Pro unlimited). No-op during free-launch.
     if (!canGenerateSection(plan.planId, countReportPages(report as unknown as Record<string, unknown>))) {
@@ -198,7 +199,7 @@ export default function AgenticPage() {
       const resp = await fetch(`${API_BASE}/api/orchestrator/${sessionId}`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ message: text.trim() || "Regarde cette image.", history, images: imgs }),
+        body: JSON.stringify({ message: text.trim() || "Regarde cette image.", history, images: imgs, planId: plan.planId }),
         signal: abortRef.current.signal,
       });
       if (!resp.ok || !resp.body) throw new Error(`HTTP ${resp.status}`);
@@ -236,6 +237,9 @@ export default function AgenticPage() {
                 }
               }
             }
+          } else if (ev.type === "paywall") {
+            // Server blocked a paid section for this plan (freemium) → open the upgrade modal.
+            usePaywallStore.getState().trigger("pages", plan.planId);
           } else if (ev.type === "reply") {
             // Finalize using the EXACT streamed text (no swap/flicker); fall back to ev.content
             // only if nothing streamed (error / non-streaming path).

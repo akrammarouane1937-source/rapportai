@@ -13,7 +13,9 @@ const router = Router();
 
 router.post("/orchestrator/:sessionId", async (req: Request, res: Response) => {
   const sessionId = req.params.sessionId as string;
-  const { message, history, images } = req.body as { message?: string; history?: Array<{ role: "user" | "assistant"; content: unknown }>; images?: string[] };
+  const { message, history, images, planId: bodyPlan } = req.body as { message?: string; history?: Array<{ role: "user" | "assistant"; content: unknown }>; images?: string[]; planId?: string };
+  // Student plan — gates paid sections (freemium). Body wins; fall back to the x-plan-id header.
+  const planId = bodyPlan ?? (req.headers["x-plan-id"] as string | undefined);
 
   if (!message?.trim()) {
     res.status(400).json({ error: "message is required" });
@@ -52,7 +54,7 @@ router.post("/orchestrator/:sessionId", async (req: Request, res: Response) => {
   const hb = setInterval(() => { try { res.write(`: working\n\n`); } catch { /* closed */ } }, 15000);
 
   try {
-    const result = await runOrchestrator({ sessionId, agent, userMessage: message, history, images, apiKey, emit });
+    const result = await runOrchestrator({ sessionId, agent, userMessage: message, history, images, planId, apiKey, emit });
     emit({ type: "reply", content: result.reply, ...(result.askUser ? { askUser: result.askUser } : {}) });
     emit({ type: "done" });
   } catch (err) {

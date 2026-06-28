@@ -47,6 +47,20 @@ const SECTION_MIN_PLAN: Record<string, PlanId> = {
   "liste-tableaux":"basique",
 };
 
+export function sectionMinPlan(sectionId: string): PlanId {
+  return SECTION_MIN_PLAN[sectionId] ?? "free";
+}
+
+// Does this plan unlock this section? FAIL-OPEN: an unknown/missing plan is treated as
+// top-tier, so a plumbing bug can never block a PAYING user — only an explicit lower-rank
+// plan (e.g. "free") is gated out of paid sections. Free sections are always allowed.
+export function planAllowsSection(planId: string | undefined | null, sectionId: string): boolean {
+  const required = SECTION_MIN_PLAN[sectionId] ?? "free";
+  if (required === "free") return true;
+  const rank = PLAN_RANK[(planId as PlanId)] ?? PLAN_RANK.pro;
+  return rank >= PLAN_RANK[required];
+}
+
 function planLabel(plan: PlanId): string {
   return plan === "free" ? "Gratuit" : plan === "basique" ? "Basique" : plan === "starter" ? "Essentiel" : "Pro";
 }

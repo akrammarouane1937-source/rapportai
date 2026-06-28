@@ -8,6 +8,7 @@ import { existsSync, readFileSync, writeFileSync, unlinkSync } from "fs";
 import path from "path";
 import type { SDKReportAgent } from "../sdk-agent";
 import { logger } from "../logger";
+import { planAllowsSection, sectionMinPlan } from "../plan-guard";
 import {
   type ReportState, setPreference, upsertSection, saveReportState, summarizeState,
 } from "./report-state";
@@ -20,6 +21,7 @@ export interface ToolContext {
   state: ReportState;
   agent: SDKReportAgent;
   emit: (ev: { type: string; [k: string]: unknown }) => void;  // stream progress to the client
+  planId?: string;  // student's plan — gates paid sections (freemium: free gets front matter + intro)
 }
 
 export interface ToolResult {
@@ -165,6 +167,15 @@ export async function runTool(name: string, input: Record<string, unknown>, ctx:
     case "write_section": {
       const sectionId = String(input.section_id);
       const instructions = String(input.instructions ?? "");
+
+      // Freemium gate: free users generate front matter + Introduction for free; paid sections
+      // (Partie I →, Partie II, Conclusion, Annexes…) open the paywall instead of generating.
+      if (!planAllowsSection(ctx.planId, sectionId)) {
+        const need = sectionMinPlan(sectionId);
+        emit({ type: "paywall", section: sectionId, requiredPlan: need });
+        return { result: `La section "${sectionId}" est réservée au plan ${need} ou supérieur. NE LA RÉDIGE PAS et n'invente rien. Dis simplement à l'étudiant, chaleureusement, qu'il peut débloquer cette partie en passant au plan ${need} — la fenêtre de paiement vient de s'ouvrir pour lui.` };
+      }
+
       upsertSection(state, { id: sectionId, status: "drafting", lastInstruction: instructions });
 
       if (PARTIE_SECTIONS.has(sectionId)) {
