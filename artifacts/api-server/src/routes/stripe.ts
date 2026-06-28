@@ -1,7 +1,7 @@
 import { Router, type Request, type Response, type NextFunction } from "express";
 import express from "express";
 import Stripe from "stripe";
-import { eq } from "drizzle-orm";
+import { eq, and } from "drizzle-orm";
 import { db, reportsTable } from "@workspace/db";
 import { logger } from "../lib/logger";
 import {
@@ -88,11 +88,27 @@ router.post("/payments/checkout", async (req: Request, res: Response) => {
     // the client, so nobody can pay a small "difference" without the lower plan.
     let currentPlan = "free";
     try {
-      const existing = await db.query.reportsTable.findFirst({
-        where: eq(reportsTable.id, report_id),
-      });
-      if (existing?.paymentStatus === "paid" && existing.plan && PLAN_RANK[existing.plan] !== undefined) {
-        currentPlan = existing.plan;
+      // Account-level: the user's HIGHEST paid plan across ALL their reports. A single report_id
+      // is unstable across sessions (it can be a fresh UUID each checkout), so a per-report lookup
+      // misses prior purchases and over-charges on upgrades. Server-authoritative — we read paid
+      // rows, never the client, so nobody pays a small "difference" without owning the lower plan.
+      const buyer = clerkId ? await getUserByClerkId(clerkId) : null;
+      const paidRows = buyer
+        ? await db.query.reportsTable.findMany({
+            where: and(eq(reportsTable.userId, buyer.id), eq(reportsTable.paymentStatus, "paid")),
+          })
+        : [];
+      for (const r of paidRows) {
+        if (r.plan && PLAN_RANK[r.plan] !== undefined && PLAN_RANK[r.plan] > PLAN_RANK[currentPlan]) {
+          currentPlan = r.plan;
+        }
+      }
+      // Fallback for anonymous / no-clerk checkouts: the specific report row.
+      if (currentPlan === "free") {
+        const existing = await db.query.reportsTable.findFirst({ where: eq(reportsTable.id, report_id) });
+        if (existing?.paymentStatus === "paid" && existing.plan && PLAN_RANK[existing.plan] !== undefined) {
+          currentPlan = existing.plan;
+        }
       }
     } catch {
       // DB hiccup → treat as a fresh purchase (charges full price, never under-charges)
