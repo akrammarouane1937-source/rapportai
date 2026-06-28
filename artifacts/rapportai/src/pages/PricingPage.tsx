@@ -67,7 +67,6 @@ const PLANS: Plan[] = [
       "Export Word",
       "Humanisation anti-détection IA",
       "Canevas de ton école",
-      "Accès JuryAI",
     ],
   },
 ];

@@ -687,7 +687,6 @@ export default function LandingPage() {
                     "Export Word",
                     "Humanisation anti-détection IA",
                     "Canevas de ton école",
-                    "Accès JuryAI",
                   ],
                 },
               ] as const).map((p, i) => {
