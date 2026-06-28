@@ -243,11 +243,9 @@ function StepCard({ section, text, status: statusProp, index, locked, lockLabel,
             <div className="w-9 h-9 rounded-full flex items-center justify-center" style={{ background: "linear-gradient(135deg,#7c3aed,#a855f7)" }}>
               <Lock className="w-4 h-4 text-white" />
             </div>
-            {lockLabel && (
-              <span className="text-[11px] font-bold px-2.5 py-1 rounded-full" style={{ background: "#fff", color: "#7c3aed", boxShadow: "0 1px 4px rgba(124,58,237,0.18)" }}>
-                Débloquer · {lockLabel}
-              </span>
-            )}
+            <span className="text-[11px] font-bold px-2.5 py-1 rounded-full" style={{ background: "#fff", color: "#7c3aed", boxShadow: "0 1px 4px rgba(124,58,237,0.18)" }}>
+              Débloquer
+            </span>
           </div>
         )}
         <div className="absolute top-2 left-2 w-5 h-5 rounded-full flex items-center justify-center text-[10px] font-bold" style={{ background: "#fff", color: "#7c3aed", boxShadow: "0 1px 4px rgba(0,0,0,0.12)" }}>

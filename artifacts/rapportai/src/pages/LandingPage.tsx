@@ -643,7 +643,7 @@ export default function LandingPage() {
                 {
                   name: "Basique",
                   price: 249 as number | null,
-                  anchor: 500 as number | null,
+                  anchor: 499 as number | null,
                   cta: "Choisir Basique",
                   href: "/pricing",
                   popular: false,

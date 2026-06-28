@@ -134,6 +134,14 @@ export function PaywallModal({ open, onClose, currentPlan, requiredPlan, section
                             {PLAN_LIMITS[plan].label}
                           </h3>
                           <div className="mb-3">
+                            {!isUpgrade && PLAN_LIMITS[plan].anchorMad > PLAN_LIMITS[plan].priceMad && (
+                              <p className="text-xs text-gray-400 mb-0.5">
+                                <span className="line-through">{PLAN_LIMITS[plan].anchorMad} MAD</span>{" "}
+                                <span className="text-green-600 font-semibold">
+                                  −{Math.round((1 - PLAN_LIMITS[plan].priceMad / PLAN_LIMITS[plan].anchorMad) * 100)}%
+                                </span>
+                              </p>
+                            )}
                             <span className="text-2xl font-extrabold text-gray-900">{isUpgrade ? `+${amount}` : amount}</span>
                             <span className="text-sm text-gray-400 ml-1">MAD</span>
                             {isUpgrade && <p className="text-xs text-gray-400">différence seulement</p>}

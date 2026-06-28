@@ -24,7 +24,7 @@ const PLANS: Plan[] = [
     id:          "basique",
     name:        "Basique",
     priceMad:    249,
-    anchorMad:   500,
+    anchorMad:   499,
     description: "Partie I incluse — le cœur de ton rapport.",
     cta:         FREE_LAUNCH ? "Commencer gratuitement" : "Choisir Basique",
     popular:     false,
