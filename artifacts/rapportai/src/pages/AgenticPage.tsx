@@ -10,7 +10,7 @@ import { Paperclip, ArrowUp, Square, Loader2, FileText, CheckCircle2, AlertCircl
 import { API_BASE } from "@/lib/apiBase";
 import { ensureSession } from "@/lib/useGenerate";
 import { useReportStore } from "@/lib/store";
-import { getMyPlan, hasAccess, canGenerateSection, wordsToPages } from "@/lib/userPlan";
+import { getMyPlan, hasAccess, canGenerateSection, wordsToPages, canRevise, incrementRevision } from "@/lib/userPlan";
 import { usePaywallStore } from "@/lib/paywallStore";
 import { Layout } from "@/components/layout";
 import { PreviewPanel } from "@/components/preview-panel";
@@ -223,8 +223,18 @@ export default function AgenticPage() {
           } else if (ev.type === "file_written") {
             const field = SECTION_FIELD[ev.section as string];
             if (field && typeof ev.content === "string") {
+              // A write to an ALREADY-populated section = the agent edited/re-generated it →
+              // counts as one revision (the student asked to change something). A first write
+              // (section was empty) is generation, not a revision.
+              const wasPopulated = !!(((report as unknown as Record<string, string>)[field]) ?? "").trim();
               updateReport({ [field]: ev.content } as Record<string, string>);
               setActiveSection(ev.section as string);
+              if (wasPopulated) {
+                const after = incrementRevision();
+                if (!canRevise(after.planId, after.revisionCount)) {
+                  usePaywallStore.getState().trigger("revisions", after.planId);
+                }
+              }
             }
           } else if (ev.type === "reply") {
             // Finalize using the EXACT streamed text (no swap/flicker); fall back to ev.content
