@@ -343,7 +343,7 @@ export function Sidebar() {
           {/* Upgrade + Sign out */}
           <div className="px-2 pb-3 space-y-1" style={{ borderTop: "1px solid #f3f4f6" }}>
             <button
-              onClick={() => usePaywallStore.getState().trigger("pages", plan.planId)}
+              onClick={() => usePaywallStore.getState().trigger("pages", plan.planId, "upgrade")}
               className="w-full flex items-center gap-2 px-2.5 py-1.5 rounded-lg text-xs font-semibold text-white hover:opacity-90 transition-opacity"
               style={{ background: "linear-gradient(135deg,#7c3aed,#a855f7)" }}
             >

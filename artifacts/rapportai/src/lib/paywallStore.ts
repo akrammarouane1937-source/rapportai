@@ -7,7 +7,10 @@ interface PaywallState {
   open:        boolean;
   limitType:   "pages" | "revisions" | null;
   currentPlan: PlanId;
-  trigger:     (limitType: "pages" | "revisions", currentPlan: PlanId) => void;
+  // "limit" = a cap was truly hit (show the limit-framed upsell). "upgrade" = the user chose to
+  // upgrade voluntarily (e.g. "Améliorer mon plan") → show neutral plan cards with the difference.
+  intent:      "limit" | "upgrade";
+  trigger:     (limitType: "pages" | "revisions", currentPlan: PlanId, intent?: "limit" | "upgrade") => void;
   close:       () => void;
 }
 
@@ -15,10 +18,11 @@ export const usePaywallStore = create<PaywallState>((set) => ({
   open:        false,
   limitType:   null,
   currentPlan: "free",
-  trigger: (limitType, currentPlan) => {
+  intent:      "limit",
+  trigger: (limitType, currentPlan, intent = "limit") => {
     // Save current path so PaymentSuccessPage can redirect back here after payment
     try { sessionStorage.setItem(RETURN_PATH_KEY, window.location.pathname); } catch {}
-    set({ open: true, limitType, currentPlan });
+    set({ open: true, limitType, currentPlan, intent });
   },
   close: () => set({ open: false, limitType: null }),
 }));

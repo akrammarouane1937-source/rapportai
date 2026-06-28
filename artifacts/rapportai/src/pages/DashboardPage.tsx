@@ -545,13 +545,13 @@ export default function DashboardPage() {
 
   const workspaceName = user?.firstName || "Mon espace";
 
-  const { open: paywallOpen, limitType: paywallLimitType, currentPlan: paywallPlan, close: closePaywall } = usePaywallStore();
+  const { open: paywallOpen, limitType: paywallLimitType, currentPlan: paywallPlan, intent: paywallIntent, close: closePaywall } = usePaywallStore();
   const paywallUpsellVariant = paywallLimitType === "revisions" ? "revision-essentiel" as const : "page-essentiel" as const;
 
   return (
     <div className="flex h-screen overflow-hidden" style={{ background: "#f9f8ff" }}>
-      {paywallPlan === "free"
-        ? <PaywallModal open={paywallOpen} onClose={closePaywall} />
+      {paywallPlan === "free" || paywallIntent === "upgrade"
+        ? <PaywallModal open={paywallOpen} onClose={closePaywall} currentPlan={paywallPlan} />
         : <UpsellModal open={paywallOpen} onClose={closePaywall} variant={paywallUpsellVariant} currentPlan={paywallPlan} />
       }
       {showTour && (isMobileView
