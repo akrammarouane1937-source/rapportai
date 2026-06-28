@@ -10,7 +10,7 @@ import { Paperclip, ArrowUp, Square, Loader2, FileText, CheckCircle2, AlertCircl
 import { API_BASE } from "@/lib/apiBase";
 import { ensureSession } from "@/lib/useGenerate";
 import { useReportStore } from "@/lib/store";
-import { getMyPlan, hasAccess } from "@/lib/userPlan";
+import { getMyPlan, hasAccess, canGenerateSection, wordsToPages } from "@/lib/userPlan";
 import { usePaywallStore } from "@/lib/paywallStore";
 import { Layout } from "@/components/layout";
 import { PreviewPanel } from "@/components/preview-panel";
@@ -45,6 +45,21 @@ const FIELD_TO_SECTION: Record<string, string> = {
   listeDesFigures: "liste-figures", listeDesTableaux: "liste-tableaux",
 };
 
+// Total pages currently in the report, counted from REAL content (so re-generating a
+// section doesn't double-count). Drives the per-plan page cap: Basique 35 / Essentiel 60 / Pro ∞.
+const PAGE_CONTENT_FIELDS = [
+  "pageDeGarde", "dedicaces", "remerciements", "resumeFr", "abstractEn", "sommaire",
+  "introduction", "partieI", "partieII", "conclusion",
+] as const;
+function countReportPages(report: Record<string, unknown>): number {
+  let words = 0;
+  for (const f of PAGE_CONTENT_FIELDS) {
+    const v = report[f];
+    if (typeof v === "string" && v.trim()) words += v.trim().split(/\s+/).length;
+  }
+  return wordsToPages(words);
+}
+
 const WORKING_MSGS = [
   "Je rédige ta section…",
   "Je structure le contenu académique…",
@@ -68,7 +83,7 @@ const mdComponents: Components = {
 };
 
 export default function AgenticPage() {
-  const { updateReport, resetReport } = useReportStore();
+  const { updateReport, resetReport, report } = useReportStore();
   const [messages, setMessages] = useState<Msg[]>(() => {
     try { return JSON.parse(localStorage.getItem(STORAGE_KEY) || "[]"); } catch { return []; }
   });
@@ -151,6 +166,11 @@ export default function AgenticPage() {
     // Concierge paywall gate: block generation for non-paying users (no-op during free-launch).
     const plan = getMyPlan();
     if (!hasAccess(plan.planId)) { usePaywallStore.getState().trigger("pages", plan.planId); return; }
+    // Per-plan page cap: once the report reaches the plan's page limit, further generation
+    // requires an upgrade (Basique 35 / Essentiel 60 / Pro unlimited). No-op during free-launch.
+    if (!canGenerateSection(plan.planId, countReportPages(report as unknown as Record<string, unknown>))) {
+      usePaywallStore.getState().trigger("pages", plan.planId); return;
+    }
     const imgs = pendingImages.map((p) => p.dataUrl);
     setPendingImages([]);
     setBusy(true); setChoices(null); setSteps([]); setStreaming(""); streamRef.current = "";
