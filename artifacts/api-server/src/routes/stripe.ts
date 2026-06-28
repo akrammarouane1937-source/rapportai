@@ -146,7 +146,7 @@ router.post("/payments/checkout", async (req: Request, res: Response) => {
         plan,
       },
       success_url: `${appUrl}/payment/success?session_id={CHECKOUT_SESSION_ID}`,
-      cancel_url:  `${appUrl}/pricing?payment=cancelled`,
+      cancel_url:  `${appUrl}/dashboard?payment=cancelled`,
       ...(user_email ? { customer_email: user_email } : {}),
     });
 
