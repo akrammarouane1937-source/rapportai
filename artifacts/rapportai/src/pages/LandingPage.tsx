@@ -626,6 +626,39 @@ export default function LandingPage() {
           </div>
         </section>
 
+        {/* Data Analyst Agent — coming soon */}
+        <section className="py-24 border-t border-border">
+          <div className="container mx-auto px-4 max-w-4xl text-center">
+            <span className="inline-block bg-purple-100 text-purple-700 text-xs font-bold uppercase tracking-wide px-3 py-1 rounded-full mb-5">
+              Bientôt disponible
+            </span>
+            <h2 className="text-3xl md:text-4xl font-bold font-heading text-foreground mb-4">
+              Data Analyst Agent
+            </h2>
+            <p className="text-base md:text-lg text-secondary-foreground max-w-2xl mx-auto mb-8">
+              Aujourd'hui, RapportAI <strong>lit</strong> tes données et rédige ton analyse à partir d'elles.
+              Bientôt, un agent analyste les <strong>calcule</strong> : importe ton CSV ou Excel et il génère
+              tes statistiques, tes graphiques et ta Partie II empirique complète — corrélations, tests,
+              régressions, tendances — depuis tes vrais résultats. Plus besoin de SPSS ou de formules Excel.
+            </p>
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4 max-w-3xl mx-auto text-left">
+              {[
+                { t: "Statistiques automatiques", d: "Moyennes, écarts-types, corrélations, tests de significativité — calculés depuis ton fichier." },
+                { t: "Graphiques prêts à insérer", d: "Histogrammes, courbes, nuages de points générés à partir de tes données." },
+                { t: "Analyse rédigée", d: "Ta Partie II écrite à partir des résultats réels, pas de généralités." },
+              ].map((f) => (
+                <div key={f.t} className="bg-white rounded-xl border border-border p-5">
+                  <div className="text-sm font-bold text-foreground mb-1">{f.t}</div>
+                  <div className="text-sm text-secondary-foreground leading-snug">{f.d}</div>
+                </div>
+              ))}
+            </div>
+            <p className="text-xs text-muted-foreground mt-8">
+              En attendant, tu peux déjà importer tes fichiers CSV, Excel, PDF et Word — l'agent les lit et s'appuie dessus pour rédiger.
+            </p>
+          </div>
+        </section>
+
         {/* 10. PRICING */}
         <section className="py-24 bg-[#f5f5f0] border-t border-border">
           <div className="container mx-auto px-4 max-w-5xl">
