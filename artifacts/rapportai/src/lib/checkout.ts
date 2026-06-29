@@ -1,4 +1,4 @@
-import type { PlanId } from "@/lib/userPlan";
+import { type PlanId, getMyPlan } from "@/lib/userPlan";
 import { API_BASE } from "@/lib/apiBase";
 import { getReport } from "@/lib/reportStore";
 
@@ -27,9 +27,10 @@ export async function startCheckout(opts: {
       ...(opts.clerkId ? { "x-clerk-id": opts.clerkId } : {}),
     },
     body: JSON.stringify({
-      plan:       opts.plan,
-      report_id:  reportId,
-      user_email: opts.userEmail,
+      plan:         opts.plan,
+      report_id:    reportId,
+      user_email:   opts.userEmail,
+      current_plan: getMyPlan().planId,   // so the backend charges the upgrade difference
     }),
   });
 

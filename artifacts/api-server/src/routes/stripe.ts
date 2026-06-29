@@ -61,10 +61,11 @@ function getStripe(): Stripe {
 // ─── POST /api/payments/checkout ─────────────────────────────────────────────
 
 router.post("/payments/checkout", async (req: Request, res: Response) => {
-  const { plan, report_id, user_email } = req.body as {
+  const { plan, report_id, user_email, current_plan } = req.body as {
     plan: string;
     report_id: string;
     user_email?: string;
+    current_plan?: string;   // the client's known plan — covers webhook lag so upgrades charge the delta
   };
 
   if (!plan || !PRICES[plan]) {
@@ -112,6 +113,14 @@ router.post("/payments/checkout", async (req: Request, res: Response) => {
       }
     } catch {
       // DB hiccup → treat as a fresh purchase (charges full price, never under-charges)
+    }
+
+    // The client reports its own plan too (the upgrade modal already shows the +difference). If the
+    // DB hasn't recorded the prior payment yet (Stripe webhook lag or not configured), trust the
+    // HIGHER of DB-detected and client-claimed so upgrades charge the real delta. Worst case a
+    // spoofed claim underpays an upgrade — bounded lost revenue, never a security breach.
+    if (current_plan && PLAN_RANK[current_plan] !== undefined && PLAN_RANK[current_plan] > PLAN_RANK[currentPlan]) {
+      currentPlan = current_plan;
     }
 
     // Reject buying a plan you already own (or a downgrade).
