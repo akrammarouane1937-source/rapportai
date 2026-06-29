@@ -771,6 +771,9 @@ export default function LandingPage() {
             <p className="text-sm text-muted-foreground mt-8">
               Paiement unique · Pas d'abonnement caché · Support 7j/7
             </p>
+            <p className="text-xs text-muted-foreground mt-2">
+              Une question ? <a href="mailto:bennisimane9@gmail.com" className="text-purple-600 hover:underline">bennisimane9@gmail.com</a>
+            </p>
           </div>
         </section>
 

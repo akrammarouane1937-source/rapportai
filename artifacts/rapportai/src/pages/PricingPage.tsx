@@ -310,6 +310,10 @@ function PricingContent({
               <Check className="w-3.5 h-3.5 text-green-500" /> Support 7j/7
             </span>
           </div>
+          <p className="text-center text-xs text-gray-400 mt-4">
+            Une question avant de payer ? Écris-nous à{" "}
+            <a href="mailto:bennisimane9@gmail.com" className="text-purple-600 hover:underline">bennisimane9@gmail.com</a>
+          </p>
 
           {/* FAQ */}
           <div className="mt-20 max-w-2xl mx-auto">
