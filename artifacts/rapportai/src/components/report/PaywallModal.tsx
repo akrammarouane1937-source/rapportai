@@ -187,6 +187,9 @@ export function PaywallModal({ open, onClose, currentPlan, requiredPlan, section
               <p className="text-center text-xs text-gray-400 mt-5">
                 Paiement sécurisé · Remboursement 48h
               </p>
+              <p className="text-center text-xs text-gray-400 mt-1">
+                Une question ? <a href="mailto:bennisimane9@gmail.com" className="text-purple-600 hover:underline">bennisimane9@gmail.com</a>
+              </p>
               {onClose && (
                 <button
                   onClick={onClose}

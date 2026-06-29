@@ -2,7 +2,7 @@ import { Link } from "wouter";
 import PublicNavbar from "@/components/layout/PublicNavbar";
 
 const LAST_UPDATED = "21 mai 2026";
-const SUPPORT_EMAIL = "support@rapportai.io";
+const SUPPORT_EMAIL = "bennisimane9@gmail.com";
 const APP_URL = "rapportai.io";
 
 export default function TermsPage() {

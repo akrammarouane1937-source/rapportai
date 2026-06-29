@@ -130,6 +130,10 @@ export default function PaymentSuccessPage() {
             >
               Continuer mon rapport <ArrowRight className="w-4 h-4" />
             </button>
+            <p className="text-center text-xs text-gray-400 mt-4">
+              Besoin d'aide ou un remboursement ? Écris-nous à{" "}
+              <a href="mailto:bennisimane9@gmail.com" className="text-purple-600 hover:underline">bennisimane9@gmail.com</a>
+            </p>
           </>
         )}
 
@@ -144,7 +148,8 @@ export default function PaymentSuccessPage() {
               Paiement non confirmé
             </h2>
             <p className="text-sm text-gray-500 mb-6">
-              Nous n'avons pas pu vérifier ton paiement. Si tu as été débité, contacte-nous.
+              Nous n'avons pas pu vérifier ton paiement. Si tu as été débité, écris-nous à{" "}
+              <a href="mailto:bennisimane9@gmail.com" className="text-purple-600 hover:underline">bennisimane9@gmail.com</a>{" "}et on règle ça tout de suite.
             </p>
             <button
               onClick={() => setLocation(returnPath)}
