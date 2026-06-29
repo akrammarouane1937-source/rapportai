@@ -136,8 +136,18 @@ router.post("/payments/checkout", async (req: Request, res: Response) => {
     let chargeAmountMad: number;
     let lineItem: Stripe.Checkout.SessionCreateParams.LineItem;
     if (currentPlan === "free") {
-      chargeAmountMad = target.amountMad;
-      lineItem = { price: target.stripePriceId, quantity: 1 };
+      // ⚠️⚠️ TEST MODE — 5 MAD to verify the webhook + unlock chain end-to-end. REVERT to:
+      //   chargeAmountMad = target.amountMad;
+      //   lineItem = { price: target.stripePriceId, quantity: 1 };
+      chargeAmountMad = 500;
+      lineItem = {
+        quantity: 1,
+        price_data: {
+          currency:     "mad",
+          unit_amount:  500,
+          product_data: { name: `${target.label} (test 5 MAD)` },
+        },
+      };
     } else {
       chargeAmountMad = target.amountMad - PRICES[currentPlan].amountMad;
       lineItem = {
