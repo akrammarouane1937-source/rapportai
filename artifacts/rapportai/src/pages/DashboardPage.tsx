@@ -806,7 +806,7 @@ export default function DashboardPage() {
                   Voir tout <ArrowRight className="w-3 h-3" />
                 </button>
               </div>
-              <div className="grid grid-cols-3 gap-3">
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
                 {recentSections.map((s) => (
                   <button
                     key={s.field}
