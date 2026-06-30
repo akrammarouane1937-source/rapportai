@@ -135,7 +135,7 @@ export function UpsellModal({
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           exit={{ opacity: 0 }}
-          className="fixed inset-0 z-[9999] flex items-center justify-center p-6"
+          className="fixed inset-0 z-[9999] flex items-center justify-center p-3 sm:p-6"
           style={{ background: "rgba(15,10,30,0.45)", backdropFilter: "blur(4px)" }}
           onClick={(e) => { if (e.target === e.currentTarget) onClose(); }}
         >
@@ -144,7 +144,7 @@ export function UpsellModal({
             animate={{ scale: 1,   opacity: 1, y: 0  }}
             exit={{ scale: 0.94, opacity: 0, y: 12 }}
             transition={{ type: "spring", damping: 26, stiffness: 320 }}
-            className="bg-white rounded-2xl w-full max-w-md overflow-hidden"
+            className="bg-white rounded-2xl w-full max-w-md overflow-y-auto max-h-[92vh]"
             style={{ boxShadow: "0 32px 80px rgba(124,58,237,0.22), 0 4px 20px rgba(0,0,0,0.15)" }}
           >
             {/* Close */}

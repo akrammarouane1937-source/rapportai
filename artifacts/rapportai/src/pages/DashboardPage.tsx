@@ -322,9 +322,8 @@ export default function DashboardPage() {
 
   const sendWithText = (text: string) => {
     if (loading) return;
-    // Concierge paywall gate: block the dashboard chat for non-paying users (no-op during free-launch).
-    const planNow = getMyPlan();
-    if (!hasAccess(planNow.planId)) { usePaywallStore.getState().trigger("pages", planNow.planId); return; }
+    // The dashboard chat is a FREE assistant (theme, problématique, questions) — open to everyone on
+    // every device. The paywall lives on the actual report builder (agentic flow), not here.
     const userMsg: Message = { id: crypto.randomUUID(), role: "user", text };
     setMessages((prev) => [...prev, userMsg]);
     sendInternal(text, [...messages, userMsg]);

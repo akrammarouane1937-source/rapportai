@@ -68,7 +68,7 @@ export function PaywallModal({ open, onClose, currentPlan, requiredPlan, section
     }
   };
 
-  const cols = plans.length >= 3 ? "grid-cols-3" : plans.length === 2 ? "grid-cols-2" : "grid-cols-1";
+  const cols = plans.length >= 3 ? "grid-cols-1 sm:grid-cols-3" : plans.length === 2 ? "grid-cols-1 sm:grid-cols-2" : "grid-cols-1";
 
   return (
     <AnimatePresence>
@@ -77,7 +77,7 @@ export function PaywallModal({ open, onClose, currentPlan, requiredPlan, section
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           exit={{ opacity: 0 }}
-          className="fixed inset-0 z-[9999] flex items-center justify-center p-6"
+          className="fixed inset-0 z-[9999] flex items-center justify-center p-3 sm:p-6"
           style={{ background: "rgba(15,10,30,0.45)", backdropFilter: "blur(4px)" }}
           onClick={(e) => { if (e.target === e.currentTarget) onClose?.(); }}
         >
@@ -86,10 +86,10 @@ export function PaywallModal({ open, onClose, currentPlan, requiredPlan, section
             animate={{ scale: 1, opacity: 1, y: 0 }}
             exit={{ scale: 0.95, opacity: 0, y: 16 }}
             transition={{ type: "spring", damping: 24, stiffness: 280 }}
-            className="bg-white rounded-2xl w-full max-w-2xl overflow-hidden"
+            className="bg-white rounded-2xl w-full max-w-2xl overflow-y-auto max-h-[92vh]"
             style={{ boxShadow: "0 24px 80px rgba(124,58,237,0.22)" }}
           >
-            <div className="px-8 pt-8 pb-6 text-center border-b border-gray-100">
+            <div className="px-5 sm:px-8 pt-6 sm:pt-8 pb-6 text-center border-b border-gray-100">
               <div className="w-12 h-12 bg-purple-100 rounded-2xl flex items-center justify-center mx-auto mb-4">
                 <Lock className="w-6 h-6 text-purple-600" />
               </div>
@@ -105,7 +105,7 @@ export function PaywallModal({ open, onClose, currentPlan, requiredPlan, section
               </p>
             </div>
 
-            <div className="p-6">
+            <div className="p-4 sm:p-6">
               {plans.length === 0 ? (
                 <p className="text-center text-sm text-gray-500 py-6">
                   Tu as déjà le meilleur plan disponible. 🎉
